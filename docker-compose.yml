@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: gaia-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: gaia
+      POSTGRES_USER: gaia
+      POSTGRES_PASSWORD: gaia1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - gaia-postgres-data:/var/lib/postgresql/data
+    networks:
+      - gaia-network
+
+  redis:
+    image: redis:7
+    container_name: gaia-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - gaia-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gaia-backend
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gaia
+      SPRING_DATASOURCE_USERNAME: gaia
+      SPRING_DATASOURCE_PASSWORD: gaia1234
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      JWT_SECRET: change-this-secret-key-change-this-secret-key
+    ports:
+      - "8080:8080"
+    networks:
+      - gaia-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gaia-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    networks:
+      - gaia-network
+
+volumes:
+  gaia-postgres-data:
+
+networks:
+  gaia-network:
+    driver: bridge
