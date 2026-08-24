@@ -1,0 +1,1161 @@
+# Sector templates
+#
+# STANDARD sectors (01-10): radius-2 axial grid, 19 hexes each.
+# DEEP SPACE sectors (11-18): 3-hex tiles (Lost Fleet expansion), always included.
+#
+# planet values: "Terra","Swamp","Desert","Oxide","Titanium","Volcanic","Ice",
+#                "Transdim","Gaia","LostPlanet","Asteroid","ProtoPlanet"
+# Hexes without planets omit the planet field.
+# s05/s06/s07 are double-sided; distinguished by side = "A"/"B".
+# All deep space sectors (11-18) are double-sided.
+# s09/s10 mark is_lost_fleet = true (expansion availability flag).
+#
+# Standard sector coordinate order: center (0,0), inner ring (6), outer ring (12) = 19 total.
+# Deep space sector coordinates: (0,0), (1,0), (0,1) — 3 hexes.
+
+# ── Sector 01 ────────────────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "Terra"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+planet = "Swamp"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+planet = "Volcanic"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+planet = "Oxide"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+planet = "Desert"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 02 ────────────────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 2
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "Ice"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+planet = "Swamp"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+planet = "Titanium"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+planet = "Desert"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+planet = "Oxide"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+planet = "Volcanic"
+
+# ── Sector 03 ────────────────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 3
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+planet = "Ice"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+planet = "Titanium"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+planet = "Desert"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+planet = "Terra"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 04 ────────────────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 4
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Oxide"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+planet = "Swamp"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+planet = "Volcanic"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+planet = "Titanium"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+planet = "Terra"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+planet = "Ice"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 05 — Side A ───────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 5
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+planet = "Ice"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+planet = "Oxide"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+planet = "Desert"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+planet = "Volcanic"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 05 — Side B ───────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 5
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+planet = "Ice"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+planet = "Oxide"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+planet = "Volcanic"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 06 — Side A ───────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 6
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "Terra"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+planet = "Swamp"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+planet = "Desert"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 06 — Side B ───────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 6
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "Terra"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+planet = "Desert"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 07 — Side A ───────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 7
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Oxide"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+planet = "Swamp"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+planet = "Titanium"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 07 — Side B ───────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 7
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+planet = "Swamp"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+planet = "Titanium"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 08 ────────────────────────────────────────────────────────────────────
+
+[[sectors]]
+id = 8
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Ice"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+planet = "Titanium"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+planet = "Volcanic"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+planet = "Terra"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Sector 09 — Lost Fleet ───────────────────────────────────────────────────────
+
+[[sectors]]
+id = 9
+is_lost_fleet = true
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+planet = "Titanium"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+planet = "Ice"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+planet = "Swamp"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+planet = "Volcanic"
+
+# ── Sector 10 — Lost Fleet ───────────────────────────────────────────────────────
+
+[[sectors]]
+id = 10
+is_lost_fleet = true
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 1
+planet = "Gaia"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -1
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -1
+planet = "Desert"
+[[sectors.hexes]]
+rel_q = 2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 1
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 2
+planet = "Transdim"
+[[sectors.hexes]]
+rel_q = -1
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 2
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 1
+[[sectors.hexes]]
+rel_q = -2
+rel_r = 0
+[[sectors.hexes]]
+rel_q = -1
+rel_r = -1
+planet = "Oxide"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = -2
+planet = "Terra"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -2
+[[sectors.hexes]]
+rel_q = 2
+rel_r = -1
+
+# ── Deep Space Sectors 11-18 (Lost Fleet expansion) ─────────────────────────────
+# 3-hex tiles — always all 8 included in 4-player Lost Fleet games.
+# Planet data: placeholder values transcribed from arch doc example.
+# Actual data must be verified against the physical Lost Fleet expansion tiles.
+
+[[sectors]]
+id = 11
+category = "deep_space"
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "ProtoPlanet"
+
+[[sectors]]
+id = 11
+category = "deep_space"
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+
+[[sectors]]
+id = 12
+category = "deep_space"
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+planet = "ProtoPlanet"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+
+[[sectors]]
+id = 12
+category = "deep_space"
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "ProtoPlanet"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "Asteroid"
+
+[[sectors]]
+id = 13
+category = "deep_space"
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+
+[[sectors]]
+id = 13
+category = "deep_space"
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "Asteroid"
+
+[[sectors]]
+id = 14
+category = "deep_space"
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "ProtoPlanet"
+
+[[sectors]]
+id = 14
+category = "deep_space"
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+planet = "ProtoPlanet"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "Asteroid"
+
+[[sectors]]
+id = 15
+category = "deep_space"
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+
+[[sectors]]
+id = 15
+category = "deep_space"
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "Asteroid"
+
+[[sectors]]
+id = 16
+category = "deep_space"
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+planet = "ProtoPlanet"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+
+[[sectors]]
+id = 16
+category = "deep_space"
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "ProtoPlanet"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+
+[[sectors]]
+id = 17
+category = "deep_space"
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "ProtoPlanet"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+
+[[sectors]]
+id = 17
+category = "deep_space"
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "ProtoPlanet"
+
+[[sectors]]
+id = 18
+category = "deep_space"
+side = "A"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+planet = "ProtoPlanet"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "Asteroid"
+
+[[sectors]]
+id = 18
+category = "deep_space"
+side = "B"
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 0
+planet = "Asteroid"
+[[sectors.hexes]]
+rel_q = 1
+rel_r = 0
+[[sectors.hexes]]
+rel_q = 0
+rel_r = 1
+planet = "ProtoPlanet"

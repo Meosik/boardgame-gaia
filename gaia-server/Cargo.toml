@@ -1,0 +1,29 @@
+[package]
+name = "gaia-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gaia-engine = { path = "../gaia-engine" }
+gaia-protocol = { path = "../gaia-protocol" }
+
+axum = { version = "0.7", features = ["ws", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "json", "migrate"] }
+tower-http = { version = "0.5", features = ["fs", "cors", "trace"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+dotenvy = "0.15"
+log = "0.4"
+env_logger = "0.11"
+thiserror = "1"
+sha2 = "0.10"
+
+[dev-dependencies]
+axum-test = { version = "15", features = ["ws"] }
+tokio = { version = "1", features = ["full", "test-util"] }
+
+[lints.clippy]
+unwrap_used = "warn"

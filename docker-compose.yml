@@ -1,0 +1,42 @@
+services:
+
+  # ── Infrastructure ────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gaiaproject
+      POSTGRES_USER: gaia
+      POSTGRES_PASSWORD: gaiapass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gaia -d gaiaproject"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Application Services ─────────────────────────────────────────────────
+  gaia-server:
+    build:
+      context: .
+      dockerfile: gaia-server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gaia:gaiapass@postgres:5432/gaiaproject
+      PORT: "8080"
+      RUST_LOG: info
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+volumes:
+  postgres_data:

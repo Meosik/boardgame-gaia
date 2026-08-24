@@ -1,0 +1,31 @@
+# Autopilot task seed: Gaia Lost Fleet core rebuild
+
+- activation prompt / task seed: `$autopilot`, following a read-only assessment of the existing Gaia prototype
+- original task status: activation-prompt with same-thread analysis context
+- scope note: rebuild the project from first principles; legacy application code and the existing stack are not constraints
+- desired outcome: a complete four-player online Gaia Project game with Lost Fleet rules, full six-round completion, final scoring, reconnect-safe state, and automated verification
+- known facts/evidence:
+  - the current workspace is a generated multi-service prototype rather than a playable end-to-end product
+  - current client/server action contracts diverge
+  - initial game state does not apply faction resources or starting structures
+  - faction abilities, Lost Fleet map placement, persistence replay, server integration tests, MCTS, and container frontend delivery are incomplete
+  - official rulebooks are available under `docs/`
+- constraints:
+  - technology choices must be re-evaluated rather than inherited
+  - the first release is guest-room based and fixed at four players
+  - a disconnected player pauses the game until session-based reconnection
+  - local execution must be reproducible
+- explicit non-goals:
+  - LLM coaching and MCTS players
+  - spectator mode and replay UI
+  - accounts, public lobby, and matchmaking
+  - CI/CD, monitoring, and production deployment automation
+- unknowns/open questions for planning:
+  - final technology stack and module boundaries
+  - exact contract-generation and persistence strategy
+  - asset redistribution/licensing constraints
+- likely codebase touchpoints:
+  - official rulebooks and game data
+  - deterministic rules engine
+  - authoritative multiplayer server and durable game state
+  - browser client and end-to-end test harness

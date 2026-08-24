@@ -1,0 +1,29 @@
+[package]
+name = "gaia-engine"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+test-utils = ["dep:proptest"]
+
+[dependencies]
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+log        = "0.4"
+thiserror  = "1"
+toml       = "0.8"
+
+[dev-dependencies]
+proptest = "1"
+# Self-dependency so integration tests under `tests/` (which link the crate
+# as an ordinary dependency, not with `cfg(test)`) can see `test_utils` —
+# without this, only the crate's own inline `#[cfg(test)]` unit tests get it.
+gaia-engine = { path = ".", features = ["test-utils"] }
+
+[dependencies.proptest]
+version  = "1"
+optional = true
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"

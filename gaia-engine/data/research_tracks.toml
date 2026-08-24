@@ -1,0 +1,245 @@
+# Research track immediate resource effects per level advancement
+# Format: [[tracks]] id + [[tracks.levels]] level + resource gains
+
+[[tracks]]
+id = "Terraforming"
+[[tracks.levels]]
+level = 1
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 2
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 3
+ore = 2
+credits = 0
+knowledge = 0
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 4
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 5
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 5
+federation_token = true
+
+[[tracks]]
+id = "Navigation"
+[[tracks.levels]]
+level = 1
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 2
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 0
+lost_planet_access = true
+[[tracks.levels]]
+level = 3
+ore = 0
+credits = 0
+knowledge = 0
+qic = 1
+vp = 0
+[[tracks.levels]]
+level = 4
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 5
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 5
+federation_token = true
+
+[[tracks]]
+id = "ArtificialIntelligence"
+[[tracks.levels]]
+level = 1
+ore = 0
+credits = 0
+knowledge = 0
+qic = 1
+vp = 0
+[[tracks.levels]]
+level = 2
+ore = 0
+credits = 0
+knowledge = 0
+qic = 1
+vp = 0
+[[tracks.levels]]
+level = 3
+ore = 0
+credits = 0
+knowledge = 0
+qic = 1
+vp = 0
+[[tracks.levels]]
+level = 4
+ore = 0
+credits = 0
+knowledge = 0
+qic = 2
+vp = 0
+[[tracks.levels]]
+level = 5
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 5
+federation_token = true
+
+[[tracks]]
+id = "GaiaProject"
+[[tracks.levels]]
+level = 1
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 0
+gaiaformers = 1
+[[tracks.levels]]
+level = 2
+ore = 0
+credits = 4
+knowledge = 0
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 3
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 0
+gaiaformers = 1
+[[tracks.levels]]
+level = 4
+ore = 0
+credits = 4
+knowledge = 0
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 5
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 5
+federation_token = true
+gaiaformers = 1
+
+[[tracks]]
+id = "Economy"
+[[tracks.levels]]
+level = 1
+ore = 0
+credits = 2
+knowledge = 0
+qic = 0
+vp = 0
+power_charge = 1
+[[tracks.levels]]
+level = 2
+ore = 1
+credits = 2
+knowledge = 0
+qic = 0
+vp = 0
+power_charge = 2
+[[tracks.levels]]
+level = 3
+ore = 1
+credits = 3
+knowledge = 0
+qic = 0
+vp = 0
+power_charge = 3
+[[tracks.levels]]
+level = 4
+ore = 2
+credits = 4
+knowledge = 0
+qic = 0
+vp = 0
+power_charge = 4
+[[tracks.levels]]
+level = 5
+ore = 2
+credits = 6
+knowledge = 0
+qic = 0
+vp = 5
+power_charge = 6
+federation_token = true
+
+[[tracks]]
+id = "Science"
+[[tracks.levels]]
+level = 1
+ore = 0
+credits = 0
+knowledge = 1
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 2
+ore = 0
+credits = 0
+knowledge = 2
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 3
+ore = 0
+credits = 0
+knowledge = 3
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 4
+ore = 0
+credits = 0
+knowledge = 4
+qic = 0
+vp = 0
+[[tracks.levels]]
+level = 5
+ore = 0
+credits = 0
+knowledge = 0
+qic = 0
+vp = 5
+federation_token = true

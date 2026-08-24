@@ -1,0 +1,27 @@
+# Development override — infrastructure only (no app services)
+# Usage: docker compose -f docker-compose.dev.yml up -d
+#
+# Run each app service locally for hot-reload:
+#   Rust:    cargo run -p gaia-server
+#   React:   npm run dev (in gaia-frontend/)
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gaiaproject
+      POSTGRES_USER: gaia
+      POSTGRES_PASSWORD: gaiapass
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gaia -d gaiaproject"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  postgres_dev_data:

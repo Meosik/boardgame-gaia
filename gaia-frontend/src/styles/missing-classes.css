@@ -1,0 +1,117 @@
+/* ── Error Banner ────────────────────────────────────────────────────────────
+   App.tsx: command_rejected 표시. 클릭하면 닫힘.
+─────────────────────────────────────────────────────────────────────────── */
+.error-banner {
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* ── Faction Badge ───────────────────────────────────────────────────────────
+   FactionBadge 컴포넌트: SVG 원형 배지 + 팩션명 레이블
+─────────────────────────────────────────────────────────────────────────── */
+.faction-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  vertical-align: middle;
+}
+
+.faction-badge--btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  color: var(--color-text);
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.faction-badge--btn:hover {
+  border-color: var(--faction-color, var(--color-accent));
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.faction-badge-label {
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+/* ── Seed Input ──────────────────────────────────────────────────────────────
+   WaitingRoomView 호스트 전용 시드 입력 영역
+─────────────────────────────────────────────────────────────────────────── */
+.seed-input-group {
+  margin-top: 0.75rem;
+}
+
+.seed-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.seed-input-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Preview Value ───────────────────────────────────────────────────────────
+   CreateRoomView의 setup-preview 내 값 표시용 (preview-label과 쌍)
+─────────────────────────────────────────────────────────────────────────── */
+.preview-value {
+  color: var(--color-text);
+  font-size: 0.8rem;
+  flex: 1;
+}
+
+/* ── Faction Chip Color Variants ─────────────────────────────────────────────
+   FactionSelectView: className={`faction-chip faction-${faction.toLowerCase()}`}
+   각 팩션 고유 색상으로 시각적 구분 제공
+─────────────────────────────────────────────────────────────────────────── */
+
+/* 기본 팩션 (코어) */
+.faction-terrans     { border-color: #4db6ac; color: #4db6ac; }
+.faction-lantids     { border-color: #9575cd; color: #9575cd; }
+.faction-xenos       { border-color: #f06292; color: #f06292; }
+.faction-gleens      { border-color: #81c784; color: #81c784; }
+.faction-taklons     { border-color: #ff8a65; color: #ff8a65; }
+.faction-ambas       { border-color: #4fc3f7; color: #4fc3f7; }
+.faction-hadschhallas { border-color: #ffd54f; color: #ffd54f; }
+.faction-ivits       { border-color: #e57373; color: #e57373; }
+.faction-geodens     { border-color: #aed581; color: #aed581; }
+.faction-baltaks     { border-color: #ff7043; color: #ff7043; }
+.faction-firaks      { border-color: #ba68c8; color: #ba68c8; }
+.faction-bescods     { border-color: #90a4ae; color: #90a4ae; }
+.faction-nevlas      { border-color: #80deea; color: #80deea; }
+.faction-itars       { border-color: #ffb74d; color: #ffb74d; }
+
+/* 확장팩 팩션 (Lost Fleet) */
+.faction-shipwrights { border-color: #64b5f6; color: #64b5f6; }
+.faction-navigators  { border-color: #a5d6a7; color: #a5d6a7; }
+.faction-pioneers    { border-color: #ffe082; color: #ffe082; }
+.faction-explorers   { border-color: #ef9a9a; color: #ef9a9a; }
+
+/* hover 상태: 배경에 팩션 색상 은은하게 */
+.faction-terrans:hover      { background: rgba(77, 182, 172, 0.15); }
+.faction-lantids:hover      { background: rgba(149, 117, 205, 0.15); }
+.faction-xenos:hover        { background: rgba(240, 98, 146, 0.15); }
+.faction-gleens:hover       { background: rgba(129, 199, 132, 0.15); }
+.faction-taklons:hover      { background: rgba(255, 138, 101, 0.15); }
+.faction-ambas:hover        { background: rgba(79, 195, 247, 0.15); }
+.faction-hadschhallas:hover { background: rgba(255, 213, 79, 0.15); }
+.faction-ivits:hover        { background: rgba(229, 115, 115, 0.15); }
+.faction-geodens:hover      { background: rgba(174, 213, 129, 0.15); }
+.faction-baltaks:hover      { background: rgba(255, 112, 67, 0.15); }
+.faction-firaks:hover       { background: rgba(186, 104, 200, 0.15); }
+.faction-bescods:hover      { background: rgba(144, 164, 174, 0.15); }
+.faction-nevlas:hover       { background: rgba(128, 222, 234, 0.15); }
+.faction-itars:hover        { background: rgba(255, 183, 77, 0.15); }
+.faction-shipwrights:hover  { background: rgba(100, 181, 246, 0.15); }
+.faction-navigators:hover   { background: rgba(165, 214, 167, 0.15); }
+.faction-pioneers:hover     { background: rgba(255, 224, 130, 0.15); }
+.faction-explorers:hover    { background: rgba(239, 154, 154, 0.15); }

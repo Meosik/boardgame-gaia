@@ -1,0 +1,462 @@
+# Gaia Project faction data — Lost Fleet expansion always enabled
+# All 18 factions (9 pairs)
+
+[[factions]]
+id = "Terrans"
+home_planet = "Terra"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 4
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+# Not in the base rulebook's faction summary text; confirmed against
+# gaia-frontend/src/assets/faction_boards/faction_board_04a.jpg.
+[[factions.starting_track_bonuses]]
+track = "GaiaProject"
+level = 1
+
+[[factions]]
+id = "Lantids"
+home_planet = "Terra"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 4
+starting_bowl2 = 0
+starting_bowl3 = 0
+gaiaformers = 3
+# No PlanetaryInstitute bonus power token (universal is 1/round).
+planetary_institute_bonus_power_tokens = 0
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+
+[[factions]]
+id = "Xenos"
+home_planet = "Desert"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+# PlanetaryInstitute bonus is +1 QIC instead of a power token.
+planetary_institute_bonus_power_tokens = 0
+[factions.planetary_institute_bonus_resource]
+resource = "Qic"
+amount = 1
+[[factions.starting_track_bonuses]]
+track = "ArtificialIntelligence"
+level = 1
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 1
+kind = "Mine"
+
+[[factions]]
+id = "Gleens"
+home_planet = "Desert"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 0
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+# PlanetaryInstitute bonus is +1 ore instead of a power token.
+planetary_institute_bonus_power_tokens = 0
+[factions.planetary_institute_bonus_resource]
+resource = "Ore"
+amount = 1
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+# Confirmed against faction_boards/faction_board_06a.jpg.
+[[factions.starting_track_bonuses]]
+track = "Navigation"
+level = 1
+
+[[factions]]
+id = "Taklons"
+home_planet = "Swamp"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+# starting_bowl1 = 2 normal power tokens + 1 Brainstone (counts as 1 power
+# token but spends as if it were 3) — the Brainstone itself isn't modeled
+# as its own token type yet, so it's not reflected in this count.
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+
+[[factions]]
+id = "Ambas"
+home_planet = "Swamp"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+# PlanetaryInstitute bonus is +2 power tokens/round (universal is 1).
+planetary_institute_bonus_power_tokens = 2
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+# Confirmed against faction_boards/faction_board_03b.jpg.
+[[factions.starting_track_bonuses]]
+track = "Navigation"
+level = 1
+
+[[factions]]
+id = "HadschHallas"
+home_planet = "Oxide"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+[[factions.starting_track_bonuses]]
+track = "Economy"
+level = 1
+
+[[factions]]
+id = "Ivits"
+home_planet = "Oxide"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+# PlanetaryInstitute grants +1 QIC/round in addition to the universal
+# power charge and bonus power token.
+[factions.planetary_institute_bonus_resource]
+resource = "Qic"
+amount = 1
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "PlanetaryInstitute"
+
+[[factions]]
+id = "Geodens"
+home_planet = "Volcanic"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+[[factions.starting_track_bonuses]]
+track = "Terraforming"
+level = 1
+
+[[factions]]
+id = "BalTaks"
+home_planet = "Volcanic"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 0
+starting_bowl1 = 2
+starting_bowl2 = 2
+starting_bowl3 = 0
+gaiaformers = 3
+# Academy(Qic) action grants 4 credits instead of 1 QIC.
+[factions.academy_qic_action]
+resource = "Credits"
+amount = 4
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+# Confirmed against faction_boards/faction_board_02b.jpg.
+[[factions.starting_track_bonuses]]
+track = "GaiaProject"
+level = 1
+
+[[factions]]
+id = "Firaks"
+home_planet = "Titanium"
+starting_ore = 3
+starting_credits = 15
+starting_knowledge = 2
+starting_qic = 1
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+# ResearchLab base income is 2 knowledge (universal is 1); table unchanged.
+[factions.research_lab_income]
+base = 2
+table = [1, 1, 1]
+
+[[factions]]
+id = "Bescods"
+home_planet = "Titanium"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 1
+starting_qic = 1
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+# PlanetaryInstitute bonus is +2 power tokens/round (universal is 1).
+planetary_institute_bonus_power_tokens = 2
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+# Faction ability swaps TradingStation/ResearchLab income: TradingStation
+# pays knowledge, ResearchLab pays credits.
+[factions.trading_station_income]
+base = 0
+table = [1, 1, 1, 1]
+resource = "Knowledge"
+[factions.research_lab_income]
+base = 0
+table = [3, 4, 5]
+resource = "Credits"
+
+[[factions]]
+id = "Nevlas"
+home_planet = "Ice"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 2
+starting_qic = 1
+starting_bowl1 = 2
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+# Confirmed against faction_boards/faction_board_05a.jpg.
+[[factions.starting_track_bonuses]]
+track = "Science"
+level = 1
+# ResearchLab income is power, not knowledge.
+[factions.research_lab_income]
+base = 0
+table = [2, 2, 2]
+resource = "Power"
+
+[[factions]]
+id = "Itars"
+home_planet = "Ice"
+starting_ore = 5
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 4
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+# Academy(Science) gives 3 knowledge/round (universal is 2).
+academy_science_income = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+[[factions.starting_structures]]
+rel_q = 1
+rel_r = 0
+kind = "Mine"
+
+# Lost Fleet expansion factions
+#
+# `home_planet` and `starting_structures` are transcribed from the rulebook
+# (docs/GP_Exp_Rule_EN_V1_Web.pdf, p.13 "Appendix I: New Factions"): all 4
+# factions have no home planet and start on an Asteroid or Protoplanet, with
+# only 1 starting structure — Tinkeroids get their Planetary Institute,
+# the other 3 get 1 mine (placed during setup's "second stage of placement",
+# not modeled by the engine yet).
+#
+# `starting_ore`/`starting_credits`/`starting_knowledge`/`starting_qic`/
+# `starting_bowl1-3` are NOT yet confirmed against a primary source (the
+# rulebook only prints faction abilities in prose, not the numeric resource
+# bowls shown on the physical faction boards) — treat these as placeholders
+# pending a confirmed board scan, per the project's stance on unverified data
+# (see PRD "Data and rulebook reconciliation gate").
+[[factions]]
+id = "Tinkeroids"
+home_planet = "Asteroid"
+starting_ore = 4
+starting_credits = 15
+starting_knowledge = 2
+starting_qic = 1
+starting_bowl1 = 4
+starting_bowl2 = 2
+starting_bowl3 = 0
+gaiaformers = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "PlanetaryInstitute"
+# Faction board icon (docs/GP_Exp_Rule_EN_V1_Web.pdf doesn't print this in
+# prose; confirmed against gaia-frontend/src/assets/faction_boards/faction_board_09b.jpg).
+[[factions.starting_track_bonuses]]
+track = "Science"
+level = 1
+
+[[factions]]
+id = "Moweyds"
+home_planet = "ProtoPlanet"
+starting_ore = 6
+starting_credits = 15
+starting_knowledge = 5
+starting_qic = 2
+starting_bowl1 = 4
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+# Confirmed against faction_boards/faction_board_08b.jpg.
+[[factions.starting_track_bonuses]]
+track = "GaiaProject"
+level = 1
+
+[[factions]]
+id = "SpaceGiants"
+home_planet = "ProtoPlanet"
+starting_ore = 6
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 4
+starting_bowl2 = 4
+starting_bowl3 = 0
+gaiaformers = 3
+# PlanetaryInstitute charges 6 power/round (universal is 4).
+planetary_institute_charge = 6
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+# Confirmed against faction_boards/faction_board_08a.jpg.
+[[factions.starting_track_bonuses]]
+track = "Navigation"
+level = 1
+
+[[factions]]
+id = "Darkanians"
+home_planet = "Asteroid"
+starting_ore = 7
+starting_credits = 15
+starting_knowledge = 3
+starting_qic = 1
+starting_bowl1 = 4
+starting_bowl2 = 2
+starting_bowl3 = 0
+gaiaformers = 3
+[[factions.starting_structures]]
+rel_q = 0
+rel_r = 0
+kind = "Mine"
+# Confirmed against faction_boards/faction_board_09a.jpg.
+[[factions.starting_track_bonuses]]
+track = "Navigation"
+level = 1
+[[factions.starting_track_bonuses]]
+track = "Economy"
+level = 1

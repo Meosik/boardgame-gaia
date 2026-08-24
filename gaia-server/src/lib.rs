@@ -1,0 +1,11 @@
+pub mod coordinator;
+pub mod error;
+pub mod event_bus;
+pub mod handlers;
+pub mod messages;
+pub mod protocol;
+pub mod repository;
+pub mod room;
+pub mod router;
+pub mod services;
+pub mod state;

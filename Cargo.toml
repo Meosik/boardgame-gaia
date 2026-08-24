@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "gaia-protocol",
+    "gaia-engine",
+    "gaia-server",
+]
+resolver = "2"

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.claude
+.omc
+.omx
+target
+gaia-frontend/node_modules
+gaia-frontend/dist
+**/.env
+**/.env.*
+!**/.env.example
+aidlc-docs
+assets
+docs
+*.py
+svg_preview.html
+setup_team.sh

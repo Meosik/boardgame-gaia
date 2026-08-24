@@ -1,0 +1,40 @@
+# Rust
+/target/
+
+# Node
+/gaia-frontend/node_modules/
+/gaia-frontend/dist/
+*.tsbuildinfo
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Editors and operating-system files
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Local agent/runtime state
+/.claude/
+/.omc/
+/.omh/
+/.omx/*
+!/.omx/context/
+!/.omx/context/**
+!/.omx/interviews/
+!/.omx/interviews/**
+!/.omx/plans/
+!/.omx/plans/**
+!/.omx/specs/
+!/.omx/specs/**
+/docs/.omc/
+/gaia-frontend/.omc/
+
+# Local test output
+coverage/
+test-results/
+playwright-report/
