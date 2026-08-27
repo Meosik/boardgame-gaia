@@ -66,6 +66,7 @@ fn passing_scores_owned_booster_and_swaps_with_available_pool() {
                     kind: StructureType::Mine,
                 })
                 .collect();
+            player.artifact_mines = vec![PlanetType::ProtoPlanet, PlanetType::Asteroid];
         })
         .with_player(1)
         .with_phase(GamePhase::ActionPhase { active_player: 0 })
@@ -82,7 +83,7 @@ fn passing_scores_owned_booster_and_swaps_with_available_pool() {
     .unwrap_or_else(|error| panic!("{error}"));
 
     let player = state.player(0).unwrap_or_else(|| panic!("player"));
-    assert_eq!(player.vp, 13);
+    assert_eq!(player.vp, 15);
     assert_eq!(player.booster, Some(Booster(8)));
     assert!(state.boosters.contains(&Booster(3)));
     assert!(!state.boosters.contains(&Booster(8)));
@@ -90,7 +91,7 @@ fn passing_scores_owned_booster_and_swaps_with_available_pool() {
         event,
         GameEvent::VpAwarded {
             player: 0,
-            amount: 3,
+            amount: 5,
             reason: VpReason::RoundBooster { booster_id: 3 }
         }
     )));

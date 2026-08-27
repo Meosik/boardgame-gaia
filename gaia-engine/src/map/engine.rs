@@ -665,6 +665,7 @@ impl MapEngine {
                     spent_gaia_formers: 0,
                 },
                 structures: Vec::new(),
+                artifact_mines: Vec::new(),
                 research_tracks: ResearchTracks::new(),
                 vp: 10,
                 setup_bid_vp: 0,

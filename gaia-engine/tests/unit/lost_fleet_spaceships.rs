@@ -1,11 +1,12 @@
 use gaia_engine::game_state::{
-    ArtifactId, BoardState, BrainstoneLocation, FactionId, FederationToken, GamePhase, Hex,
-    HexCoord, PlacedStructure, Planet, PlanetType, ResearchTrack, Sector, SpaceshipBoard,
-    SpaceshipId, Structure, StructureType, TechTile,
+    AdvancedTechTile, ArtifactId, BoardState, BrainstoneLocation, FactionId, FederationToken,
+    FinalScoringCondition, GamePhase, Hex, HexCoord, PlacedStructure, Planet, PlanetType,
+    ResearchTrack, RoundTile, Sector, SpaceshipBoard, SpaceshipId, Structure, StructureType,
+    TechTile,
 };
 use gaia_engine::rules::actions::{GameAction, TechTileRef};
 use gaia_engine::test_utils::builders::GameStateBuilder;
-use gaia_engine::RuleEngine;
+use gaia_engine::{RuleEngine, ScoringEngine};
 use std::collections::HashMap;
 
 // Lost Fleet expansion (`docs/GP_Exp_Rule_EN_V1_Web.pdf`), "11) Action: Explore a Lost Fleet
@@ -410,6 +411,7 @@ fn examine_artifact_succeeds() {
     state.players[0].resources.power.bowl2 = 4;
     state.players[0].resources.power.bowl3 = 0;
     let vp_before = state.players[0].vp;
+    let structures_before = state.players[0].structures.len();
 
     RuleEngine::apply_action(
         &mut state,
@@ -428,8 +430,20 @@ fn examine_artifact_succeeds() {
     assert_eq!(state.players[0].resources.power.bowl1, 0);
     assert_eq!(state.players[0].resources.power.bowl2, 2);
     assert_eq!(state.players[0].resources.power.bowl3, 0);
-    // Artifact id 8 (default test pool) = "FlatVp7": immediately receive 7 VP.
-    assert_eq!(state.players[0].vp, vp_before + 7);
+    // Artifact 8 grants 7 VP and counts as a current Build-a-Mine action, so the fixture's
+    // round-1 BuildMine tile grants another 2 VP. The mine is virtual: it counts for objectives
+    // and planet types without adding a board structure or consuming a physical piece.
+    assert_eq!(state.players[0].vp, vp_before + 9);
+    assert_eq!(state.players[0].structures.len(), structures_before);
+    assert_eq!(state.players[0].artifact_mines, [PlanetType::ProtoPlanet]);
+    assert_eq!(
+        ScoringEngine::final_scoring_metric(&state, 0, &FinalScoringCondition::MostBuildings,),
+        structures_before as u32 + 1
+    );
+    assert_eq!(
+        ScoringEngine::final_scoring_metric(&state, 0, &FinalScoringCondition::MostPlanetTypes,),
+        1
+    );
     let Some(board) = state
         .spaceship_boards
         .iter()
@@ -967,11 +981,12 @@ fn artifact_11_grants_3_vp_plus_1_vp_per_colonized_planet_type() {
 }
 
 #[test]
-fn artifact_12_grants_7_vp() {
+fn artifact_12_grants_7_vp_and_counts_as_a_virtual_asteroid_mine() {
     let mut state = base_state();
     state.players[0].explored_ships.push(0);
     set_artifact_pool(&mut state, &[12]);
     let vp_before = state.players[0].vp;
+    let structures_before = state.players[0].structures.len();
 
     RuleEngine::apply_action(
         &mut state,
@@ -986,9 +1001,68 @@ fn artifact_12_grants_7_vp() {
     )
     .unwrap_or_else(|e| panic!("examine artifact should succeed: {e}"));
 
-    // The token's "colonize 1 Asteroid" clause isn't modeled yet (see `ArtifactEffect`'s doc
-    // comment) — only the flat VP is applied.
-    assert_eq!(state.players[0].vp, vp_before + 7);
+    assert_eq!(state.players[0].vp, vp_before + 9);
+    assert_eq!(state.players[0].structures.len(), structures_before);
+    assert_eq!(state.players[0].artifact_mines, [PlanetType::Asteroid]);
+    assert_eq!(
+        ScoringEngine::final_scoring_metric(&state, 0, &FinalScoringCondition::MostAsteroids),
+        1
+    );
+    assert_eq!(
+        ScoringEngine::final_scoring_metric(&state, 0, &FinalScoringCondition::MostBuildings,),
+        structures_before as u32 + 1
+    );
+}
+
+#[test]
+fn artifact_virtual_mine_triggers_mine_and_new_type_scoring_but_not_sector_scoring() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(0);
+    state.players[0]
+        .advanced_tech_tiles
+        .push(AdvancedTechTile(4)); // +3 VP whenever a Mine is built
+    state.round_tiles[0] = RoundTile::from_id(10); // +3 VP for a new planet type
+    set_artifact_pool(&mut state, &[8]);
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::ExamineArtifact {
+            artifact: ArtifactId(8),
+            copy_federation_token_kind: None,
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+            bonus_research_track: None,
+        },
+    )
+    .unwrap_or_else(|e| panic!("virtual Protoplanet mine should succeed: {e}"));
+
+    // 7 VP artifact + 3 VP new planet type round tile + 3 VP advanced Mine tech tile.
+    assert_eq!(state.players[0].vp, vp_before + 13);
+
+    let mut no_sector_state = base_state();
+    no_sector_state.players[0].explored_ships.push(0);
+    no_sector_state.round_tiles[0] = RoundTile::from_id(11); // new sector only
+    set_artifact_pool(&mut no_sector_state, &[12]);
+    let no_sector_vp_before = no_sector_state.players[0].vp;
+    RuleEngine::apply_action(
+        &mut no_sector_state,
+        0,
+        GameAction::ExamineArtifact {
+            artifact: ArtifactId(12),
+            copy_federation_token_kind: None,
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+            bonus_research_track: None,
+        },
+    )
+    .unwrap_or_else(|e| panic!("virtual Asteroid mine should succeed: {e}"));
+    assert_eq!(
+        no_sector_state.players[0].vp,
+        no_sector_vp_before + 7,
+        "a coordinate-less artifact mine belongs to no sector"
+    );
 }
 
 #[test]

@@ -1989,11 +1989,14 @@ fn tech_tile_counter_value(
                     .is_some_and(|planet| planet.is_gaia_formed)
             })
             .count() as u32,
-        TechTileCounter::MinesOnBoard => player
-            .structures
-            .iter()
-            .filter(|s| s.kind == StructureType::Mine)
-            .count() as u32,
+        TechTileCounter::MinesOnBoard => {
+            player
+                .structures
+                .iter()
+                .filter(|s| s.kind == StructureType::Mine)
+                .count() as u32
+                + player.artifact_mines.len() as u32
+        }
         TechTileCounter::LargeBuildingsOwned => player
             .structures
             .iter()
@@ -2012,20 +2015,27 @@ fn tech_tile_counter_value(
             .iter()
             .filter(|s| s.kind == StructureType::ResearchLab)
             .count() as u32,
-        TechTileCounter::AsteroidsColonized => player
-            .structures
-            .iter()
-            .filter(|s| {
-                state
-                    .board
-                    .hexes
-                    .get(&s.hex)
-                    .and_then(|hex| hex.planet.as_ref())
-                    .is_some_and(|planet| {
-                        !planet.is_gaia_formed && planet.planet_type == PlanetType::Asteroid
-                    })
-            })
-            .count() as u32,
+        TechTileCounter::AsteroidsColonized => {
+            player
+                .structures
+                .iter()
+                .filter(|s| {
+                    state
+                        .board
+                        .hexes
+                        .get(&s.hex)
+                        .and_then(|hex| hex.planet.as_ref())
+                        .is_some_and(|planet| {
+                            !planet.is_gaia_formed && planet.planet_type == PlanetType::Asteroid
+                        })
+                })
+                .count() as u32
+                + player
+                    .artifact_mines
+                    .iter()
+                    .filter(|planet_type| **planet_type == PlanetType::Asteroid)
+                    .count() as u32
+        }
     }
 }
 
@@ -4475,8 +4485,11 @@ fn validate_examine_artifact(
 /// A drawn Artifact's effect (expansion rulebook Appendix VII, p.15). All 13 physical tokens'
 /// effects are confirmed from individual photos. Unknown ids fall back to `FlatVp7` as the
 /// closest-confirmed default rather than a made-up amount.
-#[derive(PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum ArtifactEffect {
+    /// Defensive fallback for an unknown artifact id: retain the historical 7 VP behavior without
+    /// inventing a virtual planet type.
+    FlatVp7,
     /// "Immediately and only once receive 2 victory points for each Deep Space sector in which
     /// you have colonized at least 1 planet." (`gaia-frontend/src/assets/artifacts/artifact_01`)
     VpPerDeepSpaceSector,
@@ -4496,10 +4509,10 @@ enum ArtifactEffect {
     CreditsThreeAndOreThree,
     /// "Immediately and only once receive 3 knowledge and 1 QIC." (`artifact_07`)
     KnowledgeThreeAndQicOne,
-    /// "Immediately and only once receive 7 victory points." (`artifact_08`, filename confirms
-    /// the rulebook's fuller text: this also counts as a Build a Mine action for colonizing an
-    /// asteroid/protoplanet — that phantom-mine part isn't modeled yet, VP-only for now.)
-    FlatVp7,
+    /// "Immediately and only once receive 7 victory points." (`artifact_08`). It also counts as
+    /// building a coordinate-less Protoplanet mine for every scoring/objective purpose, but not
+    /// as colonizing a sector and without the ordinary +6 VP Protoplanet build reward.
+    FlatVp7PlusProtoPlanetMine,
     /// "Immediately and only once receive 5 credits and 2 ore." (`artifact_09`)
     CreditsFiveAndOreTwo,
     /// "Immediately and only once receive 3 victory points, plus 1 additional victory point for
@@ -4508,12 +4521,10 @@ enum ArtifactEffect {
     /// exactly the same "distinct colonized planet types" count used there.
     FlatVp3PlusVpPerColonizedPlanetType,
     /// "Immediately and only once receive 7 victory points." (`artifact_12`) Per the user's
-    /// direct description this token's full text also grants "1 Asteroid" — i.e. a second
-    /// phantom Build-a-Mine-on-an-Asteroid, distinct from `FlatVp7`'s own unmodeled mine clause.
-    /// That part needs a target hex and Gaiaformer availability the "Examine an Artifact" action
-    /// (no coordinate parameter) doesn't have anywhere to source from, so — matching `FlatVp7`'s
-    /// existing precedent — only the VP is applied for now.
-    FlatVp7PlusAsteroidColony,
+    /// direct description this token's full text also grants a coordinate-less Asteroid mine for
+    /// every scoring/objective purpose. It consumes no Gaiaformer or physical Mine and belongs to
+    /// no sector or federation.
+    FlatVp7PlusAsteroidMine,
     /// "Immediately and only once receive 3 victory points for each research area in which you
     /// have reached at least level 3." (`artifact_13`)
     VpPerResearchTrackAtLevel3Plus,
@@ -4536,11 +4547,11 @@ fn artifact_effect(id: ArtifactId) -> ArtifactEffect {
         5 => ArtifactEffect::VpPerScienceLevel,
         6 => ArtifactEffect::CreditsThreeAndOreThree,
         7 => ArtifactEffect::KnowledgeThreeAndQicOne,
-        8 => ArtifactEffect::FlatVp7,
+        8 => ArtifactEffect::FlatVp7PlusProtoPlanetMine,
         9 => ArtifactEffect::CreditsFiveAndOreTwo,
         10 => ArtifactEffect::CopyFederationEffect,
         11 => ArtifactEffect::FlatVp3PlusVpPerColonizedPlanetType,
-        12 => ArtifactEffect::FlatVp7PlusAsteroidColony,
+        12 => ArtifactEffect::FlatVp7PlusAsteroidMine,
         13 => ArtifactEffect::VpPerResearchTrackAtLevel3Plus,
         _ => ArtifactEffect::FlatVp7, // fallback for any uncatalogued id
     }
@@ -4630,6 +4641,13 @@ fn apply_examine_artifact(
         );
         let tracks_at_level_3_plus = count_research_tracks_at_level_3_plus(state, player_id);
         let effect = artifact_effect(artifact);
+        let artifact_mine = match effect {
+            ArtifactEffect::FlatVp7PlusProtoPlanetMine => Some(PlanetType::ProtoPlanet),
+            ArtifactEffect::FlatVp7PlusAsteroidMine => Some(PlanetType::Asteroid),
+            _ => None,
+        };
+        let is_new_planet_type = artifact_mine
+            .is_some_and(|planet_type| !has_colonized_planet_type(state, player_id, planet_type));
 
         if effect == ArtifactEffect::CopyFederationEffect {
             if let Some(token_kind) = copy_federation_token_kind {
@@ -4673,6 +4691,12 @@ fn apply_examine_artifact(
                 ArtifactEffect::FlatVp7 => {
                     player.vp = player.vp.saturating_add(7);
                 }
+                ArtifactEffect::FlatVp7PlusProtoPlanetMine => {
+                    player.vp = player.vp.saturating_add(7);
+                    if !player.artifact_mines.contains(&PlanetType::ProtoPlanet) {
+                        player.artifact_mines.push(PlanetType::ProtoPlanet);
+                    }
+                }
                 ArtifactEffect::CreditsFiveAndOreTwo => {
                     add_resource(player, ResourceKind::Credits, 5);
                     add_resource(player, ResourceKind::Ore, 2);
@@ -4681,14 +4705,39 @@ fn apply_examine_artifact(
                     let vp = 3 + colonized_planet_types as i32;
                     player.vp = player.vp.saturating_add(vp);
                 }
-                ArtifactEffect::FlatVp7PlusAsteroidColony => {
+                ArtifactEffect::FlatVp7PlusAsteroidMine => {
                     player.vp = player.vp.saturating_add(7);
+                    if !player.artifact_mines.contains(&PlanetType::Asteroid) {
+                        player.artifact_mines.push(PlanetType::Asteroid);
+                    }
                 }
                 ArtifactEffect::VpPerResearchTrackAtLevel3Plus => {
                     let vp = tracks_at_level_3_plus as i32 * 3;
                     player.vp = player.vp.saturating_add(vp);
                 }
                 ArtifactEffect::CopyFederationEffect => unreachable!("handled above"),
+            }
+        }
+        if artifact_mine.is_some() {
+            events.extend(check_round_tile_bonus(
+                state,
+                player_id,
+                &RoundCondition::BuildMine,
+                1,
+            ));
+            events.extend(check_tech_tile_event_bonus(
+                state,
+                player_id,
+                &RoundCondition::BuildMine,
+                1,
+            ));
+            if is_new_planet_type {
+                events.extend(check_round_tile_bonus(
+                    state,
+                    player_id,
+                    &RoundCondition::BuildMineOnNewPlanetType,
+                    1,
+                ));
             }
         }
         events.push(GameEvent::ArtifactExamined {
@@ -6210,11 +6259,14 @@ fn round_booster_pass_vp(state: &GameState, player_id: PlayerId, booster_id: u8)
             .iter()
             .filter(|structure| structure.kind == StructureType::ResearchLab)
             .count() as u32,
-        3 => player
-            .structures
-            .iter()
-            .filter(|structure| structure.kind == StructureType::Mine)
-            .count() as u32,
+        3 => {
+            player
+                .structures
+                .iter()
+                .filter(|structure| structure.kind == StructureType::Mine)
+                .count() as u32
+                + player.artifact_mines.len() as u32
+        }
         4 => player
             .structures
             .iter()
@@ -7965,28 +8017,29 @@ fn has_colonized_planet_type(
     let Some(player) = state.player(player_id) else {
         return false;
     };
-    player.structures.iter().any(|structure| {
-        state
-            .board
-            .hexes
-            .get(&structure.hex)
-            .and_then(|hex| hex.planet.as_ref())
-            .is_some_and(|planet| {
-                let colonized_type = if planet.is_gaia_formed {
-                    PlanetType::Gaia
-                } else {
-                    planet.planet_type
-                };
-                colonized_type == target_type
-            })
-    })
+    player.artifact_mines.contains(&target_type)
+        || player.structures.iter().any(|structure| {
+            state
+                .board
+                .hexes
+                .get(&structure.hex)
+                .and_then(|hex| hex.planet.as_ref())
+                .is_some_and(|planet| {
+                    let colonized_type = if planet.is_gaia_formed {
+                        PlanetType::Gaia
+                    } else {
+                        planet.planet_type
+                    };
+                    colonized_type == target_type
+                })
+        })
 }
 
 fn colonized_planet_types(state: &GameState, player_id: PlayerId) -> Vec<PlanetType> {
     let Some(player) = state.player(player_id) else {
         return Vec::new();
     };
-    let mut types = Vec::new();
+    let mut types = player.artifact_mines.clone();
     for structure in &player.structures {
         let Some(planet) = state
             .board

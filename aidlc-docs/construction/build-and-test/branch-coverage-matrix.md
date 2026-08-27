@@ -70,9 +70,9 @@ Every currently implemented `GameAction` variant is referenced by executable eng
 
 Failure families exercised across these tests include wrong phase/turn/faction, missing prerequisite building/tile/ship, unavailable or reused shared slot, insufficient resources, invalid/missing target, occupied/out-of-range target, exhausted supply, duplicate ownership, maxed track, invalid follow-up choice, and once-per-round/game reuse. The detailed executable cases live under `gaia-engine/tests/unit`, `gaia-engine/tests/property`, and the top-level engine integration tests.
 
-## Explicit non-branches / known model limits
+## Explicit boundaries / known model limits
 
-- Artifact 8's phantom asteroid/protoplanet mine and artifact 12's asteroid-colonization clause are documented as not modeled because the current `ExamineArtifact` command has no placement coordinate. They therefore have no reachable success branch in the current API and are not falsely counted as covered.
+- Artifacts 8 and 12 are coordinate-less virtual Protoplanet/Asteroid mines. They trigger current Build-a-Mine and new-planet-type scoring, count toward mine/building/planet-type/Asteroid objectives, and deliberately count toward no sector, federation, physical-piece supply, or income row.
 - Browser pixel automation is not installed. Visual asset correctness is guarded by component/image mapping tests and production build, while the prior real multi-tab manual session is documented in `README.md`.
 - Infrastructure outages (database unavailable, port unavailable, process killed) are operational failures rather than deterministic application response branches in this matrix.
 

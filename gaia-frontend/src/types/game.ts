@@ -103,6 +103,8 @@ export interface PlayerState {
   faction: FactionId | null;
   resources: Resources;
   structures: Structure[];
+  /** Artifact 8/12 virtual mines: scoring/objective mines without a board coordinate or piece. */
+  artifact_mines?: PlanetType[];
   research_tracks: ResearchTracks;
   vp: number;
   /** Setup auction cost, deducted only when final scoring is calculated. */

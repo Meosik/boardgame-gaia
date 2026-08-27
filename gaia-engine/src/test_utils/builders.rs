@@ -120,6 +120,7 @@ pub fn minimal_player(player_id: u8) -> PlayerState {
             spent_gaia_formers: 0,
         },
         structures: vec![],
+        artifact_mines: vec![],
         research_tracks: ResearchTracks::new(),
         vp: 10,
         setup_bid_vp: 0,

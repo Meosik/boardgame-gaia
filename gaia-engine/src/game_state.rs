@@ -454,6 +454,11 @@ pub struct PlayerState {
     pub faction: Option<FactionId>,
     pub resources: Resources,
     pub structures: Vec<Structure>,
+    /// Artifact 8/12 count as mines on a Protoplanet/Asteroid for every scoring and objective
+    /// purpose, but have no board coordinate, consume no physical mine, reveal no income space,
+    /// and belong to no sector or federation (Lost Fleet Appendix VII).
+    #[serde(default)]
+    pub artifact_mines: Vec<PlanetType>,
     pub research_tracks: ResearchTracks,
     pub vp: i32,
     /// VP promised during setup bidding. It remains separate from `vp` until

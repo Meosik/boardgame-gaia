@@ -219,15 +219,18 @@ fn metric_for_condition(
                 .iter()
                 .filter(|structure| is_scoring_building(structure.kind))
                 .count() as u32;
-            tracked + untracked_lost_planet_mine(state, player_id)
+            tracked
+                + untracked_lost_planet_mine(state, player_id)
+                + player.artifact_mines.len() as u32
         }
         FinalScoringCondition::MostPlanetTypes => {
-            let types: HashSet<PlanetType> = colonized_planets(state, player_id)
+            let mut types: HashSet<PlanetType> = colonized_planets(state, player_id)
                 .into_iter()
                 .map(|(_, planet)| {
                     normalized_planet_type(planet.planet_type, planet.is_gaia_formed)
                 })
                 .collect();
+            types.extend(player.artifact_mines.iter().copied());
             types.len() as u32
         }
         FinalScoringCondition::MostGaiaPlanets => colonized_planets(state, player_id)
@@ -262,10 +265,17 @@ fn metric_for_condition(
         FinalScoringCondition::MostDeepSpaceSectors => {
             occupied_sector_count(state, player_id, crate::data::SectorCategory::DeepSpace)
         }
-        FinalScoringCondition::MostAsteroids => colonized_planets(state, player_id)
-            .into_iter()
-            .filter(|(_, planet)| planet.planet_type == PlanetType::Asteroid)
-            .count() as u32,
+        FinalScoringCondition::MostAsteroids => {
+            colonized_planets(state, player_id)
+                .into_iter()
+                .filter(|(_, planet)| planet.planet_type == PlanetType::Asteroid)
+                .count() as u32
+                + player
+                    .artifact_mines
+                    .iter()
+                    .filter(|planet_type| **planet_type == PlanetType::Asteroid)
+                    .count() as u32
+        }
         FinalScoringCondition::GreatestDistancePiAcademy => {
             let planetary_institutes: Vec<HexCoord> = player
                 .structures
