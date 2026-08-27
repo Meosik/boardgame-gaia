@@ -1,10 +1,12 @@
 import { researchBoardImageSrc } from '../../assets/researchBoardImage';
 import { FACTION_VISUAL } from '../GameLobby/FactionBadge';
 import { SatelliteToken } from './SatelliteToken';
-import type { PlayerState, ResearchTracks } from '../../types/game';
+import { advancedTechTileImageSrc, standardTechTileImageSrc } from '../../assets/techTileImages';
+import type { PlayerState, ResearchBoard as ResearchBoardState, ResearchTracks } from '../../types/game';
 
 interface Props {
   players: PlayerState[];
+  board?: ResearchBoardState;
 }
 
 /**
@@ -35,13 +37,60 @@ const LEVEL_Y_PCT: Record<number, number> = {
   0: 53.74,
 };
 
-export function ResearchBoard({ players }: Props) {
+const STANDARD_TECH_SLOTS = [
+  { x: 8.33, y: 70.5 },
+  { x: 25.0, y: 70.5 },
+  { x: 41.67, y: 70.5 },
+  { x: 58.33, y: 70.5 },
+  { x: 75.0, y: 70.5 },
+  { x: 91.67, y: 70.5 },
+  { x: 16.67, y: 83.4 },
+  { x: 50.0, y: 83.4 },
+  { x: 83.33, y: 83.4 },
+];
+
+const ADVANCED_TECH_SLOTS = [8.33, 25.0, 41.67, 58.33, 75.0, 91.67];
+
+export function ResearchBoard({ players, board }: Props) {
   const active = players.filter((p) => p.faction);
 
   return (
     <section className="research-board" aria-label="연구판">
       <div className="research-board-image-wrap">
         <img className="research-board-image" src={researchBoardImageSrc()} alt="연구판" />
+        <img
+          className="research-board-qic-overlay"
+          src="/assets/tts/lost_fleet_qic_board_overlay__protoplanet_asteroid_terraforming_rule.jpg"
+          alt="Lost Fleet 식민화 오버레이 — 기존 Q.I.C. 액션 3개 폐쇄"
+        />
+        {board?.tech_tile_slots?.map((tileId, index) => {
+          const slot = STANDARD_TECH_SLOTS[index];
+          const src = tileId === null ? undefined : standardTechTileImageSrc(tileId);
+          if (!slot || !src) return null;
+          return (
+            <img
+              key={`standard-tech-${index}-${tileId}`}
+              className="research-board-standard-tech"
+              style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+              src={src}
+              alt={`표준 기술 타일 ${tileId}`}
+            />
+          );
+        })}
+        {board?.advanced_tech_tiles.map((tileId, index) => {
+          const x = ADVANCED_TECH_SLOTS[index];
+          const src = tileId === null ? undefined : advancedTechTileImageSrc(tileId);
+          if (x === undefined || !src) return null;
+          return (
+            <img
+              key={`advanced-tech-${index}-${tileId}`}
+              className="research-board-advanced-tech"
+              style={{ left: `${x}%`, top: '13.2%' }}
+              src={src}
+              alt={`고급 기술 타일 ${tileId}`}
+            />
+          );
+        })}
         {TRACKS.map(({ key, xPct }) =>
           active.map((player) => {
             const level = Math.max(0, Math.min(5, player.research_tracks[key]));

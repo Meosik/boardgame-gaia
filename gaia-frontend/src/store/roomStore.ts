@@ -95,14 +95,20 @@ export const useRoomStore = create<RoomStore>()(
           const { roomCode, sessionToken } = get();
           if (!roomCode || !sessionToken) return;
           const setup = await api.regenerateSetup(roomCode, sessionToken, seed);
-          set({ gameSetup: setup });
+          set((state) => ({
+            gameSetup: setup,
+            lobbyPlayers: state.lobbyPlayers.map((player) => ({ ...player, ready: false })),
+          }));
         },
 
         async fetchPreviewBoard() {
-          const { roomCode } = get();
+          const { roomCode, gameSetup } = get();
           if (!roomCode) return;
+          const expectedSeed = gameSetup?.seed;
           const previewBoard = await api.getPreviewBoard(roomCode);
-          set({ previewBoard });
+          if (get().gameSetup?.seed === expectedSeed && previewBoard.seed === expectedSeed) {
+            set({ previewBoard });
+          }
         },
 
         setRoomInfo(info) {

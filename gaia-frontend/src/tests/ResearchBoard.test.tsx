@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ResearchBoard } from '../components/PlayerDashboard/ResearchBoard';
-import type { PlayerState } from '../types/game';
+import type { PlayerState, ResearchBoard as ResearchBoardState } from '../types/game';
 
 function mockPlayer(overrides: Partial<PlayerState> = {}): PlayerState {
   return {
@@ -36,6 +36,22 @@ function mockPlayer(overrides: Partial<PlayerState> = {}): PlayerState {
 }
 
 describe('ResearchBoard', () => {
+  const board: ResearchBoardState = {
+    tracks: {} as ResearchBoardState['tracks'],
+    tech_tiles: [],
+    tech_tile_slots: [2, 3, 4, 5, 6, 7, 8, 9, 10],
+    advanced_tech_tiles: [1, 2, 3, 4, 5, 6],
+    federation_tokens: [],
+  };
+
+  it('lays out all starting Tech tiles and covers the three obsolete Q.I.C. actions', () => {
+    render(<ResearchBoard players={[]} board={board} />);
+
+    expect(screen.getAllByAltText(/표준 기술 타일/)).toHaveLength(9);
+    expect(screen.getAllByAltText(/고급 기술 타일/)).toHaveLength(6);
+    expect(screen.getByAltText(/기존 Q.I.C. 액션 3개 폐쇄/)).toBeInTheDocument();
+  });
+
   it('renders the shared board image and one token per player per track', () => {
     const players = [
       mockPlayer({ player_id: 0, nickname: 'P0', faction: 'Terrans' }),

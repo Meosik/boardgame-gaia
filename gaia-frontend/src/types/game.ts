@@ -206,6 +206,8 @@ export interface SpaceshipBoard {
   explorers: (PlayerId | null)[];
   /** Twilight only — remaining Artifact ids available to draw via "Examine an Artifact". */
   artifact_pool: number[];
+  /** Lost Fleet Standard Tech pile on this ship (four identical copies at setup). */
+  tech_tiles?: number[];
   /** The ship's own Federation token (ids 8-11, `FederationTokenChoice.Spaceship`) — `null` once
    * claimed by a player who explored this ship. */
   federation_token: number | null;
@@ -221,6 +223,7 @@ export interface TrackState {
 export interface ResearchBoard {
   tracks: Record<ResearchTrack, TrackState>;
   tech_tiles: number[];
+  tech_tile_slots?: (number | null)[];
   advanced_tech_tiles: (number | null)[];
   federation_tokens: number[];
 }
@@ -402,6 +405,7 @@ export interface GameSetup {
   boosters: number[];
   final_scoring: FinalScoringTile[];
   tech_tile_ids: number[];
+  tech_tile_slot_ids?: number[];
   sector_layout: SectorPlacement[];
   deep_space_layout: SectorPlacement[];
   seed: string;
@@ -411,10 +415,12 @@ export interface GameSetup {
  * the game started right now, computed read-only (never mutates room state) so the waiting room
  * can show the randomized layout, and let the host reroll it, before anyone readies up. */
 export interface PreviewBoard {
+  seed: string;
   board: BoardState;
   round_tiles: RoundTile[];
   final_scoring_tiles: FinalScoringTile[];
   spaceship_boards: SpaceshipBoard[];
+  research_board?: ResearchBoard;
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────

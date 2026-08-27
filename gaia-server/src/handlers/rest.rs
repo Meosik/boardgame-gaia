@@ -224,10 +224,12 @@ pub async fn preview_board(
     let state = MapEngine::init_game_state(&room_code, &seed, &players, &setup);
 
     Ok(Json(serde_json::json!({
+        "seed": seed,
         "board": state.board,
         "round_tiles": state.round_tiles,
         "final_scoring_tiles": state.final_scoring_tiles,
         "spaceship_boards": state.spaceship_boards,
+        "research_board": state.research_board,
     })))
 }
 

@@ -18,18 +18,17 @@ interface Props {
  * matching dial number 1-6), and the 2 Final Scoring tile slots sit in the gray panels below.
  */
 const ROUND_SLOTS_PCT = [
-  { x: 38.6, y: 45.81, rotation: -68 },
-  { x: 42.2, y: 36.1, rotation: -50 },
-  { x: 48.16, y: 34.87, rotation: -16 },
-  { x: 54.95, y: 35.02, rotation: 9 },
-  { x: 60.7, y: 37.1, rotation: 40 },
-  { x: 66.5, y: 46.45, rotation: 61 },
+  { x: 28.0, y: 41.0, rotation: -63 },
+  { x: 40.0, y: 29.0, rotation: -43 },
+  { x: 49.1, y: 21.0, rotation: -15 },
+  { x: 60.4, y: 21.0, rotation: 15 },
+  { x: 70.4, y: 29.0, rotation: 43 },
+  { x: 78.6, y: 41.0, rotation: 63 },
 ];
 const FINAL_SLOTS_PCT = [
-  { x: 69.39, y: 56.35 },
-  { x: 69.39, y: 75.6 },
+  { x: 71.35, y: 55.9 },
+  { x: 71.35, y: 75.0 },
 ];
-const ROTATED_FINAL_TILE_IDS = new Set([2, 6, 9]);
 
 export function ScoringBoard({ roundTiles, finalScoringTiles, currentRound }: Props) {
   return (
@@ -47,21 +46,17 @@ export function ScoringBoard({ roundTiles, finalScoringTiles, currentRound }: Pr
           return (
             <div
               key={`round-${round}`}
-              className="scoring-board-round-anchor"
+              className={`scoring-board-tile scoring-board-tile--round ${passed ? 'scoring-board-tile--flipped' : ''}`}
               style={{
-                transformOrigin: `${x}% ${y}%`,
-                transform: `rotate(${rotation}deg)`,
+                left: `${x}%`,
+                top: `${y}%`,
+                transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
               }}
+              aria-label={`라운드 ${round} 점수 타일${passed ? ' (완료됨)' : ''}`}
             >
-              <div
-                className={`scoring-board-tile scoring-board-tile--round ${passed ? 'scoring-board-tile--flipped' : ''}`}
-                style={{ left: `${x}%`, top: `${y}%` }}
-                aria-label={`라운드 ${round} 점수 타일${passed ? ' (완료됨)' : ''}`}
-              >
-                <div className="scoring-board-tile-inner">
-                  <img className="scoring-board-tile-face scoring-board-tile-front" src={src} alt={`라운드 ${round}`} />
-                  <div className="scoring-board-tile-face scoring-board-tile-back" />
-                </div>
+              <div className="scoring-board-tile-inner">
+                <img className="scoring-board-tile-face scoring-board-tile-front" src={src} alt={`라운드 ${round}`} />
+                <div className="scoring-board-tile-face scoring-board-tile-back" />
               </div>
             </div>
           );
@@ -71,7 +66,6 @@ export function ScoringBoard({ roundTiles, finalScoringTiles, currentRound }: Pr
           if (!slot) return null;
           const src = finalScoringTileImageSrc(tile.id);
           if (!src) return null;
-          const usesRotatedRawScan = ROTATED_FINAL_TILE_IDS.has(tile.id);
           return (
             <div
               key={`final-${tile.id}`}
@@ -79,7 +73,7 @@ export function ScoringBoard({ roundTiles, finalScoringTiles, currentRound }: Pr
               style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
             >
               <img
-                className={`scoring-board-final-image ${usesRotatedRawScan ? 'scoring-board-final-image--rotated-source' : ''}`}
+                className="scoring-board-final-image"
                 src={src}
                 alt={`게임 종료 점수 타일 ${index + 1}`}
               />

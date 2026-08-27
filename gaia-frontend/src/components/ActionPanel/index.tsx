@@ -517,6 +517,14 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
     Partial<Record<FreeActionKind, number>>
   >({});
   const currentPlayer = gameState.players.find((player) => player.player_id === myPlayerId);
+  const exploredShipIndexes = new Set(currentPlayer?.explored_ships ?? []);
+  const shipIndex = { Twilight: 0, Rebellion: 1, TFMars: 2, Eclipse: 3 } as const;
+  const availableStandardTechTiles = Array.from(new Set([
+    ...gameState.research_board.tech_tiles,
+    ...gameState.spaceship_boards.flatMap((board) =>
+      exploredShipIndexes.has(shipIndex[board.id]) ? (board.tech_tiles ?? []) : [],
+    ),
+  ]));
   const requiresBoosterChoice = gameState.round < 6 && currentPlayer?.booster != null;
 
   const phase = gameState.phase;
@@ -1306,7 +1314,7 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
             >
               타일 선택 안 함
             </button>
-            {Array.from(new Set(gameState.research_board.tech_tiles))
+            {availableStandardTechTiles
               .filter((tile) => !currentPlayer.tech_tiles?.includes(tile))
               .map((tile) => (
                 <button

@@ -270,6 +270,7 @@ fn state_with_spaceship_token(kind: u8) -> gaia_engine::game_state::GameState {
         id: SpaceshipId::Twilight,
         explorers: vec![Some(0), None, None, None],
         artifact_pool: vec![],
+        tech_tiles: vec![],
         federation_token: Some(FederationToken(kind)),
     }];
     state

@@ -374,6 +374,8 @@ impl MapEngine {
                             }
                         }
                     }
+                    let mut boundary: Vec<HexCoord> = boundary.into_iter().collect();
+                    boundary.sort_unstable_by_key(|coord| (coord.q, coord.r));
                     for cand in boundary {
                         let touches =
                             |d: &HashSet<HexCoord>| d.iter().any(|h| h.distance(&cand) == 1);
@@ -385,6 +387,8 @@ impl MapEngine {
                 }
             }
         }
+        holes.sort_unstable_by_key(|coord| (coord.q, coord.r));
+        holes.dedup();
         holes
     }
 
@@ -589,25 +593,28 @@ impl MapEngine {
                     }
                 }
             }
+            candidates.sort_unstable_by_key(|coord| (coord.q, coord.r));
             candidates
         })
     }
 
-    /// The 4 Lost Fleet spaceship boards' initial shared state — empty shuttle slots (one per
-    /// possible player; per-slot power charge confirmed via a physical board photo, see
-    /// `spaceship_shuttle_power_charge` in rules/engine.rs), Twilight's Artifact pool seeded
-    /// with ids 1-9 and 11-13 (12 of the 13 physical Artifact tokens whose effects are confirmed
-    /// — see `artifact_effect` in rules/engine.rs; id 10, "Copy the effect of a Federation Token
-    /// you own," is deliberately excluded — it needs a federation-token-effect-replay mechanic
-    /// that doesn't exist anywhere in the engine yet, so it must never actually be drawable until
-    /// that infrastructure lands), and one Lost Fleet Federation token per ship (expansion p.5,
-    /// "Take 4 of the new Federation tokens and distribute them on the 4 spaceships at random" —
-    /// ids 8-15 in `federation_token_kind`, rules/engine.rs, one physical token each per the
-    /// user's direct component check; 4 of the 8 are drawn into play, the rest return to the box).
+    /// The 4 Lost Fleet spaceship boards' initial shared state: empty shuttle slots, four random
+    /// face-up artifacts from all 13 kinds on Twilight, one random Lost Fleet Federation token per
+    /// ship, and the three Lost Fleet standard-tech piles randomly assigned to the other ships.
     pub fn initial_spaceship_boards(seed: &str) -> Vec<SpaceshipBoard> {
         let mut rng = Randomizer::new(seed);
         let mut federation_pool: Vec<FederationToken> = (8..=15).map(FederationToken).collect();
         rng.shuffle(&mut federation_pool);
+        let mut artifact_pool: Vec<ArtifactId> = (1..=13).map(ArtifactId).collect();
+        rng.shuffle(&mut artifact_pool);
+        let visible_artifacts: Vec<ArtifactId> = artifact_pool.into_iter().take(4).collect();
+        let mut spaceship_tech_types = vec![
+            crate::game_state::TechTile(11),
+            crate::game_state::TechTile(12),
+            crate::game_state::TechTile(13),
+        ];
+        rng.shuffle(&mut spaceship_tech_types);
+        let mut next_tech_type = spaceship_tech_types.into_iter();
 
         SpaceshipId::all()
             .into_iter()
@@ -616,9 +623,17 @@ impl MapEngine {
                 id,
                 explorers: vec![None; 4],
                 artifact_pool: if id == SpaceshipId::Twilight {
-                    (1..=13).map(ArtifactId).collect()
+                    visible_artifacts.clone()
                 } else {
                     Vec::new()
+                },
+                tech_tiles: if id == SpaceshipId::Twilight {
+                    Vec::new()
+                } else {
+                    next_tech_type
+                        .next()
+                        .map(|tile| vec![tile; 4])
+                        .unwrap_or_default()
                 },
                 federation_token: federation_pool.get(i).cloned(),
             })
@@ -733,6 +748,18 @@ impl MapEngine {
                     .tech_tile_ids
                     .iter()
                     .map(|&id| crate::game_state::TechTile(id))
+                    .collect();
+                let slot_ids = if setup.tech_tile_slot_ids.is_empty() {
+                    let mut unique = setup.tech_tile_ids.clone();
+                    unique.dedup();
+                    unique.truncate(9);
+                    unique
+                } else {
+                    setup.tech_tile_slot_ids.clone()
+                };
+                rb.tech_tile_slots = slot_ids
+                    .into_iter()
+                    .map(|id| Some(crate::game_state::TechTile(id)))
                     .collect();
                 // One Advanced Tech tile per research track (`ResearchTrack::all()` order,
                 // rulebook p.4: "Randomly place one advanced tech tile faceup on each space

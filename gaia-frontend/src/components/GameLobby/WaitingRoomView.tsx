@@ -106,7 +106,12 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
           actions.setRevision(message.revision);
           const { state } = message;
           if (!isGameState(state)) {
-            if (state.setup) actions.setRoomInfo({ gameSetup: state.setup });
+            actions.setRoomInfo({
+              ...(state.setup ? { gameSetup: state.setup } : {}),
+              ...(Array.isArray(state.players)
+                ? { lobbyPlayers: state.players, playerCount: state.players.length }
+                : {}),
+            });
             break;
           }
           // A `GameState` exists once all four seats ready up — that's
@@ -140,7 +145,6 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
   const isHost = playerId !== null && playerId === hostPlayerId;
   const me = lobbyPlayers.find((player) => player.player_id === playerId);
   const isReady = me?.ready ?? false;
-  const hasReadyPlayers = lobbyPlayers.some((player) => player.ready);
 
   function handleToggleReady() {
     sendCommand({ type: 'player_ready', ready: !isReady }, revision);
@@ -178,7 +182,7 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
         <aside className="waiting-room-board-rail" aria-label="게임 참조 보드">
           <section className="waiting-room-reference-card">
             <h3>연구 트랙</h3>
-            <ResearchBoard players={[]} />
+            <ResearchBoard players={[]} board={previewBoard.research_board} />
           </section>
           <section className="waiting-room-personal-placeholder" aria-label="개인 보드 영역">
             <strong>개인 보드 영역</strong>
@@ -247,7 +251,6 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
               <button
                 className="btn btn-secondary btn-small"
                 onClick={handleRegenerateSetup}
-                disabled={hasReadyPlayers}
               >
                 랜더마이저 재설정
               </button>

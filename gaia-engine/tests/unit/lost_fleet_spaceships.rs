@@ -127,6 +127,7 @@ fn empty_spaceship_board(id: SpaceshipId) -> SpaceshipBoard {
         } else {
             vec![]
         },
+        tech_tiles: vec![],
         federation_token: None,
     }
 }
@@ -1093,13 +1094,20 @@ fn artifact_13_grants_3_vp_per_research_track_at_level_3_plus() {
 }
 
 #[test]
-fn all_thirteen_artifacts_including_id_10_are_seeded() {
-    let seeded = gaia_engine::map::MapEngine::initial_spaceship_boards("test-seed");
-    let Some(twilight) = seeded.iter().find(|b| b.id == SpaceshipId::Twilight) else {
-        panic!("Twilight board should exist");
-    };
-    assert!(twilight.artifact_pool.contains(&ArtifactId(10)));
-    assert_eq!(twilight.artifact_pool.len(), 13);
+fn four_face_up_artifacts_are_drawn_from_all_thirteen_kinds() {
+    let mut seen = std::collections::HashSet::new();
+    for seed in 0..100 {
+        let seeded = gaia_engine::map::MapEngine::initial_spaceship_boards(&format!("seed-{seed}"));
+        let Some(twilight) = seeded
+            .iter()
+            .find(|board| board.id == SpaceshipId::Twilight)
+        else {
+            panic!("Twilight board should exist");
+        };
+        assert_eq!(twilight.artifact_pool.len(), 4);
+        seen.extend(twilight.artifact_pool.iter().map(|artifact| artifact.0));
+    }
+    assert_eq!(seen, (1..=13).collect());
 }
 
 #[test]

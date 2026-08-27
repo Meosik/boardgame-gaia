@@ -278,6 +278,7 @@ fn empty_spaceship_board(id: SpaceshipId) -> SpaceshipBoard {
         id,
         explorers: vec![None; 4],
         artifact_pool: vec![],
+        tech_tiles: vec![],
         federation_token: None,
     }
 }

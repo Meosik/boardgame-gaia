@@ -83,6 +83,28 @@ fn setup_has_two_final_scoring_tiles() {
 }
 
 #[test]
+fn setup_places_nine_distinct_base_tech_piles_on_the_research_board() {
+    let setup = setup("tech-layout");
+    let mut slots = setup.tech_tile_slot_ids.clone();
+    assert_eq!(slots.len(), 9);
+    slots.sort_unstable();
+    assert_eq!(slots, (2..=10).collect::<Vec<_>>());
+
+    for tile_id in 2..=10 {
+        assert_eq!(
+            setup
+                .tech_tile_ids
+                .iter()
+                .filter(|id| **id == tile_id)
+                .count(),
+            4,
+            "base Standard Tech pile {tile_id} must contain four copies"
+        );
+    }
+    assert!(setup.tech_tile_ids.iter().all(|id| (2..=10).contains(id)));
+}
+
+#[test]
 fn sector_layout_has_ten_sectors() {
     assert_eq!(setup("test").sector_layout.len(), 10);
 }

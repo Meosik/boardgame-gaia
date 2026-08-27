@@ -3,13 +3,14 @@
 // you may advance in a research area... You can take any standard tech tile, except one you
 // already own... Every upgrade follows these rules... Instead of taking a standard tech tile,
 // you can take an advanced tech tile [if] your player token [is] on level 4 or 5 of the research
-// area [it sits under]." Standard tile ids 2-10 are the base game's 9; 11-14 are the Lost Fleet
+// area [it sits under]." Standard tile ids 2-10 are the base game's 9; 11-13 are the Lost Fleet
 // expansion's Appendix V additions. Advanced tile ids are 1-22 (minus 18). Effects confirmed
 // against `gaia-frontend/src/assets/tech_tiles/{standard,advanced,lost_fleet}/`.
 
 use gaia_engine::game_state::{
     AdvancedTechTile, BoardState, FactionId, GameEvent, GamePhase, Hex, HexCoord, PlacedStructure,
-    Planet, PlanetType, ResearchTrack, Sector, Structure, StructureType, TechTile,
+    Planet, PlanetType, ResearchTrack, Sector, SpaceshipBoard, SpaceshipId, Structure,
+    StructureType, TechTile,
 };
 use gaia_engine::rules::actions::{GameAction, TechTileChoice, TechTileRef};
 use gaia_engine::test_utils::builders::GameStateBuilder;
@@ -100,6 +101,41 @@ fn upgrade_can_take_a_standard_tile_and_advance_a_research_track() {
     assert!(events.iter().any(
         |e| matches!(e, GameEvent::TechTileGained { player: 0, tile } if *tile == TechTile(4))
     ));
+}
+
+#[test]
+fn spaceship_standard_tech_requires_exploring_that_ship_and_is_removed_from_its_pile() {
+    let spaceship_board = SpaceshipBoard {
+        id: SpaceshipId::TFMars,
+        explorers: vec![None; 4],
+        artifact_pool: vec![],
+        tech_tiles: vec![TechTile(12); 4],
+        federation_token: None,
+    };
+    let choice = TechTileChoice::Standard {
+        tile: TechTile(12),
+        advance_track: None,
+        bonus_build_coord: None,
+    };
+
+    let mut inaccessible = tech_tiles_state(vec![]);
+    inaccessible.spaceship_boards = vec![spaceship_board.clone()];
+    assert!(
+        RuleEngine::apply_action(&mut inaccessible, 0, upgrade_action(Some(choice.clone())))
+            .is_err()
+    );
+
+    let mut accessible = tech_tiles_state(vec![]);
+    accessible.players[0].explored_ships.push(2); // T F Mars
+    accessible.spaceship_boards = vec![spaceship_board];
+    RuleEngine::apply_action(&mut accessible, 0, upgrade_action(Some(choice))).unwrap_or_else(
+        |error| {
+            panic!("an explored spaceship should make its Standard Tech pile available: {error}")
+        },
+    );
+
+    assert!(accessible.players[0].tech_tiles.contains(&TechTile(12)));
+    assert_eq!(accessible.spaceship_boards[0].tech_tiles.len(), 3);
 }
 
 #[test]

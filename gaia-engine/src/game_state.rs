@@ -158,6 +158,10 @@ pub struct SpaceshipBoard {
     /// Twilight only: remaining face-up Artifact tokens available to draw via "Examine an
     /// Artifact". Empty for the other 3 ships.
     pub artifact_pool: Vec<ArtifactId>,
+    /// The Lost Fleet Standard Tech pile assigned to this spaceship at setup. Twilight has no
+    /// pile; the other three ships each receive four copies of one of ids 11-13.
+    #[serde(default)]
+    pub tech_tiles: Vec<TechTile>,
     /// The ship's own Federation token (expansion p.5, "4) Action: Form a Federation" — one of 4
     /// Lost Fleet-specific tokens seeded at setup, ids 8-11 in `federation_token_kind`), claimable
     /// only by a player who has explored this ship, via `FederationTokenChoice::Spaceship`. `None`
@@ -744,6 +748,10 @@ pub struct PlacedStructure {
 pub struct ResearchBoard {
     pub tracks: HashMap<ResearchTrack, TrackState>,
     pub tech_tiles: Vec<TechTile>,
+    /// The nine physical Standard Tech pile positions on the Research Board: six beneath the
+    /// research areas followed by the three unrestricted spaces along the bottom.
+    #[serde(default)]
+    pub tech_tile_slots: Vec<Option<TechTile>>,
     pub advanced_tech_tiles: [Option<AdvancedTechTile>; 6],
     pub federation_tokens: Vec<FederationToken>,
 }
@@ -757,6 +765,7 @@ impl ResearchBoard {
         Self {
             tracks,
             tech_tiles: Vec::new(),
+            tech_tile_slots: Vec::new(),
             advanced_tech_tiles: [None, None, None, None, None, None],
             federation_tokens: Vec::new(),
         }

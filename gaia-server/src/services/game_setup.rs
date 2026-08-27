@@ -87,6 +87,9 @@ impl GameSetupService {
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
                 room.seed.clone_from(&new_seed);
                 room.setup = Some(setup.clone());
+                for (_, _, ready) in &mut room.players {
+                    *ready = false;
+                }
                 Ok(Vec::new())
             })
             .await?;

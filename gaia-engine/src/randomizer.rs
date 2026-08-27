@@ -115,15 +115,17 @@ impl Randomizer {
         self.shuffle(&mut final_pool);
         let final_scoring = [final_pool.remove(0), final_pool.remove(0)];
 
-        // Step 5: Tech tiles. Standard supply: 13 types (ids 2-10 base game, 11-14 Lost Fleet
-        // Appendix V), 4 physical copies each — "this will give you nine piles of four identical
-        // tech tiles" (rulebook p.4), extended by the same count for the 4 Lost Fleet additions
-        // (expansion components list: "12 Standard Tech tiles"). Advanced supply: 1 tile per
-        // research track (6 total), drawn from the 21 known kinds (`gaia-frontend/src/assets/
-        // tech_tiles/advanced/` — id 18's scan is missing, so it never appears here).
-        let mut tech_tile_ids: Vec<u8> =
-            (2..=14).flat_map(|id| std::iter::repeat_n(id, 4)).collect();
-        self.shuffle(&mut tech_tile_ids);
+        // Step 5: the nine base-game Standard Tech piles are shuffled across the nine printed
+        // Research Board spaces; each pile contains four identical copies. Lost Fleet's three
+        // new piles (ids 11-13, four copies each) belong on the three non-Twilight spaceships and
+        // are initialized there by `MapEngine::initial_spaceship_boards`, not mixed into this
+        // Research Board supply (expansion rulebook p.3/p.6).
+        let mut tech_tile_slot_ids: Vec<u8> = (2..=10).collect();
+        self.shuffle(&mut tech_tile_slot_ids);
+        let tech_tile_ids: Vec<u8> = tech_tile_slot_ids
+            .iter()
+            .flat_map(|id| std::iter::repeat_n(*id, 4))
+            .collect();
         let known_advanced_tech_tile_ids: [u8; 21] = [
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22,
         ];
@@ -147,6 +149,7 @@ impl Randomizer {
             boosters,
             final_scoring,
             tech_tile_ids,
+            tech_tile_slot_ids,
             advanced_tech_tile_ids,
             sector_layout,
             deep_space_layout,
@@ -295,6 +298,9 @@ pub struct GameSetup {
     pub boosters: Vec<Booster>,
     pub final_scoring: [FinalScoringTile; 2],
     pub tech_tile_ids: Vec<u8>,
+    /// Nine ids in physical Research Board slot order (six track-linked, then three free-choice).
+    #[serde(default)]
+    pub tech_tile_slot_ids: Vec<u8>,
     /// One Advanced Tech tile id per research track (`ResearchTrack::all()` order), drawn from
     /// the known kinds — see `Randomizer::generate_setup`.
     #[serde(default)]

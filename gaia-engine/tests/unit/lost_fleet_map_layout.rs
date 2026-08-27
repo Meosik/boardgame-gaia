@@ -139,6 +139,78 @@ fn all_four_spaceship_tiles_present_and_pairwise_spaced_at_least_three() {
 }
 
 #[test]
+fn repeated_initialization_with_the_same_room_seed_is_identical() {
+    for seed in 0..SEEDS {
+        let seed_str = format!("lf-deterministic-{seed}");
+        let setup = setup(&seed_str);
+        let first = MapEngine::init_game_state("same-room", &seed_str, &four_players(), &setup);
+        let second = MapEngine::init_game_state("same-room", &seed_str, &four_players(), &setup);
+
+        let first_board = serde_json::to_value(&first.board)
+            .unwrap_or_else(|error| panic!("first board should serialize: {error}"));
+        let second_board = serde_json::to_value(&second.board)
+            .unwrap_or_else(|error| panic!("second board should serialize: {error}"));
+        assert_eq!(
+            first_board, second_board,
+            "seed {seed}: repeated previews of one room must not depend on HashSet iteration order"
+        );
+    }
+}
+
+#[test]
+fn spaceship_setup_randomizes_four_artifacts_four_federations_and_three_tech_piles() {
+    let seed = "lf-shared-board-components";
+    let setup = setup(seed);
+    let state = MapEngine::init_game_state("room", seed, &four_players(), &setup);
+
+    let Some(twilight) = state
+        .spaceship_boards
+        .iter()
+        .find(|board| board.id == SpaceshipId::Twilight)
+    else {
+        panic!("Twilight board should exist");
+    };
+    assert_eq!(twilight.artifact_pool.len(), 4);
+    let mut artifacts = twilight
+        .artifact_pool
+        .iter()
+        .map(|artifact| artifact.0)
+        .collect::<Vec<_>>();
+    artifacts.sort_unstable();
+    artifacts.dedup();
+    assert_eq!(
+        artifacts.len(),
+        4,
+        "the four face-up artifacts must be distinct"
+    );
+
+    let mut federation_ids = state
+        .spaceship_boards
+        .iter()
+        .filter_map(|board| board.federation_token.as_ref().map(|token| token.0))
+        .collect::<Vec<_>>();
+    federation_ids.sort_unstable();
+    federation_ids.dedup();
+    assert_eq!(federation_ids.len(), 4);
+
+    let mut tech_types = state
+        .spaceship_boards
+        .iter()
+        .filter(|board| board.id != SpaceshipId::Twilight)
+        .map(|board| {
+            assert_eq!(board.tech_tiles.len(), 4);
+            assert!(board
+                .tech_tiles
+                .iter()
+                .all(|tile| tile == &board.tech_tiles[0]));
+            board.tech_tiles[0].0
+        })
+        .collect::<Vec<_>>();
+    tech_types.sort_unstable();
+    assert_eq!(tech_types, vec![11, 12, 13]);
+}
+
+#[test]
 fn eight_deep_space_sectors_have_real_non_overlapping_origins() {
     for seed in 0..SEEDS {
         let seed_str = format!("lf-map-{seed}");

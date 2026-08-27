@@ -48,6 +48,7 @@ const setup: GameSetup = {
 };
 
 const previewBoard: PreviewBoard = {
+  seed: 'ui-seed',
   board: {
     sectors: [],
     hexes: {},
@@ -211,8 +212,8 @@ describe('WaitingRoomView lobby controls and overlays', () => {
     await waitFor(() => expect(regenerateSetup).toHaveBeenCalledOnce());
   });
 
-  it('covers host reroll blocked state and hides host-only reroll for non-hosts', () => {
-    seedWaitingRoom({
+  it('allows host reroll with ready players and hides host-only reroll for non-hosts', async () => {
+    const { regenerateSetup } = seedWaitingRoom({
       lobbyPlayers: [
         { player_id: 0, nickname: 'Host', ready: false },
         { player_id: 1, nickname: 'P1', ready: true },
@@ -222,7 +223,9 @@ describe('WaitingRoomView lobby controls and overlays', () => {
       <WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />,
     );
 
-    expect(screen.getByRole('button', { name: '랜더마이저 재설정' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: '랜더마이저 재설정' }));
+    await waitFor(() => expect(regenerateSetup).toHaveBeenCalledOnce());
+    expect(screen.getByRole('button', { name: '랜더마이저 재설정' })).toBeEnabled();
 
     act(() => {
       seedWaitingRoom({ playerId: 1, nickname: 'P1', hostPlayerId: 0 });

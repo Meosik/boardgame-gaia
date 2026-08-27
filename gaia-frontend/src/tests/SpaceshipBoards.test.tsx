@@ -40,6 +40,7 @@ function mockShip(overrides: Partial<SpaceshipBoard> = {}): SpaceshipBoard {
     id: 'Twilight',
     explorers: [null, null, null, null],
     artifact_pool: [],
+    tech_tiles: [],
     federation_token: 8,
     ...overrides,
   };
@@ -67,5 +68,18 @@ describe('SpaceshipBoards', () => {
 
     expect(screen.getByLabelText('탐사 셔틀 1 슬롯 탐사 완료')).toBeInTheDocument();
     expect(screen.queryByLabelText('탐사 셔틀 2 슬롯 탐사 완료')).not.toBeInTheDocument();
+  });
+
+  it('renders randomized tech, artifact, and federation components in their ship slots', () => {
+    const ships = [
+      mockShip({ id: 'Twilight', artifact_pool: [1, 2, 3, 4], federation_token: 8 }),
+      mockShip({ id: 'TFMars', tech_tiles: [11, 11, 11, 11], federation_token: 9 }),
+    ];
+    render(<SpaceshipBoards spaceshipBoards={ships} players={[]} />);
+
+    expect(screen.getAllByAltText(/^아티팩트 /)).toHaveLength(4);
+    expect(screen.getByAltText('T F Mars 표준 기술 타일 11')).toBeInTheDocument();
+    expect(screen.getByAltText('Twilight 연방 토큰 8')).toBeInTheDocument();
+    expect(screen.getByAltText('T F Mars 연방 토큰 9')).toBeInTheDocument();
   });
 });

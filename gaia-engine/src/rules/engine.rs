@@ -1785,7 +1785,7 @@ fn validate_tech_tile_choice(
             advance_track,
             bonus_build_coord,
         } => {
-            if !state.research_board.tech_tiles.contains(tile) {
+            if !standard_tech_tile_available_to_player(state, player, tile) {
                 return Err(RuleError::ActionNotAllowed(
                     "that Tech tile isn't available".to_string(),
                 ));
@@ -8100,19 +8100,59 @@ fn transfer_tech_tile_to_player(
     player_id: PlayerId,
     tile: &TechTile,
 ) -> bool {
-    let Some(pos) = state
+    let explored_ships = state
+        .player(player_id)
+        .map(|player| player.explored_ships.clone())
+        .unwrap_or_default();
+    let removed = if let Some(pos) = state
         .research_board
         .tech_tiles
         .iter()
         .position(|t| t == tile)
-    else {
-        return false;
+    {
+        state.research_board.tech_tiles.remove(pos);
+        true
+    } else if let Some((board_index, tile_index)) = state
+        .spaceship_boards
+        .iter()
+        .enumerate()
+        .filter(|(_, board)| explored_ships.contains(&spaceship_id_to_ship_id(board.id)))
+        .find_map(|(board_index, board)| {
+            board
+                .tech_tiles
+                .iter()
+                .position(|candidate| candidate == tile)
+                .map(|tile_index| (board_index, tile_index))
+        })
+    {
+        state.spaceship_boards[board_index]
+            .tech_tiles
+            .remove(tile_index);
+        true
+    } else {
+        false
     };
-    state.research_board.tech_tiles.remove(pos);
+    if !removed {
+        return false;
+    }
     if let Some(p) = state.player_mut(player_id) {
         p.tech_tiles.push(tile.clone());
     }
     true
+}
+
+fn standard_tech_tile_available_to_player(
+    state: &GameState,
+    player: &PlayerState,
+    tile: &TechTile,
+) -> bool {
+    state.research_board.tech_tiles.contains(tile)
+        || state.spaceship_boards.iter().any(|board| {
+            player
+                .explored_ships
+                .contains(&spaceship_id_to_ship_id(board.id))
+                && board.tech_tiles.contains(tile)
+        })
 }
 
 fn apply_ability_event(state: &mut GameState, event: &GameEvent) {

@@ -174,6 +174,7 @@ fn empty_research_board() -> ResearchBoard {
     ResearchBoard {
         tracks,
         tech_tiles: (1..=6).map(TechTile).collect(),
+        tech_tile_slots: vec![],
         advanced_tech_tiles: [None, None, None, None, None, None],
         federation_tokens: vec![],
     }

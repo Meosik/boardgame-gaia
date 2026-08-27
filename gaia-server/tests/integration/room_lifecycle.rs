@@ -278,6 +278,23 @@ async fn preview_board_returns_layout_and_404_for_missing_room() {
         body["spaceship_boards"].is_array(),
         "preview should include spaceship boards"
     );
+    assert_eq!(
+        body["research_board"]["tech_tile_slots"]
+            .as_array()
+            .map(Vec::len),
+        Some(9),
+        "preview should include the nine physical Standard Tech positions"
+    );
+
+    let repeated = server
+        .get(&format!("/api/rooms/{}/preview_board", created.code))
+        .await;
+    repeated.assert_status_ok();
+    assert_eq!(
+        body["board"],
+        repeated.json::<Value>()["board"],
+        "every client in one room must receive the same deterministic Interspace layout"
+    );
 
     let missing = server.get("/api/rooms/NOPE00/preview_board").await;
     missing.assert_status(StatusCode::NOT_FOUND);
@@ -350,6 +367,16 @@ async fn regenerate_setup_covers_host_non_host_and_invalid_session() {
     let created = create_room(&server, "Host", Some("sequential")).await;
     let _cleanup = RoomCleanupGuard::new(created.code.clone());
     let guest = join_room(&server, &created.code, "Guest").await;
+    let mut guest_ws =
+        join_existing_player_ws(&server, &created.code, &guest.nickname, &guest.token).await;
+    send_command_and_await_accept(
+        &mut guest_ws.ws,
+        &created.code,
+        "ready-before-reroll",
+        0,
+        json!({ "type": "player_ready", "ready": true }),
+    )
+    .await;
 
     let regenerated = server
         .post(&format!("/api/rooms/{}/regenerate", created.code))
@@ -359,6 +386,14 @@ async fn regenerate_setup_covers_host_non_host_and_invalid_session() {
     let setup = regenerated.json::<Value>();
     assert_eq!(setup["seed"].as_str(), Some("regen-success"));
     assert_eq!(setup["setup_mode"].as_str(), Some("sequential"));
+
+    let room = server.get(&format!("/api/rooms/{}", created.code)).await;
+    room.assert_status_ok();
+    assert!(room.json::<Value>()["players"]
+        .as_array()
+        .expect("room players")
+        .iter()
+        .all(|player| player["ready"].as_bool() == Some(false)));
 
     let non_host = server
         .post(&format!("/api/rooms/{}/regenerate", created.code))

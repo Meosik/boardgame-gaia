@@ -19,6 +19,7 @@ vi.mock('../hooks/useWebSocket', () => ({
 // under test here and jsdom has no real server to hit — mock it out so it
 // doesn't reject with an unhandled "Invalid URL" error for a relative path.
 const emptyPreview = {
+  seed: 'ui-waiting-room',
   board: { sectors: [], hexes: {}, lost_planet: null, spaceship_tiles: {} },
   round_tiles: [],
   final_scoring_tiles: [],

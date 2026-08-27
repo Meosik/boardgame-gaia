@@ -164,7 +164,7 @@ export function App() {
       <aside className="game-reference-rail" aria-label="공용 트랙과 함선 보드">
         <section className="game-reference-card">
           <h2>연구 트랙</h2>
-          <ResearchBoard players={gameState.players} />
+          <ResearchBoard players={gameState.players} board={gameState.research_board} />
           <div className="game-vp-summary" aria-label="현재 승점">
             {gameState.players.map((player) => (
               <span key={player.player_id}>

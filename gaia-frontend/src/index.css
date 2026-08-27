@@ -1109,6 +1109,36 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   pointer-events: none;
 }
 
+.research-board-standard-tech,
+.research-board-advanced-tech,
+.research-board-qic-overlay {
+  position: absolute;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px #000);
+}
+
+.research-board-standard-tech {
+  width: 12.5%;
+  transform: translate(-50%, -50%);
+}
+
+.research-board-advanced-tech {
+  width: 15.2%;
+  height: 11.2%;
+  object-fit: fill;
+  transform: translate(-50%, -50%);
+}
+
+.research-board-qic-overlay {
+  z-index: 2;
+  top: 87.15%;
+  left: 62.7%;
+  width: 36.7%;
+  height: 12.35%;
+  object-fit: fill;
+  border-radius: 2px;
+}
+
 /* Faction board — real player-board scan, with income-track fill markers */
 .faction-board {
   width: 100%;
@@ -1178,6 +1208,25 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   pointer-events: none;
 }
 
+.spaceship-board-tech-tile,
+.spaceship-board-artifact,
+.spaceship-board-federation {
+  position: absolute;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 3px #000);
+  pointer-events: none;
+}
+
+.spaceship-board-tech-tile {
+  top: 50%;
+  left: 83.5%;
+  width: 17.5%;
+}
+
+.spaceship-board-artifact { width: 15.5%; }
+.spaceship-board-federation { width: 8.5%; }
+
 /* Scoring board — round/final scoring tiles sit in their real printed slots;
    round tiles 3D-flip in place once their round has passed. */
 .scoring-board { margin: 0; }
@@ -1217,26 +1266,10 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   object-fit: fill;
 }
 
-.scoring-board-final-image--rotated-source {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 66%;
-  height: 152%;
-  transform: translate(-50%, -50%) rotate(-90deg);
-}
-
 .scoring-board-tile--round {
   width: 20%;
   aspect-ratio: 177 / 202;
-  transform: translate(-50%, -100%);
   perspective: 400px;
-}
-
-.scoring-board-round-anchor {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
 }
 
 .scoring-board-tile-inner {
