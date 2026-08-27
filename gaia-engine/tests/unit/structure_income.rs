@@ -108,11 +108,12 @@ fn academy_qic_grants_no_passive_income() {
 
 #[test]
 fn planetary_institute_charges_universal_four_power() {
-    // Lantids get no PlanetaryInstitute bonus power token, so this stays a
+    // Xenos get no PlanetaryInstitute bonus power token (and no passive income
+    // to muddy the exact power values below, unlike Lantids), so this stays a
     // plain (non-order-pausing) charge — see `no_bonus_token_skips_income_order_pause`.
     let state = GameStateBuilder::new()
         .with_player_fn(0, |p| {
-            p.faction = Some(FactionId::Lantids);
+            p.faction = Some(FactionId::Xenos);
             p.resources.power.bowl1 = 4;
             p.resources.power.bowl2 = 0;
             p.structures = vec![structure(StructureType::PlanetaryInstitute)];

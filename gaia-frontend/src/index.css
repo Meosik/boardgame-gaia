@@ -30,16 +30,41 @@ body { min-height: 100vh; }
   justify-content: center;
 }
 
-.app--lobby:has(.faction-selection-view) {
+.app--lobby:has(.faction-selection-view),
+.app--lobby:has(.waiting-room-view) {
   align-items: flex-start;
+}
+
+.app--lobby:has(.faction-selection-view) {
   background: #000000;
 }
 
+/* Shared game table: frequently used public boards stay visible on the left,
+   the galaxy owns the flexible center, opponents/actions use a compact right
+   rail, and the controlled player's board remains docked along the bottom. */
 .app--game {
+  --game-reference-width: 440px;
+  --game-sidebar-width: 170px;
+  --game-topbar-height: 56px;
+  --game-personal-height: 260px;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: var(--game-reference-width) minmax(0, 1fr) var(--game-sidebar-width);
+  grid-template-rows: var(--game-topbar-height) minmax(0, 1fr) var(--game-personal-height);
+  grid-template-areas:
+    "reference top sidebar"
+    "reference board sidebar"
+    "reference personal sidebar";
   height: 100vh;
   overflow: hidden;
+  background: #080812;
+}
+
+.app--game > .error-banner {
+  position: fixed;
+  top: 0.5rem;
+  left: 50%;
+  z-index: 120;
+  transform: translateX(-50%);
 }
 
 .app--loading {
@@ -51,19 +76,117 @@ body { min-height: 100vh; }
   height: 100vh;
 }
 
+.game-topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.game-top-control {
+  min-width: 170px;
+  padding: 0.6rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent2) 70%, var(--color-border));
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-accent2);
+  cursor: pointer;
+  font: 700 0.78rem/1 inherit;
+}
+
+.game-top-control:hover,
+.game-top-control:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+  outline: none;
+}
+
+.game-reference-rail {
+  grid-area: reference;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.65rem;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.game-reference-card + .game-reference-card { margin-top: 0.75rem; }
+.game-reference-card h2 {
+  margin-bottom: 0.4rem;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.game-reference-card .research-board { margin: 0; }
+.game-vp-summary { display: grid; gap: 0.3rem; margin-top: 0.65rem; }
+.game-vp-summary > span { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.35rem 0.45rem; border: 1px solid var(--color-border); border-radius: 5px; background: var(--color-surface); font-size: 0.68rem; }
+.game-vp-summary strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-vp-summary b { flex: 0 0 auto; color: var(--color-warning); }
+
+.game-board-stage {
+  grid-area: board;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.game-board-stage .game-board-container { width: 100%; height: 100%; }
+
+.game-personal-dock {
+  grid-area: personal;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface2);
+}
+
 .game-main {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-rows: auto 1fr;
   overflow: hidden;
 }
 
 .game-sidebar {
+  grid-area: sidebar;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.5rem;
   background: var(--color-surface2);
   overflow-y: auto;
+}
+
+.bidding-preview .game-main {
+  grid-column: 1 / 3;
+  grid-row: 1 / -1;
+}
+
+@media (max-width: 1200px) {
+  .app--game {
+    --game-reference-width: 360px;
+    --game-sidebar-width: 160px;
+    --game-personal-height: 230px;
+  }
+}
+
+@media (max-width: 800px) {
+  .app--game {
+    display: flex;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    flex-direction: column;
+  }
+  .game-topbar { order: 0; position: sticky; top: 0; z-index: 20; background: var(--color-bg); }
+  .game-reference-rail { order: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 0; }
+  .game-board-stage { order: 1; height: 58vh; min-height: 380px; }
+  .game-personal-dock { order: 3; min-height: 240px; }
+  .game-sidebar { order: 4; overflow: visible; }
+  .game-top-control { min-width: 0; flex: 1 1 0; }
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
@@ -120,13 +243,159 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 /* Setup preview */
 .setup-preview { background: var(--color-surface2); border-radius: 8px; padding: 1rem; margin: 1rem 0; }
 .setup-preview h3 { font-size: 0.875rem; color: var(--color-muted); margin-bottom: 0.75rem; text-transform: uppercase; }
+.setup-mode-picker { display: grid; gap: 0.5rem; margin: 0 0 1rem; padding: 0; border: 0; }
+.setup-mode-picker legend { margin-bottom: 0.35rem; color: var(--color-muted); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.setup-mode-picker label { display: flex; align-items: flex-start; gap: 0.65rem; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface2); cursor: pointer; }
+.setup-mode-picker label.selected { border-color: var(--color-accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 30%, transparent); }
+.setup-mode-picker input { margin-top: 0.2rem; accent-color: var(--color-accent); }
+.setup-mode-picker span { display: grid; gap: 0.2rem; }
+.setup-mode-picker small { color: var(--color-muted); line-height: 1.35; }
 .preview-row { display: flex; gap: 0.5rem; align-items: flex-start; margin-bottom: 0.5rem; font-size: 0.8rem; }
 .preview-label { color: var(--color-muted); min-width: 70px; }
 .faction-pair { display: inline-block; margin-right: 0.5rem; background: var(--color-surface); padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.75rem; }
 
-/* Waiting room */
-.waiting-room-view { max-width: 480px; padding: 2rem; background: var(--color-surface); border-radius: 12px; }
-.waiting-room-view h2 { margin-bottom: 1.5rem; }
+/* Waiting room — the randomized board preview fills the center viewport while
+   global board-reference controls stay at the screen top, the research/ship
+   boards form a left rail beside the map, and lobby controls stay in a
+   dedicated right panel. */
+.waiting-room-view {
+  --waiting-room-rail-width: 440px;
+  --waiting-room-panel-width: 220px;
+  --waiting-room-topbar-height: 3.75rem;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #0a0a1a;
+}
+
+.waiting-room-backdrop {
+  position: absolute;
+  inset: var(--waiting-room-topbar-height) calc(var(--waiting-room-panel-width) + 1rem) 1rem calc(var(--waiting-room-rail-width) + 1rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.waiting-room-backdrop .game-board-container {
+  width: 100%;
+  height: 100%;
+  justify-content: flex-end;
+}
+.preview-loading { color: var(--color-muted); font-size: 0.85rem; }
+
+.waiting-room-personal-placeholder {
+  display: flex;
+  min-height: 180px;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.35rem;
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 60%, var(--color-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-surface2) 82%, transparent);
+  color: var(--color-muted);
+  pointer-events: none;
+}
+.waiting-room-personal-placeholder strong { color: var(--color-text); font-size: 0.82rem; }
+.waiting-room-personal-placeholder span { font-size: 0.68rem; }
+
+.waiting-room-topbar {
+  position: fixed;
+  top: 0.75rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.waiting-room-top-control {
+  min-width: 150px;
+  padding: 0.65rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent2) 70%, var(--color-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  color: var(--color-accent2);
+  cursor: pointer;
+  font: 700 0.8rem/1 inherit;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+}
+
+.waiting-room-top-control:hover,
+.waiting-room-top-control:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.waiting-room-board-rail {
+  position: fixed;
+  top: var(--waiting-room-topbar-height);
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 40;
+  display: flex;
+  width: var(--waiting-room-rail-width);
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-y: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+}
+
+.waiting-room-reference-card h3 {
+  margin-bottom: 0.4rem;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.waiting-room-board-rail .research-board { margin: 0; }
+
+.waiting-room-overlay {
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  width: min(var(--waiting-room-panel-width), calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.waiting-room-panel {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  padding: 0.8rem;
+  pointer-events: auto;
+}
+.waiting-room-panel h2 { margin-bottom: 1rem; }
+.waiting-room-panel .room-code-display {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.waiting-room-panel .lobby-player-row { gap: 0.35rem; padding: 0.5rem; }
+.setup-factions-pool { margin-top: 0.5rem; }
+.faction-pool-badge { display: inline-block; margin: 0.15rem; background: var(--color-surface2); border: 1px solid var(--color-border); border-radius: 4px; padding: 0.1rem 0.4rem; font-size: 0.75rem; }
 .room-code-display { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
 .room-code { font-size: 1.5rem; letter-spacing: 0.2em; color: var(--color-accent); }
 .connection-status { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.8rem; }
@@ -146,6 +415,63 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .ready-toggle-btn { width: 100%; margin-top: 1rem; }
 .waiting-hint { color: var(--color-muted); font-size: 0.85rem; margin-top: 1rem; }
 .setup-info { font-size: 0.8rem; color: var(--color-muted); }
+
+@media (max-width: 1200px) {
+  .waiting-room-view {
+    --waiting-room-rail-width: 360px;
+    --waiting-room-panel-width: 200px;
+  }
+
+  .waiting-room-personal-placeholder { min-height: 100px; }
+}
+
+@media (max-width: 800px) {
+  .waiting-room-view {
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .waiting-room-topbar {
+    right: 0.75rem;
+    left: 0.75rem;
+  }
+
+  .waiting-room-top-control {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .waiting-room-board-rail {
+    position: relative;
+    inset: auto;
+    display: flex;
+    width: auto;
+    margin: 4.5rem 1rem 1rem;
+  }
+
+  .waiting-room-backdrop {
+    position: relative;
+    inset: auto;
+    height: 55vh;
+    min-height: 360px;
+  }
+
+  .waiting-room-personal-placeholder {
+    min-height: 180px;
+  }
+
+  .waiting-room-overlay {
+    position: relative;
+    inset: auto;
+    width: auto;
+    height: auto;
+    margin: 1rem;
+  }
+
+  .waiting-room-panel { height: auto; }
+}
 
 /* Faction selection */
 .faction-selection-view {
@@ -208,6 +534,10 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   color: var(--color-text);
 }
 
+.faction-selection-player.passed {
+  opacity: 0.5;
+}
+
 .faction-selection-position {
   display: grid;
   place-items: center;
@@ -254,6 +584,11 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   outline: none;
 }
 
+.faction-selection-choice.selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
 .faction-selection-choice:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -263,6 +598,350 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   justify-content: center;
   border: 0;
   background: transparent;
+}
+
+.bidding-assignment {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.bidding-assignment small {
+  color: var(--color-muted);
+}
+
+.bidding-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.bidding-summary > div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface2);
+}
+
+.bidding-summary span {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.bidding-summary strong {
+  color: var(--color-warning);
+  font-size: 1.1rem;
+}
+
+.bidding-controls {
+  display: grid;
+  grid-template-columns: auto minmax(90px, 130px) auto auto;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.bidding-controls label,
+.bidding-choice-heading {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.bidding-controls input {
+  width: 100%;
+}
+
+.bidding-rule-note {
+  margin-top: 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.bidding-choice-heading {
+  margin: 1rem 0 0.5rem;
+}
+
+.turn-position-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.turn-position-grid button {
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface2);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.turn-position-grid button.selected {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface2));
+}
+
+.turn-position-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.bidding-confirm {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* The auction is decided by looking at the fully-set-up board, so it renders
+   underneath (`.bidding-preview` reuses the normal in-game `.app--game`
+   layout) with the bidding controls as a small floating panel over a corner
+   of it — NOT a full-screen dimmed modal, which would defeat the point by
+   hiding the board (and the sidebar's opponent panels) behind it. */
+.bidding-modal-overlay {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  width: min(420px, calc(100vw - 2rem));
+  max-height: min(80vh, 640px);
+  pointer-events: none;
+}
+
+.bidding-modal {
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+}
+
+.bidding-modal .faction-selection-view {
+  width: 100%;
+  padding: 1rem;
+}
+
+.bidding-modal .faction-selection-order {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ── Board overlay (generic "확대" popup for a single board) ───────────────── */
+.board-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 1.5rem;
+}
+
+.board-overlay-panel {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  border-radius: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+.board-overlay-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.board-overlay-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.board-overlay-close {
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem;
+}
+.board-overlay-close:hover { color: var(--color-accent); }
+
+.board-overlay-body {
+  padding: 1rem;
+}
+
+.board-overlay-body > .spaceship-boards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+/* Non-modal reference panel used by boards that must remain visible while
+   the map is still being inspected or clicked. */
+.floating-board-panel {
+  position: fixed;
+  top: 4.5rem;
+  bottom: 1rem;
+  z-index: 90;
+  width: min(430px, calc(100vw - 3rem));
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg) 96%, transparent);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(12px);
+}
+
+.app--game .floating-board-panel {
+  right: calc(var(--game-sidebar-width) + 0.75rem);
+  bottom: calc(var(--game-personal-height) + 0.75rem);
+}
+
+.waiting-room-view .floating-board-panel {
+  right: calc(var(--waiting-room-panel-width) + 1rem);
+}
+
+.floating-board-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.floating-board-panel-header h3 { font-size: 0.85rem; }
+.floating-board-panel-body { padding: 0.75rem; }
+.floating-board-panel-body > .spaceship-boards { display: grid; grid-template-columns: 1fr; gap: 0.65rem; }
+
+@media (max-width: 800px) {
+  .app--game .floating-board-panel,
+  .waiting-room-view .floating-board-panel {
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+  }
+}
+
+.board-open-btn {
+  width: 100%;
+}
+
+.starting-structure-view {
+  width: min(100%, 1180px);
+}
+
+.starting-player-status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.starting-player-status small {
+  color: var(--color-muted);
+}
+
+.starting-placement-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.starting-placement-meta span,
+.starting-placement-meta strong {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface2);
+}
+
+.starting-placement-meta strong {
+  color: var(--color-warning);
+}
+
+.starting-structure-board {
+  height: min(62vh, 680px);
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.starting-placement-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  color: var(--color-muted);
+}
+
+.starting-booster-panel .bidding-rule-note {
+  margin: -0.35rem 0 1rem;
+}
+
+.starting-booster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.starting-booster-choice {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface2);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.starting-booster-choice img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.starting-booster-choice:hover:not(:disabled),
+.starting-booster-choice:focus-visible,
+.starting-booster-choice.selected {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.starting-booster-choice.selected {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.starting-booster-choice:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.starting-booster-confirm {
+  width: 100%;
+  margin-top: 1rem;
 }
 
 @media (max-width: 720px) {
@@ -278,19 +957,40 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   .faction-selection-order {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .bidding-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .bidding-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bidding-controls label {
+    grid-column: 1 / -1;
+  }
+
+  .starting-structure-board {
+    height: 55vh;
+    min-height: 360px;
+  }
+
+  .starting-placement-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 /* ── Player Dashboard ────────────────────────────────────────────────────── */
+/* Only the controlled player's panel lives here now — large and board-first.
+   The other 3 players are the compact `.opponent-panels` list in the sidebar. */
 .player-dashboard {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  height: 100%;
   padding: 4px;
   background: var(--color-surface2);
-  border-bottom: 1px solid var(--color-border);
 }
 
-.player-panel { background: var(--color-surface); border-radius: 6px; padding: 0.5rem; border: 1px solid var(--color-border); }
+.player-panel { height: 100%; overflow: hidden; background: var(--color-surface); border-radius: 6px; padding: 0.5rem; border: 1px solid var(--color-border); }
 .player-panel--me { border-color: var(--color-accent); }
 .player-panel--passed { opacity: 0.6; }
 .player-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
@@ -298,17 +998,319 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .player-vp { font-size: 0.85rem; color: var(--color-warning); font-weight: 700; }
 .passed-badge { font-size: 0.65rem; background: var(--color-muted); border-radius: 3px; padding: 0.1rem 0.3rem; }
 .faction-badge { font-size: 0.65rem; background: var(--color-surface2); border-radius: 3px; padding: 0.1rem 0.3rem; border: 1px solid var(--color-border); }
-.player-body { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+/* Capped so the faction board (see `.faction-board`) stays legible without
+   eating the whole viewport height — `.app--game` is a fixed 100vh grid,
+   this row is `auto`-sized to its content, and the galaxy map row below it
+   gets whatever height this row doesn't use. Kept tighter than the board's
+   natural width so the map (priority 1 of the in-game layout, per the
+   redesign discussion) gets the majority of the vertical space. */
+.player-dashboard-content { display: grid; min-height: 0; grid-template-columns: minmax(0, 720px) minmax(180px, 1fr); gap: 0.65rem; }
+.player-body-top { display: flex; min-width: 0; gap: 0.5rem; }
+.game-personal-dock .faction-board-image { width: auto; max-width: 100%; max-height: 190px; object-fit: contain; object-position: left top; }
+.game-personal-dock .exploration-board { width: 70px; flex-basis: 70px; }
+.player-personal-summary { display: grid; min-width: 0; align-content: start; gap: 0.45rem; padding: 0.35rem; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface2); }
+.player-resource-summary { display: grid; grid-template-columns: minmax(80px, 1fr) auto; gap: 0.5rem; }
+.personal-holdings { display: grid; grid-template-columns: 2.4rem 1fr; align-items: start; gap: 0.35rem; font-size: 0.65rem; }
+.personal-holdings > strong { color: var(--color-muted); }
+.personal-holdings-list { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.personal-holdings-list span { padding: 0.12rem 0.28rem; border: 1px solid var(--color-border); border-radius: 3px; background: var(--color-surface); color: var(--color-warning); }
+.personal-holdings-list small { color: var(--color-muted); }
+
+/* Opponent status cards — sit side by side across the top of the right
+   column (the same row the controlled player's panel occupies on the left),
+   each getting an even third of the sidebar's width. */
+.opponent-panels { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.opponent-panel {
+  min-width: 0;
+  background: var(--color-surface);
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+.opponent-panel summary { display: grid; gap: 0.3rem; padding: 0.45rem; cursor: pointer; list-style: none; }
+.opponent-panel summary::-webkit-details-marker { display: none; }
+.opponent-panel summary::after { content: '종족 보드 보기 ›'; color: var(--color-muted); font-size: 0.58rem; text-align: right; }
+.opponent-panel[open] summary::after { content: '종족 보드 닫기 ⌄'; }
+.opponent-heading { display: flex; align-items: center; gap: 0.4rem; }
+.opponent-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem; color: var(--color-muted); font-size: 0.62rem; }
+.opponent-meta > span:not(.faction-badge):not(.passed-badge) { padding: 0.08rem 0.22rem; border-radius: 3px; background: var(--color-surface2); }
+.opponent-board-detail { padding: 0 0.4rem 0.4rem; }
+
+/* Lost Fleet personal Exploration Board */
+.exploration-board {
+  width: 64px;
+  margin: 0;
+  flex: 0 0 64px;
+}
+
+.exploration-board-image-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: #171717;
+}
+
+.exploration-board-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.exploration-board figcaption {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 0.6rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.exploration-shuttle {
+  position: absolute;
+  left: 56%;
+  display: grid;
+  width: 25%;
+  aspect-ratio: 0.84;
+  place-items: center;
+  transform: translateY(-50%);
+  clip-path: polygon(28% 0, 72% 0, 86% 14%, 86% 62%, 100% 75%, 88% 100%, 12% 100%, 0 75%, 14% 62%, 14% 14%);
+  border: 1px solid color-mix(in srgb, var(--shuttle-color) 65%, white);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--shuttle-color) 55%, white), var(--shuttle-color));
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.48rem;
+  filter: drop-shadow(0 1px 2px #000);
+}
+
+.exploration-shuttle--1 { top: 52%; }
+.exploration-shuttle--2 { top: 69%; }
+.exploration-shuttle--3 { top: 86%; }
+
+/* Shared Research Board — one physical board, all players' tokens on it */
+.research-board { margin: 0 0 0.5rem; }
+
+.research-board-image-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: #171717;
+}
+
+.research-board-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.research-board-token {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 2px #000);
+  pointer-events: none;
+}
+
+/* Faction board — real player-board scan, with income-track fill markers */
+.faction-board {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+.faction-board-image-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: #171717;
+}
+
+.faction-board-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.faction-board-slot {
+  position: absolute;
+  width: 6%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 3px #000) drop-shadow(0 0 4px rgba(255, 235, 59, 0.9));
+  pointer-events: none;
+}
+
+.faction-board-slot--large {
+  width: 9%;
+}
+
+/* Lost Fleet spaceship boards */
+.spaceship-boards { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.spaceship-board { margin: 0; }
+
+.spaceship-board-image-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: #171717;
+}
+
+.spaceship-board-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.spaceship-board figcaption {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.spaceship-board-explorer {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 2px #000);
+  pointer-events: none;
+}
+
+/* Scoring board — round/final scoring tiles sit in their real printed slots;
+   round tiles 3D-flip in place once their round has passed. */
+.scoring-board { margin: 0; }
+
+.scoring-board-image-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: #171717;
+}
+
+.scoring-board-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.scoring-board-tile {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 3px #000);
+  pointer-events: none;
+}
+
+.scoring-board-tile--final {
+  width: 19.8%;
+  aspect-ratio: 203 / 134;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.scoring-board-final-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.scoring-board-final-image--rotated-source {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 66%;
+  height: 152%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.scoring-board-tile--round {
+  width: 20%;
+  aspect-ratio: 177 / 202;
+  transform: translate(-50%, -100%);
+  perspective: 400px;
+}
+
+.scoring-board-round-anchor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.scoring-board-tile-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.scoring-board-tile--flipped .scoring-board-tile-inner {
+  transform: rotateY(180deg);
+}
+
+.scoring-board-tile-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  backface-visibility: hidden;
+  border-radius: 4px;
+}
+
+.scoring-board-tile-back {
+  background: linear-gradient(145deg, #2a2a4e, #16213e);
+  border: 1px solid var(--color-border);
+  transform: rotateY(180deg);
+}
+
+/* Round boosters — real tiles instead of bare "#id" buttons, with a
+   faction-colored marker on whichever tile a player currently holds. */
+.round-boosters { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; }
+
+.round-booster-tile {
+  position: relative;
+  width: 64px;
+  aspect-ratio: 102 / 298;
+  margin: 0;
+}
+
+.round-booster-tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  border-radius: 5px;
+  border: 1px solid var(--color-border);
+}
+
+.round-booster-tile--inverted-source img { transform: rotate(180deg); }
+
+.round-booster-owner {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  filter: drop-shadow(0 1px 2px #000);
+}
 
 /* Resource panel */
 .resource-panel { display: flex; flex-direction: column; gap: 2px; min-width: 80px; }
 .resource-row { display: flex; align-items: center; gap: 4px; font-size: 0.75rem; }
-.resource-icon { font-size: 0.7rem; }
+.resource-icon { width: 14px; height: 14px; object-fit: contain; flex-shrink: 0; }
 .resource-label { color: var(--color-muted); flex: 1; }
 .resource-value { font-weight: 700; min-width: 20px; text-align: right; }
 
 /* Power cycle */
 .power-cycle { display: flex; gap: 4px; align-items: center; }
+.brainstone-token {
+  color: #8e24aa;
+  font-size: 17px;
+  line-height: 1;
+  text-shadow: 0 0 3px #fff, 0 0 5px #ce93d8;
+}
 .power-bowl { border: 1px solid; border-radius: 4px; padding: 2px 6px; text-align: center; min-width: 32px; }
 .bowl-label { font-size: 0.6rem; display: block; }
 .bowl-count { font-size: 0.85rem; font-weight: 700; }
@@ -328,18 +1330,71 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .hex-cell:hover polygon { filter: brightness(1.2); }
 
 /* ── Action Panel ────────────────────────────────────────────────────────── */
+.round-scoring-track { padding: 0.75rem; border-radius: 8px; background: var(--color-surface); }
+.round-scoring-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.65rem; }
+.round-scoring-header span { color: var(--color-accent2); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; }
+.round-scoring-header h3 { margin-top: 0.1rem; font-size: 0.9rem; }
+.round-scoring-header > strong { color: var(--color-warning); font-size: 0.78rem; }
+.round-scoring-list { display: grid; gap: 0.35rem; }
+.round-scoring-card { position: relative; display: grid; grid-template-columns: 44px 1fr; gap: 0.55rem; min-height: 50px; padding: 0.35rem; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface2); overflow: hidden; }
+.round-scoring-card img { width: 44px; height: 50px; border-radius: 4px; object-fit: contain; }
+.round-scoring-card.active { border-color: var(--color-accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 35%, transparent); }
+.round-scoring-card.complete { opacity: 0.45; }
+.round-scoring-card.active::after { content: '현재'; position: absolute; top: 0.2rem; right: 0.25rem; padding: 0.1rem 0.25rem; border-radius: 3px; background: var(--color-accent); color: white; font-size: 0.55rem; font-weight: 700; }
+.round-scoring-round { position: absolute; bottom: 0.2rem; left: 0.2rem; z-index: 1; padding: 0.05rem 0.2rem; border-radius: 3px; background: rgba(0, 0, 0, 0.75); color: white; font-size: 0.55rem; font-weight: 700; }
+.round-scoring-copy { display: grid; align-content: center; gap: 0.15rem; min-width: 0; padding-right: 1.7rem; }
+.round-scoring-copy strong { font-size: 0.7rem; line-height: 1.25; }
+.round-scoring-copy span { color: var(--color-warning); font-size: 0.65rem; font-weight: 700; }
+
+.final-scoring-tiles { padding: 0.75rem; border-radius: 8px; background: var(--color-surface); }
+.final-scoring-header { margin-bottom: 0.65rem; }
+.final-scoring-header span { color: var(--color-accent2); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; }
+.final-scoring-header h3 { margin-top: 0.1rem; font-size: 0.9rem; }
+.final-scoring-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
+.final-scoring-card { display: grid; gap: 0.35rem; min-width: 0; padding: 0.35rem; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface2); }
+.final-scoring-card img { width: 100%; aspect-ratio: 203 / 134; border-radius: 4px; object-fit: contain; }
+.final-scoring-card > div { display: grid; gap: 0.18rem; }
+.final-scoring-card strong { font-size: 0.68rem; line-height: 1.25; }
+.final-scoring-card span { color: var(--color-warning); font-size: 0.58rem; font-weight: 700; line-height: 1.3; }
 .action-panel { background: var(--color-surface); border-radius: 8px; padding: 0.75rem; }
 .action-panel-title { font-size: 0.8rem; text-transform: uppercase; color: var(--color-accent); margin-bottom: 0.5rem; letter-spacing: 0.05em; }
 .action-panel--waiting { text-align: center; color: var(--color-muted); padding: 1.5rem; }
 .waiting-msg { font-size: 0.9rem; }
 .action-buttons { display: flex; flex-direction: column; gap: 4px; margin-bottom: 0.5rem; }
 .action-btn { justify-content: space-between; text-align: left; }
+.free-action-row { display: grid; grid-template-columns: minmax(0, 1fr) 3.5rem; gap: 0.35rem; }
+.free-action-count { min-width: 0; text-align: center; }
+.game-log { background: var(--color-surface); border-radius: 8px; padding: 0.75rem; }
+.game-log-title { color: var(--color-accent); font-size: 0.8rem; margin-bottom: 0.5rem; text-transform: uppercase; }
+.game-log-list { display: flex; flex-direction: column; gap: 0.35rem; list-style: none; margin: 0; padding: 0; }
+.game-log-list li { color: var(--color-muted); font-size: 0.75rem; }
+.game-log-list strong { color: var(--color-text); }
 .action-btn--selected { border-color: var(--color-accent); background: rgba(124, 77, 255, 0.15); }
 .action-label { font-size: 0.8rem; }
 .action-shortcut { font-size: 0.65rem; background: var(--color-surface2); border-radius: 3px; padding: 0.1rem 0.3rem; color: var(--color-muted); font-family: monospace; }
 .confirm-btn { width: 100%; margin-bottom: 0.25rem; }
 .action-hint { font-size: 0.75rem; color: var(--color-muted); text-align: center; margin-bottom: 0.5rem; }
+.current-booster { display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+.current-booster-image { width: 40px; height: auto; border-radius: 4px; border: 1px solid var(--color-border); }
+.booster-picker-btn { padding: 0.25rem; }
+.booster-picker-btn img { display: block; width: 56px; height: auto; border-radius: 4px; }
 .pass-btn { width: 100%; margin-top: 0.5rem; }
 
 .spinner { width: 16px; height: 16px; border: 2px solid var(--color-border); border-top-color: var(--color-accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Game Over ───────────────────────────────────────────────────────────── */
+.app--game-over { display: flex; align-items: center; justify-content: center; }
+.game-over-card { width: min(420px, 90vw); padding: 2rem; border-radius: 12px; background: var(--color-surface); text-align: center; }
+.game-over-eyebrow { color: var(--color-accent2); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.15em; }
+.game-over-title { margin: 0.25rem 0 1.5rem; font-size: 1.75rem; font-weight: 700; color: var(--color-accent); }
+.game-over-standings { display: grid; gap: 0.5rem; list-style: none; margin: 0 0 1.5rem; padding: 0; text-align: left; }
+.game-over-row { display: grid; grid-template-columns: 1.5rem 2rem 1fr auto; align-items: center; gap: 0.6rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface2); }
+.game-over-row--winner { border-color: var(--color-warning); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 40%, transparent); }
+.game-over-row--me .game-over-name { text-decoration: underline; text-decoration-color: var(--color-accent2); text-underline-offset: 3px; }
+.game-over-rank { color: var(--color-muted); font-weight: 700; text-align: center; }
+.game-over-swatch { display: flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; color: #fff; font-size: 0.65rem; font-weight: 700; }
+.game-over-name { font-size: 0.9rem; }
+.game-over-crown { margin-left: 0.35rem; }
+.game-over-vp { font-weight: 700; color: var(--color-warning); font-size: 0.9rem; }
+.game-over-return-btn { width: 100%; }

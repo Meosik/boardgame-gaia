@@ -8,6 +8,7 @@ fn arb_power_cycle() -> impl Strategy<Value = PowerCycle> {
         bowl3: b3,
         gaia_bowl: gaia,
         gaia_forming: 0,
+        brainstone: None,
     })
 }
 
@@ -18,7 +19,8 @@ proptest! {
             + cycle.bowl2 as u16
             + cycle.bowl3 as u16
             + cycle.gaia_bowl as u16
-            + cycle.gaia_forming as u16;
+            + cycle.gaia_forming as u16
+            + u16::from(cycle.brainstone.is_some());
         prop_assert_eq!(cycle.total() as u16, expected);
     }
 }

@@ -1,0 +1,9 @@
+{
+  "type": "state_patch",
+  "protocol_version": 1,
+  "schema_hash": "abababababababababababababababababababababababababababababababab",
+  "revision": 8,
+  "state": {
+    "round": 3
+  }
+}

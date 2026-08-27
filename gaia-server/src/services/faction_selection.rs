@@ -29,7 +29,7 @@ impl FactionSelectionService {
                     .as_mut()
                     .ok_or(gaia_engine::error::RuleError::WrongPhase)?;
 
-                let events = gaia_engine::RuleEngine::apply_setup_action(
+                let mut events = gaia_engine::RuleEngine::apply_setup_action(
                     game_state,
                     player_id,
                     action.clone(),
@@ -37,7 +37,7 @@ impl FactionSelectionService {
 
                 if game_state.phase == GamePhase::Setup(SetupPhase::Complete) {
                     room.state = RoomState::InGame;
-                    game_state.phase = GamePhase::ActionPhase { active_player: 0 };
+                    events.extend(gaia_engine::RuleEngine::start_first_round(game_state)?);
                 }
 
                 Ok(events)

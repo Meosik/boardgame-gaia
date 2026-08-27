@@ -25,6 +25,13 @@ pub enum FederationPowerRule {
 pub trait FactionAbility: Send + Sync {
     fn faction_id(&self) -> FactionId;
 
+    /// Whether this faction currently exposes a turn-consuming special
+    /// action through [`Self::special_action`]. Unsupported/stub factions
+    /// must remain `false` so the engine cannot consume a turn for no effect.
+    fn has_special_action(&self) -> bool {
+        false
+    }
+
     /// Triggered after a Mine is successfully placed on `coord`.
     /// Returns additional events to append (e.g. Lantids building on occupied hexes).
     fn on_build(&self, state: &GameState, player_id: PlayerId, coord: HexCoord) -> Vec<GameEvent>;

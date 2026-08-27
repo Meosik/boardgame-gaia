@@ -28,7 +28,8 @@ pub async fn ws_handler(
     Path(room_code): Path<String>,
     State(app): State<AppState>,
 ) -> Response {
-    ws.on_upgrade(move |socket| handle_socket(socket, room_code, app))
+    ws.max_message_size(protocol::MAX_CLIENT_FRAME_BYTES)
+        .on_upgrade(move |socket| handle_socket(socket, room_code, app))
 }
 
 async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) {
@@ -38,7 +39,7 @@ async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) 
     // The first message MUST be JoinRoom to obtain player_id.
     let player_id = match socket.recv().await {
         Some(Ok(Message::Text(text))) => {
-            match serde_json::from_str::<ClientFrame>(&text) {
+            match protocol::decode_client_frame(&text) {
                 Ok(ClientFrame::JoinRoom {
                     room_code: requested_room_code,
                     nickname,
@@ -60,8 +61,18 @@ async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) 
                     // existing session rather than minting a new one.
                     let reconnected = match &session_token {
                         Some(token) => match app.sessions.validate(token).await {
-                            Ok(Some((pid, _))) => Some((pid, token.clone())),
-                            Ok(None) => None,
+                            Ok(Some((pid, token_room_code))) if token_room_code == room_code => {
+                                Some((pid, token.clone()))
+                            }
+                            Ok(Some(_)) | Ok(None) => {
+                                send_error(
+                                    &mut socket,
+                                    "INVALID_SESSION",
+                                    "session invalid or expired",
+                                )
+                                .await;
+                                return;
+                            }
                             Err(e) => {
                                 send_error(&mut socket, "INTERNAL", &e.to_string()).await;
                                 return;
@@ -96,22 +107,44 @@ async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) 
                     };
 
                     // Send RoomJoined to this player
-                    let (setup, revision) = {
+                    let (setup, revision, snapshot_view, member_nickname) = {
                         let rooms = app.rooms.read().await;
                         match rooms.get_room(&room_code) {
-                            Some(r) => (r.setup.clone(), r.revision),
-                            None => (None, 0),
+                            Some(r) => (
+                                r.setup.clone(),
+                                r.revision,
+                                Some(coordinator::room_snapshot_view(r)),
+                                r.nickname_of(pid).map(str::to_owned),
+                            ),
+                            None => (None, 0, None, None),
                         }
+                    };
+                    let Some(nickname) = member_nickname else {
+                        send_error(&mut socket, "INVALID_SESSION", "session invalid or expired")
+                            .await;
+                        return;
                     };
                     if let Some(setup) = setup {
                         let msg = ServerMessage::RoomJoined {
                             room_code: room_code.clone(),
                             player_id: pid,
                             session_token: token,
-                            game_setup: setup,
+                            game_setup: Box::new(setup),
                             revision,
                         };
                         send_msg(&mut socket, &msg.into()).await;
+                    }
+                    // Directly catch this connection up on the room's actual
+                    // current state — `RoomJoined` above only carries the
+                    // lobby-phase `game_setup`, so without this a client that
+                    // (re)connects after the game has already started (every
+                    // setup-stage transition opens a brand new WebSocket
+                    // connection, not just a true reconnect) would otherwise
+                    // see nothing but its own client-guessed placeholder
+                    // state until someone else's unrelated action happens to
+                    // broadcast the real one.
+                    if let (Ok(revision), Some(view)) = (Revision::new(revision), snapshot_view) {
+                        send_msg(&mut socket, &protocol::snapshot(revision, view).into()).await;
                     }
 
                     // Broadcast player and lobby state to room
@@ -143,7 +176,11 @@ async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) 
 
                     pid
                 }
-                _ => {
+                Err(error) => {
+                    send_error(&mut socket, error.code(), &error.to_string()).await;
+                    return;
+                }
+                Ok(ClientFrame::Command(_)) => {
                     send_error(&mut socket, "PROTOCOL", "first message must be JoinRoom").await;
                     return;
                 }
@@ -213,10 +250,10 @@ async fn handle_client_message(
     text: &str,
     socket: &mut WebSocket,
 ) {
-    let frame = match serde_json::from_str::<ClientFrame>(text) {
+    let frame = match protocol::decode_client_frame(text) {
         Ok(f) => f,
         Err(e) => {
-            send_error(socket, "PARSE_ERROR", &e.to_string()).await;
+            send_error(socket, e.code(), &e.to_string()).await;
             return;
         }
     };
@@ -228,6 +265,25 @@ async fn handle_client_message(
             return;
         }
     };
+
+    if let Err(error) = envelope.validate_compatibility(protocol::SCHEMA_HASH) {
+        let current = coordinator::current_revision(app, room_code)
+            .await
+            .unwrap_or(Revision::ZERO);
+        let (code, message_key) = protocol::compatibility_rejection_reason(&error);
+        send_msg(
+            socket,
+            &protocol::command_rejected(
+                Some(envelope.command_id.clone()),
+                current,
+                code,
+                message_key,
+            )
+            .into(),
+        )
+        .await;
+        return;
+    }
 
     if envelope.room_id != room_code {
         send_error(socket, "PROTOCOL", "room_id mismatch").await;
@@ -332,7 +388,15 @@ async fn handle_player_ready(
                     .iter()
                     .map(|(id, nickname, _)| (*id, nickname.clone()))
                     .collect();
-                room.game_state = Some(MapEngine::init_game_state(room_code, &players, setup));
+                let game_state = match setup.setup_mode {
+                    gaia_engine::SetupMode::Sequential => {
+                        MapEngine::init_game_state(room_code, &room.seed, &players, setup)
+                    }
+                    gaia_engine::SetupMode::Bidding => MapEngine::init_game_state_with_bidding(
+                        room_code, &room.seed, &players, setup,
+                    )?,
+                };
+                room.game_state = Some(game_state);
                 room.state = RoomState::FactionSelection;
             }
 

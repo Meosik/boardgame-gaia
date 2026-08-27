@@ -51,6 +51,7 @@ export function structureAssetName(kind: StructureType): StructureAssetName | nu
   if (kind === 'ResearchLab') return 'researchlab';
   if (kind === 'PlanetaryInstitute') return 'planetary_institute';
   if (kind === 'Satellite') return 'marker';
+  if (kind === 'SpaceStation') return 'marker';
   if (typeof kind === 'object' && 'Academy' in kind) return 'academy';
   return null;
 }

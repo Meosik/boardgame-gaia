@@ -1,0 +1,11 @@
+{
+  "type": "command_rejected",
+  "protocol_version": 1,
+  "schema_hash": "abababababababababababababababababababababababababababababababab",
+  "command_id": "cmd_rotate_1",
+  "revision": 8,
+  "rejection": {
+    "code": "REVISION_CONFLICT",
+    "message_key": "command.revision_conflict"
+  }
+}

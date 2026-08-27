@@ -64,6 +64,7 @@ fn board(
         }],
         hexes,
         lost_planet: None,
+        spaceship_tiles: HashMap::new(),
     }
 }
 

@@ -9,6 +9,49 @@ const PROTOCOL_VERSION = 1;
 // 32 zero bytes as lowercase hex — mirrors `gaia-server/src/protocol.rs::SCHEMA_HASH`
 // (fixed for now; automatic schema-hash derivation is out of scope).
 const SCHEMA_HASH = '0'.repeat(64);
+const HEX_COORD_PATTERN = /^-?\d+,-?\d+$/;
+
+/**
+ * Rust serializes `HexCoord` as the canonical "q,r" string so it can also
+ * serve as a JSON object key. The UI keeps coordinates as `{ q, r }` for
+ * ergonomic rendering, so the WebSocket boundary converts both directions.
+ */
+export function encodeHexCoordinates(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(encodeHexCoordinates);
+  if (value === null || typeof value !== 'object') return value;
+
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (
+    keys.length === 2 &&
+    keys.includes('q') &&
+    keys.includes('r') &&
+    typeof record.q === 'number' &&
+    typeof record.r === 'number'
+  ) {
+    return `${record.q},${record.r}`;
+  }
+
+  return Object.fromEntries(
+    Object.entries(record).map(([key, entry]) => [key, encodeHexCoordinates(entry)]),
+  );
+}
+
+export function decodeHexCoordinates(value: unknown): unknown {
+  if (typeof value === 'string' && HEX_COORD_PATTERN.test(value)) {
+    const [q, r] = value.split(',').map(Number);
+    return { q, r };
+  }
+  if (Array.isArray(value)) return value.map(decodeHexCoordinates);
+  if (value === null || typeof value !== 'object') return value;
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+      key,
+      decodeHexCoordinates(entry),
+    ]),
+  );
+}
 
 export class GaiaWebSocket {
   private ws: WebSocket | null = null;
@@ -42,7 +85,7 @@ export class GaiaWebSocket {
 
     this.ws.onmessage = (ev: MessageEvent) => {
       try {
-        const msg = JSON.parse(ev.data as string) as ServerMessage;
+        const msg = decodeHexCoordinates(JSON.parse(ev.data as string)) as ServerMessage;
         this.listeners.forEach((l) => l(msg));
       } catch {
         // ignore malformed messages
@@ -77,7 +120,7 @@ export class GaiaWebSocket {
 
   private doSend(msg: ClientFrame): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(msg));
+      this.ws.send(JSON.stringify(encodeHexCoordinates(msg)));
     }
   }
 

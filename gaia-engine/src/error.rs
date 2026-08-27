@@ -43,8 +43,8 @@ pub enum RuleError {
     #[error("bid too low: current max {current_max}, placed {placed}")]
     BidTooLow { current_max: u32, placed: u32 },
 
-    #[error("bid {bid} exceeds current VP {vp}")]
-    BidExceedsVp { bid: u32, vp: i32 },
+    #[error("bid too high: max {max}, placed {placed}")]
+    BidTooHigh { max: u32, placed: u32 },
 
     #[error("already passed this round")]
     AlreadyPassed,

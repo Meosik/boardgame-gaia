@@ -20,6 +20,12 @@ const FALLBACK_COLORS: Record<string, string> = {
 
 export function PowerCycle({ power, faction }: Props) {
   const accentColor = faction ? FACTION_VISUAL[faction].color : null;
+  const brainstoneBowl =
+    power.brainstone === 'Area1' ? 'I'
+      : power.brainstone === 'Area2' ? 'II'
+        : power.brainstone === 'Area3' ? 'III'
+          : power.brainstone === 'Gaia' ? 'G'
+            : null;
 
   return (
     <div className="power-cycle">
@@ -30,6 +36,7 @@ export function PowerCycle({ power, faction }: Props) {
           count={power[key]}
           faction={faction ?? null}
           color={accentColor ?? FALLBACK_COLORS[label]}
+          hasBrainstone={brainstoneBowl === label}
         />
       ))}
       {power.gaia_forming > 0 && (
@@ -38,6 +45,7 @@ export function PowerCycle({ power, faction }: Props) {
           count={power.gaia_forming}
           faction={faction ?? null}
           color={accentColor ?? FALLBACK_COLORS['GF']}
+          hasBrainstone={false}
         />
       )}
     </div>
@@ -49,11 +57,13 @@ function BowlDisplay({
   count,
   faction,
   color,
+  hasBrainstone,
 }: {
   label: string;
   count: number;
   faction: FactionId | null;
   color: string;
+  hasBrainstone: boolean;
 }) {
   return (
     <div className="power-bowl" style={{ borderColor: color }}>
@@ -68,7 +78,10 @@ function BowlDisplay({
               size={12}
             />
           ))}
-          {count === 0 && <span className="bowl-empty">—</span>}
+          {hasBrainstone && (
+            <span className="brainstone-token" title="Taklons Brainstone">◆</span>
+          )}
+          {count === 0 && !hasBrainstone && <span className="bowl-empty">—</span>}
         </div>
       ) : (
         <span className="bowl-count">{count}</span>

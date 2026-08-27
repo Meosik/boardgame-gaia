@@ -50,7 +50,7 @@ fn choosing_one_board_side_removes_both_sides() {
 }
 
 #[test]
-fn four_selections_complete_setup_without_changing_clockwise_order() {
+fn four_selections_begin_structure_placement_without_changing_clockwise_order() {
     let setup = match Randomizer::generate_setup("sequential-faction-selection") {
         Ok(setup) => setup,
         Err(e) => panic!("fixture seed should produce a setup: {e:?}"),
@@ -61,7 +61,7 @@ fn four_selections_complete_setup_without_changing_clockwise_order() {
         (9, "P3".to_string()),
         (1, "P4".to_string()),
     ];
-    let mut game = MapEngine::init_game_state("ROOM", &players, &setup);
+    let mut game = MapEngine::init_game_state("ROOM", "ROOM", &players, &setup);
 
     assert_eq!(
         game.phase,
@@ -86,7 +86,15 @@ fn four_selections_complete_setup_without_changing_clockwise_order() {
         );
     }
 
-    assert_eq!(game.phase, GamePhase::Setup(SetupPhase::Complete));
+    assert_eq!(
+        game.phase,
+        GamePhase::Setup(SetupPhase::StartingStructures {
+            active_player: 7,
+            placement_index: 0,
+            kind: gaia_engine::game_state::StructureType::Mine,
+        })
+    );
+    assert_eq!(game.round, 0);
     assert_eq!(game.turn_order, vec![7, 3, 9, 1]);
     assert_eq!(game.players[0].faction, Some(FactionId::Terrans));
     assert_eq!(game.players[1].faction, Some(FactionId::Xenos));

@@ -1,0 +1,10 @@
+{
+  "type": "snapshot",
+  "protocol_version": 1,
+  "schema_hash": "abababababababababababababababababababababababababababababababab",
+  "revision": 8,
+  "state": {
+    "round": 3,
+    "active_seat": 2
+  }
+}

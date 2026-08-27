@@ -4,8 +4,9 @@
 
 ### BR-P01: 페이즈별 허용 액션
 - `GamePhase::Setup(SetupPhase::Bidding)` → `SetupAction::PlaceBid`, `SetupAction::PassBid`만 허용
-- `GamePhase::Setup(SetupPhase::FactionSelection)` → `SetupAction::SelectFaction`만 허용 (낙찰자만)
-- `GamePhase::Setup(SetupPhase::TurnOrderSelection)` → `SetupAction::SelectTurnOrder`만 허용 (낙찰자만)
+- `GamePhase::Setup(SetupPhase::BiddingChoice)` → `SetupAction::ChooseBidReward`만 허용 (낙찰자만)
+- `GamePhase::Setup(SetupPhase::FactionSelection)` → `SetupAction::SelectFaction`만 허용 (현재 플레이어만)
+- `GamePhase::Setup(SetupPhase::StartingStructures)` → `SetupAction::PlaceStartingStructure`만 허용 (현재 배치 플레이어만)
 - `GamePhase::ActionPhase` → `GameAction` 전체 허용 (단, 개별 액션 조건 별도 확인)
 - 비 해당 페이즈에서 액션 시도 → `RuleError::WrongPhase`
 
@@ -38,16 +39,43 @@
 - 또는 `remaining_players` 전원이 `passed` → 마지막으로 `PlaceBid`한 플레이어 낙찰
 
 ### BR-B05: 자동 배정
-- 마지막 1명이 남으면 남은 페어 자동 배정 (입찰 없음)
-- `bid_amount = 0` 설정
+- 세 번의 낙찰 뒤 마지막 1명에게 남은 팩션과 턴 위치를 자동 배정
+- `setup_bid_vp = 0` 설정
 
 ### BR-B06: 팩션 선택 범위
-- `SelectFaction(faction_id)` 시 `faction_id`는 낙찰된 페어의 두 팩션 중 하나여야 함
+- `ChooseBidReward`의 `faction_id`는 아직 선택되지 않은 공개 팩션이어야 함
 - 위반 시 → `RuleError::ActionNotAllowed`
 
 ### BR-B07: 턴 순서 선택 범위
-- `SelectTurnOrder(pos)` 시 `pos`는 1-4 중 아직 선택되지 않은 값이어야 함
+- `ChooseBidReward`의 `turn_position`은 1-4 중 아직 선택되지 않은 값이어야 함
 - 위반 시 → `RuleError::ActionNotAllowed`
+
+---
+
+## 2a. 시작 구조물 배치 규칙
+
+### BR-S01: 배치 순서
+- 첫 구조물은 최종 턴 순서대로 시계 방향 배치
+- 둘째 구조물은 역순으로 반시계 방향 배치
+- Xenos의 셋째 Mine은 모든 둘째 배치 뒤에 배치
+- Ivits의 PlanetaryInstitute는 모든 Mine 배치 뒤 마지막으로 배치
+- 시작 구조물이 하나인 Lost Fleet 팩션은 첫 배치를 건너뛰고 반시계 방향 단계에서 배치
+
+### BR-S02: 배치 대상
+- 팩션 데이터의 `home_planet`과 같은 타입의 행성에만 배치 가능
+- Gaia 형성 행성, 이미 소유자가 있는 행성, 구조물이 있는 hex에는 배치 불가
+- 위반 시 → `RuleError::InvalidTarget` 또는 `RuleError::TargetOccupied`
+
+### BR-S03: 배치 효과
+- `PlayerState.structures`, `Planet.owner`, `Hex.structures`를 하나의 액션에서 함께 갱신
+- 자원과 건설 비용은 소모하지 않으며 셋업 중 파워 충전도 발생하지 않음
+- 마지막 배치 뒤에는 `StartingBoosters`로 전환하며 아직 첫 라운드 수입을 지급하지 않음
+
+### BR-S04: 초기 부스터 선택
+- 최종 턴 순서의 마지막 플레이어부터 역순으로 하나씩 선택
+- 선택 대상은 `GameState.boosters`에 남아 있어야 하며 중복 선택 불가
+- 전원 선택 완료 후에만 `round=1`, `Setup::Complete`로 전환
+- 서버는 완료 직후 구조물·연구트랙·팩션·부스터 수입을 적용하고 액션 단계를 시작
 
 ---
 
@@ -169,14 +197,15 @@ ResearchLab → Academy (ore 3, knowledge 0)  [플레이어당 2개]
   - 레벨 3: 3개
 
 ### BR-G03: 비용
-- Gaiaformer 1개 소비 + `power.gaia_bowl`에서 4 파워 소비 → `gaia_forming`으로 이동
+- 사용 가능한 Gaiaformer 1개를 배치하고 Gaia Project 연구 레벨에 따른 파워(6/4/3)를 I/II/III 구역에서 `gaia_forming`으로 이동
 - 자원 부족 시 → `RuleError::InsufficientResources`
 
 ### BR-G04: 완료 조건
-- 가이아 포밍 시작 시: `gaia_forming += 4`
-- 다음 라운드 Gaia Phase: `gaia_forming → gaia_bowl` 이동
-- 그 다음 라운드 Gaia Phase: `gaia_bowl` 반환, 행성 `is_gaia_formed = true`
-- (실제로는 2라운드 소요)
+- 가이아 프로젝트를 시작한 다음 라운드 Gaia Phase에 행성 `is_gaia_formed = true`
+- 배치한 Gaiaformer는 행성 완료 시 플레이어 보드로 돌아가며, 해당 플레이어가 광산을 지을 수 있음
+- 일반 진영의 Gaia 구역 파워는 I 구역으로, Terrans는 II 구역으로 반환
+- Terrans 행성의회: 반환할 파워 값만큼 파워→자원 자유행동 비율을 선택적으로 적용하며 토큰은 모두 II 구역으로 이동
+- Itars 행성의회: Gaia 구역 파워 4개를 버릴 때마다 기술 타일 1개를 반복 획득 가능
 
 ---
 
@@ -198,6 +227,10 @@ ResearchLab → Academy (ore 3, knowledge 0)  [플레이어당 2개]
 ### BR-PS01: 부스터 교환
 - `Pass { booster }` 시 현재 보유 부스터 반납 + 선택한 booster 획득
 - 선택한 booster는 남은 부스터 풀에 있어야 함
+- 1-5라운드에는 새 booster 선택 필수, 6라운드에는 새 booster를 선택하지 않음
+- 패스 시 반납하는 기존 booster의 패스 VP를 즉시 계산
+- 첫 라운드 시작과 이후 Income Phase에 현재 booster의 수입 적용
+- 시작 booster 선택 UI가 생기기 전까지는 역순 턴 순서에 따라 셔플 결과를 결정론적으로 배정
 
 ### BR-PS02: 라운드 패스
 - `player.passed = true` 설정
@@ -278,17 +311,17 @@ ResearchLab → Academy (ore 3, knowledge 0)  [플레이어당 2개]
 - 예: 1위 VP=18, 2위 VP=12, 동점 2명 → 각 (18+12)/2 = 15점
 
 ### BR-SC04: 자원 → VP 변환
-- `floor((ore + credits) / 3)` VP 지급
+- `floor((ore + credits + knowledge) / 3)` VP 지급
 - 변환 후 남은 자원은 무시
 
 ### BR-SC05: Lost Fleet 최종 득점 타일 풀 확장
 - 전체 최종 득점 타일 풀 = 기본 6개 + Lost Fleet 3개 = 9개
 - 랜더마이저가 9개 중 2개를 랜덤 선택하여 `GameState.final_scoring_tiles`에 배치
-- 3개 Lost Fleet 조건: `MostExploredShips`, `MostSpecialPlanets`, `HighestSingleTrack`
+- 3개 Lost Fleet 조건: `MostDeepSpaceSectors`, `MostAsteroids`, `GreatestDistancePiAcademy`
 - 각 조건 계산 방식:
-  - `MostExploredShips`: `player.explored_ships.len()` 비교
-  - `MostSpecialPlanets`: `AsteroidColonized + ProtoPlanetColonized` 이벤트 수 합산
-  - `HighestSingleTrack`: `max(player.research_tracks.*)` 단일 트랙 최고값 비교
+  - `MostDeepSpaceSectors`: 하나 이상의 행성을 개척한 심우주 섹터 수 비교
+  - `MostAsteroids`: 개척한 소행성 수 비교
+  - `GreatestDistancePiAcademy`: 행성 의회에서 가장 먼 아카데미까지의 거리 비교
 
 ### BR-SC06: spent_gaia_formers 최종 득점 미반영
 - `player.resources.spent_gaia_formers`는 사용 가능 Gaiaformer 수 계산에만 사용

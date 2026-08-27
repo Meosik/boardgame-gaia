@@ -1,3 +1,4 @@
+use crate::bidding::BiddingState;
 use crate::error::DeserializeError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -127,6 +128,49 @@ impl PlanetType {
     }
 }
 
+/// One of the 4 physical Lost Fleet spaceship boards (expansion rulebook, "Lost Fleet
+/// Spaceships"). Distinct from the map hex a spaceship tile sits on — see
+/// `BoardState::spaceship_tiles`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SpaceshipId {
+    Twilight,
+    Rebellion,
+    TFMars,
+    Eclipse,
+}
+
+impl SpaceshipId {
+    pub fn all() -> [Self; 4] {
+        [Self::Twilight, Self::Rebellion, Self::TFMars, Self::Eclipse]
+    }
+}
+
+/// Shared state for one Lost Fleet spaceship board: which players have explored it (shuttle
+/// slots, in board order — slot 0 is the first explorer) and, for Twilight only, its remaining
+/// Artifact pool.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpaceshipBoard {
+    pub id: SpaceshipId,
+    /// Shuttle slots in board order; `explorers[i]` is `Some(player)` once slot i is taken.
+    /// Power charged for slots after the first explorer is looked up by index
+    /// (`spaceship_shuttle_power_charge` in rules/engine.rs).
+    pub explorers: Vec<Option<PlayerId>>,
+    /// Twilight only: remaining face-up Artifact tokens available to draw via "Examine an
+    /// Artifact". Empty for the other 3 ships.
+    pub artifact_pool: Vec<ArtifactId>,
+    /// The ship's own Federation token (expansion p.5, "4) Action: Form a Federation" — one of 4
+    /// Lost Fleet-specific tokens seeded at setup, ids 8-11 in `federation_token_kind`), claimable
+    /// only by a player who has explored this ship, via `FederationTokenChoice::Spaceship`. `None`
+    /// once claimed.
+    #[serde(default)]
+    pub federation_token: Option<FederationToken>,
+}
+
+/// A drawn Lost Fleet Artifact token (expansion Appendix VII). The physical set has 13 tokens
+/// total, all confirmed from individual photos (`artifact_effect` in rules/engine.rs).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArtifactId(pub u8);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum StructureType {
     Mine,
@@ -212,13 +256,13 @@ pub enum FinalScoringCondition {
     MostStructuresInFederation, // most structures that are part of federations
     MostBuildings,              // most structures total
     MostPlanetTypes,            // most different planet types colonized
-    MostGaiaplanets,            // most Gaia planets colonized
-    MostSectors,                // most sectors with at least 1 structure
+    MostGaiaPlanets,            // most Gaia planets colonized
+    MostSectors,                // most standard sectors with at least 1 colonized planet
     MostSatellites,             // most satellites (Ivits: space stations count)
     // Lost Fleet expansion (3 tiles, pool of 9 total)
-    MostExploredShips,
-    MostSpecialPlanets,
-    HighestSingleTrack,
+    MostDeepSpaceSectors,
+    MostAsteroids,
+    GreatestDistancePiAcademy,
 }
 
 // ── FactionId ─────────────────────────────────────────────────────────────────
@@ -343,6 +387,19 @@ pub struct PowerCycle {
     pub bowl3: u8,
     pub gaia_bowl: u8,
     pub gaia_forming: u8,
+    /// Taklons' distinct Brainstone token. It charges one step like a normal
+    /// token, counts as one token for non-spending effects, and spends as
+    /// three power from Area III.
+    #[serde(default)]
+    pub brainstone: Option<BrainstoneLocation>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BrainstoneLocation {
+    Area1,
+    Area2,
+    Area3,
+    Gaia,
 }
 
 impl PowerCycle {
@@ -353,6 +410,7 @@ impl PowerCycle {
             bowl3: 0,
             gaia_bowl: 0,
             gaia_forming: 0,
+            brainstone: None,
         }
     }
 
@@ -362,6 +420,7 @@ impl PowerCycle {
             .saturating_add(self.bowl3)
             .saturating_add(self.gaia_bowl)
             .saturating_add(self.gaia_forming)
+            .saturating_add(u8::from(self.brainstone.is_some()))
     }
 }
 
@@ -397,13 +456,48 @@ pub struct PlayerState {
     pub structures: Vec<Structure>,
     pub research_tracks: ResearchTracks,
     pub vp: i32,
+    /// VP promised during setup bidding. It remains separate from `vp` until
+    /// final scoring, where it is applied as a deduction.
+    #[serde(default)]
+    pub setup_bid_vp: u32,
     pub passed: bool,
+    /// Currently owned round booster. `GameState::boosters` contains only
+    /// boosters available to take when passing.
+    #[serde(default)]
+    pub booster: Option<Booster>,
     pub federation_tokens: Vec<FederationToken>,
+    /// Federation tokens flipped from green to gray (rulebook p.14: "You can later flip tokens
+    /// from their green side to their gray side to gain an advanced tech tile or advance to the
+    /// highest level (level 5) of a research area") — moved here from `federation_tokens` (which
+    /// therefore holds only still-green, spendable tokens) when flipped. A flipped token's
+    /// reward isn't re-granted or removed; it just can no longer be flipped again.
+    #[serde(default)]
+    pub gray_federation_tokens: Vec<FederationToken>,
     pub alliance_tiles: Vec<AllianceTile>,
     pub explored_ships: Vec<ShipId>,
+    /// Exploration Shuttles not yet deployed to a Lost Fleet spaceship (starts at 3 — this
+    /// project is always 4 players, so never the base rulebook's 2-player count of 2).
+    /// Deploying one via "Explore a Lost Fleet Spaceship" decrements this permanently.
+    #[serde(default)]
+    pub exploration_shuttles_available: u8,
     pub gaiaformers_total: u8,
     pub gaiaformers_deployed: u8,
+    /// Bal T'aks Gaiaformers converted into QIC remain unavailable in the
+    /// Gaia area until the next Gaia phase.
+    #[serde(default)]
+    pub gaiaformers_in_gaia_area: u8,
     pub tech_tiles: Vec<TechTile>,
+    /// Advanced Tech tiles owned (rulebook p.15: taking one removes it permanently from its
+    /// research track's level-4/5 slot in `ResearchBoard.advanced_tech_tiles`).
+    #[serde(default)]
+    pub advanced_tech_tiles: Vec<AdvancedTechTile>,
+    /// Standard Tech tiles physically covered by an Advanced Tech tile taken on top of them
+    /// (rulebook p.15: "When you gain an advanced tech tile, place it faceup covering one of
+    /// your standard tech tiles. A covered tech tile has no effect."). Still owned (counts for
+    /// "no faction can own more than one of the same tech tile" and VP-per-tile-owned effects
+    /// like `TFMarsTechBonus`), but excluded from every ongoing effect check.
+    #[serde(default)]
+    pub covered_tech_tiles: Vec<TechTile>,
     /// Whether this player has used their faction's one-time Planetary
     /// Institute special action (e.g. Space Giants' free tech tile).
     /// Meaningless for factions without such an ability.
@@ -420,6 +514,53 @@ pub struct PlayerState {
     /// — may only be used once per round, tracked by placing an action
     /// token; reset at Clean-up). Meaningless without a built Academy(Qic).
     pub academy_qic_action_used_this_round: bool,
+    /// Lost Fleet expansion (`GP_Exp_Rule_EN_V1_Web.pdf` p.10, "7) Special Actions"): the
+    /// Gleens' and Space Giants' Exploration Board special action, once per round each
+    /// ("You cannot combine this special action with another action" — enforced the same way
+    /// as every other main action, by consuming the turn). Meaningless for other factions.
+    pub gleens_special_action_used_this_round: bool,
+    pub space_giants_special_action_used_this_round: bool,
+    /// Whether the special action printed on the player's currently owned round booster has
+    /// been used this round. Only boosters with action spaces use the flag; reset during
+    /// Clean-up and preserved independently when the player exchanges boosters while passing.
+    #[serde(default)]
+    pub round_booster_special_action_used_this_round: bool,
+    /// Shared once-per-round action-token flag for a faction's base-board
+    /// special action (currently Ambas, Firaks, and Bescods). A player can
+    /// only belong to one faction, so one flag is sufficient.
+    #[serde(default)]
+    pub faction_special_action_used_this_round: bool,
+    /// Planet types for which Geodens' Planetary Institute bonus is no longer
+    /// available. Types colonized before the PI is built are seeded here when
+    /// the upgrade occurs, because they never qualify retroactively.
+    #[serde(default)]
+    pub geodens_rewarded_planet_types: Vec<PlanetType>,
+    /// Every hex (colonized planet or satellite) this player has ever committed to a formed
+    /// Federation. Rulebook p.14: "Each planet and satellite can be part of only one
+    /// federation" — checked against this list before a new `FormFederation` can reuse a hex,
+    /// and extended with the new federation's hexes on success. Colonizing a planet directly
+    /// adjacent to an existing federation later "enlarges" it for free (rulebook) rather than
+    /// requiring a new `FormFederation` submission, so this list only grows via that action.
+    #[serde(default)]
+    pub federated_hexes: Vec<HexCoord>,
+    /// Tinkeroids only: ids (1-6) of the Tinkering tiles this player has already used via
+    /// `GameAction::TinkeroidsUseTile` — each of the 6 tiles is usable at most once per game
+    /// (rulebook Appendix I: "each tile is only used once").
+    #[serde(default)]
+    pub tinkeroids_tiles_used: Vec<u8>,
+    /// Moweyds only: hexes where this player has placed one of their (at most 6) Power Rings via
+    /// `GameAction::MoweydsPlacePowerRing`. Each hex in this list adds +2 to that hex's structure
+    /// power value for federation power and opponent charge-power purposes (rulebook Appendix I).
+    #[serde(default)]
+    pub moweyds_power_ring_hexes: Vec<HexCoord>,
+    /// Ids of Standard Tech tiles whose "as a special action" ability this player has already
+    /// used this round (each owned special-action tile is independently once-per-round — reset
+    /// at Clean-up, distinct from `faction_special_action_used_this_round`).
+    #[serde(default)]
+    pub tech_tile_special_actions_used_this_round: Vec<u8>,
+    /// Same as `tech_tile_special_actions_used_this_round`, for Advanced Tech tiles.
+    #[serde(default)]
+    pub advanced_tech_tile_special_actions_used_this_round: Vec<u8>,
 }
 
 impl PlayerState {
@@ -427,7 +568,8 @@ impl PlayerState {
         let used = self
             .resources
             .spent_gaia_formers
-            .saturating_add(self.gaiaformers_deployed);
+            .saturating_add(self.gaiaformers_deployed)
+            .saturating_add(self.gaiaformers_in_gaia_area);
         self.gaiaformers_total.saturating_sub(used)
     }
 }
@@ -549,6 +691,11 @@ pub struct BoardState {
     pub sectors: Vec<Sector>,
     pub hexes: HashMap<HexCoord, Hex>,
     pub lost_planet: Option<HexCoord>,
+    /// Where each of the 4 Lost Fleet spaceship tiles sits on the map, placed among the 10
+    /// Interspace tile holes per the 4-player variable setup (rulebook p.4-5) — see
+    /// `MapEngine::place_interspace_tiles`.
+    #[serde(default)]
+    pub spaceship_tiles: HashMap<SpaceshipId, HexCoord>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -648,10 +795,43 @@ pub struct AdvancedTechTile(pub u8);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FinalScoringTile {
+    /// Stable asset id. The physical/TTS set uses ids 1-6 and 8-10.
+    #[serde(default)]
+    pub id: u8,
     pub condition: FinalScoringCondition,
     pub vp_1st: u8,
     pub vp_2nd: u8,
     pub vp_3rd: u8,
+}
+
+impl FinalScoringTile {
+    pub const IDS: [u8; 9] = [1, 2, 3, 4, 5, 6, 8, 9, 10];
+
+    pub fn from_id(id: u8) -> Self {
+        let condition = match id {
+            1 => FinalScoringCondition::MostGaiaPlanets,
+            2 => FinalScoringCondition::MostDeepSpaceSectors,
+            3 => FinalScoringCondition::MostStructuresInFederation,
+            4 => FinalScoringCondition::MostPlanetTypes,
+            5 => FinalScoringCondition::MostBuildings,
+            6 => FinalScoringCondition::MostAsteroids,
+            8 => FinalScoringCondition::MostSectors,
+            9 => FinalScoringCondition::GreatestDistancePiAcademy,
+            10 => FinalScoringCondition::MostSatellites,
+            _ => FinalScoringCondition::MostBuildings,
+        };
+        Self {
+            id,
+            condition,
+            vp_1st: 18,
+            vp_2nd: 12,
+            vp_3rd: 6,
+        }
+    }
+
+    pub fn all() -> Vec<Self> {
+        Self::IDS.into_iter().map(Self::from_id).collect()
+    }
 }
 
 // ── Booster ───────────────────────────────────────────────────────────────────
@@ -693,6 +873,15 @@ pub enum GamePhase {
         queue: Vec<PendingIncomeOrder>,
         round: u8,
     },
+    /// Gaia phase pause for the Terrans' and Itars' Planetary Institute
+    /// abilities. The player at the front may resolve their optional ability
+    /// any number of times, then submits `FinishGaiaDecision`; any remaining
+    /// Gaia-area power is moved to that faction's normal destination and the
+    /// next queued player decides.
+    GaiaDecisionPending {
+        queue: Vec<PendingGaiaDecision>,
+        round: u8,
+    },
     RoundScoring {
         round: u8,
     },
@@ -717,9 +906,44 @@ pub struct PendingIncomeOrder {
     pub bonus_tokens: u8,
 }
 
+/// Which optional Planetary Institute ability a player may resolve during a
+/// `GaiaDecisionPending` pause.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GaiaDecisionKind {
+    TerransPowerConversion,
+    ItarsTechTile,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PendingGaiaDecision {
+    pub player: PlayerId,
+    pub kind: GaiaDecisionKind,
+    /// Power value still available to the optional faction ability. Terrans
+    /// consume only this allowance (their tokens still all move to Area II);
+    /// Itars discard the corresponding physical Gaia-area tokens too.
+    pub remaining_power: u8,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SetupPhase {
-    FactionSelection { active_player: PlayerId },
+    FactionSelection {
+        active_player: PlayerId,
+    },
+    Bidding {
+        active_player: PlayerId,
+    },
+    BiddingChoice {
+        winner: PlayerId,
+    },
+    StartingStructures {
+        active_player: PlayerId,
+        placement_index: usize,
+        kind: StructureType,
+    },
+    StartingBoosters {
+        active_player: PlayerId,
+        selection_index: usize,
+    },
     Complete,
 }
 
@@ -757,9 +981,29 @@ pub enum GameEvent {
         player: PlayerId,
         faction: FactionId,
     },
+    BidPlaced {
+        player: PlayerId,
+        amount: u32,
+    },
+    BidPassed {
+        player: PlayerId,
+    },
+    BidWon {
+        player: PlayerId,
+        amount: u32,
+        faction: FactionId,
+        turn_position: u8,
+    },
     ResourceChanged {
         player: PlayerId,
         delta: ResourceDelta,
+    },
+    /// Human-readable audit event for a free-action conversion. The
+    /// accompanying `ResourceChanged` event remains the numeric state delta.
+    FreeActionTaken {
+        player: PlayerId,
+        kind: String,
+        count: u8,
     },
     VpAwarded {
         player: PlayerId,
@@ -776,6 +1020,19 @@ pub enum GameEvent {
         hex: HexCoord,
         from: StructureType,
         to: StructureType,
+    },
+    StructuresSwapped {
+        player: PlayerId,
+        first: HexCoord,
+        second: HexCoord,
+    },
+    SpaceStationPlaced {
+        player: PlayerId,
+        hex: HexCoord,
+    },
+    PowerRingPlaced {
+        player: PlayerId,
+        hex: HexCoord,
     },
     FederationFormed {
         player: PlayerId,
@@ -799,6 +1056,10 @@ pub enum GameEvent {
         player: PlayerId,
         booster: Booster,
     },
+    BoosterSelected {
+        player: PlayerId,
+        booster: Booster,
+    },
     ShipExplored {
         player: PlayerId,
         ship_id: ShipId,
@@ -811,9 +1072,17 @@ pub enum GameEvent {
         player: PlayerId,
         hex: HexCoord,
     },
+    ArtifactExamined {
+        player: PlayerId,
+        artifact: ArtifactId,
+    },
     TechTileGained {
         player: PlayerId,
         tile: TechTile,
+    },
+    AdvancedTechTileGained {
+        player: PlayerId,
+        tile: AdvancedTechTile,
     },
 
     RoundStarted {
@@ -830,6 +1099,7 @@ pub enum GameEvent {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VpReason {
     RoundTile { tile_id: u8 },
+    RoundBooster { booster_id: u8 },
     FinalTile { tile_id: u8 },
     ResearchTrack { track: ResearchTrack },
     ResourceConversion,
@@ -838,6 +1108,7 @@ pub enum VpReason {
     ShipExploration,
     AsteroidColony,
     ProtoPlanetColony,
+    TechTile { tile_id: u8 },
 }
 
 // ── RoundTile ─────────────────────────────────────────────────────────────────
@@ -851,20 +1122,22 @@ pub struct RoundTile {
 
 impl RoundTile {
     /// Map a round tile id (1–12) to its condition and VP value.
+    /// Each id maps one-to-one to a distinct image asset used by the client.
     pub fn from_id(id: u8) -> Self {
         let (condition, vp_per_unit) = match id {
             1 => (RoundCondition::BuildMine, 2),
-            2 => (RoundCondition::BuildMine, 2),
-            3 => (RoundCondition::Upgrade, 3),
-            4 => (RoundCondition::Upgrade, 3),
-            5 => (RoundCondition::ResearchAdvance, 2),
-            6 => (RoundCondition::ResearchAdvance, 2),
-            7 => (RoundCondition::GaiaProject, 3),
-            8 => (RoundCondition::GaiaProject, 3),
-            9 => (RoundCondition::BuildStation, 3),
-            10 => (RoundCondition::BuildStation, 3),
-            11 => (RoundCondition::FormFederation, 6),
-            _ => (RoundCondition::BuildAcademy, 5), // id 12 and unknown
+            2 => (RoundCondition::TerraformingStep, 2),
+            3 => (RoundCondition::BuildMineOnGaia, 4),
+            4 => (RoundCondition::UpgradeTradingStation, 3),
+            5 => (RoundCondition::FormFederation, 5),
+            6 => (RoundCondition::UpgradeLargeBuilding, 5),
+            7 => (RoundCondition::BuildMineOnGaia, 3),
+            8 => (RoundCondition::UpgradeTradingStation, 4),
+            9 => (RoundCondition::ResearchAdvance, 2),
+            10 => (RoundCondition::BuildMineOnNewPlanetType, 3),
+            11 => (RoundCondition::BuildMineInNewSector, 3),
+            12 => (RoundCondition::UpgradeResearchLab, 4),
+            _ => (RoundCondition::BuildMine, 0),
         };
         Self {
             id,
@@ -877,12 +1150,15 @@ impl RoundTile {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RoundCondition {
     BuildMine,
-    Upgrade,
+    TerraformingStep,
+    BuildMineOnGaia,
+    UpgradeTradingStation,
+    UpgradeLargeBuilding,
     ResearchAdvance,
-    GaiaProject,
-    BuildStation,
     FormFederation,
-    BuildAcademy,
+    BuildMineOnNewPlanetType,
+    BuildMineInNewSector,
+    UpgradeResearchLab,
 }
 
 // ── GameState ─────────────────────────────────────────────────────────────────
@@ -903,6 +1179,9 @@ pub struct GameState {
     pub final_scoring_tiles: [FinalScoringTile; 2],
     pub research_board: ResearchBoard,
     pub faction_selection: Option<FactionSelectionState>,
+    /// Present only when the optional fixed four-player bidding setup is used.
+    #[serde(default)]
+    pub bidding: Option<BiddingState>,
 
     pub turn_order: Vec<PlayerId>,
     pub current_player: usize,
@@ -913,10 +1192,19 @@ pub struct GameState {
     /// `PlayerState::academy_qic_action_used_this_round`'s per-player
     /// exclusivity. Reset in `finish_round_transition`.
     pub used_power_actions: Vec<u8>,
-    /// QIC-action board slot ids already taken this round (see
-    /// `qic_action_slot_id` for the kind→id mapping) — same shared,
-    /// once-per-round-across-all-players exclusivity as `used_power_actions`.
-    pub used_qic_action_slots: Vec<u8>,
+
+    /// The 4 Lost Fleet spaceship boards' shared explore/artifact state. Always 4 entries
+    /// (this project is always 4 players, so the Rebellion spaceship — normally unused in
+    /// 2-player games — is always in play).
+    #[serde(default)]
+    pub spaceship_boards: Vec<SpaceshipBoard>,
+
+    /// Lost Fleet expansion Appendix II ("New Action Spaces") ids already used this round.
+    /// These spaces are shared across all players: the first player covers the space with an
+    /// action token, and Clean-up removes that token for the next round. Reset alongside
+    /// `used_power_actions` in `finish_round_transition`.
+    #[serde(default)]
+    pub used_spaceship_actions: Vec<u8>,
 
     pub event_log: Vec<GameEvent>,
 }

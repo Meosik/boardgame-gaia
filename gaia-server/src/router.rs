@@ -18,7 +18,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/rooms", post(rest::create_room))
         .route("/rooms/:code/join", post(rest::join_room))
         .route("/rooms/:code", get(rest::get_room))
-        .route("/rooms/:code/regenerate", post(rest::regenerate_setup));
+        .route("/rooms/:code/regenerate", post(rest::regenerate_setup))
+        .route("/rooms/:code/preview_board", get(rest::preview_board));
 
     let frontend_dir =
         std::env::var("FRONTEND_DIR").unwrap_or_else(|_| "gaia-frontend/dist".to_string());

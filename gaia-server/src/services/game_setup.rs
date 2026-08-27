@@ -1,4 +1,4 @@
-use gaia_engine::{game_state::PlayerId, GameSetup, Randomizer};
+use gaia_engine::{game_state::PlayerId, GameSetup, Randomizer, SetupMode};
 use gaia_protocol::{CommandId, Revision};
 
 use crate::{
@@ -16,10 +16,11 @@ impl GameSetupService {
         state: &AppState,
         host_nickname: &str,
         seed: Option<String>,
+        setup_mode: SetupMode,
     ) -> ServerResult<(String, PlayerId, GameSetup)> {
         let (code, player_id) = {
             let mut rooms = state.rooms.write().await;
-            rooms.create_room(host_nickname, seed)?
+            rooms.create_room(host_nickname, seed, setup_mode)?
         };
 
         let setup = {
@@ -57,20 +58,30 @@ impl GameSetupService {
         command_id: CommandId,
         expected_revision: Revision,
     ) -> CommandResult {
-        let is_host = {
+        let setup_mode = {
             let rooms = state.rooms.read().await;
-            rooms
+            let room = rooms
                 .get_room(room_code)
-                .map(|r| r.is_host(requesting_player))
-                .unwrap_or(false)
+                .ok_or_else(|| coordinator::CommandError::RoomNotFound(room_code.to_string()))?;
+            if !room.is_host(requesting_player) {
+                return Err(coordinator::CommandError::Server(ServerError::Unauthorised));
+            }
+            if room.state != crate::room::manager::RoomState::Lobby {
+                return Err(coordinator::CommandError::Server(
+                    ServerError::RoomAlreadyStarted,
+                ));
+            }
+            room.setup
+                .as_ref()
+                .map_or(SetupMode::Sequential, |setup| setup.setup_mode)
         };
-        if !is_host {
-            return Err(coordinator::CommandError::Server(ServerError::Unauthorised));
-        }
 
         let new_seed = seed.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-        let setup = Randomizer::generate_setup(&new_seed)
-            .map_err(|e| coordinator::CommandError::Server(ServerError::from(e)))?;
+        let setup = match setup_mode {
+            SetupMode::Sequential => Randomizer::generate_setup(&new_seed),
+            SetupMode::Bidding => Randomizer::generate_bidding_setup(&new_seed),
+        }
+        .map_err(|e| coordinator::CommandError::Server(ServerError::from(e)))?;
 
         let outcome =
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {

@@ -51,7 +51,7 @@ export function FactionBadge({
       alt={faction}
       width={size}
       height={size}
-      // Faction board portraits are 480x1332 with the character art in a
+      // Exploration Board portraits are 480x1332 with the character art in a
       // ~480x480 band starting ~60px (~7% of the 852px vertical overflow
       // once cover-scaled to a square) from the top — the default 50%
       // vertical center instead lands on the stats table in the board's

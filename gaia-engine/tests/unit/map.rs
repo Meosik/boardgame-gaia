@@ -25,6 +25,7 @@ fn make_board(coords: &[(i32, i32)]) -> BoardState {
         }],
         hexes,
         lost_planet: None,
+        spaceship_tiles: HashMap::new(),
     }
 }
 

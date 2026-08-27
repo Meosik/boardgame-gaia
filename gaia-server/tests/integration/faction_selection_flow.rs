@@ -23,8 +23,8 @@
 use axum_test::TestWebSocket;
 use serde_json::{json, Value};
 
-use gaia_engine::game_state::FactionId;
-use gaia_engine::{GamePhase, GameState};
+use gaia_engine::game_state::{FactionId, HexCoord, SetupPhase};
+use gaia_engine::{data::load_factions, GamePhase, GameState};
 
 use super::harness::{
     next_command_id, receive_until, receive_until_revision, send_command_and_await_accept,
@@ -33,7 +33,7 @@ use super::harness::{
 
 #[tokio::test]
 #[ignore = "requires DATABASE_URL"]
-async fn sequential_faction_selection_reaches_game_started_action_phase() {
+async fn sequential_setup_reaches_action_phase_after_structures_boosters_and_income() {
     let server = spawn_test_app().await;
 
     // ── Create room (host) via REST, exactly like the real client flow ─────
@@ -148,7 +148,7 @@ async fn sequential_faction_selection_reaches_game_started_action_phase() {
     //    available faction board-side, strictly in clockwise room-join order
     //    (host, P2, P3, P4) per PD-001/PD-002. Picking indices 0, 2, 4, 6
     //    from the initially-offered faction list always lands on distinct
-    //    board pairs, mirroring `gaia-engine/tests/setup_policy.rs`. ────────
+    //    board pairs and exercises Xenos' expansion-specific third mine. ──
     let picks = [
         (host_id, factions[0]),
         (guest_ids[0], factions[2]),
@@ -178,19 +178,140 @@ async fn sequential_faction_selection_reaches_game_started_action_phase() {
         .await;
     }
 
-    // ── Assert: every connection eventually observes a `snapshot` at the
-    //    final revision with the game in `ActionPhase { active_player: 0 }`
-    //    — the exact transition performed when the final `SelectFaction`
-    //    command completes setup. Each connection also received earlier
-    //    snapshot broadcasts for *other* players' commands along the way
-    //    (this test only ever awaits its own `command_accepted`), so this
-    //    scans past those rather than assuming the final snapshot is next. ─
-    let host_snapshot = receive_until_revision(&mut host_ws, revision).await;
-    assert_snapshot_reached_action_phase(&host_snapshot, "host", revision);
-    for (i, (_, ws)) in guests.iter_mut().enumerate() {
-        let snap = receive_until_revision(ws, revision).await;
-        assert_snapshot_reached_action_phase(&snap, &format!("guest[{i}]"), revision);
+    // Faction selection transitions through interactive structure placement,
+    // reverse-order initial booster selection, and any first-income ordering
+    // decisions before round-one actions open.
+    let mut snapshot = receive_until_revision(&mut host_ws, revision).await;
+    let mut game_state = snapshot_game_state(&snapshot, "after faction selection");
+    loop {
+        let (active_player, command) = match &game_state.phase {
+            GamePhase::Setup(SetupPhase::StartingStructures { active_player, .. }) => {
+                let coord = open_home_planet(&game_state, *active_player);
+                (
+                    *active_player,
+                    json!({
+                        "type": "place_setup_action",
+                        "action": {
+                            "type": "PlaceStartingStructure",
+                            "coord": coord,
+                        },
+                    }),
+                )
+            }
+            GamePhase::Setup(SetupPhase::StartingBoosters { active_player, .. }) => {
+                let booster_id = game_state
+                    .boosters
+                    .first()
+                    .unwrap_or_else(|| panic!("an initial booster should remain"))
+                    .0;
+                (
+                    *active_player,
+                    json!({
+                        "type": "place_setup_action",
+                        "action": {
+                            "type": "SelectStartingBooster",
+                            "booster_id": booster_id,
+                        },
+                    }),
+                )
+            }
+            GamePhase::IncomeOrderPending { queue, .. } => {
+                let entry = queue
+                    .first()
+                    .unwrap_or_else(|| panic!("income-order queue should not be empty"));
+                (
+                    entry.player,
+                    json!({
+                        "type": "place_game_action",
+                        "action": {
+                            "type": "ChooseIncomeOrder",
+                            "charge_first": true,
+                        },
+                    }),
+                )
+            }
+            GamePhase::ActionPhase { active_player: 0 } => break,
+            ref phase => panic!("unexpected phase while driving setup: {phase:?}"),
+        };
+
+        {
+            let ws = if u64::from(active_player) == host_id {
+                &mut host_ws
+            } else {
+                &mut guests
+                    .iter_mut()
+                    .find(|(id, _)| *id == u64::from(active_player))
+                    .expect("placement player must be a known room member")
+                    .1
+            };
+            revision = send_command_and_await_accept(
+                ws,
+                &room_code,
+                &next_command_id("fsf", &mut cmd_id),
+                revision,
+                command,
+            )
+            .await;
+        }
+
+        // Observe on a different connection because the action sender may
+        // receive and consume the broadcast before its command acknowledgement.
+        snapshot = if u64::from(active_player) == host_id {
+            receive_until_revision(&mut guests[0].1, revision).await
+        } else {
+            receive_until_revision(&mut host_ws, revision).await
+        };
+        game_state = snapshot_game_state(&snapshot, "during setup completion");
     }
+
+    assert_snapshot_reached_action_phase(&snapshot, "setup observer", revision);
+}
+
+fn snapshot_game_state(snapshot: &Value, label: &str) -> GameState {
+    serde_json::from_value(snapshot["state"].clone())
+        .unwrap_or_else(|error| panic!("[{label}] snapshot should deserialize: {error}"))
+}
+
+fn open_home_planet(game_state: &GameState, player_id: u8) -> HexCoord {
+    let faction = game_state
+        .player(player_id)
+        .and_then(|player| player.faction)
+        .unwrap_or_else(|| panic!("placement player {player_id} should have a faction"));
+    let home_planet = load_factions()
+        .factions
+        .into_iter()
+        .find(|data| data.faction_id() == Some(faction))
+        .and_then(|data| data.home_planet_type())
+        .unwrap_or_else(|| panic!("{faction:?} should have a home planet"));
+    game_state
+        .board
+        .hexes
+        .values()
+        .find(|hex| {
+            hex.planet.as_ref().is_some_and(|planet| {
+                planet.planet_type == home_planet
+                    && !planet.is_gaia_formed
+                    && planet.owner.is_none()
+                    && hex.structures.is_empty()
+            })
+        })
+        .map(|hex| hex.coord)
+        .unwrap_or_else(|| {
+            let matching_planets = game_state
+                .board
+                .hexes
+                .values()
+                .filter(|hex| {
+                    hex.planet
+                        .as_ref()
+                        .is_some_and(|planet| planet.planet_type == home_planet)
+                })
+                .count();
+            panic!(
+                "an open {home_planet:?} planet should exist for player {player_id} ({faction:?}); \
+                 board contains {matching_planets} matching planets"
+            )
+        })
 }
 
 fn assert_snapshot_reached_action_phase(snapshot: &Value, label: &str, expected_revision: u64) {

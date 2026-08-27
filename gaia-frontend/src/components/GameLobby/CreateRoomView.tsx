@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { shallow } from 'zustand/shallow';
 import { useRoomStore } from '../../store/roomStore';
-import type { GameSetup } from '../../types/game';
+import type { GameSetup, SetupMode } from '../../types/game';
 
 interface Props {
   onRoomCreated: () => void;
@@ -10,12 +11,16 @@ interface Props {
 export function CreateRoomView({ onRoomCreated, onBack }: Props) {
   const [nickname, setNickname] = useState('');
   const [seed, setSeed] = useState('');
+  const [setupMode, setSetupMode] = useState<SetupMode>('bidding');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { gameSetup, actions } = useRoomStore((s) => ({
-    gameSetup: s.gameSetup,
-    actions: s.actions,
-  }));
+  const { gameSetup, actions } = useRoomStore(
+    (s) => ({
+      gameSetup: s.gameSetup,
+      actions: s.actions,
+    }),
+    shallow,
+  );
 
   async function handleCreate() {
     if (!nickname.trim()) {
@@ -25,7 +30,7 @@ export function CreateRoomView({ onRoomCreated, onBack }: Props) {
     setLoading(true);
     setError('');
     try {
-      await actions.createRoom(nickname.trim(), seed.trim() || undefined);
+      await actions.createRoom(nickname.trim(), seed.trim() || undefined, setupMode);
       onRoomCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : '방 생성에 실패했습니다');
@@ -69,6 +74,35 @@ export function CreateRoomView({ onRoomCreated, onBack }: Props) {
           placeholder="랜덤 시드 (비워두면 자동)"
         />
       </div>
+      <fieldset className="setup-mode-picker">
+        <legend>종족 결정 방식</legend>
+        <label className={setupMode === 'bidding' ? 'selected' : ''}>
+          <input
+            type="radio"
+            name="setup-mode"
+            value="bidding"
+            checked={setupMode === 'bidding'}
+            onChange={() => setSetupMode('bidding')}
+          />
+          <span>
+            <strong>VP 비딩</strong>
+            <small>방장부터 입찰하고 종족과 최종 순서를 선택합니다.</small>
+          </span>
+        </label>
+        <label className={setupMode === 'sequential' ? 'selected' : ''}>
+          <input
+            type="radio"
+            name="setup-mode"
+            value="sequential"
+            checked={setupMode === 'sequential'}
+            onChange={() => setSetupMode('sequential')}
+          />
+          <span>
+            <strong>순차 선택</strong>
+            <small>기존 방식대로 시계방향으로 종족만 선택합니다.</small>
+          </span>
+        </label>
+      </fieldset>
 
       {error && <p className="error-msg">{error}</p>}
 
@@ -98,6 +132,12 @@ function SetupPreview({ setup }: { setup: GameSetup }) {
       <div className="preview-row">
         <span className="preview-label">시드:</span>
         <span className="preview-value mono">{setup.seed}</span>
+      </div>
+      <div className="preview-row">
+        <span className="preview-label">선택 방식:</span>
+        <span className="preview-value">
+          {setup.setup_mode === 'bidding' ? 'VP 비딩' : '순차 선택'}
+        </span>
       </div>
       <div className="preview-row">
         <span className="preview-label">섹터 수:</span>

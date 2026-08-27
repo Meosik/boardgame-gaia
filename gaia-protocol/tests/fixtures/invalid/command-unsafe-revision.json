@@ -1,0 +1,10 @@
+{
+  "protocol_version": 1,
+  "schema_hash": "abababababababababababababababababababababababababababababababab",
+  "room_id": "ROOM01",
+  "command_id": "cmd_revision_1",
+  "expected_revision": 9007199254740992,
+  "command": {
+    "type": "pass"
+  }
+}

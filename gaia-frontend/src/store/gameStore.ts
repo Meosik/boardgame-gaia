@@ -6,6 +6,13 @@ import { hexKey } from '../components/GameBoard/hex-utils';
 
 type ActionType = GameAction['type'] | null;
 
+/** Set once the server broadcasts `game_ended` (round 6 completes) — the game is over and the
+ * board becomes read-only; `GameOverScreen` renders instead of the normal action flow. */
+export interface FinalResult {
+  finalScores: [PlayerId, number][];
+  winner: PlayerId;
+}
+
 interface GameStore {
   gameState: GameState | null;
   myPlayerId: PlayerId | null;
@@ -15,6 +22,7 @@ interface GameStore {
   selectedHexes: HexCoord[];
   selectedAction: ActionType;
   wsClient: GaiaWebSocket | null;
+  finalResult: FinalResult | null;
 
   actions: {
     setGameState: (state: GameState) => void;
@@ -24,6 +32,7 @@ interface GameStore {
     selectAction: (action: ActionType) => void;
     sendAction: (action: GameAction) => void;
     setWsClient: (client: GaiaWebSocket | null) => void;
+    setFinalResult: (result: FinalResult) => void;
     reset: () => void;
   };
 }
@@ -35,6 +44,7 @@ const initialState = {
   selectedHexes: [] as HexCoord[],
   selectedAction: null as ActionType,
   wsClient: null,
+  finalResult: null as FinalResult | null,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -77,6 +87,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     setWsClient(client) {
       set({ wsClient: client });
+    },
+
+    setFinalResult(result) {
+      set({ finalResult: result });
     },
 
     reset() {

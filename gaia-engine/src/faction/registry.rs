@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use super::ability::FactionAbility;
-use super::impls::{DarkaniansAbility, DefaultFactionAbility, SpaceGiantsAbility, TerransAbility};
+use super::impls::{
+    DarkaniansAbility, DefaultFactionAbility, LantidsAbility, SpaceGiantsAbility, TerransAbility,
+    XenosAbility,
+};
 use crate::game_state::FactionId;
 
 // ── FactionRegistry ───────────────────────────────────────────────────────────
@@ -45,12 +48,17 @@ impl FactionRegistry {
         }
 
         // Real implementations replace the stub as each faction's ability is coded.
-        // Tinkeroids/Moweyds stay on the stub: their abilities (Tinkering tiles,
-        // Power Ring, the randomized 3-vs-1 terraforming split) depend on the
-        // Exploration board / Deep Space spatial subsystem, which isn't built yet.
+        // Tinkeroids/Moweyds stay on the stub too, like Ambas/Firaks/Bescods/Ivits above them:
+        // their abilities (Tinkering tiles, Power Rings, and the opponent-dependent 3-vs-1
+        // terraforming split) are state-dependent in ways this trait's stateless per-faction
+        // methods can't express, so `rules::engine` implements them directly via
+        // `GameAction::TinkeroidsUseTile`/`MoweydsPlacePowerRing` and faction-id checks inside
+        // `terraforming_distance`/`gaia_qic_cost`/`faction_structure_power_value` instead.
         map.insert(FactionId::Darkanians, Box::new(DarkaniansAbility));
         map.insert(FactionId::SpaceGiants, Box::new(SpaceGiantsAbility));
         map.insert(FactionId::Terrans, Box::new(TerransAbility));
+        map.insert(FactionId::Lantids, Box::new(LantidsAbility));
+        map.insert(FactionId::Xenos, Box::new(XenosAbility));
 
         Self { map }
     }

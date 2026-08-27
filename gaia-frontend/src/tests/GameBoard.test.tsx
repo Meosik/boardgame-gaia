@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import { axialToPixel, hexCorners, hexKey } from '../components/GameBoard/hex-utils';
+import { HexCell } from '../components/GameBoard/HexCell';
+import { axialDistance, axialToPixel, hexCorners, hexKey } from '../components/GameBoard/hex-utils';
+import type { Hex } from '../types/game';
 
 describe('hex-utils', () => {
   it('axialToPixel returns correct coords for origin', () => {
@@ -31,6 +33,11 @@ describe('hex-utils', () => {
     expect(hexKey(3, -2)).toBe('3,-2');
     expect(hexKey(0, 0)).toBe('0,0');
   });
+
+  it('axialDistance matches engine hex distance', () => {
+    expect(axialDistance({ q: 0, r: 0 }, { q: 5, r: -2 })).toBe(5);
+    expect(axialDistance({ q: 3, r: -2 }, { q: 3, r: -3 })).toBe(1);
+  });
 });
 
 describe('GameBoard rendering', () => {
@@ -41,5 +48,35 @@ describe('GameBoard rendering', () => {
       <svg data-testid="board-svg" />
     );
     expect(container.querySelector('svg')).toBeTruthy();
+  });
+
+  it('keeps printed sector planets visible instead of drawing a duplicate icon', () => {
+    const hex: Hex = {
+      coord: { q: 0, r: 0 },
+      planet: { planet_type: 'Desert', is_gaia_formed: false, owner: null },
+      space_tile_kind: null,
+      structures: [],
+      satellites: [],
+    };
+    const { container } = render(
+      <svg>
+        <HexCell
+          hex={hex}
+          cx={50}
+          cy={50}
+          size={36}
+          playerFactions={{}}
+          isHighlighted={false}
+          isSelected={false}
+          isPrintedOnSectorArt={true}
+          showPlanetOverlay={false}
+          hasPowerRing={false}
+          onClick={() => undefined}
+        />
+      </svg>,
+    );
+
+    expect(container.querySelector('image')).toBeNull();
+    expect(container.querySelector('polygon')?.getAttribute('fill')).toBe('transparent');
   });
 });

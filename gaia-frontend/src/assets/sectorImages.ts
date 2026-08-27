@@ -1,37 +1,73 @@
-// Only the `space_sector_NN.jpg` front faces are bundled here. Three
-// `_back` variants also exist on disk (02, 07, 10) but are intentionally
-// excluded from this glob: `BoardState.sectors` (what the frontend receives
-// at runtime) carries no `side`/`back` flag to select them with — see the
-// `sectorImageSrc` doc comment below — so they are unreachable via any
-// current code path. They're left on disk (unconverted, full size) rather
-// than deleted so the capability isn't silently lost if `BoardState` ever
-// grows a side flag; bundling them today would just be dead weight.
-//
-// `eager: true` is kept: the 10 remaining files are ~80KB each (~800KB
-// total) after downscaling/re-encoding, so eagerly bundling them no longer
-// meaningfully hurts first paint, and it keeps `sectorImageSrc` synchronous
-// for the SVG render path in GameBoard/index.tsx.
-const SECTOR_IMAGES = import.meta.glob('./space_sectors/space_sector_[0-9][0-9].jpg', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
+import spaceSector01 from './space_sectors/space_sector_01.jpg';
+import spaceSector02 from './space_sectors/space_sector_02.jpg';
+import spaceSector03 from './space_sectors/space_sector_03.jpg';
+import spaceSector04 from './space_sectors/space_sector_04.jpg';
+import spaceSector05 from './space_sectors/space_sector_05.jpg';
+import spaceSector06 from './space_sectors/space_sector_06.jpg';
+import spaceSector07 from './space_sectors/space_sector_07.jpg';
+import spaceSector08 from './space_sectors/space_sector_08.jpg';
+import spaceSector09 from './space_sectors/space_sector_09.jpg';
+import spaceSector10 from './space_sectors/space_sector_10.jpg';
+import deepSpace01 from './deep_space_sectors/deep_space_sector_01.jpg';
+import deepSpace02 from './deep_space_sectors/deep_space_sector_02.jpg';
+import deepSpace03 from './deep_space_sectors/deep_space_sector_03.jpg';
+import deepSpace04 from './deep_space_sectors/deep_space_sector_04.jpg';
+import deepSpace05 from './deep_space_sectors/deep_space_sector_05.jpg';
+import deepSpace06 from './deep_space_sectors/deep_space_sector_06.jpg';
+import deepSpace07 from './deep_space_sectors/deep_space_sector_07.jpg';
+import deepSpace08 from './deep_space_sectors/deep_space_sector_08.jpg';
 
 /**
- * Resolve the image path for a map sector tile.
- *
- * `id` is the sector's numeric id (1-10, matching `space_sector_NN.jpg`).
- * `back` selects the `_back` variant for double-sided sectors (only 02, 07 and
- * 10 have a `_back` asset on disk today) — callers should only pass `back:
- * true` when they actually know which side is showing. `BoardState.sectors`
- * (what the frontend receives at runtime) does not carry a `side`/`back`
- * flag — that information exists only on `SectorPlacement` during game setup
- * and is not threaded through to the board the client renders — so board
- * rendering always uses the front face. Note: `_back` assets are not
- * currently bundled (see glob above), so passing `back: true` will resolve
- * to `null` until that asset is added to the glob pattern.
+ * `space_sector_NN.jpg` -> sector NN, confirmed by the number printed on
+ * each tile's own scan (the original scan-order filenames were mismatched —
+ * `space_sector_01.jpg` used to show a tile printed "09" — since fixed by
+ * renaming each file to match its printed id directly). Sectors 5/6/7 are
+ * double-sided in the physical game and 4-player Lost Fleet setup always
+ * uses side "A" specifically (`sectors.toml`); these three scans are
+ * whichever side was rescanned/kept for this filename, not independently
+ * re-verified against `sectors.toml`'s side-A hex list.
  */
-export function sectorImageSrc(id: number, back = false): string | null {
-  const padded = String(id).padStart(2, '0');
-  const suffix = back ? '_back' : '';
-  return SECTOR_IMAGES[`./space_sectors/space_sector_${padded}${suffix}.jpg`] ?? null;
+const STANDARD_SECTOR_IMAGES: Record<number, string> = {
+  1: spaceSector01,
+  2: spaceSector02,
+  3: spaceSector03,
+  4: spaceSector04,
+  5: spaceSector05,
+  6: spaceSector06,
+  7: spaceSector07,
+  8: spaceSector08,
+  9: spaceSector09,
+  10: spaceSector10,
+};
+
+/** Sector ids 11-18 (Lost Fleet expansion, `gaia-engine/data/sectors.toml`),
+ * mapped to the physically-scanned tile photos at
+ * `gaia-frontend/src/assets/deep_space_sectors/`. Side "A" vs "B" isn't
+ * distinguished here (both sides show the same 3-hex layout with the
+ * Asteroid/ProtoPlanet swapped between the two non-empty hexes — visually
+ * near-identical from this distance, and `Sector` doesn't carry which side
+ * was placed), so every deep-space sector always renders its "front" scan. */
+const DEEP_SPACE_SECTOR_IMAGES: Record<number, string> = {
+  11: deepSpace01,
+  12: deepSpace02,
+  13: deepSpace03,
+  14: deepSpace04,
+  15: deepSpace05,
+  16: deepSpace06,
+  17: deepSpace07,
+  18: deepSpace08,
+};
+
+/** Resolve the scanned photo for a standard Space Sector (ids 1-10) — see
+ * the mapping comment above for the side-A caveat on sectors 5-7. */
+export function sectorImageSrc(id: number): string | null {
+  return STANDARD_SECTOR_IMAGES[id] ?? null;
+}
+
+/** Resolve the scanned photo for a Deep Space sector (ids 11-18). Unlike
+ * `sectorImageSrc`'s 19-hex standard sectors, these are a 3-hex L-tromino —
+ * see `sectorCentroidPixel` (`hex-utils.ts`) for how the image gets
+ * positioned/sized against that much smaller footprint. */
+export function deepSpaceSectorImageSrc(id: number): string | null {
+  return DEEP_SPACE_SECTOR_IMAGES[id] ?? null;
 }

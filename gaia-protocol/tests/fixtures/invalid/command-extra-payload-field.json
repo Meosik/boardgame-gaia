@@ -1,0 +1,13 @@
+{
+  "protocol_version": 1,
+  "schema_hash": "abababababababababababababababababababababababababababababababab",
+  "room_id": "ROOM01",
+  "command_id": "cmd_extra_2",
+  "expected_revision": 7,
+  "command": {
+    "type": "rotate_sector",
+    "sector_id": 5,
+    "steps": 2,
+    "force": true
+  }
+}

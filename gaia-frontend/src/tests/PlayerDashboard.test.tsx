@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ResourcePanel } from '../components/PlayerDashboard/ResourcePanel';
 import { PowerCycle } from '../components/PlayerDashboard/PowerCycle';
-import { ResearchTrack } from '../components/PlayerDashboard/ResearchTrack';
-import type { PowerCycle as PowerCycleData, ResearchTracks, Resources } from '../types/game';
+import { PlayerDashboard } from '../components/PlayerDashboard';
+import type { PlayerState, PowerCycle as PowerCycleData, Resources } from '../types/game';
 
 const mockPower: PowerCycleData = {
   bowl1: 3,
@@ -20,15 +20,6 @@ const mockResources: Resources = {
   qic: 1,
   power: mockPower,
   spent_gaia_formers: 0,
-};
-
-const mockTracks: ResearchTracks = {
-  terraforming: 2,
-  navigation: 1,
-  ai: 0,
-  gaia: 3,
-  economy: 1,
-  science: 0,
 };
 
 describe('ResourcePanel', () => {
@@ -67,21 +58,48 @@ describe('PowerCycle', () => {
     render(<PowerCycle power={{ ...mockPower, gaia_forming: 2 }} />);
     expect(screen.getByText('GF')).toBeInTheDocument();
   });
+
+  it('renders the Taklons Brainstone in its current bowl', () => {
+    render(
+      <PowerCycle
+        power={{ ...mockPower, brainstone: 'Area2' }}
+        faction="Taklons"
+      />,
+    );
+    expect(screen.getByTitle('Taklons Brainstone')).toBeInTheDocument();
+  });
 });
 
-describe('ResearchTrack', () => {
-  it('renders all 6 track labels', () => {
-    render(<ResearchTrack tracks={mockTracks} />);
-    expect(screen.getByText('TF')).toBeInTheDocument();
-    expect(screen.getByText('NAV')).toBeInTheDocument();
-    expect(screen.getByText('AI')).toBeInTheDocument();
-    expect(screen.getByText('GP')).toBeInTheDocument();
-    expect(screen.getByText('ECO')).toBeInTheDocument();
-    expect(screen.getByText('SCI')).toBeInTheDocument();
-  });
+describe('PlayerDashboard', () => {
+  it('keeps the faction board, resources, technology and federation holdings together', () => {
+    const player: PlayerState = {
+      player_id: 0,
+      nickname: 'Me',
+      faction: 'Taklons',
+      resources: mockResources,
+      structures: [],
+      research_tracks: { terraforming: 0, navigation: 0, ai: 0, gaia: 0, economy: 0, science: 0 },
+      vp: 14,
+      setup_bid_vp: 0,
+      passed: false,
+      federation_tokens: [2],
+      alliance_tiles: [],
+      explored_ships: [],
+      exploration_shuttles_available: 3,
+      gaiaformers_total: 3,
+      gaiaformers_deployed: 0,
+      academy_qic_action_used_this_round: false,
+      gleens_special_action_used_this_round: false,
+      space_giants_special_action_used_this_round: false,
+      tech_tiles: [4],
+      advanced_tech_tiles: [7],
+    };
 
-  it('renders level values', () => {
-    render(<ResearchTrack tracks={mockTracks} />);
-    expect(screen.getByText('3')).toBeInTheDocument(); // gaia level
+    render(<PlayerDashboard player={player} />);
+
+    expect(screen.getByRole('img', { name: 'Taklons 종족 보드' })).toBeInTheDocument();
+    expect(screen.getByLabelText('내 자원과 획득 타일')).toHaveTextContent('T4');
+    expect(screen.getByLabelText('내 자원과 획득 타일')).toHaveTextContent('A7');
+    expect(screen.getByLabelText('내 자원과 획득 타일')).toHaveTextContent('F2');
   });
 });

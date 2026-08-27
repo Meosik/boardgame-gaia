@@ -1,0 +1,7 @@
+{
+  "type": "command_accepted",
+  "protocol_version": 1,
+  "schema_hash": "abababababababababababababababababababababababababababababababab",
+  "command_id": "cmd_pass_1",
+  "revision": 8
+}

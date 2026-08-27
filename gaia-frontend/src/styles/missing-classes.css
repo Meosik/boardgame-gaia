@@ -1,3 +1,14 @@
+/* ── Action Panel Subtitle ───────────────────────────────────────────────────
+   ActionPanel: 무료 행동 섹션 등 서브 그룹 라벨.
+─────────────────────────────────────────────────────────────────────────── */
+.action-panel-subtitle {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  letter-spacing: 0.05em;
+  margin: 0.5rem 0 0.25rem;
+}
+
 /* ── Error Banner ────────────────────────────────────────────────────────────
    App.tsx: command_rejected 표시. 클릭하면 닫힘.
 ─────────────────────────────────────────────────────────────────────────── */

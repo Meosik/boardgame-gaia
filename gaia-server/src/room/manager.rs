@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use gaia_engine::{game_state::PlayerId, GameSetup, GameState, Randomizer};
+use gaia_engine::{game_state::PlayerId, GameSetup, GameState, Randomizer, SetupMode};
 
 use crate::error::{ServerError, ServerResult};
 
@@ -146,11 +146,19 @@ impl RoomManager {
         &mut self,
         host_nickname: &str,
         seed: Option<String>,
+        setup_mode: SetupMode,
     ) -> ServerResult<(String, PlayerId)> {
+        let host_nickname = host_nickname.trim();
+        if host_nickname.is_empty() {
+            return Err(ServerError::InvalidNickname);
+        }
         let seed = seed.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
         let code = generate_room_code();
         let player_id = self.alloc_player_id();
-        let setup = Randomizer::generate_setup(&seed)?;
+        let setup = match setup_mode {
+            SetupMode::Sequential => Randomizer::generate_setup(&seed)?,
+            SetupMode::Bidding => Randomizer::generate_bidding_setup(&seed)?,
+        };
         let room = Room {
             code: code.clone(),
             host_player: player_id,
@@ -169,6 +177,10 @@ impl RoomManager {
 
     /// Joins an existing room. Returns the new player's id.
     pub fn join_room(&mut self, code: &str, nickname: &str) -> ServerResult<PlayerId> {
+        let nickname = nickname.trim();
+        if nickname.is_empty() {
+            return Err(ServerError::InvalidNickname);
+        }
         let room = self
             .rooms
             .get_mut(code)
@@ -217,4 +229,29 @@ fn generate_room_code() -> String {
     let mut s = String::with_capacity(6);
     let _ = write!(s, "{:06X}", n & 0xFF_FFFF);
     s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RoomManager;
+    use gaia_engine::SetupMode;
+
+    #[test]
+    fn bidding_room_persists_mode_and_four_offered_factions() {
+        let mut rooms = RoomManager::new();
+        let (code, _) = rooms
+            .create_room(
+                "Host",
+                Some("server-bidding-room".to_string()),
+                SetupMode::Bidding,
+            )
+            .unwrap_or_else(|error| panic!("bidding room should be created: {error}"));
+
+        let setup = rooms
+            .get_room(&code)
+            .and_then(|room| room.setup.as_ref())
+            .unwrap_or_else(|| panic!("created room should retain its setup"));
+        assert_eq!(setup.setup_mode, SetupMode::Bidding);
+        assert_eq!(setup.factions.len(), 4);
+    }
 }

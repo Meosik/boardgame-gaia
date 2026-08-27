@@ -10,9 +10,9 @@ use crate::game_state::{
 ///
 /// Rulebook (`docs/EN_Gaia_rulebook_lo.pdf`, p.20, Appendix I): "During the
 /// Gaia phase, move the power tokens in your Gaia area to area II of your
-/// power cycle instead of to area I." Everything else (the Planetary
-/// Institute's free-action resource conversion) remains unimplemented —
-/// stubbed like every other ability method here.
+/// power cycle instead of to area I." The Planetary Institute's optional
+/// Gaia-phase resource conversion is resolved by `RuleEngine` because it is
+/// an interactive pending choice rather than a passive ability hook.
 pub struct TerransAbility;
 
 impl FactionAbility for TerransAbility {

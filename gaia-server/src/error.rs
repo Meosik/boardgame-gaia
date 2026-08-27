@@ -33,6 +33,9 @@ pub enum ServerError {
     #[error("session invalid or expired")]
     InvalidSession,
 
+    #[error("nickname must not be empty")]
+    InvalidNickname,
+
     #[error("database error: {0}")]
     Database(#[from] sqlx::Error),
 
@@ -65,6 +68,7 @@ impl IntoResponse for ServerError {
             ServerError::InvalidAction(_) => (StatusCode::UNPROCESSABLE_ENTITY, "INVALID_ACTION"),
             ServerError::Unauthorised => (StatusCode::FORBIDDEN, "UNAUTHORISED"),
             ServerError::InvalidSession => (StatusCode::UNAUTHORIZED, "INVALID_SESSION"),
+            ServerError::InvalidNickname => (StatusCode::UNPROCESSABLE_ENTITY, "INVALID_NICKNAME"),
             ServerError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR"),
             ServerError::Serialise(_) => (StatusCode::INTERNAL_SERVER_ERROR, "SERIALISE_ERROR"),
             ServerError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR"),

@@ -21,6 +21,10 @@ impl FactionAbility for SpaceGiantsAbility {
         FactionId::SpaceGiants
     }
 
+    fn has_special_action(&self) -> bool {
+        true
+    }
+
     fn on_build(
         &self,
         _state: &GameState,

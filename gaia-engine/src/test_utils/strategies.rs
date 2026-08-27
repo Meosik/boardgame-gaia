@@ -31,6 +31,7 @@ pub fn valid_resources() -> impl Strategy<Value = Resources> {
                 bowl3: b3,
                 gaia_bowl: 0,
                 gaia_forming: 0,
+                brainstone: None,
             },
             spent_gaia_formers: 0,
         })

@@ -158,6 +158,7 @@ PlayerState {
     research_tracks:  ResearchTracks,
     vp:               i32,                   // 음수 가능 (비딩 차감 후)
     passed:           bool,                  // 현재 라운드 패스 여부
+    booster:          Option<Booster>,       // 현재 보유 라운드 부스터
     federation_tokens: Vec<FederationToken>,
     alliance_tiles:   Vec<AllianceTile>,
     explored_ships:   Vec<ShipId>,           // Lost Fleet: 탐사선 파견된 우주선
@@ -265,6 +266,8 @@ enum GamePhase {
     IncomePhase,                          // 수입 단계
     GaiaformingPhase,                     // 가이아포밍 시작 가능
     ActionPhase { active_player: usize }, // 실제 액션 단계
+    IncomeOrderPending { ... },           // 행성의회 수입 순서 선택
+    GaiaDecisionPending { ... },          // Terrans/Itars 가이아 단계 선택
     RoundScoring { round: u8 },           // 라운드 득점
     FinalScoring,                         // 최종 득점
     Ended,
@@ -277,9 +280,18 @@ enum GamePhase {
 
 ```
 enum SetupPhase {
-    Bidding,
-    FactionSelection { winner: PlayerId, pair: FactionPair },
-    TurnOrderSelection { player: PlayerId },
+    FactionSelection { active_player: PlayerId },
+    Bidding { active_player: PlayerId },
+    BiddingChoice { winner: PlayerId },
+    StartingStructures {
+        active_player: PlayerId,
+        placement_index: usize,
+        kind: StructureType,
+    },
+    StartingBoosters {
+        active_player: PlayerId,
+        selection_index: usize,
+    },
     Complete,
 }
 ```
@@ -318,10 +330,15 @@ FactionPair {
 
 ```
 enum SetupAction {
-    PlaceBid(u32),              // 현재 최고가보다 높아야 함
+    SelectFaction { faction: FactionId },
+    PlaceBid { amount: u32 },   // 현재 최고가보다 높아야 함
     PassBid,
-    SelectFaction(FactionId),   // 낙찰자만 가능
-    SelectTurnOrder(u8),        // 낙찰자만 가능, 1-4
+    ChooseBidReward {
+        faction: FactionId,
+        turn_position: u8,
+    },
+    PlaceStartingStructure { coord: HexCoord },
+    SelectStartingBooster { booster_id: BoosterId },
 }
 
 enum GameAction {
@@ -354,6 +371,7 @@ enum GameEvent {
     BidPassed         { player: PlayerId },
     FactionSelected   { player: PlayerId, faction: FactionId },
     TurnOrderSelected { player: PlayerId, position: u8 },
+    BoosterSelected   { player: PlayerId, booster: BoosterId },
 
     // 게임 이벤트
     ActionPerformed   { player: PlayerId, action: GameAction, round: u8 },
@@ -490,21 +508,22 @@ enum RuleError {
 ```
 enum FinalScoringCondition {
     // 기본 게임 타일
-    MostBuildings,         // 구조물 총 수 (Mine 제외)
-    MostSectors,           // 점령한 섹터 수
-    MostGaiaplanets,       // 가이아 행성 수
+    MostStructuresInFederation, // 연방에 포함된 건물 수
+    MostBuildings,         // 전체 건물 수
+    MostPlanetTypes,       // 개척한 서로 다른 행성 유형 수
+    MostGaiaPlanets,       // 가이아 행성 수
+    MostSectors,           // 개척한 일반 우주 섹터 수
     MostSatellites,        // 위성 + 우주정거장 수
-    ResearchTrackLevels,   // 연구 트랙 합계 레벨
-    MostFederations,       // 연방 토큰 수
     // Lost Fleet 확장 추가 타일 (3개)
-    MostExploredShips,     // 탐사선 파견된 우주선 수
-    MostSpecialPlanets,    // 소행성 + 원시행성 식민화 합계
-    HighestSingleTrack,    // 단일 연구 트랙 최고 레벨
+    MostDeepSpaceSectors,  // 개척한 심우주 섹터 수
+    MostAsteroids,         // 개척한 소행성 수
+    GreatestDistancePiAcademy, // 행성 의회와 아카데미 사이 최장 거리
 }
 
 // GameState.final_scoring_tiles = [FinalScoringTile; 2]
 // 각 FinalScoringTile은 FinalScoringCondition + 순위별 VP 값 포함
 struct FinalScoringTile {
+    id: u8,
     condition: FinalScoringCondition,
     vp_1st:    u8,   // 1위 VP (예: 18)
     vp_2nd:    u8,   // 2위 VP (예: 12)

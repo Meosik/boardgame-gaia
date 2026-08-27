@@ -1,0 +1,14 @@
+{
+  "type": "control",
+  "protocol_version": 1,
+  "schema_hash": "abababababababababababababababababababababababababababababababab",
+  "control": {
+    "control_revision": 4,
+    "paused": true,
+    "recovery_hold": false,
+    "missing_seats": [
+      1,
+      3
+    ]
+  }
+}

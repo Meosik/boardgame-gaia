@@ -1,4 +1,5 @@
-use gaia_engine::{GameSetup, Randomizer};
+use gaia_engine::game_state::FinalScoringTile;
+use gaia_engine::{GameSetup, MapEngine, Randomizer, SetupMode};
 
 fn setup(seed: &str) -> GameSetup {
     match Randomizer::generate_setup(seed) {
@@ -38,18 +39,47 @@ fn setup_offers_all_eighteen_factions() {
 }
 
 #[test]
+fn bidding_setup_offers_four_factions_from_distinct_boards() {
+    let setup = Randomizer::generate_bidding_setup("bidding-factions")
+        .unwrap_or_else(|error| panic!("fixture seed should produce a bidding setup: {error}"));
+
+    assert_eq!(setup.setup_mode, SetupMode::Bidding);
+    assert_eq!(setup.factions.len(), 4);
+    for faction in &setup.factions {
+        assert!(!setup.factions.contains(&faction.other_board_side()));
+    }
+}
+
+#[test]
 fn setup_has_six_round_tiles() {
-    assert_eq!(setup("test").round_tile_ids.len(), 6);
+    let round_tile_ids = setup("test").round_tile_ids;
+    assert_eq!(round_tile_ids.len(), 6);
+    assert!(round_tile_ids.iter().all(|id| (1..=12).contains(id)));
+    let mut unique = round_tile_ids.clone();
+    unique.sort_unstable();
+    unique.dedup();
+    assert_eq!(unique.len(), 6, "physical round tiles cannot repeat");
 }
 
 #[test]
 fn setup_has_seven_boosters() {
-    assert_eq!(setup("test").boosters.len(), 7);
+    let boosters = setup("test").boosters;
+    assert_eq!(boosters.len(), 7);
+    assert!(boosters.iter().all(|booster| (1..=14).contains(&booster.0)));
+    let mut unique = boosters.iter().map(|booster| booster.0).collect::<Vec<_>>();
+    unique.sort_unstable();
+    unique.dedup();
+    assert_eq!(unique.len(), 7, "physical boosters cannot repeat");
 }
 
 #[test]
 fn setup_has_two_final_scoring_tiles() {
-    assert_eq!(setup("test").final_scoring.len(), 2);
+    let tiles = setup("test").final_scoring;
+    assert_eq!(tiles.len(), 2);
+    assert_ne!(tiles[0].id, tiles[1].id);
+    assert!(tiles
+        .iter()
+        .all(|tile| FinalScoringTile::IDS.contains(&tile.id)));
 }
 
 #[test]
@@ -58,14 +88,58 @@ fn sector_layout_has_ten_sectors() {
 }
 
 #[test]
-fn center_sectors_are_ids_one_to_four() {
+fn two_center_sectors_are_selected_from_ids_one_to_four() {
     let center: Vec<u8> = setup("test")
         .sector_layout
         .iter()
-        .take(4)
+        .take(2)
         .map(|s| s.sector_id)
         .collect();
-    assert_eq!(center, vec![1, 2, 3, 4]);
+    assert_eq!(center.len(), 2);
+    assert!(center.iter().all(|id| (1..=4).contains(id)));
+    assert_ne!(center[0], center[1]);
+}
+
+#[test]
+fn four_player_standard_sector_sides_are_fixed() {
+    let setup = setup("test");
+    for placement in setup
+        .sector_layout
+        .iter()
+        .filter(|placement| (5..=7).contains(&placement.sector_id))
+    {
+        assert_eq!(placement.side.as_deref(), Some("A"));
+    }
+}
+
+#[test]
+fn generated_sector_layouts_never_overwrite_hexes() {
+    for seed in 0..100 {
+        let setup = setup(&format!("collision-regression-{seed}"));
+        let standard_board = MapEngine::build_board(&setup.sector_layout);
+        assert_eq!(
+            standard_board.hexes.len(),
+            190,
+            "ten 19-hex standard sectors must remain distinct for seed {seed}"
+        );
+
+        // `setup.deep_space_layout`'s own `origin`/`rotation` are placeholders — Deep Space
+        // sectors are placed board-dependently (in the gaps along the assembled board's outer
+        // edge), which only `MapEngine::init_game_state` can do, since it needs the standard
+        // board (plus Interspace tiles) to already exist. Exercise the real pipeline instead of
+        // `build_board` on the raw setup, which would only see collision-prone placeholders.
+        let players: Vec<(gaia_engine::game_state::PlayerId, String)> = (0..4)
+            .map(|i| (i as gaia_engine::game_state::PlayerId, format!("p{i}")))
+            .collect();
+        let seed_str = format!("collision-regression-{seed}");
+        let state = MapEngine::init_game_state(&seed_str, &seed_str, &players, &setup);
+        assert_eq!(
+            state.board.hexes.len(),
+            190 + 10 + 24,
+            "10 standard sectors (190) + 10 Interspace tile holes (10) + 8 Deep Space sectors \
+             (24) must all remain distinct, non-overlapping hexes for seed {seed}"
+        );
+    }
 }
 
 #[test]

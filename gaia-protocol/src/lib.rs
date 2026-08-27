@@ -19,6 +19,14 @@ pub enum ProtocolTypeError {
     InvalidDigest,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum ProtocolCompatibilityError {
+    #[error("unsupported protocol version {received}; expected {expected}")]
+    UnsupportedVersion { expected: u16, received: u16 },
+    #[error("schema hash does not match the server schema")]
+    SchemaHashMismatch,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CommandId(String);
 
@@ -224,6 +232,24 @@ pub struct CommandEnvelope<C> {
     pub command: C,
 }
 
+impl<C> CommandEnvelope<C> {
+    pub fn validate_compatibility(
+        &self,
+        expected_schema_hash: Digest32,
+    ) -> Result<(), ProtocolCompatibilityError> {
+        if self.protocol_version != PROTOCOL_VERSION {
+            return Err(ProtocolCompatibilityError::UnsupportedVersion {
+                expected: PROTOCOL_VERSION,
+                received: self.protocol_version,
+            });
+        }
+        if self.schema_hash != expected_schema_hash {
+            return Err(ProtocolCompatibilityError::SchemaHashMismatch);
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProtocolRejection {
@@ -356,5 +382,56 @@ mod tests {
         assert!(CommandId::parse("").is_err());
         assert!(CommandId::parse("contains spaces").is_err());
         assert!(CommandId::parse(&"x".repeat(MAX_COMMAND_ID_LEN + 1)).is_err());
+    }
+
+    #[test]
+    fn command_envelope_accepts_matching_protocol_metadata() {
+        let envelope = CommandEnvelope {
+            protocol_version: PROTOCOL_VERSION,
+            schema_hash: schema_hash(),
+            room_id: "ROOM01".to_string(),
+            command_id: CommandId::parse("cmd_1").unwrap_or_else(|error| panic!("{error}")),
+            expected_revision: Revision::ZERO,
+            command: TestCommand::Pass,
+        };
+
+        assert_eq!(envelope.validate_compatibility(schema_hash()), Ok(()));
+    }
+
+    #[test]
+    fn command_envelope_rejects_wrong_protocol_version() {
+        let envelope = CommandEnvelope {
+            protocol_version: PROTOCOL_VERSION + 1,
+            schema_hash: schema_hash(),
+            room_id: "ROOM01".to_string(),
+            command_id: CommandId::parse("cmd_1").unwrap_or_else(|error| panic!("{error}")),
+            expected_revision: Revision::ZERO,
+            command: TestCommand::Pass,
+        };
+
+        assert_eq!(
+            envelope.validate_compatibility(schema_hash()),
+            Err(ProtocolCompatibilityError::UnsupportedVersion {
+                expected: PROTOCOL_VERSION,
+                received: PROTOCOL_VERSION + 1,
+            })
+        );
+    }
+
+    #[test]
+    fn command_envelope_rejects_wrong_schema_hash() {
+        let envelope = CommandEnvelope {
+            protocol_version: PROTOCOL_VERSION,
+            schema_hash: schema_hash(),
+            room_id: "ROOM01".to_string(),
+            command_id: CommandId::parse("cmd_1").unwrap_or_else(|error| panic!("{error}")),
+            expected_revision: Revision::ZERO,
+            command: TestCommand::Pass,
+        };
+
+        assert_eq!(
+            envelope.validate_compatibility(Digest32::from_bytes([0xCD; 32])),
+            Err(ProtocolCompatibilityError::SchemaHashMismatch)
+        );
     }
 }

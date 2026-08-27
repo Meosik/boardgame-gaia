@@ -32,6 +32,8 @@ pub enum CommandError {
     Paused,
     #[error("revision conflict: expected {expected}, room is at {current}")]
     RevisionConflict { expected: u64, current: u64 },
+    #[error("{message}")]
+    RejectedReplay { code: String, message: String },
     #[error(transparent)]
     Rule(#[from] RuleError),
     #[error(transparent)]
@@ -106,6 +108,13 @@ pub async fn apply_command(
             return Err(CommandError::Rule(rule_error));
         }
     };
+
+    // GameEvent is the durable, user-visible audit trail as well as the DB
+    // event payload. Keep it in the full snapshot so reconnecting clients
+    // can render the same log without a separate replay/query path.
+    if let Some(game_state) = candidate.game_state.as_mut() {
+        game_state.event_log.extend(events.iter().cloned());
+    }
 
     // `commit_*` always advances by exactly 1 on success — deterministic, so
     // it's safe to compute now and store it alongside the outcome for replay.
@@ -284,12 +293,17 @@ fn decode_stored_outcome(stored: &serde_json::Value) -> CommandResult {
         })?;
         Ok(CommandOutcome { revision, events })
     } else {
+        let code = stored
+            .get("code")
+            .and_then(|v| v.as_str())
+            .unwrap_or("ACTION_NOT_ALLOWED")
+            .to_string();
         let message = stored
             .get("message")
             .and_then(|v| v.as_str())
             .unwrap_or("command was previously rejected")
             .to_string();
-        Err(CommandError::Server(ServerError::InvalidAction(message)))
+        Err(CommandError::RejectedReplay { code, message })
     }
 }
 
@@ -332,14 +346,27 @@ pub async fn broadcast_snapshot(app: &AppState, room_code: &str, revision: Revis
         let Some(room) = rooms.get_room(room_code) else {
             return;
         };
-        room.game_state
-            .as_ref()
-            .map(|gs| gs.serialize())
-            .unwrap_or_else(|| lobby_view(room))
+        room_snapshot_view(room)
     };
     app.event_bus
         .broadcast(room_code, protocol::snapshot(revision, view))
         .await;
+}
+
+/// The room's current state as a `Snapshot` envelope's `state` payload — a
+/// lobby view before a `GameState` exists, the full serialized `GameState`
+/// after. Shared by `broadcast_snapshot` and the join handler's direct
+/// catch-up send (`handlers/websocket.rs`): a client that (re)connects after
+/// the game has already started otherwise only learns of `RoomJoined`'s
+/// lobby-phase `game_setup` and has to wait for the next unrelated broadcast
+/// to see the real `GameState` — e.g. `FactionSelectView` mounts a brand new
+/// WebSocket connection on every setup-stage transition, so this gap hit on
+/// every single transition, not just true reconnects.
+pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
+    room.game_state
+        .as_ref()
+        .map(|gs| gs.serialize())
+        .unwrap_or_else(|| lobby_view(room))
 }
 
 fn lobby_view(room: &Room) -> serde_json::Value {
@@ -360,6 +387,7 @@ pub fn command_error_to_server_error(error: CommandError) -> ServerError {
         CommandError::RevisionConflict { expected, current } => ServerError::InvalidAction(
             format!("revision conflict: expected {expected}, room is at {current}"),
         ),
+        CommandError::RejectedReplay { message, .. } => ServerError::InvalidAction(message),
         CommandError::Rule(rule_error) => ServerError::InvalidAction(rule_error.to_string()),
         CommandError::Server(server_error) => server_error,
     }

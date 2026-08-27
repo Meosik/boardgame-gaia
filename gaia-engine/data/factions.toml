@@ -116,9 +116,8 @@ starting_ore = 4
 starting_credits = 15
 starting_knowledge = 3
 starting_qic = 1
-# starting_bowl1 = 2 normal power tokens + 1 Brainstone (counts as 1 power
-# token but spends as if it were 3) — the Brainstone itself isn't modeled
-# as its own token type yet, so it's not reflected in this count.
+# starting_bowl1 is the 2 normal power tokens. The engine adds the distinct
+# Brainstone to Area I when Taklons starting resources are seeded.
 starting_bowl1 = 2
 starting_bowl2 = 4
 starting_bowl3 = 0
@@ -188,8 +187,13 @@ starting_ore = 4
 starting_credits = 15
 starting_knowledge = 3
 starting_qic = 1
+# Lost Fleet expansion (always enabled in this project) overrides the base
+# game's starting power split: exploration board top icon shows "2 power in
+# Area I, 2 power in Area II" (GP_Exp_Rule_EN_V1_Web.pdf p.6; confirmed
+# against gaia-frontend/src/assets/exploration_boards/der_schwarm.jpg's two
+# stacked "2" power-token icons) instead of the base game's 2/4 split.
 starting_bowl1 = 2
-starting_bowl2 = 4
+starting_bowl2 = 2
 starting_bowl3 = 0
 gaiaformers = 3
 # PlanetaryInstitute grants +1 QIC/round in addition to the universal
@@ -282,7 +286,13 @@ id = "Bescods"
 home_planet = "Titanium"
 starting_ore = 4
 starting_credits = 15
-starting_knowledge = 1
+# Lost Fleet expansion (always enabled in this project) overrides the base
+# game's starting knowledge: exploration board top icon shows a dial marker
+# on "3" (GP_Exp_Rule_EN_V1_Web.pdf p.6, "the Bescods start with 3
+# knowledge"; confirmed against
+# gaia-frontend/src/assets/exploration_boards/mad_androids.jpg) instead of
+# the base game's 1.
+starting_knowledge = 3
 starting_qic = 1
 starting_bowl1 = 2
 starting_bowl2 = 4

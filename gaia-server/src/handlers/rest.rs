@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use gaia_engine::game_state::PlayerId;
+use gaia_engine::{game_state::PlayerId, MapEngine, SetupMode};
 
 use crate::{
     coordinator,
@@ -21,6 +21,8 @@ use crate::{
 pub struct CreateRoomRequest {
     pub nickname: String,
     pub seed: Option<String>,
+    #[serde(default)]
+    pub setup_mode: SetupMode,
 }
 
 #[derive(Serialize)]
@@ -65,7 +67,7 @@ pub async fn create_room(
     Json(req): Json<CreateRoomRequest>,
 ) -> ServerResult<(StatusCode, Json<CreateRoomResponse>)> {
     let (code, player_id, setup) =
-        GameSetupService::create_room(&app, &req.nickname, req.seed).await?;
+        GameSetupService::create_room(&app, &req.nickname, req.seed, req.setup_mode).await?;
 
     let session_token = app.sessions.create_session(player_id, &code).await?;
 
@@ -98,35 +100,39 @@ pub async fn join_room(
     Path(code): Path<String>,
     Json(req): Json<JoinRoomRequest>,
 ) -> ServerResult<Json<JoinRoomResponse>> {
-    // Reconnect path
+    // Reconnect path. If a client explicitly supplies a session token, it
+    // must validate for this requested room; otherwise falling through would
+    // silently create an extra seat for a mistyped/expired token.
     if let Some(token) = &req.session_token {
-        if let Ok((player_id, room_code)) = ReconnectService::validate_session(&app, token).await {
-            app.ensure_room_loaded(&room_code).await?;
-            let (game_setup, game_state, players, host_player_id) = {
-                let rooms = app.rooms.read().await;
-                let room = rooms
-                    .get_room(&room_code)
-                    .ok_or_else(|| ServerError::RoomNotFound(room_code.clone()))?;
-                (
-                    room.setup
-                        .as_ref()
-                        .and_then(|setup| serde_json::to_value(setup).ok())
-                        .unwrap_or(serde_json::Value::Null),
-                    room.game_state.as_ref().map(|gs| gs.serialize()),
-                    lobby_players(room),
-                    room.host_player,
-                )
-            };
-            return Ok(Json(JoinRoomResponse {
-                player_id,
-                session_token: token.clone(),
-                room_code,
-                game_setup,
-                players,
-                host_player_id,
-                game_state,
-            }));
+        let (player_id, room_code) = ReconnectService::validate_session(&app, token).await?;
+        if room_code != code {
+            return Err(ServerError::InvalidSession);
         }
+        app.ensure_room_loaded(&room_code).await?;
+        let (game_setup, game_state, players, host_player_id) = {
+            let rooms = app.rooms.read().await;
+            let room = rooms
+                .get_room(&room_code)
+                .ok_or_else(|| ServerError::RoomNotFound(room_code.clone()))?;
+            (
+                room.setup
+                    .as_ref()
+                    .and_then(|setup| serde_json::to_value(setup).ok())
+                    .unwrap_or(serde_json::Value::Null),
+                room.game_state.as_ref().map(|gs| gs.serialize()),
+                lobby_players(room),
+                room.host_player,
+            )
+        };
+        return Ok(Json(JoinRoomResponse {
+            player_id,
+            session_token: token.clone(),
+            room_code,
+            game_setup,
+            players,
+            host_player_id,
+            game_state,
+        }));
     }
 
     let player_id = {
@@ -183,12 +189,58 @@ pub async fn get_room(
     })))
 }
 
+/// Read-only preview of the board/tiles the current `room.setup`/`room.seed` would produce if the
+/// game started right now — lets the waiting room show the randomized layout (and let the host
+/// reroll via the existing `regenerate_setup` seed controls) before anyone readies up. Reuses
+/// `MapEngine::init_game_state` directly rather than a separate preview-only builder, since that's
+/// the one real code path that actually assembles Deep Space/Interspace positions; the 4
+/// placeholder players are fine because the board/tile layout never depends on real player
+/// identity or count (this project is always exactly 4-player) — this also means the preview
+/// works even before all 4 seats are filled. Pure computation: never touches `room.state`/
+/// `room.game_state`, so the room stays in `Lobby` regardless of how often this is called.
+const PREVIEW_PLAYERS: [(PlayerId, &str); 4] = [(0, ""), (1, ""), (2, ""), (3, "")];
+
+pub async fn preview_board(
+    State(app): State<AppState>,
+    Path(code): Path<String>,
+) -> ServerResult<Json<serde_json::Value>> {
+    app.ensure_room_loaded(&code).await?;
+    let (room_code, seed, setup) = {
+        let rooms = app.rooms.read().await;
+        let room = rooms
+            .get_room(&code)
+            .ok_or_else(|| ServerError::RoomNotFound(code.clone()))?;
+        let setup = room
+            .setup
+            .clone()
+            .ok_or_else(|| ServerError::Internal("setup missing".into()))?;
+        (room.code.clone(), room.seed.clone(), setup)
+    };
+
+    let players: Vec<(PlayerId, String)> = PREVIEW_PLAYERS
+        .iter()
+        .map(|(id, nickname)| (*id, (*nickname).to_string()))
+        .collect();
+    let state = MapEngine::init_game_state(&room_code, &seed, &players, &setup);
+
+    Ok(Json(serde_json::json!({
+        "board": state.board,
+        "round_tiles": state.round_tiles,
+        "final_scoring_tiles": state.final_scoring_tiles,
+        "spaceship_boards": state.spaceship_boards,
+    })))
+}
+
 pub async fn regenerate_setup(
     State(app): State<AppState>,
     Path(code): Path<String>,
     Json(req): Json<RegenerateRequest>,
 ) -> ServerResult<Json<serde_json::Value>> {
-    let (player_id, _) = ReconnectService::validate_session(&app, &req.session_token).await?;
+    let (player_id, session_room_code) =
+        ReconnectService::validate_session(&app, &req.session_token).await?;
+    if session_room_code != code {
+        return Err(ServerError::InvalidSession);
+    }
 
     // No client envelope on the REST path — mint a provisional command_id
     // and use the room's current revision as "expected" (same rationale as

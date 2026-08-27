@@ -1,0 +1,14 @@
+{
+  "type": "events",
+  "protocol_version": 1,
+  "schema_hash": "abababababababababababababababababababababababababababababababab",
+  "from_revision": 8,
+  "to_revision": 9,
+  "events": [
+    {
+      "type": "resource_changed",
+      "seat": 2,
+      "ore": -1
+    }
+  ]
+}

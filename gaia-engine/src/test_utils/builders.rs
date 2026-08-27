@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::game_state::{
     BoardState, Booster, FinalScoringCondition, FinalScoringTile, GamePhase, GameState, HexCoord,
     PlayerState, PowerCycle, ResearchBoard, ResearchTrack, ResearchTracks, Resources, RoomCode,
-    RoundCondition, RoundTile, Sector, TechTile, TrackState,
+    RoundTile, Sector, TechTile, TrackState,
 };
 
 // ── GameStateBuilder ──────────────────────────────────────────────────────────
@@ -80,10 +80,12 @@ impl GameStateBuilder {
             final_scoring_tiles: default_final_scoring_tiles(),
             research_board: empty_research_board(),
             faction_selection: None,
+            bidding: None,
             turn_order,
             current_player: 0,
             used_power_actions: vec![],
-            used_qic_action_slots: vec![],
+            spaceship_boards: vec![],
+            used_spaceship_actions: vec![],
             event_log: vec![],
         }
     }
@@ -113,22 +115,40 @@ pub fn minimal_player(player_id: u8) -> PlayerState {
                 bowl3: 0,
                 gaia_bowl: 0,
                 gaia_forming: 0,
+                brainstone: None,
             },
             spent_gaia_formers: 0,
         },
         structures: vec![],
         research_tracks: ResearchTracks::new(),
         vp: 10,
+        setup_bid_vp: 0,
         passed: false,
+        booster: None,
         federation_tokens: vec![],
+        gray_federation_tokens: vec![],
         alliance_tiles: vec![],
         explored_ships: vec![],
+        exploration_shuttles_available: 3,
         gaiaformers_total: 0,
         gaiaformers_deployed: 0,
+        gaiaformers_in_gaia_area: 0,
         tech_tiles: vec![],
+        advanced_tech_tiles: vec![],
+        covered_tech_tiles: vec![],
         pi_ability_used: false,
         first_colonization_bonus_used: false,
         academy_qic_action_used_this_round: false,
+        gleens_special_action_used_this_round: false,
+        space_giants_special_action_used_this_round: false,
+        round_booster_special_action_used_this_round: false,
+        faction_special_action_used_this_round: false,
+        geodens_rewarded_planet_types: vec![],
+        federated_hexes: vec![],
+        tinkeroids_tiles_used: vec![],
+        moweyds_power_ring_hexes: vec![],
+        tech_tile_special_actions_used_this_round: vec![],
+        advanced_tech_tile_special_actions_used_this_round: vec![],
     }
 }
 
@@ -141,6 +161,7 @@ fn empty_board() -> BoardState {
         }],
         hexes: HashMap::new(),
         lost_planet: None,
+        spaceship_tiles: HashMap::new(),
     }
 }
 
@@ -158,30 +179,27 @@ fn empty_research_board() -> ResearchBoard {
 }
 
 fn default_round_tiles() -> [RoundTile; 6] {
-    let make = |id: u8, condition: RoundCondition| RoundTile {
-        id,
-        condition,
-        vp_per_unit: 2,
-    };
     [
-        make(1, RoundCondition::BuildMine),
-        make(2, RoundCondition::Upgrade),
-        make(3, RoundCondition::ResearchAdvance),
-        make(4, RoundCondition::GaiaProject),
-        make(5, RoundCondition::FormFederation),
-        make(6, RoundCondition::BuildMine),
+        RoundTile::from_id(1),
+        RoundTile::from_id(4),
+        RoundTile::from_id(9),
+        RoundTile::from_id(3),
+        RoundTile::from_id(5),
+        RoundTile::from_id(12),
     ]
 }
 
 fn default_final_scoring_tiles() -> [FinalScoringTile; 2] {
     [
         FinalScoringTile {
+            id: 5,
             condition: FinalScoringCondition::MostBuildings,
             vp_1st: 18,
             vp_2nd: 12,
             vp_3rd: 6,
         },
         FinalScoringTile {
+            id: 8,
             condition: FinalScoringCondition::MostSectors,
             vp_1st: 18,
             vp_2nd: 12,

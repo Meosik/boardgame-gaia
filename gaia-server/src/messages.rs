@@ -23,7 +23,7 @@ pub enum ServerMessage {
         room_code: String,
         player_id: PlayerId,
         session_token: String,
-        game_setup: GameSetup,
+        game_setup: Box<GameSetup>,
         /// The room's current revision, for the client to bootstrap
         /// `expected_revision` tracking from.
         revision: u64,

@@ -1,0 +1,9 @@
+{
+  "protocol_version": 1,
+  "schema_hash": "abababababababababababababababababababababababababababababababab",
+  "room_id": "ROOM01",
+  "command_id": "cmd_missing_1",
+  "command": {
+    "type": "pass"
+  }
+}
