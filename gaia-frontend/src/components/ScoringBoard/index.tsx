@@ -11,23 +11,18 @@ interface Props {
   currentRound: number;
 }
 
-/**
- * Positions measured directly off the complete `boards/scoring_board.jpg` (2104x2130):
- * the 6 round-tile
- * "wedge" slots fan out around the round-tracker dial (each wedge sits directly above its
- * matching dial number 1-6), and the 2 Final Scoring tile slots sit in the gray panels below.
- */
+/** Positions measured from the user-marked corners on the complete 2104x2130 board image. */
 const ROUND_SLOTS_PCT = [
-  { x: 28.0, y: 41.0, rotation: -63 },
-  { x: 40.0, y: 29.0, rotation: -43 },
-  { x: 49.1, y: 21.0, rotation: -15 },
-  { x: 60.4, y: 21.0, rotation: 15 },
-  { x: 70.4, y: 29.0, rotation: 43 },
-  { x: 78.6, y: 41.0, rotation: 63 },
+  { x: 28.232, y: 38.398, rotation: -74.86 },
+  { x: 34.666, y: 27.537, rotation: -45.01 },
+  { x: 45.643, y: 21.193, rotation: -15.22 },
+  { x: 58.563, y: 21.195, rotation: 15.58 },
+  { x: 69.765, y: 27.613, rotation: 45.87 },
+  { x: 76.194, y: 38.458, rotation: 75.4 },
 ];
 const FINAL_SLOTS_PCT = [
-  { x: 71.35, y: 55.9 },
-  { x: 71.35, y: 75.0 },
+  { x: 70.825, y: 52.656, width: 19.897, height: 12.68 },
+  { x: 70.83, y: 71.734, width: 19.907, height: 12.531 },
 ];
 
 export function ScoringBoard({ roundTiles, finalScoringTiles, currentRound }: Props) {
@@ -70,7 +65,12 @@ export function ScoringBoard({ roundTiles, finalScoringTiles, currentRound }: Pr
             <div
               key={`final-${tile.id}`}
               className="scoring-board-tile scoring-board-tile--final"
-              style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+              style={{
+                left: `${slot.x}%`,
+                top: `${slot.y}%`,
+                width: `${slot.width}%`,
+                height: `${slot.height}%`,
+              }}
             >
               <img
                 className="scoring-board-final-image"
