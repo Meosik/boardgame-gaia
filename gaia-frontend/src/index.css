@@ -1769,7 +1769,9 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   position: absolute;
   left: calc(48% - 15px);
   display: block;
-  width: 40%;
+  /* Keep the physical shuttle proportional when the narrow expansion board
+     is rendered at different sizes. */
+  width: 30%;
   aspect-ratio: 1;
   transform: translateY(-50%);
   filter: drop-shadow(0 1px 2px #000);
@@ -2332,7 +2334,9 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 
 .spaceship-board-explorer {
   position: absolute;
-  width: clamp(55px, 17.5%, 75px);
+  /* The dock can shrink each ship substantially; a fixed pixel floor made
+     shuttles stay oversized and overlap their printed slots. */
+  width: 12%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   filter: drop-shadow(0 1px 2px #000);
