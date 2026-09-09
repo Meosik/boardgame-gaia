@@ -10,7 +10,7 @@ import { scoringBoardImageSrc } from '../../assets/scoringBoardImage';
 import { scoringBoardExtensionImageSrc } from '../../assets/scoringBoardExtensionImage';
 import { lostFleetTechRequirementBoardImageSrc } from '../../assets/lostFleetTechRequirementBoardImages';
 import { economyResearchTileImageSrc } from '../../assets/economyResearchTileImages';
-import qicOverlayImageSrc from '../../assets/boards/lost_fleet_qic_board_overlay.jpg';
+import qicOverlayImageSrc from '../../assets/boards/normalized/lost_fleet_qic_board_overlay.webp';
 import type { EconomyResearchTileSide, FactionId, SpaceshipId } from '../../types/game';
 
 const QIC_OVERLAY_SRC = qicOverlayImageSrc;

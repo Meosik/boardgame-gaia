@@ -5,7 +5,7 @@ import { advancedTechTileImageSrc, standardTechTileImageSrc } from '../../assets
 import { economyResearchTileImageSrc } from '../../assets/economyResearchTileImages';
 import { federationTokenImageSrc } from '../../assets/federationTokenImages';
 import lostPlanetImageSrc from '../../assets/boards/normalized/lost_planet.webp';
-import qicOverlayImageSrc from '../../assets/boards/lost_fleet_qic_board_overlay.jpg';
+import qicOverlayImageSrc from '../../assets/boards/normalized/lost_fleet_qic_board_overlay.webp';
 import { POWER_ACTION_SPACES } from '../boardActionSpaces';
 import { GamePieceIcon } from '../GamePieceIcon';
 import type {

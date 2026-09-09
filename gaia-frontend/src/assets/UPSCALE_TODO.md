@@ -22,17 +22,20 @@
 
 ## 조건부 작업
 
-- `icons/normalized/power_badge_1.webp` (76×88px)
-- `icons/normalized/power_badge_3.webp` (85×87px)
-- `icons/normalized/power_badge_4.webp` (89×101px)
 - `icons/normalized/range.webp` (69×77px)
 
 현재 UI 크기에는 충분하다. 32px보다 크게 표시하도록 바꿀 때만 원본 PNG를 4배 업스케일한 뒤 WebP 런타임 자산을 다시 만든다.
+
+## 배치 보류
+
+- `icons/normalized/power_badge_{1,3,4}.webp`: 업스케일 런타임 자산 생성은 완료했다.
+  무료 행동 모음의 위치와 구성을 사용자가 확정한 뒤 배치한다.
 
 ## 재작업 불필요
 
 - `boards/terraforming_selection_board.*`: 제공된 고해상도 원본을 적용했다.
 - `boards/lost_planet.*`: 업스케일 원본과 최적화 WebP를 적용했다.
+- `boards/normalized/lost_fleet_qic_board_overlay.webp`: 업스케일 원본을 기존 연구판 위치에 적용했다.
 - 자원 아이콘: 384px 런타임 자산으로 현재 표시 크기에 충분하다.
 - 연구판, 점수판, 함선 보드, 종족 보드, 탐사 보드, 기술/점수/부스터 타일: 고해상도 또는 정규화 자산을 사용한다.
-- `boards/scoring_track_extension.jpg` (1190×661px)와 `boards/lost_fleet_qic_board_overlay.jpg` (1274×524px): 현재 표시 크기에 충분하다.
+- `boards/scoring_track_extension.jpg` (1190×661px): 현재 표시 크기에 충분하다.

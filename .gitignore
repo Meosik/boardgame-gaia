@@ -4,7 +4,10 @@
 # Node
 /gaia-frontend/node_modules/
 /gaia-frontend/dist/
+/node_modules/
 *.tsbuildinfo
+__pycache__/
+*.pyc
 
 # Local environment and secrets
 .env
@@ -21,6 +24,7 @@
 # Local agent/runtime state
 /.claude/
 /.omc/
+**/.omc/
 /.omh/
 /.omx/*
 !/.omx/context/

@@ -32,7 +32,12 @@ BOARD_SOURCES = (
     "terraforming_selection_board.png",
 )
 
+BOARD_MAX_SIZES = {
+    "lost_fleet_qic_board_overlay.png": (2548, 1048),
+}
+
 ICON_SOURCES = ("credits.png", "knowledge.png", "ore.png", "qic.png")
+POWER_BADGE_SOURCES = ("power_badge_1.png", "power_badge_3.png", "power_badge_4.png")
 ICON_MAX_SIZE = (384, 384)
 
 
@@ -91,6 +96,13 @@ def main() -> None:
     for source_name in BOARD_SOURCES:
         source_path = board_dir / source_name
         convert(source_path, board_dir / "normalized" / f"{source_path.stem}.webp")
+    for source_name, max_size in BOARD_MAX_SIZES.items():
+        source_path = board_dir / source_name
+        convert(
+            source_path,
+            board_dir / "normalized" / f"{source_path.stem}.webp",
+            max_size,
+        )
 
     icon_dir = ASSETS_DIR / "icons"
     for source_name in ICON_SOURCES:
@@ -100,6 +112,9 @@ def main() -> None:
             icon_dir / "normalized" / f"{source_path.stem}.webp",
             ICON_MAX_SIZE,
         )
+    for source_name in POWER_BADGE_SOURCES:
+        source_path = icon_dir / "source" / source_name
+        convert(source_path, icon_dir / "normalized" / f"{source_path.stem}.webp")
 
 
 if __name__ == "__main__":
