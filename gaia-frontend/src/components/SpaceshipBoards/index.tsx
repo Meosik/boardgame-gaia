@@ -14,11 +14,13 @@ interface Props {
   isMyTurn?: boolean;
   usedActionIds?: number[];
   selectedAction?: GameAction['type'] | null;
+  selectableTechTiles?: number[];
   onActionSelect?: (
     actionType: GameAction['type'],
     actionTypes: GameAction['type'][],
   ) => void;
   onArtifactSelect?: (artifactId: number) => void;
+  onTechTileSelect?: (tileId: number) => void;
 }
 
 const SHIPS: { id: SpaceshipId; label: string }[] = [
@@ -124,8 +126,10 @@ export function SpaceshipBoards({
   isMyTurn = false,
   usedActionIds = [],
   selectedAction = null,
+  selectableTechTiles = [],
   onActionSelect,
   onArtifactSelect,
+  onTechTileSelect,
 }: Props) {
   const factionByPlayer = new Map(players.map((p) => [p.player_id, p.faction]));
 
@@ -145,6 +149,36 @@ export function SpaceshipBoards({
                 const renderedSrc = standardTechTileImageSrc(tileId);
                 const slot = TECH_TILE_SLOT[id];
                 if (!renderedSrc || !slot) return null;
+                const explored = myPlayerId !== undefined && board.explorers.includes(myPlayerId);
+                const selectable = onTechTileSelect !== undefined
+                  && isMyTurn
+                  && explored
+                  && selectableTechTiles.includes(tileId);
+                const selectionTitle = selectable
+                  ? '기술 타일 선택'
+                  : explored
+                    ? '이미 보유했거나 선택할 수 없는 기술 타일입니다'
+                    : '이 함선을 먼저 탐사해야 합니다';
+                if (onTechTileSelect) {
+                  return (
+                    <button
+                      type="button"
+                      className="spaceship-board-tech-tile spaceship-board-tech-tile--button"
+                      style={slot}
+                      disabled={!selectable}
+                      onClick={() => onTechTileSelect(tileId)}
+                      aria-label={`${label} 표준 기술 타일 ${tileId} 선택`}
+                      title={selectionTitle}
+                    >
+                      <img
+                        className="spaceship-board-tech-source"
+                        src={renderedSrc}
+                        alt=""
+                        aria-hidden
+                      />
+                    </button>
+                  );
+                }
                 return (
                   <span
                     className="spaceship-board-tech-tile"

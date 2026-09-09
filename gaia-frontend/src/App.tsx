@@ -523,6 +523,16 @@ export function App() {
     }
     const grantsTechTile = to === 'ResearchLab' || typeof to === 'object';
     if (grantsTechTile) {
+      if (selectableStandardTiles.length === 0 && selectableAdvancedTracks.length === 0) {
+        gameActions.sendAction({
+          type: 'Upgrade',
+          coord: structurePopup.coord,
+          to,
+          tech_tile_choice: null,
+        });
+        closeBoardContext();
+        return;
+      }
       setTechUpgradeFlow({
         stage: 'tile',
         coord: structurePopup.coord,
@@ -588,6 +598,10 @@ export function App() {
       finishStandardTechChoice(tile, alignedTrack);
       return;
     }
+    if (selectableTechResearchTracks.length === 0) {
+      finishStandardTechChoice(tile, null);
+      return;
+    }
     setTechUpgradeFlow({ ...techUpgradeFlow, stage: 'track', tile });
   }
 
@@ -617,18 +631,16 @@ export function App() {
 
   function handleCoveredTechTile(tile: number) {
     if (techUpgradeFlow?.stage !== 'cover') return;
+    if (selectableTechResearchTracks.length === 0) {
+      sendTechUpgrade({
+        kind: 'Advanced',
+        track: techUpgradeFlow.track,
+        covered_tile: tile,
+        advance_track: null,
+      });
+      return;
+    }
     setTechUpgradeFlow({ ...techUpgradeFlow, stage: 'advanced-track', coveredTile: tile });
-  }
-
-  function finishUpgradeWithoutTechTile() {
-    if (techUpgradeFlow?.stage !== 'tile') return;
-    gameActions.sendAction({
-      type: 'Upgrade',
-      coord: techUpgradeFlow.coord,
-      to: techUpgradeFlow.to,
-      tech_tile_choice: null,
-    });
-    closeBoardContext();
   }
 
   function finishUpgradeWithoutResearchAdvance() {
@@ -655,13 +667,23 @@ export function App() {
   }
 
   const ownedUncoveredTechTiles = (me.tech_tiles ?? []).filter((tile) => !(me.covered_tech_tiles ?? []).includes(tile));
-  const selectableStandardTiles = (gameState.research_board.tech_tile_slots ?? []).filter(
+  const selectableResearchBoardTechTiles = (gameState.research_board.tech_tile_slots ?? []).filter(
     (tile): tile is number => tile !== null && !(me.tech_tiles ?? []).includes(tile),
   );
+  const selectableSpaceshipTechTiles = gameState.spaceship_boards
+    .filter((board) => board.explorers.includes(myId))
+    .flatMap((board) => board.tech_tiles ?? [])
+    .filter((tile) => !(me.tech_tiles ?? []).includes(tile));
+  const selectableStandardTiles = [
+    ...new Set([...selectableResearchBoardTechTiles, ...selectableSpaceshipTechTiles]),
+  ];
   const greenFederationTokenCount = me.federation_tokens.length;
   const selectableAdvancedTracks =
     greenFederationTokenCount > 0 && ownedUncoveredTechTiles.length > 0
-      ? RESEARCH_TRACK_ORDER.filter((track) => researchLevel(me, track) >= 4)
+      ? RESEARCH_TRACK_ORDER.filter((track, index) =>
+          researchLevel(me, track) >= 4
+          && gameState.research_board.advanced_tech_tiles[index] !== null,
+        )
       : [];
   const selectableTechResearchTracks = RESEARCH_TRACK_ORDER.filter((track) => {
     const level = researchLevel(me, track);
@@ -774,8 +796,14 @@ export function App() {
             isMyTurn={isMyActionTurn}
             usedActionIds={gameState.used_spaceship_actions}
             selectedAction={selectedAction}
+            selectableTechTiles={techUpgradeFlow?.stage === 'tile' ? selectableStandardTiles : []}
             onActionSelect={handleShipActionSelect}
             onArtifactSelect={handleArtifactClick}
+            onTechTileSelect={
+              techUpgradeFlow?.stage === 'tile'
+                ? (tile) => handleStandardTechTile(tile, -1)
+                : undefined
+            }
           />
         </section>
       </aside>
@@ -904,7 +932,6 @@ export function App() {
           onUpgrade={handleUpgradeChoice}
           onStartFederation={startFederationFromStructure}
           onCoverTile={handleCoveredTechTile}
-          onSkipTech={finishUpgradeWithoutTechTile}
           onSkipResearch={finishUpgradeWithoutResearchAdvance}
           player={me}
           board={gameState.board}

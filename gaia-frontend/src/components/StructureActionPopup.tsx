@@ -22,7 +22,6 @@ interface Props {
   onUpgrade?: (to: StructureType) => void;
   onStartFederation?: () => void;
   onCoverTile?: (tileId: number) => void;
-  onSkipTech?: () => void;
   onSkipResearch?: () => void;
   player?: PlayerState;
   board?: BoardState;
@@ -123,7 +122,6 @@ export function StructureActionPopup({
   onUpgrade,
   onStartFederation,
   onCoverTile,
-  onSkipTech,
   onSkipResearch,
   player,
   board,
@@ -202,12 +200,7 @@ export function StructureActionPopup({
       )}
 
       {mode.kind === 'choose-tech' && (
-        <>
-          <PopupInstruction eyebrow="업그레이드" text="연구판에서 기술 타일을 누르세요" />
-          <button type="button" className="btn btn-ghost" onClick={onSkipTech}>
-            기술 타일 없이 업그레이드 완료
-          </button>
-        </>
+        <PopupInstruction eyebrow="업그레이드" text="연구판에서 기술 타일을 누르세요" />
       )}
       {mode.kind === 'choose-track' && (
         <>
