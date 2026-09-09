@@ -39,7 +39,7 @@ import { useRoomStore } from './store/roomStore';
 import { GaiaWebSocket } from './api/websocket';
 import { api } from './api/rest';
 import type { Hex, HexCoord, ResearchTrack, ServerMessage, SpaceshipId, StructureType, TechTileChoice } from './types/game';
-import { activeActionPlayerId, isGameState } from './types/game';
+import { activeActionPlayerId, isGameState, pendingDecisionPlayerId } from './types/game';
 
 type AppView = 'lobby' | 'game';
 
@@ -414,18 +414,7 @@ export function App() {
         )
         .map((hex) => hex.coord)
     : [];
-  const pendingDecisionPlayer = (() => {
-    const phase = gameState.phase;
-    if (typeof phase !== 'object' || phase === null) return null;
-    if ('LostPlanetPlacementPending' in phase) return phase.LostPlanetPlacementPending.player;
-    if ('ChargePowerPending' in phase) return phase.ChargePowerPending.queue[0]?.player ?? null;
-    if ('LostPlanetChargePowerPending' in phase) {
-      return phase.LostPlanetChargePowerPending.queue[0]?.player ?? null;
-    }
-    if ('IncomeOrderPending' in phase) return phase.IncomeOrderPending.queue[0]?.player ?? null;
-    if ('GaiaDecisionPending' in phase) return phase.GaiaDecisionPending.queue[0]?.player ?? null;
-    return null;
-  })();
+  const pendingDecisionPlayer = pendingDecisionPlayerId(gameState.phase);
 
   function handleResearchBoardAction(id: number) {
     if (!isMyActionTurn || usedPowerActions.includes(id)) return;

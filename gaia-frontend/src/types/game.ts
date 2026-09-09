@@ -807,3 +807,21 @@ export function activeActionPlayerId(
 
   return state.turn_order[state.phase.ActionPhase.active_player] ?? null;
 }
+
+/** Resolve the player who must answer a phase-blocking decision before play resumes. */
+export function pendingDecisionPlayerId(phase: GamePhase): PlayerId | null {
+  if (typeof phase !== 'object' || phase === null) return null;
+
+  if ('LostPlanetPlacementPending' in phase) return phase.LostPlanetPlacementPending.player;
+  if ('ChargePowerPending' in phase) return phase.ChargePowerPending.queue[0]?.player ?? null;
+  if ('LostPlanetChargePowerPending' in phase) {
+    return phase.LostPlanetChargePowerPending.queue[0]?.player ?? null;
+  }
+  if ('IncomeOrderPending' in phase) return phase.IncomeOrderPending.queue[0]?.player ?? null;
+  if ('GaiaDecisionPending' in phase) return phase.GaiaDecisionPending.queue[0]?.player ?? null;
+  if ('TinkeroidsTileSelectionPending' in phase) {
+    return phase.TinkeroidsTileSelectionPending.player;
+  }
+
+  return null;
+}

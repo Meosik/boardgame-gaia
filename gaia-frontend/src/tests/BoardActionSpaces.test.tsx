@@ -35,11 +35,15 @@ describe('physical board action spaces', () => {
     );
 
     expect(screen.getByRole('button', { name: /파워 7 → 지식 3.*사용함/ })).toBeDisabled();
-    const available = screen.getByRole('button', { name: /파워 4 → 광석 2.*사용 가능/ });
-    expect(available).toBeEnabled();
+    const oreAction = screen.getByRole('button', { name: /파워 4 → 광석 2.*사용 가능/ });
+    const creditAction = screen.getByRole('button', { name: /파워 4 → 크레딧 7.*사용 가능/ });
+    expect(oreAction).toBeEnabled();
+    expect(creditAction).toBeEnabled();
 
-    fireEvent.click(available);
-    expect(onPowerAction).toHaveBeenCalledWith(3);
+    fireEvent.click(oreAction);
+    fireEvent.click(creditAction);
+    expect(onPowerAction).toHaveBeenNthCalledWith(1, 3);
+    expect(onPowerAction).toHaveBeenNthCalledWith(2, 4);
   });
 
   it('allows ship actions only to an entrant and locks a slot used by anyone', () => {
