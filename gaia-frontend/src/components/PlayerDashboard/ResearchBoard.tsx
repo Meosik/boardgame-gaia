@@ -25,6 +25,7 @@ interface Props {
   techSelectionMode?: 'tile' | 'track' | null;
   selectableStandardTiles?: number[];
   selectableAdvancedTracks?: ResearchTrack[];
+  selectableResearchTracks?: ResearchTrack[];
   onStandardTechTile?: (tileId: number, slotIndex: number) => void;
   onAdvancedTechTile?: (tileId: number, track: ResearchTrack) => void;
   onResearchTrack?: (track: ResearchTrack) => void;
@@ -120,6 +121,7 @@ export function ResearchBoard({
   techSelectionMode = null,
   selectableStandardTiles,
   selectableAdvancedTracks,
+  selectableResearchTracks,
   onStandardTechTile,
   onAdvancedTechTile,
   onResearchTrack,
@@ -241,8 +243,10 @@ export function ResearchBoard({
             const slot = sameLevelPlayers.indexOf(player);
             const fanOffset = (slot - (sameLevelPlayers.length - 1) / 2) * 2.2;
             const tooltip = `${player.nickname} · ${player.faction} · ${TRACK_LABELS[track]} ${level}레벨`;
+            const researchTrackSelectable = selectableResearchTracks === undefined
+              || selectableResearchTracks.includes(track);
             const chooseTrack = techSelectionMode === 'track'
-              ? onResearchTrack
+              ? researchTrackSelectable ? onResearchTrack : undefined
               : techSelectionMode === null
                 ? onPaidResearchTrack
                 : undefined;
@@ -261,26 +265,35 @@ export function ResearchBoard({
           }),
         )}
         {((techSelectionMode === 'track' && onResearchTrack) ||
-          (techSelectionMode === null && onPaidResearchTrack)) && TRACKS.map(({ track }, index) => (
-          <button
-            key={`research-track-choice-${track}`}
-            type="button"
-            className={`research-board-track-hotspot${
-              techSelectionMode === null ? ' research-board-track-hotspot--paid' : ''
-            }`}
-            style={{ left: `${index * (100 / 6)}%`, width: `${100 / 6}%` }}
-            onClick={() => {
-              if (techSelectionMode === 'track') onResearchTrack?.(track);
-              else onPaidResearchTrack?.(track);
-            }}
-            aria-label={`${TRACK_LABELS[track]} 트랙 ${
-              techSelectionMode === 'track' ? '선택' : '연구 (지식 4)'
-            }`}
-            title={`${TRACK_LABELS[track]} 트랙 ${
-              techSelectionMode === 'track' ? '선택' : '연구 — 지식 4'
-            }`}
-          />
-        ))}
+          (techSelectionMode === null && onPaidResearchTrack)) && TRACKS.map(({ track }, index) => {
+          const selectable = techSelectionMode !== 'track'
+            || selectableResearchTracks === undefined
+            || selectableResearchTracks.includes(track);
+          return (
+            <button
+              key={`research-track-choice-${track}`}
+              type="button"
+              className={`research-board-track-hotspot${
+                techSelectionMode === null ? ' research-board-track-hotspot--paid' : ''
+              }`}
+              style={{ left: `${index * (100 / 6)}%`, width: `${100 / 6}%` }}
+              disabled={!selectable}
+              onClick={() => {
+                if (!selectable) return;
+                if (techSelectionMode === 'track') onResearchTrack?.(track);
+                else onPaidResearchTrack?.(track);
+              }}
+              aria-label={`${TRACK_LABELS[track]} 트랙 ${
+                techSelectionMode === 'track' ? '선택' : '연구 (지식 4)'
+              }`}
+              title={`${TRACK_LABELS[track]} 트랙 ${
+                techSelectionMode === 'track'
+                  ? selectable ? '선택' : '더 이상 상승할 수 없음'
+                  : '연구 — 지식 4'
+              }`}
+            />
+          );
+        })}
         {onPowerAction && POWER_ACTION_SPACES.map(({ id, label, x, y }) => {
           const used = usedPowerActions.includes(id);
           const available = isMyTurn && !used;

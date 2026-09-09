@@ -1,4 +1,7 @@
 import rangeIcon from '../assets/icons/normalized/range.webp';
+import powerBadge1 from '../assets/icons/normalized/power_badge_1.webp';
+import powerBadge3 from '../assets/icons/normalized/power_badge_3.webp';
+import powerBadge4 from '../assets/icons/normalized/power_badge_4.webp';
 import { FACTION_STRUCTURE_COLOR, structureImageSrc } from '../assets/structureImages';
 import { ResourceToken, type DisplayResource } from './ResourceTokens';
 import { GamePieceIcon } from './GamePieceIcon';
@@ -25,6 +28,12 @@ const RESULT_RESOURCE: Partial<Record<FreeActionKind, DisplayResource>> = {
 
 // These two conversions produce an actual power token in a bowl (bowl1 and bowl3 respectively).
 const POWER_TOKEN_RESULT_KINDS = new Set<FreeActionKind>(['OreToPower', 'OreToPowerBowl3']);
+
+const POWER_COST_BADGE: Partial<Record<number, string>> = {
+  1: powerBadge1,
+  3: powerBadge3,
+  4: powerBadge4,
+};
 
 interface SidebarTurnControlsProps {
   player: PlayerState;
@@ -99,6 +108,7 @@ export function SidebarTurnControls({
     const resultResource = RESULT_RESOURCE[option.kind];
     const resultIsPowerToken = POWER_TOKEN_RESULT_KINDS.has(option.kind);
     const costIsPower = option.cost.resource === 'bowl2' || option.cost.resource === 'bowl3';
+    const powerCostBadge = costIsPower ? POWER_COST_BADGE[option.cost.amount] : undefined;
     const costResource = option.cost.resource === 'ore' || option.cost.resource === 'credits'
       || option.cost.resource === 'knowledge' || option.cost.resource === 'qic'
       ? option.cost.resource
@@ -113,7 +123,11 @@ export function SidebarTurnControls({
         disabled={unavailable}
         onClick={() => onFreeAction(option.kind)}
       >
-        {costIsPower ? (
+        {powerCostBadge ? (
+          <span className="sidebar-power-cost sidebar-power-cost--badge" aria-hidden>
+            <img src={powerCostBadge} alt="" />
+          </span>
+        ) : costIsPower ? (
           <ResourceToken resource="power" value={option.cost.amount} compact />
         ) : costResource ? (
           <ResourceToken resource={costResource} value={option.cost.amount} compact />

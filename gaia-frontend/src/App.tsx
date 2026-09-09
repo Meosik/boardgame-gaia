@@ -81,7 +81,7 @@ type TechUpgradeFlow =
       to: StructureType;
       anchor: { x: number; y: number };
       tile: number;
-      advanceTrack: ResearchTrack;
+      advanceTrack: ResearchTrack | null;
     }
   | {
       stage: 'cover';
@@ -90,6 +90,14 @@ type TechUpgradeFlow =
       anchor: { x: number; y: number };
       tile: number;
       track: ResearchTrack;
+    }
+  | {
+      stage: 'advanced-track';
+      coord: HexCoord;
+      to: StructureType;
+      anchor: { x: number; y: number };
+      track: ResearchTrack;
+      coveredTile: number;
     };
 
 function DraggableActionPopup({
@@ -552,7 +560,7 @@ export function App() {
     closeBoardContext();
   }
 
-  function finishStandardTechChoice(tile: number, advanceTrack: ResearchTrack) {
+  function finishStandardTechChoice(tile: number, advanceTrack: ResearchTrack | null) {
     if (!techUpgradeFlow) return;
     if (tile === 11) {
       setTechUpgradeFlow({
@@ -584,8 +592,16 @@ export function App() {
   }
 
   function handleTechResearchTrack(track: ResearchTrack) {
-    if (techUpgradeFlow?.stage !== 'track') return;
-    finishStandardTechChoice(techUpgradeFlow.tile, track);
+    if (techUpgradeFlow?.stage === 'track') {
+      finishStandardTechChoice(techUpgradeFlow.tile, track);
+    } else if (techUpgradeFlow?.stage === 'advanced-track') {
+      sendTechUpgrade({
+        kind: 'Advanced',
+        track: techUpgradeFlow.track,
+        covered_tile: techUpgradeFlow.coveredTile,
+        advance_track: track,
+      });
+    }
   }
 
   function handlePaidResearchTrack(track: ResearchTrack) {
@@ -601,12 +617,31 @@ export function App() {
 
   function handleCoveredTechTile(tile: number) {
     if (techUpgradeFlow?.stage !== 'cover') return;
-    sendTechUpgrade({
-      kind: 'Advanced',
-      track: techUpgradeFlow.track,
-      covered_tile: tile,
-      advance_track: techUpgradeFlow.track,
+    setTechUpgradeFlow({ ...techUpgradeFlow, stage: 'advanced-track', coveredTile: tile });
+  }
+
+  function finishUpgradeWithoutTechTile() {
+    if (techUpgradeFlow?.stage !== 'tile') return;
+    gameActions.sendAction({
+      type: 'Upgrade',
+      coord: techUpgradeFlow.coord,
+      to: techUpgradeFlow.to,
+      tech_tile_choice: null,
     });
+    closeBoardContext();
+  }
+
+  function finishUpgradeWithoutResearchAdvance() {
+    if (techUpgradeFlow?.stage === 'track') {
+      finishStandardTechChoice(techUpgradeFlow.tile, null);
+    } else if (techUpgradeFlow?.stage === 'advanced-track') {
+      sendTechUpgrade({
+        kind: 'Advanced',
+        track: techUpgradeFlow.track,
+        covered_tile: techUpgradeFlow.coveredTile,
+        advance_track: null,
+      });
+    }
   }
 
   function handleBonusMineTarget(coord: HexCoord) {
@@ -623,11 +658,21 @@ export function App() {
   const selectableStandardTiles = (gameState.research_board.tech_tile_slots ?? []).filter(
     (tile): tile is number => tile !== null && !(me.tech_tiles ?? []).includes(tile),
   );
-  const greenFederationTokenCount = Math.max(0, me.federation_tokens.length - (me.gray_federation_tokens ?? []).length);
+  const greenFederationTokenCount = me.federation_tokens.length;
   const selectableAdvancedTracks =
     greenFederationTokenCount > 0 && ownedUncoveredTechTiles.length > 0
       ? RESEARCH_TRACK_ORDER.filter((track) => researchLevel(me, track) >= 4)
       : [];
+  const selectableTechResearchTracks = RESEARCH_TRACK_ORDER.filter((track) => {
+    const level = researchLevel(me, track);
+    if (level >= 5) return false;
+    if (me.faction === 'BalTaks'
+      && track === 'Navigation'
+      && !me.structures.some(({ kind }) => kind === 'PlanetaryInstitute')) return false;
+    if (level < 4) return true;
+    return greenFederationTokenCount > 0
+      && !gameState.players.some((player) => player.player_id !== myId && researchLevel(player, track) >= 5);
+  });
   const bonusMineTargets =
     techUpgradeFlow?.stage === 'bonus-mine' ? Object.values(gameState.board.hexes).map((hex) => hex.coord) : [];
   const federationSelectableHexes = selectedAction === 'FormFederation'
@@ -645,7 +690,7 @@ export function App() {
     };
   } else if (techUpgradeFlow?.stage === 'tile') {
     popupMode = { kind: 'choose-tech' };
-  } else if (techUpgradeFlow?.stage === 'track') {
+  } else if (techUpgradeFlow?.stage === 'track' || techUpgradeFlow?.stage === 'advanced-track') {
     popupMode = { kind: 'choose-track' };
   } else if (techUpgradeFlow?.stage === 'bonus-mine') {
     popupMode = { kind: 'choose-bonus-mine' };
@@ -711,6 +756,7 @@ export function App() {
             }
             selectableStandardTiles={selectableStandardTiles}
             selectableAdvancedTracks={selectableAdvancedTracks}
+            selectableResearchTracks={selectableTechResearchTracks}
             onStandardTechTile={handleStandardTechTile}
             onAdvancedTechTile={handleAdvancedTechTile}
             onResearchTrack={handleTechResearchTrack}
@@ -858,6 +904,8 @@ export function App() {
           onUpgrade={handleUpgradeChoice}
           onStartFederation={startFederationFromStructure}
           onCoverTile={handleCoveredTechTile}
+          onSkipTech={finishUpgradeWithoutTechTile}
+          onSkipResearch={finishUpgradeWithoutResearchAdvance}
           player={me}
           board={gameState.board}
           onClose={closeBoardContext}
