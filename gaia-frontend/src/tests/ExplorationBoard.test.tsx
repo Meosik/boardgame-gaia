@@ -23,7 +23,7 @@ describe('ExplorationBoard', () => {
   });
 
   it('uses the corrected swapped scans for Ivits and Hadsch Hallas', () => {
-    expect(explorationBoardImageSrc('Ivits')).toContain('/hadsch_halla.webp');
-    expect(explorationBoardImageSrc('HadschHallas')).toContain('/ivits.webp');
+    expect(explorationBoardImageSrc('Ivits')).toContain('/ivits.webp');
+    expect(explorationBoardImageSrc('HadschHallas')).toContain('/hadsch_halla.webp');
   });
 });
