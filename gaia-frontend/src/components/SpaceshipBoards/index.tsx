@@ -14,7 +14,11 @@ interface Props {
   isMyTurn?: boolean;
   usedActionIds?: number[];
   selectedAction?: GameAction['type'] | null;
-  onActionSelect?: (actionType: GameAction['type']) => void;
+  onActionSelect?: (
+    actionType: GameAction['type'],
+    actionTypes: GameAction['type'][],
+  ) => void;
+  onArtifactSelect?: (artifactId: number) => void;
 }
 
 const SHIPS: { id: SpaceshipId; label: string }[] = [
@@ -121,6 +125,7 @@ export function SpaceshipBoards({
   usedActionIds = [],
   selectedAction = null,
   onActionSelect,
+  onArtifactSelect,
 }: Props) {
   const factionByPlayer = new Map(players.map((p) => [p.player_id, p.faction]));
 
@@ -157,15 +162,39 @@ export function SpaceshipBoards({
                 const slot = TWILIGHT_ARTIFACT_SLOTS[index];
                 const src = artifactImageSrc(artifactId);
                 if (!slot || !src) return null;
+                const style = {
+                  left: `${slot.x}%`,
+                  top: `${slot.y + slot.yOffsetPx * 100 / TWILIGHT_BOARD_HEIGHT_PX}%`,
+                  transform: `translate(-50%, -50%) scale(${ARTIFACT_VISUAL_SCALE[artifactId] ?? 1})`,
+                };
+                if (onArtifactSelect) {
+                  const available = isMyTurn
+                    && myPlayerId !== undefined
+                    && board.explorers.includes(myPlayerId);
+                  return (
+                    <button
+                      key={`artifact-${artifactId}-${index}`}
+                      type="button"
+                      className="spaceship-board-artifact spaceship-board-artifact--transparent-redraw spaceship-board-artifact--button"
+                      style={style}
+                      disabled={!available}
+                      onClick={() => onArtifactSelect(artifactId)}
+                      aria-label={`아티팩트 ${artifactId} 조사${available ? '' : ' (Twilight 함선 진입 필요)'}`}
+                    >
+                      <img
+                        className="spaceship-board-artifact-source"
+                        src={src}
+                        alt=""
+                        aria-hidden
+                      />
+                    </button>
+                  );
+                }
                 return (
                   <img
                     key={`artifact-${artifactId}`}
                     className="spaceship-board-artifact spaceship-board-artifact--transparent-redraw"
-                    style={{
-                      left: `${slot.x}%`,
-                      top: `${slot.y + slot.yOffsetPx * 100 / TWILIGHT_BOARD_HEIGHT_PX}%`,
-                      transform: `translate(-50%, -50%) scale(${ARTIFACT_VISUAL_SCALE[artifactId] ?? 1})`,
-                    }}
+                    style={style}
                     src={src}
                     alt={`아티팩트 ${artifactId}`}
                   />
@@ -239,7 +268,7 @@ export function SpaceshipBoards({
                     }${selected ? ' board-action-hotspot--selected' : ''}`}
                     style={{ left: `${space.x}%`, top: `${space.y}%` }}
                     disabled={!available}
-                    onClick={() => onActionSelect(space.primaryActionType)}
+                    onClick={() => onActionSelect(space.primaryActionType, space.actionTypes)}
                     aria-label={`${label} — ${space.label}: ${reason}`}
                     title={`${space.label} — ${reason}`}
                   >

@@ -788,6 +788,37 @@ describe('ActionPanel — GaiaDecisionPending', () => {
 });
 
 describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact', () => {
+  it('allows choosing every mode printed in Twilight’s shared +3 range slot', () => {
+    useGameStore.setState({ selectedAction: 'TwilightRangeBuild' });
+    const state = mockGameState({
+      spaceship_boards: [
+        {
+          id: 'Twilight',
+          explorers: [0, null, null, null],
+          artifact_pool: [],
+          federation_token: null,
+        },
+      ],
+    });
+    render(
+      <ActionPanel
+        gameState={state}
+        myPlayerId={0}
+        focusedAction
+        focusedActionOptions={[
+          'TwilightRangeBuild',
+          'TwilightRangeGaiaFormation',
+          'TwilightRangeExploreSpaceship',
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByText(
+      byTextAcrossNodes(rangeActionLabel('Twilight +3 사거리 함선 탐사 (지식 1)')),
+    ));
+    expect(useGameStore.getState().selectedAction).toBe('TwilightRangeExploreSpaceship');
+  });
+
   it('disables spaceship action spaces already covered this round', () => {
     const state = mockGameState({ used_spaceship_actions: [1, 5] });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
@@ -848,6 +879,42 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     fireEvent.click(screen.getByText('7점'));
     fireEvent.click(screen.getByText('확인'));
 
+    expect(sendAction).toHaveBeenCalledWith({
+      type: 'ExamineArtifact',
+      artifact: 8,
+      copy_federation_token_kind: null,
+      bonus_build_coord: null,
+      bonus_tech_tile: null,
+      bonus_research_track: null,
+    });
+  });
+
+  it('preselects an artifact clicked directly on the Twilight board', () => {
+    const sendAction = vi.fn();
+    useGameStore.setState((state) => ({
+      selectedAction: 'ExamineArtifact',
+      actions: { ...state.actions, sendAction },
+    }));
+    const state = mockGameState({
+      spaceship_boards: [
+        {
+          id: 'Twilight',
+          explorers: [0, null, null, null],
+          artifact_pool: [8],
+          federation_token: null,
+        },
+      ],
+    });
+    render(
+      <ActionPanel
+        gameState={state}
+        myPlayerId={0}
+        focusedAction
+        initialArtifactId={8}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('확인'));
     expect(sendAction).toHaveBeenCalledWith({
       type: 'ExamineArtifact',
       artifact: 8,

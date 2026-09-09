@@ -166,3 +166,7 @@ export const REQUIRED_SPACESHIP_BY_ACTION: Partial<Record<GameAction['type'], Sp
     }
     return result;
   }, {});
+
+export function isSpaceshipBoardAction(actionType: GameAction['type'] | null): boolean {
+  return actionType !== null && REQUIRED_SPACESHIP_BY_ACTION[actionType] !== undefined;
+}

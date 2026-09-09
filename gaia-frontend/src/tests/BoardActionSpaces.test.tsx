@@ -2,13 +2,21 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ResearchBoard } from '../components/PlayerDashboard/ResearchBoard';
 import { SpaceshipBoards } from '../components/SpaceshipBoards';
-import type { SpaceshipBoard } from '../types/game';
+import {
+  isSpaceshipBoardAction,
+  SPACESHIP_ACTION_SPACES,
+} from '../components/boardActionSpaces';
+import type { SpaceshipBoard, SpaceshipId } from '../types/game';
 
-function tfMarsBoard(explorers: SpaceshipBoard['explorers']): SpaceshipBoard {
+function spaceshipBoard(
+  id: SpaceshipId,
+  explorers: SpaceshipBoard['explorers'],
+  artifactPool: number[] = [],
+): SpaceshipBoard {
   return {
-    id: 'TFMars',
+    id,
     explorers,
-    artifact_pool: [],
+    artifact_pool: artifactPool,
     tech_tiles: [],
     federation_token: null,
   };
@@ -19,7 +27,7 @@ describe('physical board action spaces', () => {
     const { rerender } = render(<ResearchBoard players={[]} />);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
 
-    rerender(<SpaceshipBoards spaceshipBoards={[tfMarsBoard([null, null, null, null])]} players={[]} />);
+    rerender(<SpaceshipBoards spaceshipBoards={[spaceshipBoard('TFMars', [null, null, null, null])]} players={[]} />);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
@@ -50,7 +58,7 @@ describe('physical board action spaces', () => {
     const onActionSelect = vi.fn();
     const { rerender } = render(
       <SpaceshipBoards
-        spaceshipBoards={[tfMarsBoard([1, null, null, null])]}
+        spaceshipBoards={[spaceshipBoard('TFMars', [1, null, null, null])]}
         players={[]}
         myPlayerId={0}
         isMyTurn
@@ -62,7 +70,7 @@ describe('physical board action spaces', () => {
 
     rerender(
       <SpaceshipBoards
-        spaceshipBoards={[tfMarsBoard([0, null, null, null])]}
+        spaceshipBoards={[spaceshipBoard('TFMars', [0, null, null, null])]}
         players={[]}
         myPlayerId={0}
         isMyTurn
@@ -76,6 +84,51 @@ describe('physical board action spaces', () => {
     expect(screen.getByRole('button', { name: /기술 타일 수만큼.*사용함/ })).toBeDisabled();
 
     fireEvent.click(creditAction);
-    expect(onActionSelect).toHaveBeenCalledWith('SpaceshipCreditTerraform');
+    expect(onActionSelect).toHaveBeenCalledWith(
+      'SpaceshipCreditTerraform',
+      ['SpaceshipCreditTerraform'],
+    );
+  });
+
+  it('connects every printed spaceship action slot to its primary action flow', () => {
+    const onActionSelect = vi.fn();
+    const boards = (Object.keys(SPACESHIP_ACTION_SPACES) as SpaceshipId[]).map((id) =>
+      spaceshipBoard(id, [0, null, null, null]),
+    );
+    render(
+      <SpaceshipBoards
+        spaceshipBoards={boards}
+        players={[]}
+        myPlayerId={0}
+        isMyTurn
+        onActionSelect={onActionSelect}
+      />,
+    );
+
+    const spaces = Object.values(SPACESHIP_ACTION_SPACES).flat();
+    for (const space of spaces) {
+      expect(isSpaceshipBoardAction(space.primaryActionType)).toBe(true);
+      fireEvent.click(screen.getByTitle(`${space.label} — 사용 가능`));
+    }
+
+    expect(onActionSelect.mock.calls.map(([actionType]) => actionType)).toEqual(
+      spaces.map(({ primaryActionType }) => primaryActionType),
+    );
+  });
+
+  it('opens artifact examination from an available Twilight artifact', () => {
+    const onArtifactSelect = vi.fn();
+    render(
+      <SpaceshipBoards
+        spaceshipBoards={[spaceshipBoard('Twilight', [0, null, null, null], [8])]}
+        players={[]}
+        myPlayerId={0}
+        isMyTurn
+        onArtifactSelect={onArtifactSelect}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '아티팩트 8 조사' }));
+    expect(onArtifactSelect).toHaveBeenCalledWith(8);
   });
 });

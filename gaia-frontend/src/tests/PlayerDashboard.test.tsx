@@ -97,7 +97,8 @@ describe('PlayerDashboard', () => {
 
     render(<PlayerDashboard player={player} />);
 
-    expect(screen.getByLabelText('승점 14점')).toHaveTextContent('14');
+    expect(screen.queryByText('Me')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('승점 14점')).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Taklons 종족 보드' })).toBeInTheDocument();
     expect(screen.getByAltText('일반 기술 타일 4')).toBeInTheDocument();
     expect(screen.getByAltText('고급 기술 타일 7')).toBeInTheDocument();

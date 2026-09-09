@@ -34,11 +34,12 @@ import { GameLog } from './components/GameLog';
 import { SidebarTurnControls } from './components/SidebarTurnControls';
 import { TopPassControl } from './components/TopPassControl';
 import { GameOverScreen } from './components/GameOverScreen';
+import { isSpaceshipBoardAction } from './components/boardActionSpaces';
 import { useGameStore } from './store/gameStore';
 import { useRoomStore } from './store/roomStore';
 import { GaiaWebSocket } from './api/websocket';
 import { api } from './api/rest';
-import type { Hex, HexCoord, ResearchTrack, ServerMessage, SpaceshipId, StructureType, TechTileChoice } from './types/game';
+import type { GameAction, Hex, HexCoord, ResearchTrack, ServerMessage, SpaceshipId, StructureType, TechTileChoice } from './types/game';
 import { activeActionPlayerId, isGameState, pendingDecisionPlayerId } from './types/game';
 
 type AppView = 'lobby' | 'game';
@@ -169,6 +170,8 @@ export function App() {
   const [gameNotice, setGameNotice] = useState<string | null>(null);
   const [suppressTerraformOreConfirmation, setSuppressTerraformOreConfirmation] = useState(false);
   const [devPowerChargeTargeting, setDevPowerChargeTargeting] = useState(false);
+  const [boardArtifactId, setBoardArtifactId] = useState<number | null>(null);
+  const [shipActionOptions, setShipActionOptions] = useState<GameAction['type'][]>([]);
   const devGameLaunchStarted = useRef(false);
   const searchParams = new URLSearchParams(window.location.search);
   const devGameRequested = searchParams.get('devGame') === '1';
@@ -486,6 +489,25 @@ export function App() {
     setSpaceshipPopup({ ship, anchor });
   }
 
+  function handleArtifactClick(artifactId: number) {
+    if (!isMyActionTurn) return;
+    closeBoardContext();
+    setShipActionOptions([]);
+    setBoardArtifactId(artifactId);
+    gameActions.selectAction('ExamineArtifact');
+  }
+
+  function handleShipActionSelect(
+    actionType: GameAction['type'],
+    actionTypes: GameAction['type'][],
+  ) {
+    if (!isMyActionTurn) return;
+    closeBoardContext();
+    setBoardArtifactId(null);
+    setShipActionOptions(actionTypes);
+    gameActions.selectAction(actionType);
+  }
+
   function handleUpgradeChoice(to: StructureType) {
     if (!structurePopup || !gameState) return;
     if (!canPayForUpgrade(me, gameState.board, structurePopup.coord, structurePopup.structure, to)) {
@@ -706,7 +728,8 @@ export function App() {
             isMyTurn={isMyActionTurn}
             usedActionIds={gameState.used_spaceship_actions}
             selectedAction={selectedAction}
-            onActionSelect={gameActions.selectAction}
+            onActionSelect={handleShipActionSelect}
+            onArtifactSelect={handleArtifactClick}
           />
         </section>
       </aside>
@@ -895,6 +918,17 @@ export function App() {
       {selectedAction === 'FormFederation' && (
         <DraggableActionPopup className="federation-action-popup" label="연방 구축">
           <ActionPanel gameState={gameState} myPlayerId={myId} focusedAction />
+        </DraggableActionPopup>
+      )}
+      {(isSpaceshipBoardAction(selectedAction) || selectedAction === 'ExamineArtifact') && (
+        <DraggableActionPopup className="ship-action-popup" label="함선 행동">
+          <ActionPanel
+            gameState={gameState}
+            myPlayerId={myId}
+            focusedAction
+            focusedActionOptions={shipActionOptions}
+            initialArtifactId={boardArtifactId}
+          />
         </DraggableActionPopup>
       )}
       {activeBoardOverlay === 'scoring' && (

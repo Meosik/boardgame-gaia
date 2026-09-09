@@ -2,7 +2,6 @@ import { clsx } from 'clsx';
 import { ExplorationBoard } from './ExplorationBoard';
 import { FactionBoard } from './FactionBoard';
 import { PowerCycle } from './PowerCycle';
-import { VictoryPointToken } from '../ResourceTokens';
 import type { PlayerState } from '../../types/game';
 
 interface Props {
@@ -15,16 +14,6 @@ export function PlayerDashboard({ player }: Props) {
   return (
     <div className="player-dashboard">
       <div className={clsx('player-panel', 'player-panel--me', player.passed && 'player-panel--passed')}>
-        <div className="player-header">
-          <span className="player-name">{player.nickname}</span>
-          {player.faction && (
-            <span className={`faction-badge faction-${player.faction.toLowerCase()}`}>
-              {player.faction}
-            </span>
-          )}
-          <VictoryPointToken value={player.vp} />
-          {player.passed && <span className="passed-badge">패스</span>}
-        </div>
         <div className="player-dashboard-content">
           {player.faction && (
             <div className="player-body-top">

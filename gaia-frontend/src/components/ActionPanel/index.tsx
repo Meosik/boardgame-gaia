@@ -35,6 +35,10 @@ interface Props {
   myPlayerId: PlayerId;
   /** Shows only the details for an action already selected on the board. */
   focusedAction?: boolean;
+  /** Variants printed in one physical action space, such as Twilight's +3 range action. */
+  focusedActionOptions?: GameAction['type'][];
+  /** Preselects an artifact clicked directly on the Twilight board. */
+  initialArtifactId?: number | null;
 }
 
 type ActionKind = GameAction['type'];
@@ -354,7 +358,13 @@ function availableSpaceshipFederationTokens(
     .map((b) => ({ ship: b.id, kind: b.federation_token as number }));
 }
 
-export function ActionPanel({ gameState, myPlayerId, focusedAction = false }: Props) {
+export function ActionPanel({
+  gameState,
+  myPlayerId,
+  focusedAction = false,
+  focusedActionOptions = [],
+  initialArtifactId = null,
+}: Props) {
   const { selectedAction, selectedPowerActionId, activePlanet, selectedHexes, actions } = useGameStore(
     (s) => ({
       selectedAction: s.selectedAction,
@@ -370,7 +380,7 @@ export function ActionPanel({ gameState, myPlayerId, focusedAction = false }: Pr
   const [passBoosterId, setPassBoosterId] = useState<number | null>(null);
   const [spaceshipId, setSpaceshipId] = useState<SpaceshipId | null>(null);
   const [replayFederationKind, setReplayFederationKind] = useState<number | null>(null);
-  const [examineArtifactId, setExamineArtifactId] = useState<number | null>(null);
+  const [examineArtifactId, setExamineArtifactId] = useState<number | null>(initialArtifactId);
   const [selectedResearchTrack, setSelectedResearchTrack] = useState<ResearchTrack | null>(null);
   const [federationToken, setFederationToken] = useState<FederationTokenChoice | null>(null);
   const [federationBonusCoord, setFederationBonusCoord] = useState<{ q: number; r: number } | null>(
@@ -403,7 +413,7 @@ export function ActionPanel({ gameState, myPlayerId, focusedAction = false }: Pr
     setUpgradeTarget(null);
     setSpaceshipId(null);
     setReplayFederationKind(null);
-    setExamineArtifactId(null);
+    setExamineArtifactId(selectedAction === 'ExamineArtifact' ? initialArtifactId : null);
     setSelectedResearchTrack(null);
     setFederationToken(null);
     setFederationBonusCoord(null);
@@ -412,7 +422,7 @@ export function ActionPanel({ gameState, myPlayerId, focusedAction = false }: Pr
     setUpgradeAdvanceTrack(null);
     setUpgradeBonusCoord(null);
     setUpgradeCoveredTile(null);
-  }, [selectedAction]);
+  }, [initialArtifactId, selectedAction]);
 
   const federationSelectionKey = selectedHexes
     .map(({ q, r }) => hexKey(q, r))
@@ -1146,6 +1156,27 @@ export function ActionPanel({ gameState, myPlayerId, focusedAction = false }: Pr
           {selectedActionLabel && <strong>{selectedActionLabel} 선택됨</strong>}
           <p>{actionInstruction}</p>
           <span>빛나는 버튼은 현재 선택할 수 있습니다.</span>
+        </div>
+      )}
+      {focusedAction && focusedActionOptions.length > 1 && (
+        <div className="action-buttons" aria-label="함선 행동 방식 선택">
+          {focusedActionOptions.map((actionType) => {
+            const label = ACTION_BUTTONS.find((action) => action.actionType === actionType)?.label
+              ?? actionType;
+            return (
+              <button
+                key={actionType}
+                type="button"
+                className={clsx(
+                  'btn action-btn',
+                  selectedAction === actionType && 'action-btn--selected',
+                )}
+                onClick={() => actions.selectAction(actionType)}
+              >
+                {renderLabelWithRangeIcon(label)}
+              </button>
+            );
+          })}
         </div>
       )}
       {selectedAction ? (

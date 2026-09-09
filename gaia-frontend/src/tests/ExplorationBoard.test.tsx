@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ExplorationBoard } from '../components/PlayerDashboard/ExplorationBoard';
+import { explorationBoardImageSrc } from '../assets/explorationBoardImages';
 
 describe('ExplorationBoard', () => {
   it('uses the faction-specific exploration board image and shows all starting shuttles', () => {
@@ -19,5 +20,10 @@ describe('ExplorationBoard', () => {
 
     rerender(<ExplorationBoard faction="Ambas" shuttlesAvailable={8} />);
     expect(screen.getAllByLabelText(/대기 중인 탐사 셔틀/)).toHaveLength(3);
+  });
+
+  it('uses the corrected swapped scans for Ivits and Hadsch Hallas', () => {
+    expect(explorationBoardImageSrc('Ivits')).toContain('/hadsch_halla.webp');
+    expect(explorationBoardImageSrc('HadschHallas')).toContain('/ivits.webp');
   });
 });

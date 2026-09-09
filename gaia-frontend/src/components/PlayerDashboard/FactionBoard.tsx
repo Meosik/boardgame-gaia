@@ -145,7 +145,6 @@ export function FactionBoard({
     <figure className="faction-board" aria-label={`${faction} 종족 보드`}>
       {resources && (
         <div className="faction-board-resource-header">
-          <figcaption className="faction-board-name">{faction} 종족 보드</figcaption>
           {(expensiveTerraformingPlanetTypes.length > 0 || selectedTinkeringTile !== null) && (
             <div className="faction-board-special-status">
               {expensiveTerraformingPlanetTypes.length > 0 && (
