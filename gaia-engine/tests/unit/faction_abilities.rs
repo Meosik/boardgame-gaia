@@ -1,11 +1,13 @@
 use gaia_engine::error::RuleError;
 use gaia_engine::faction::registry::global as faction_registry;
 use gaia_engine::game_state::{
-    BoardState, BrainstoneLocation, FactionId, FederationToken, GameEvent, GamePhase, Hex,
-    HexCoord, PendingCharge, PlacedStructure, Planet, PlanetType, ResearchTrack, Sector,
-    SetupPhase, Structure, StructureType,
+    BoardState, BrainstoneLocation, FactionId, FederationToken, FinalScoringCondition, GameEvent,
+    GamePhase, Hex, HexCoord, PendingCharge, PlacedStructure, Planet, PlanetType, ResearchTrack,
+    Sector, SetupPhase, SpaceshipId, Structure, StructureType,
 };
+use gaia_engine::map::MapEngine;
 use gaia_engine::rules::actions::{FederationTokenChoice, FreeActionKind, GameAction, SetupAction};
+use gaia_engine::scoring::ScoringEngine;
 use gaia_engine::test_utils::builders::GameStateBuilder;
 use gaia_engine::{RuleEngine, SetupPolicy};
 use std::collections::HashMap;
@@ -160,8 +162,8 @@ fn setup_completion_seeds_starting_resources() {
     assert_eq!(darkanians.research_tracks.economy, 1);
     assert_eq!(darkanians.research_tracks.gaia, 0);
 
-    // Base rule: every faction starts with 3 Gaiaformers.
-    assert_eq!(darkanians.gaiaformers_total, 3);
+    // The three physical Gaiaformers begin locked on the Gaia Project track.
+    assert_eq!(darkanians.gaiaformers_total, 0);
 
     let terrans = state.player(1).unwrap_or_else(|| panic!("player 1 exists"));
     assert_eq!(terrans.resources.ore, 4);
@@ -174,7 +176,7 @@ fn setup_completion_seeds_starting_resources() {
     // setup section, a non-zero starting track level also grants that
     // level's one-time bonus immediately: GaiaProject level 1 = 1 Gaiaformer.
     assert_eq!(terrans.research_tracks.gaia, 1);
-    assert_eq!(terrans.gaiaformers_total, 4);
+    assert_eq!(terrans.gaiaformers_total, 1);
 }
 
 #[test]
@@ -187,6 +189,7 @@ fn setup_completion_seeds_moweyds_and_tinkeroids_starting_tracks() {
         .with_player(0)
         .with_player(1)
         .build();
+    state.spaceship_boards = MapEngine::initial_spaceship_boards("moweyds-setup-test");
     state.faction_selection = Some(SetupPolicy::initialize(
         vec![0, 1],
         vec![
@@ -210,9 +213,227 @@ fn setup_completion_seeds_moweyds_and_tinkeroids_starting_tracks() {
 
     let moweyds = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
     assert_eq!(moweyds.research_tracks.gaia, 1);
+    assert_eq!(moweyds.exploration_shuttles_available, 2);
+    assert!(moweyds.explored_ships.contains(&2));
+    assert_eq!(moweyds.expensive_terraforming_planet_types.len(), 3);
+    let tf_mars = state
+        .spaceship_boards
+        .iter()
+        .find(|board| board.id == SpaceshipId::TFMars)
+        .unwrap_or_else(|| panic!("T F Mars board exists"));
+    assert_eq!(tf_mars.explorers[0], Some(0));
 
     let tinkeroids = state.player(1).unwrap_or_else(|| panic!("player 1 exists"));
     assert_eq!(tinkeroids.research_tracks.science, 1);
+    assert_eq!(tinkeroids.resources.knowledge, 3);
+    assert_eq!(tinkeroids.expensive_terraforming_planet_types.len(), 3);
+}
+
+#[test]
+fn setup_resolves_shared_opponent_colors_then_fills_from_terraforming_board_order() {
+    let mut state = GameStateBuilder::new()
+        .with_player(0)
+        .with_player(1)
+        .with_player(2)
+        .with_player(3)
+        .build();
+    state.terraforming_color_order = vec![
+        PlanetType::Ice,
+        PlanetType::Swamp,
+        PlanetType::Desert,
+        PlanetType::Oxide,
+        PlanetType::Titanium,
+        PlanetType::Volcanic,
+        PlanetType::Terra,
+    ];
+    state.spaceship_boards = MapEngine::initial_spaceship_boards("terraforming-cost-test");
+    state.faction_selection = Some(SetupPolicy::initialize(
+        vec![0, 1, 2, 3],
+        vec![
+            FactionId::Moweyds,
+            FactionId::Bescods,
+            FactionId::Tinkeroids,
+            FactionId::Terrans,
+        ],
+    ));
+    state.phase = GamePhase::Setup(SetupPhase::FactionSelection { active_player: 0 });
+
+    for (player, faction) in [
+        (0, FactionId::Moweyds),
+        (1, FactionId::Bescods),
+        (2, FactionId::Tinkeroids),
+        (3, FactionId::Terrans),
+    ] {
+        RuleEngine::apply_setup_action(&mut state, player, SetupAction::SelectFaction { faction })
+            .unwrap_or_else(|error| panic!("player {player} selects {faction:?}: {error}"));
+    }
+
+    assert_eq!(
+        state.players[0].expensive_terraforming_planet_types,
+        vec![PlanetType::Titanium, PlanetType::Terra, PlanetType::Ice]
+    );
+    assert_eq!(
+        state.players[2].expensive_terraforming_planet_types,
+        vec![PlanetType::Titanium, PlanetType::Terra, PlanetType::Swamp]
+    );
+}
+
+fn lantids_cohabitation_state(
+    target_type: PlanetType,
+    gaia: bool,
+) -> gaia_engine::game_state::GameState {
+    let pi = HexCoord::new(-1, 0);
+    let origin = HexCoord::new(0, 0);
+    let target = HexCoord::new(1, 0);
+    let mut hexes = HashMap::new();
+    for (coord, kind) in [
+        (pi, StructureType::PlanetaryInstitute),
+        (origin, StructureType::Mine),
+    ] {
+        hexes.insert(
+            coord,
+            Hex {
+                coord,
+                planet: Some(Planet {
+                    planet_type: PlanetType::Terra,
+                    is_gaia_formed: false,
+                    owner: Some(0),
+                }),
+                space_tile_kind: None,
+                structures: vec![PlacedStructure { owner: 0, kind }],
+                satellites: vec![],
+            },
+        );
+    }
+    hexes.insert(
+        target,
+        Hex {
+            coord: target,
+            planet: Some(Planet {
+                planet_type: target_type,
+                is_gaia_formed: gaia,
+                owner: Some(1),
+            }),
+            space_tile_kind: None,
+            structures: vec![PlacedStructure {
+                owner: 1,
+                kind: StructureType::TradingStation,
+            }],
+            satellites: vec![],
+        },
+    );
+    let board = BoardState {
+        sectors: vec![Sector {
+            id: 1,
+            rotation: 0,
+            origin: HexCoord::new(0, 0),
+        }],
+        hexes,
+        lost_planet: None,
+        spaceship_tiles: HashMap::new(),
+    };
+
+    GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.faction = Some(FactionId::Lantids);
+            player.resources.ore = 10;
+            player.resources.credits = 15;
+            player.resources.knowledge = 3;
+            player.resources.qic = 0;
+            player.resources.power.bowl1 = 1;
+            player.resources.power.bowl2 = 0;
+            player.structures = vec![
+                Structure {
+                    hex: pi,
+                    kind: StructureType::PlanetaryInstitute,
+                },
+                Structure {
+                    hex: origin,
+                    kind: StructureType::Mine,
+                },
+            ];
+        })
+        .with_player_fn(1, |player| {
+            player.structures = vec![Structure {
+                hex: target,
+                kind: StructureType::TradingStation,
+            }];
+        })
+        .with_player(2)
+        .with_player(3)
+        .with_board(board)
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build()
+}
+
+#[test]
+fn lantids_build_on_an_opponents_planet_without_terraforming_and_keep_ownership() {
+    let target = HexCoord::new(1, 0);
+    let mut state = lantids_cohabitation_state(PlanetType::Ice, false);
+
+    RuleEngine::apply_action(&mut state, 0, GameAction::Build { coord: target })
+        .unwrap_or_else(|error| panic!("Lantids cohabitation build should succeed: {error}"));
+
+    let player = state
+        .player(0)
+        .unwrap_or_else(|| panic!("Lantids player exists"));
+    assert_eq!(player.resources.ore, 9);
+    assert_eq!(player.resources.credits, 13);
+    assert_eq!(player.resources.knowledge, 5);
+    assert!(player
+        .structures
+        .iter()
+        .any(|structure| structure.hex == target && structure.kind == StructureType::Mine));
+    let target_hex = state
+        .board
+        .hexes
+        .get(&target)
+        .unwrap_or_else(|| panic!("target exists"));
+    assert_eq!(
+        target_hex.planet.as_ref().and_then(|planet| planet.owner),
+        Some(1)
+    );
+    assert_eq!(target_hex.structures.len(), 2);
+
+    state.phase = GamePhase::ActionPhase { active_player: 0 };
+    assert!(matches!(
+        RuleEngine::validate_action(&state, 0, &GameAction::Build { coord: target }),
+        Err(RuleError::TargetOccupied(coord)) if coord == target
+    ));
+    assert!(matches!(
+        RuleEngine::validate_action(
+            &state,
+            0,
+            &GameAction::Upgrade {
+                coord: target,
+                to: StructureType::TradingStation,
+                tech_tile_choice: None,
+            },
+        ),
+        Err(RuleError::ActionNotAllowed(_))
+    ));
+}
+
+#[test]
+fn lantids_shared_gaia_mine_counts_as_a_building_but_not_as_a_planet_type() {
+    let target = HexCoord::new(1, 0);
+    let mut state = lantids_cohabitation_state(PlanetType::Transdim, true);
+
+    RuleEngine::apply_action(&mut state, 0, GameAction::Build { coord: target })
+        .unwrap_or_else(|error| panic!("shared Gaia build should succeed: {error}"));
+
+    assert_eq!(
+        ScoringEngine::final_scoring_metric(&state, 0, &FinalScoringCondition::MostBuildings),
+        3
+    );
+    assert_eq!(
+        ScoringEngine::final_scoring_metric(&state, 0, &FinalScoringCondition::MostPlanetTypes),
+        1
+    );
+    assert_eq!(
+        ScoringEngine::final_scoring_metric(&state, 0, &FinalScoringCondition::MostGaiaPlanets),
+        0
+    );
 }
 
 #[test]

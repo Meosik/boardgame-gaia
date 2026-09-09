@@ -17,8 +17,8 @@ use crate::{
     protocol::{self, ClientCommand, ClientFrame},
     room::manager::{Room, RoomState},
     services::{
-        faction_selection::FactionSelectionService, game_action::GameActionService,
-        game_setup::GameSetupService,
+        dev_game::DevGameService, faction_selection::FactionSelectionService,
+        game_action::GameActionService, game_setup::GameSetupService, undo::UndoService,
     },
     state::AppState,
 };
@@ -333,6 +333,48 @@ async fn handle_client_message(
                 room_code,
                 player_id,
                 action,
+                command_id.clone(),
+                expected_revision,
+            )
+            .await
+        }
+        ClientCommand::TriggerDevPowerCharge { coord } => {
+            DevGameService::trigger_power_charge(
+                app,
+                room_code,
+                player_id,
+                coord,
+                command_id.clone(),
+                expected_revision,
+            )
+            .await
+        }
+        ClientCommand::UndoFreeAction => {
+            UndoService::undo_free_action(
+                app,
+                room_code,
+                player_id,
+                command_id.clone(),
+                expected_revision,
+            )
+            .await
+        }
+        ClientCommand::RequestTurnUndo => {
+            UndoService::request_turn_undo(
+                app,
+                room_code,
+                player_id,
+                command_id.clone(),
+                expected_revision,
+            )
+            .await
+        }
+        ClientCommand::RespondTurnUndo { approve } => {
+            UndoService::respond_turn_undo(
+                app,
+                room_code,
+                player_id,
+                approve,
                 command_id.clone(),
                 expected_revision,
             )

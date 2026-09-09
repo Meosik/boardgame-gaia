@@ -405,6 +405,153 @@ fn federation_rejects_a_submission_with_a_redundant_hex() {
     );
 }
 
+/// The selected power-7 structures can be connected around `hop` with three satellites, but
+/// routing through the player's otherwise-unselected Mine at `hop` needs only two. The official
+/// federation FAQ requires that shorter route and automatically adds the Mine to the federation.
+fn board_with_shorter_owned_planet_hop() -> BoardState {
+    let planetary_institute = HexCoord::new(0, 0);
+    let trading_station_a = HexCoord::new(0, 1);
+    let hop = HexCoord::new(2, 0);
+    let trading_station_b = HexCoord::new(4, 0);
+    let mut hexes = HashMap::new();
+
+    for (coord, kind) in [
+        (planetary_institute, StructureType::PlanetaryInstitute),
+        (trading_station_a, StructureType::TradingStation),
+        (hop, StructureType::Mine),
+        (trading_station_b, StructureType::TradingStation),
+    ] {
+        hexes.insert(
+            coord,
+            Hex {
+                coord,
+                planet: None,
+                space_tile_kind: None,
+                structures: vec![PlacedStructure { owner: 0, kind }],
+                satellites: vec![],
+            },
+        );
+    }
+
+    for coord in [
+        HexCoord::new(1, 0),
+        HexCoord::new(3, 0),
+        HexCoord::new(1, 1),
+        HexCoord::new(2, 1),
+    ] {
+        hexes.insert(
+            coord,
+            Hex {
+                coord,
+                planet: None,
+                space_tile_kind: None,
+                structures: vec![],
+                satellites: vec![],
+            },
+        );
+    }
+
+    BoardState {
+        sectors: vec![Sector {
+            id: 1,
+            rotation: 0,
+            origin: planetary_institute,
+        }],
+        hexes,
+        lost_planet: None,
+        spaceship_tiles: HashMap::new(),
+    }
+}
+
+fn state_with_shorter_owned_planet_hop() -> gaia_engine::game_state::GameState {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| {
+            p.vp = 10;
+            p.resources.power.bowl1 = 4;
+            p.structures = vec![
+                Structure {
+                    hex: HexCoord::new(0, 0),
+                    kind: StructureType::PlanetaryInstitute,
+                },
+                Structure {
+                    hex: HexCoord::new(0, 1),
+                    kind: StructureType::TradingStation,
+                },
+                Structure {
+                    hex: HexCoord::new(2, 0),
+                    kind: StructureType::Mine,
+                },
+                Structure {
+                    hex: HexCoord::new(4, 0),
+                    kind: StructureType::TradingStation,
+                },
+            ];
+        })
+        .with_player(1)
+        .with_board(board_with_shorter_owned_planet_hop())
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build();
+    state.research_board.federation_tokens = vec![gaia_engine::game_state::FederationToken(1)];
+    state
+}
+
+#[test]
+fn federation_must_use_a_shorter_route_through_an_unselected_owned_planet() {
+    let mut state = state_with_shorter_owned_planet_hop();
+
+    let result = RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::FormFederation {
+            hexes: vec![
+                HexCoord::new(0, 0),
+                HexCoord::new(0, 1),
+                HexCoord::new(4, 0),
+            ],
+            satellite_hexes: vec![
+                HexCoord::new(1, 1),
+                HexCoord::new(2, 1),
+                HexCoord::new(3, 0),
+            ],
+            token: FederationTokenChoice::Supply { kind: 1 },
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+        },
+    );
+
+    assert!(
+        result.is_err(),
+        "the three-satellite detour must be rejected when an owned-planet hop needs only two"
+    );
+}
+
+#[test]
+fn shortest_owned_planet_hop_is_accepted_and_included_in_the_federation() {
+    let mut state = state_with_shorter_owned_planet_hop();
+    let hop = HexCoord::new(2, 0);
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::FormFederation {
+            hexes: vec![
+                HexCoord::new(0, 0),
+                HexCoord::new(0, 1),
+                hop,
+                HexCoord::new(4, 0),
+            ],
+            satellite_hexes: vec![HexCoord::new(1, 0), HexCoord::new(3, 0)],
+            token: FederationTokenChoice::Supply { kind: 1 },
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+        },
+    )
+    .unwrap_or_else(|error| panic!("the two-satellite owned-planet hop should succeed: {error}"));
+
+    assert!(state.players[0].federated_hexes.contains(&hop));
+    assert_eq!(state.players[0].resources.power.bowl1, 2);
+}
+
 // ── Adjacency exclusivity (p.14: "Planets and satellites of the newly formed federation
 // cannot be directly adjacent to planets or satellites from any of your existing federations")
 // ────────────────────────────────────────────────────────────────────────────────────────────

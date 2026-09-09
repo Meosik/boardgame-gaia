@@ -14,10 +14,9 @@ use crate::game_state::{
 /// exploration board's own top icon (`gaia-frontend/src/assets/exploration_boards/lantida.jpg`,
 /// a "+1" purple power token). This is a per-round income grant (fresh
 /// token into bowl1, not a charge), on top of the base game's standard
-/// income — everything else about Lantids (their normal Planetary
-/// Institute ability, "build on an adjacent occupied planet") is
-/// unaffected and stays unimplemented, matching every other stubbed method
-/// here.
+/// income. Their occupied-planet Mine placement and player-count-dependent
+/// Planetary Institute reward are stateful build rules implemented in
+/// `rules::engine`.
 pub struct LantidsAbility;
 
 impl FactionAbility for LantidsAbility {

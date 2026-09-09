@@ -20,3 +20,15 @@ the base rulebook Appendix IV, and Lost Fleet Appendix III.
 | 12 | Base 4 | 2 credits | Special: Build a Mine with 1 free terraforming step |
 | 13 | Base 1 | 1 ore and 1 knowledge | — |
 | 14 | Lost Fleet 3 | 3 credits | Pass: 2 VP per colonized Deep Space sector |
+
+## Normalized frontend assets
+
+The application uses `normalized/booster_01.webp` through
+`normalized/booster_14.webp`. They share one `720x2104` RGBA footprint and do
+not require per-tile CSS rotation or clipping.
+
+Regenerate them from the reviewed upscale renders with:
+
+```bash
+python3 scripts/normalize_upscaled_round_boosters.py
+```

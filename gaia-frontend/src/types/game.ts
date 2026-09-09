@@ -139,8 +139,12 @@ export interface PlayerState {
   /** Every hex (colonized planet or satellite) already committed to a formed Federation —
    * each can only be part of one. */
   federated_hexes?: HexCoord[];
-  /** Tinkeroids only: ids (1-6) of Tinkering tiles already used this game. */
+  /** Tinkeroids only: ids (1-6) of Tinkering tiles removed from play. */
   tinkeroids_tiles_used?: number[];
+  /** Tinkeroids only: Tinkering tile selected for the current round. */
+  tinkeroids_selected_tile?: number | null;
+  /** Tinkeroids/Moweyds only: the three standard planet colors costing three steps. */
+  expensive_terraforming_planet_types?: PlanetType[];
   /** Moweyds only: hexes where a Power Ring has been placed (at most 6). */
   moweyds_power_ring_hexes?: HexCoord[];
   /** Standard Tech tile ids owned (2-10 base game, 11-14 Lost Fleet Appendix V). */
@@ -225,8 +229,14 @@ export interface ResearchBoard {
   tech_tiles: number[];
   tech_tile_slots?: (number | null)[];
   advanced_tech_tiles: (number | null)[];
+  terraforming_level_5_token?: number | null;
+  lost_fleet_advanced_tech_tile?: number | null;
+  lost_fleet_advanced_tech_requirement?: 'exploration-shuttles' | '25-vp';
   federation_tokens: number[];
+  economy_research_tile_side?: EconomyResearchTileSide;
 }
+
+export type EconomyResearchTileSide = 'Power' | 'VictoryPoints';
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
 
@@ -303,9 +313,12 @@ export type GamePhase =
   | 'IncomePhase'
   | 'GaiaformingPhase'
   | { ActionPhase: { active_player: number } }
+  | { LostPlanetPlacementPending: { player: PlayerId; resume_phase: GamePhase } }
+  | { LostPlanetChargePowerPending: { queue: PendingCharge[]; resume_phase: GamePhase } }
   | { ChargePowerPending: { queue: PendingCharge[]; resume_active_player: number | null } }
   | { IncomeOrderPending: { queue: PendingIncomeOrder[]; round: number } }
   | { GaiaDecisionPending: { queue: PendingGaiaDecision[]; round: number } }
+  | { TinkeroidsTileSelectionPending: { player: PlayerId; round: number } }
   | { RoundScoring: { round: number } }
   | 'FinalScoring'
   | 'Ended';
@@ -360,10 +373,14 @@ export interface GameState {
   round_tiles: RoundTile[];
   final_scoring_tiles: FinalScoringTile[];
   boosters: number[];
+  /** Numbered 1-7 base planet color order on the Lost Fleet Terraforming board. */
+  terraforming_color_order?: PlanetType[];
   faction_selection: FactionSelectionState | null;
   bidding: BiddingState | null;
   turn_order: PlayerId[];
+  pass_order?: PlayerId[];
   current_player: number;
+  undo_state?: UndoState;
   /** Shared power-action board slot ids already taken this round (rulebook
    * Appendix III — exclusive across all players, reset at Clean-up). The
    * QIC-action board doesn't exist under this project's always-Lost-Fleet
@@ -383,6 +400,31 @@ export interface GameState {
   event_log?: GameEvent[];
 }
 
+export interface UndoOpenTurn {
+  player: PlayerId;
+  start_revision: number;
+  free_action_revisions: number[];
+}
+
+export interface UndoCompletedTurn {
+  player: PlayerId;
+  start_revision: number;
+  completed_revision: number;
+}
+
+export interface UndoRequestState {
+  requester: PlayerId;
+  target_revision: number;
+  required_approvals: PlayerId[];
+  approvals: PlayerId[];
+}
+
+export interface UndoState {
+  open_turn: UndoOpenTurn | null;
+  recent_turns: UndoCompletedTurn[];
+  pending_request: UndoRequestState | null;
+}
+
 export interface FreeActionTakenEvent {
   FreeActionTaken: {
     player: PlayerId;
@@ -391,8 +433,22 @@ export interface FreeActionTakenEvent {
   };
 }
 
+export interface IncomeReceivedEvent {
+  IncomeReceived: {
+    player: PlayerId;
+    round: number;
+    ore: number;
+    credits: number;
+    knowledge: number;
+    qic: number;
+    power_charge: number;
+    power_tokens: number;
+    vp: number;
+  };
+}
+
 /** Events use serde's default externally-tagged enum representation. */
-export type GameEvent = FreeActionTakenEvent | Record<string, unknown>;
+export type GameEvent = FreeActionTakenEvent | IncomeReceivedEvent | Record<string, unknown>;
 
 // ── Game Setup (pre-game randomizer output) ───────────────────────────────────
 
@@ -406,6 +462,7 @@ export interface GameSetup {
   final_scoring: FinalScoringTile[];
   tech_tile_ids: number[];
   tech_tile_slot_ids?: number[];
+  terraforming_color_order?: PlanetType[];
   sector_layout: SectorPlacement[];
   deep_space_layout: SectorPlacement[];
   seed: string;
@@ -494,6 +551,7 @@ export type GameAction =
       tech_tile_choice?: TechTileChoice | null;
     }
   | { type: 'ResearchAdvance'; track: ResearchTrack }
+  | { type: 'PlaceLostPlanet'; coord: HexCoord }
   | {
       type: 'FormFederation';
       hexes: HexCoord[];
@@ -508,6 +566,7 @@ export type GameAction =
   | { type: 'FiraksDowngradeResearchLab'; coord: HexCoord; track: ResearchTrack }
   | { type: 'BescodsLowestResearchAdvance'; track: ResearchTrack }
   | { type: 'IvitsPlaceSpaceStation'; coord: HexCoord }
+  | { type: 'SelectTinkeringTile'; tile: number }
   | { type: 'TinkeroidsUseTile'; tile: number; coord?: HexCoord | null }
   | { type: 'MoweydsPlacePowerRing'; coord: HexCoord }
   | { type: 'TechTileSpecialAction'; tile: TechTileRef }
@@ -586,7 +645,11 @@ export type ClientCommand =
   | { type: 'player_ready'; ready: boolean }
   | { type: 'regenerate_setup'; seed?: string }
   | { type: 'place_setup_action'; action: SetupAction }
-  | { type: 'place_game_action'; action: GameAction };
+  | { type: 'place_game_action'; action: GameAction }
+  | { type: 'trigger_dev_power_charge'; coord: HexCoord }
+  | { type: 'undo_free_action' }
+  | { type: 'request_turn_undo' }
+  | { type: 'respond_turn_undo'; approve: boolean };
 
 export interface CommandEnvelope {
   type: 'command';
@@ -716,10 +779,31 @@ export interface JoinRoomResponse {
   game_state: GameState | null;
 }
 
+export interface DevGameResponse {
+  room_code: string;
+  player_id: PlayerId;
+  session_token: string;
+  game_setup: GameSetup;
+  game_state: GameState;
+  players: LobbyPlayer[];
+  host_player_id: PlayerId;
+}
+
 // ── Type guards ────────────────────────────────────────────────────────────────
 
 /** A `snapshot.state` is a `GameState` unless it's the lobby-phase view
  * (`phase === 'lobby'`, a value `GameState.phase` never takes). */
 export function isGameState(state: SnapshotState): state is GameState {
   return (state as LobbySnapshotView).phase !== 'lobby';
+}
+
+/** Resolve the action-phase turn-order index to the player's stable ID. */
+export function activeActionPlayerId(
+  state: Pick<GameState, 'phase' | 'turn_order'>,
+): PlayerId | null {
+  if (typeof state.phase !== 'object' || !('ActionPhase' in state.phase)) {
+    return null;
+  }
+
+  return state.turn_order[state.phase.ActionPhase.active_player] ?? null;
 }

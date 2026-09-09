@@ -53,6 +53,15 @@
   line-height: 1;
 }
 
+.faction-badge-portrait {
+  display: block;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background-position: 50% 5%;
+  background-repeat: no-repeat;
+  background-size: 190% auto;
+}
+
 /* ── Seed Input ──────────────────────────────────────────────────────────────
    WaitingRoomView 호스트 전용 시드 입력 영역
 ─────────────────────────────────────────────────────────────────────────── */

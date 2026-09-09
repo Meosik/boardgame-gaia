@@ -24,7 +24,7 @@ export function RoundScoringTrack({ tiles, currentRound }: Props) {
     <section className="round-scoring-track" aria-label="라운드별 점수 타일">
       <div className="round-scoring-header">
         <div>
-          <span>ROUND SCORING</span>
+          <span>라운드 점수</span>
           <h3>라운드 점수 타일</h3>
         </div>
         <strong>{currentRound > 0 && currentRound <= 6 ? `${currentRound} / 6` : '게임 종료'}</strong>
@@ -45,7 +45,7 @@ export function RoundScoringTrack({ tiles, currentRound }: Props) {
               {imageSrc && <img src={imageSrc} alt={`라운드 ${round}: ${conditionLabels[tile.condition]}`} />}
               <div className="round-scoring-copy">
                 <strong>{conditionLabels[tile.condition]}</strong>
-                <span>단위당 +{tile.vp_per_unit} VP</span>
+                <span>단위당 승점 +{tile.vp_per_unit}점</span>
               </div>
             </article>
           );

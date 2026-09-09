@@ -21,7 +21,7 @@ export function FinalScoringTiles({ tiles }: Props) {
   return (
     <section className="final-scoring-tiles" aria-label="게임 종료 점수 타일">
       <div className="final-scoring-header">
-        <span>FINAL SCORING</span>
+        <span>최종 점수</span>
         <h3>게임 종료 점수</h3>
       </div>
       <div className="final-scoring-list">
@@ -33,7 +33,7 @@ export function FinalScoringTiles({ tiles }: Props) {
               <div>
                 <strong>{conditionLabels[tile.condition]}</strong>
                 <span>
-                  1위 {tile.vp_1st} · 2위 {tile.vp_2nd} · 3위 {tile.vp_3rd} VP
+                  승점: 1위 {tile.vp_1st}점 · 2위 {tile.vp_2nd}점 · 3위 {tile.vp_3rd}점
                 </span>
               </div>
             </article>

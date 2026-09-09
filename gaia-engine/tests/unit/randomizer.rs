@@ -1,4 +1,4 @@
-use gaia_engine::game_state::FinalScoringTile;
+use gaia_engine::game_state::{FinalScoringTile, PlanetType};
 use gaia_engine::{GameSetup, MapEngine, Randomizer, SetupMode};
 
 fn setup(seed: &str) -> GameSetup {
@@ -73,6 +73,24 @@ fn setup_has_seven_boosters() {
 }
 
 #[test]
+fn setup_randomizes_each_base_planet_color_once_on_the_terraforming_board() {
+    let mut colors = setup("terraforming-board").terraforming_color_order;
+    assert_eq!(colors.len(), 7);
+    colors.sort_by_key(|planet_type| format!("{planet_type:?}"));
+    let mut expected = vec![
+        PlanetType::Terra,
+        PlanetType::Swamp,
+        PlanetType::Desert,
+        PlanetType::Oxide,
+        PlanetType::Titanium,
+        PlanetType::Volcanic,
+        PlanetType::Ice,
+    ];
+    expected.sort_by_key(|planet_type| format!("{planet_type:?}"));
+    assert_eq!(colors, expected);
+}
+
+#[test]
 fn setup_has_two_final_scoring_tiles() {
     let tiles = setup("test").final_scoring;
     assert_eq!(tiles.len(), 2);
@@ -102,6 +120,52 @@ fn setup_places_nine_distinct_base_tech_piles_on_the_research_board() {
         );
     }
     assert!(setup.tech_tile_ids.iter().all(|id| (2..=10).contains(id)));
+}
+
+#[test]
+fn setup_places_six_advanced_tiles_on_tracks_and_one_on_the_lost_fleet_board() {
+    let setup = setup("advanced-tech-layout");
+    assert_eq!(setup.advanced_tech_tile_ids.len(), 7);
+
+    let mut unique = setup.advanced_tech_tile_ids.clone();
+    unique.sort_unstable();
+    unique.dedup();
+    assert_eq!(
+        unique.len(),
+        7,
+        "physical Advanced Tech tiles cannot repeat"
+    );
+
+    let players = (0..4).map(|id| (id, format!("p{id}"))).collect::<Vec<_>>();
+    let state = MapEngine::init_game_state("room", "advanced-tech-layout", &players, &setup);
+    assert!(state
+        .research_board
+        .advanced_tech_tiles
+        .iter()
+        .all(Option::is_some));
+    assert_eq!(
+        state.research_board.lost_fleet_advanced_tech_tile,
+        setup
+            .advanced_tech_tile_ids
+            .get(6)
+            .copied()
+            .map(gaia_engine::game_state::AdvancedTechTile)
+    );
+
+    let mut legacy_setup = setup.clone();
+    legacy_setup.advanced_tech_tile_ids.truncate(6);
+    let legacy_state = MapEngine::init_game_state(
+        "legacy-room",
+        "advanced-tech-layout",
+        &players,
+        &legacy_setup,
+    );
+    let Some(fallback_tile) = legacy_state.research_board.lost_fleet_advanced_tech_tile else {
+        panic!("legacy six-tile setups should receive an unused Lost Fleet tile");
+    };
+    assert!(!legacy_setup
+        .advanced_tech_tile_ids
+        .contains(&fallback_tile.0));
 }
 
 #[test]
@@ -169,4 +233,36 @@ fn rotation_values_in_range() {
     for placement in &setup("test").sector_layout {
         assert!(placement.rotation < 6, "rotation must be in [0,5]");
     }
+}
+
+#[test]
+fn shared_federation_supply_excludes_the_gleens_unique_token() {
+    let seed = "base-federation-supply";
+    let setup = setup(seed);
+    let players: Vec<(gaia_engine::game_state::PlayerId, String)> = (0..4)
+        .map(|i| (i as gaia_engine::game_state::PlayerId, format!("p{i}")))
+        .collect();
+    let state = MapEngine::init_game_state("room", seed, &players, &setup);
+
+    let mut kinds: Vec<u8> = state
+        .research_board
+        .federation_tokens
+        .iter()
+        .map(|token| token.0)
+        .collect();
+    kinds.extend(
+        state
+            .research_board
+            .terraforming_level_5_token
+            .iter()
+            .map(|token| token.0),
+    );
+    kinds.sort_unstable();
+
+    assert_eq!(
+        kinds,
+        vec![1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6]
+    );
+    assert!(!kinds.contains(&7));
+    assert!(state.research_board.terraforming_level_5_token.is_some());
 }

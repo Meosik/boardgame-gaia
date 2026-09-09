@@ -26,9 +26,13 @@ pub struct LevelEffect {
     #[serde(default)]
     pub power_charge: u8,
     #[serde(default)]
+    pub power_tokens: u8,
+    #[serde(default)]
     pub federation_token: bool,
     #[serde(default)]
     pub lost_planet_access: bool,
+    #[serde(default)]
+    pub vp_per_gaia_planet: u8,
 }
 
 pub fn load_research_tracks() -> ResearchTrackFile {

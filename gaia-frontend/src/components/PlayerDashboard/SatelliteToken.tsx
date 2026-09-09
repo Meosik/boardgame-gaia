@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import {
   FACTION_STRUCTURE_COLOR,
   structureImageSrc,
@@ -9,6 +10,9 @@ interface Props {
   color: string;
   faction?: FactionId | null;
   size?: number;
+  className?: string;
+  style?: CSSProperties;
+  label?: string;
 }
 
 const HEX_TO_STRUCTURE_COLOR: Record<string, StructureAssetColor> = {
@@ -36,16 +40,25 @@ function assetColorForToken(color: string, faction: FactionId | null | undefined
   return faction ? FACTION_STRUCTURE_COLOR[faction] : HEX_TO_STRUCTURE_COLOR[color.toLowerCase()] ?? 'gray';
 }
 
-export function SatelliteToken({ color, faction = null, size = 16 }: Props) {
+export function SatelliteToken({
+  color,
+  faction = null,
+  size = 16,
+  className,
+  style,
+  label,
+}: Props) {
   const assetColor = assetColorForToken(color, faction);
   return (
     <img
       src={structureImageSrc(assetColor, 'marker')}
-      alt=""
+      alt={label ?? ''}
+      className={className}
       width={size}
       height={size}
-      style={{ display: 'inline-block', verticalAlign: 'middle', objectFit: 'contain' }}
-      aria-hidden
+      style={{ display: 'inline-block', verticalAlign: 'middle', objectFit: 'contain', ...style }}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
     />
   );
 }

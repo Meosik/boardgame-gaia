@@ -1,7 +1,7 @@
 use crate::faction::registry::global as faction_registry;
 use crate::game_state::{
-    FinalScoringCondition, GameEvent, GameState, HexCoord, PlanetType, PlayerId, StructureType,
-    VpReason,
+    FactionId, FinalScoringCondition, GameEvent, GameState, HexCoord, PlanetType, PlayerId,
+    StructureType, VpReason,
 };
 use crate::map::MapEngine;
 use serde::{Deserialize, Serialize};
@@ -205,13 +205,23 @@ fn metric_for_condition(
                 .flatten()
                 .copied()
                 .collect();
-            player
+            let tracked = player
                 .structures
                 .iter()
                 .filter(|structure| {
                     federated_hexes.contains(&structure.hex) && is_scoring_building(structure.kind)
                 })
-                .count() as u32
+                .count() as u32;
+            let lost_planet = if state
+                .board
+                .lost_planet
+                .is_some_and(|coord| federated_hexes.contains(&coord))
+            {
+                untracked_lost_planet_mine(state, player_id)
+            } else {
+                0
+            };
+            tracked + lost_planet
         }
         FinalScoringCondition::MostBuildings => {
             let tracked = player
@@ -226,6 +236,7 @@ fn metric_for_condition(
         FinalScoringCondition::MostPlanetTypes => {
             let mut types: HashSet<PlanetType> = colonized_planets(state, player_id)
                 .into_iter()
+                .filter(|(coord, _)| !is_lantids_cohabitation(state, player_id, *coord))
                 .map(|(_, planet)| {
                     normalized_planet_type(planet.planet_type, planet.is_gaia_formed)
                 })
@@ -235,6 +246,7 @@ fn metric_for_condition(
         }
         FinalScoringCondition::MostGaiaPlanets => colonized_planets(state, player_id)
             .into_iter()
+            .filter(|(coord, _)| !is_lantids_cohabitation(state, player_id, *coord))
             .filter(|(_, planet)| {
                 normalized_planet_type(planet.planet_type, planet.is_gaia_formed)
                     == PlanetType::Gaia
@@ -308,6 +320,23 @@ fn normalized_planet_type(planet_type: PlanetType, is_gaia_formed: bool) -> Plan
     } else {
         planet_type
     }
+}
+
+fn is_lantids_cohabitation(state: &GameState, player_id: PlayerId, coord: HexCoord) -> bool {
+    state.player(player_id).is_some_and(|player| {
+        player.faction == Some(FactionId::Lantids)
+            && player
+                .structures
+                .iter()
+                .any(|structure| structure.hex == coord)
+            && state
+                .board
+                .hexes
+                .get(&coord)
+                .and_then(|hex| hex.planet.as_ref())
+                .and_then(|planet| planet.owner)
+                .is_some_and(|owner| owner != player_id)
+    })
 }
 
 fn colonized_planets(

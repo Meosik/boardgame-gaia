@@ -1,5 +1,5 @@
 use gaia_engine::game_state::{
-    AcademyType, FactionId, GamePhase, HexCoord, Structure, StructureType,
+    AcademyType, AdvancedTechTile, FactionId, GamePhase, HexCoord, Structure, StructureType,
 };
 use gaia_engine::rules::actions::GameAction;
 use gaia_engine::test_utils::builders::GameStateBuilder;
@@ -379,6 +379,25 @@ fn academy_qic_action_grants_one_qic_by_default() {
 
     let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
     assert_eq!(player.resources.qic, 1);
+}
+
+#[test]
+fn academy_qic_action_does_not_trigger_advanced_tech_16() {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| {
+            p.faction = Some(FactionId::Terrans);
+            p.resources.qic = 0;
+            p.structures = vec![structure(StructureType::Academy(AcademyType::Qic))];
+            p.advanced_tech_tiles.push(AdvancedTechTile(16));
+        })
+        .build();
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(&mut state, 0, GameAction::AcademyQicAction)
+        .unwrap_or_else(|e| panic!("{e}"));
+
+    assert_eq!(state.players[0].resources.qic, 1);
+    assert_eq!(state.players[0].vp, vp_before);
 }
 
 #[test]

@@ -1,6 +1,5 @@
 import type { FactionId, PowerCycle as PowerCycleData } from '../../types/game';
-import { FACTION_VISUAL } from '../GameLobby/FactionBadge';
-import { SatelliteToken } from './SatelliteToken';
+import { GamePieceIcon } from '../GamePieceIcon';
 
 interface Props {
   power: PowerCycleData;
@@ -19,7 +18,6 @@ const FALLBACK_COLORS: Record<string, string> = {
 };
 
 export function PowerCycle({ power, faction }: Props) {
-  const accentColor = faction ? FACTION_VISUAL[faction].color : null;
   const brainstoneBowl =
     power.brainstone === 'Area1' ? 'I'
       : power.brainstone === 'Area2' ? 'II'
@@ -35,7 +33,7 @@ export function PowerCycle({ power, faction }: Props) {
           label={label}
           count={power[key]}
           faction={faction ?? null}
-          color={accentColor ?? FALLBACK_COLORS[label]}
+          color={FALLBACK_COLORS[label]}
           hasBrainstone={brainstoneBowl === label}
         />
       ))}
@@ -44,7 +42,7 @@ export function PowerCycle({ power, faction }: Props) {
           label="GF"
           count={power.gaia_forming}
           faction={faction ?? null}
-          color={accentColor ?? FALLBACK_COLORS['GF']}
+          color={FALLBACK_COLORS['GF']}
           hasBrainstone={false}
         />
       )}
@@ -71,15 +69,20 @@ function BowlDisplay({
       {faction ? (
         <div className="bowl-tokens">
           {Array.from({ length: count }).map((_, i) => (
-            <SatelliteToken
+            <GamePieceIcon
               key={i}
-              color={FACTION_VISUAL[faction!].color}
-              faction={faction}
-              size={12}
+              kind="power"
+              className="power-bowl-piece"
             />
           ))}
           {hasBrainstone && (
-            <span className="brainstone-token" title="Taklons Brainstone">◆</span>
+            <GamePieceIcon
+              kind="brainstone"
+              className="brainstone-token"
+              decorative={false}
+              label="브레인스톤"
+              title="Taklons Brainstone"
+            />
           )}
           {count === 0 && !hasBrainstone && <span className="bowl-empty">—</span>}
         </div>

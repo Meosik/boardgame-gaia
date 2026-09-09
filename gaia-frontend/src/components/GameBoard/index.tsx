@@ -1,4 +1,5 @@
 import { Fragment, useMemo } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { shallow } from 'zustand/shallow';
 import {
   axialDistance,
@@ -12,7 +13,11 @@ import {
 } from './hex-utils';
 import { HexCell } from './HexCell';
 import { useGameStore } from '../../store/gameStore';
-import { sectorImageSrc, deepSpaceSectorImageSrc } from '../../assets/sectorImages';
+import {
+  deepSpaceSectorImageSrc,
+  deepSpaceSectorSide,
+  sectorImageSrc,
+} from '../../assets/sectorImages';
 import {
   asteroidInterspaceImageSrc,
   blankInterspaceImageSrc,
@@ -22,9 +27,11 @@ import {
 import type {
   BoardState,
   FactionId,
+  Hex,
   HexCoord,
   PlayerId,
   PlayerState,
+  Sector,
   SpaceshipId,
 } from '../../types/game';
 
@@ -34,33 +41,32 @@ const SVG_HEIGHT = 1400;
 const OFFSET_X = SVG_WIDTH / 2;
 const OFFSET_Y = SVG_HEIGHT / 2;
 
-// A standard sector is a radius-2 cluster of 19 hexes (see gaia-engine
-// data/sectors.toml). For flat-top hexes with circumradius `size`, the
-// pixel bounding box of that cluster (hex centers ±2 rings out, plus each
-// outer hex's own corner extent) works out to width = 8*size,
-// height = 5*sqrt(3)*size — this closely matches the ~0.92 aspect ratio of
-// the actual space_sector_*.jpg art (1246x1354), so it's used directly to
-// size the sector background image rather than clipping to an exact hex
-// silhouette.
+// A standard sector is a radius-2 cluster of 19 hexes. Normalize every
+// source canvas into the same physical footprint; the hex clip below keeps
+// the transformed rectangular image inside the sector silhouette.
 const SECTOR_IMAGE_WIDTH = HEX_SIZE * 8;
 const SECTOR_IMAGE_HEIGHT = HEX_SIZE * 5 * Math.sqrt(3);
+// Every normalized 01-10 scan uses the same photographed resting orientation: its printed
+// planets are four clockwise hex-steps ahead of the canonical sector templates used by the
+// engine. Undo that baked-in 240° turn before applying the randomized sector rotation. This was
+// verified across all ten images against each sector's distinctive planet pattern, rather than
+// guessed from a single highlighted starting planet.
+const STANDARD_SECTOR_PHOTO_ROTATION_OFFSET = 4;
 
 // A Deep Space sector (Lost Fleet expansion, ids 11-18) is a 3-hex
 // L-tromino at relative offsets (0,0)/(1,0)/(0,1) — see
 // `gaia-engine/data/sectors.toml`'s "Deep Space Sectors" block, which
 // `insert_sector` places by rotating each of these same three offsets and
 // adding the sector's origin. The three hex centers plus one hex-radius of
-// margin on every side span roughly 3.5 hex-widths in both axes, which is
-// also close to the scanned `deep_space_sector_*.jpg` art's own ~1:1 aspect
-// ratio (822x818) — sized a bit generous (3.6) so `xMidYMid slice` always
-// has art to crop from rather than ever showing empty space at a corner.
+// margin on every side spans exactly 3.5 radii horizontally and 2*sqrt(3)
+// radii vertically. The normalized art uses that same physical footprint.
 const DEEP_SPACE_HEX_OFFSETS: [number, number][] = [
   [0, 0],
   [1, 0],
   [0, 1],
 ];
-const DEEP_SPACE_IMAGE_WIDTH = HEX_SIZE * 3.6;
-const DEEP_SPACE_IMAGE_HEIGHT = HEX_SIZE * 3.6;
+const DEEP_SPACE_IMAGE_WIDTH = HEX_SIZE * 3.5;
+const DEEP_SPACE_IMAGE_HEIGHT = HEX_SIZE * 2 * Math.sqrt(3);
 // The scanned `deep_space_sector_*.jpg` photos weren't shot in the same
 // orientation `DEEP_SPACE_HEX_OFFSETS` assumes as "unrotated" — there's no
 // printed orientation arrow on these tiles the way standard sectors have, so
@@ -71,43 +77,88 @@ const DEEP_SPACE_IMAGE_HEIGHT = HEX_SIZE * 3.6;
 // how the *image* is anchored/rotated, never to the clip mask, which must
 // stay tied to the hexes' true board positions regardless of this.
 const DEEP_SPACE_PHOTO_ROTATION_OFFSET = 1;
-// The scans' own 3-way hex vertex (where the tromino's gridlines converge —
-// visible in every `deep_space_sector_*.jpg` as the point 2+ blue grid lines
-// meet, usually next to a small printed sector-id label) sits well off the
-// raw file's own pixel center (822x818 -> center (411,409)), consistently
-// across all 8 scans (measured directly: mean vertex pixel (449,402) across
-// deep_space_sector_01..08.jpg, individual values 428-474/389-407 — a real,
-// consistent scan-framing offset, not per-photo noise). `preserveAspectRatio
-//="xMidYMid slice"` centers the photo's own pixel-center at the `<image>`
-// box's center by construction, so without correction the true vertex
-// (and everything else in the photo) renders shifted from where the hex
-// grid actually is — the "whole board shifted toward one corner" symptom.
-// These two constants are that fixed pixel offset (vertex minus photo
-// center, in the scan's own unrotated pixel space) plus the scan's own
-// dimensions, used below to shift the image box back by the equivalent
-// amount post-scale so the vertex — not the raw file's geometric center —
-// lands on the true world position `sectorCentroidPixel` computes.
-const DEEP_SPACE_PHOTO_WIDTH = 822;
-const DEEP_SPACE_PHOTO_HEIGHT = 818;
-const DEEP_SPACE_VERTEX_OFFSET_X = 449 - DEEP_SPACE_PHOTO_WIDTH / 2;
-const DEEP_SPACE_VERTEX_OFFSET_Y = 402 - DEEP_SPACE_PHOTO_HEIGHT / 2;
-
+// The image's important anchor is the common vertex of its three hexes, not
+// the canvas center. The normalization script fixes that vertex at 4/7 of
+// the width and 1/2 of the height for every source image.
+const DEEP_SPACE_JUNCTION_X_RATIO = 4 / 7;
+const DEEP_SPACE_JUNCTION_Y_RATIO = 1 / 2;
+const CALM_STANDARD_SECTOR_IDS = new Set([1, 3, 5]);
+const NAVIGATION_RANGE = [1, 1, 2, 2, 3, 4] as const;
+const HEX_DIRECTIONS = [
+  [1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1],
+] as const;
 interface StarDot { cx: number; cy: number; r: number; opacity: number }
 
 interface Props {
   board: BoardState;
   players?: PlayerState[];
   validTargets?: HexCoord[];
+  /** During federation formation, only these owned buildings and route hexes may be added.
+   * Already-selected hexes remain clickable so the player can always remove them. */
+  federationSelectableHexes?: HexCoord[];
   selectedCoord?: HexCoord | null;
   onHexClick?: (coord: HexCoord) => void;
+  /** Opens a contextual action popup only for a structure owned by this player. */
+  interactivePlayerId?: PlayerId;
+  onOwnedStructureClick?: (
+    hex: Hex,
+    anchor: { x: number; y: number },
+  ) => void;
+  /** Opens the direct planet-action popup when no action is already selected. */
+  onPlanetClick?: (
+    hex: Hex,
+    anchor: { x: number; y: number },
+  ) => void;
+  /** Opens the direct spaceship-exploration popup from a spaceship map tile. */
+  onSpaceshipClick?: (
+    ship: SpaceshipId,
+    anchor: { x: number; y: number },
+  ) => void;
+  /** Lets a temporarily activated board action reuse the normal planet popup. */
+  allowPlanetPopupDuringSelectedAction?: boolean;
+  /** DEV sandbox target mode: clicking an owned structure opens the normal charge decision. */
+  devPowerChargeTargeting?: boolean;
+  onPowerChargeStructureClick?: (hex: Hex) => void;
+  onContextDismiss?: () => void;
+  /** Reports every board click before action/valid-target filtering. Intended for temporary
+   * diagnostics and read-only inspection without weakening the actual action rules. */
+  onHexInspect?: (coord: HexCoord) => void;
+  /** Outlines every Deep Space sector's hexes in white so they're easy to tell apart from the
+   * single-hex Interspace tiles during room setup, where there's no other way to distinguish
+   * them at a glance. Off by default — once the actual game starts, the grid's normal blue
+   * stroke is enough since players have had time to learn the board. */
+  highlightDeepSpace?: boolean;
+  /** Gives every single-hex Interspace tile the same white setup outline as Deep Space. */
+  highlightInterspace?: boolean;
+  /** Enables the structure-separation treatment while it is being evaluated in the dev game. */
+  emphasizeStructures?: boolean;
+  /** Faintly outlines the hexes inside this player's current basic Navigation range. */
+  rangePlayerId?: PlayerId;
+  /** Read-only preview bonus, normally +2 for one QIC. */
+  rangePreviewBonus?: number;
 }
 
 export function GameBoard({
   board,
   players = [],
   validTargets = [],
+  federationSelectableHexes = [],
   selectedCoord = null,
   onHexClick,
+  interactivePlayerId,
+  onOwnedStructureClick,
+  onPlanetClick,
+  onSpaceshipClick,
+  allowPlanetPopupDuringSelectedAction = false,
+  devPowerChargeTargeting = false,
+  onPowerChargeStructureClick,
+  onContextDismiss,
+  onHexInspect,
+  highlightDeepSpace = false,
+  highlightInterspace = false,
+  emphasizeStructures = false,
+  rangePlayerId,
+  rangePreviewBonus = 0,
 }: Props) {
   const { activePlanet, selectedHexes, selectedAction, actions } = useGameStore(
     (s) => ({
@@ -122,6 +173,9 @@ export function GameBoard({
 
   const validSet = new Set(validTargets.map((c) => hexKey(c.q, c.r)));
   const selectedHexSet = new Set(selectedHexes.map((c) => hexKey(c.q, c.r)));
+  const federationSelectableSet = new Set(
+    federationSelectableHexes.map((c) => hexKey(c.q, c.r)),
+  );
 
   // Stable star field — generated once on mount
   const stars = useMemo<StarDot[]>(() => {
@@ -139,14 +193,58 @@ export function GameBoard({
   // selected — the server is authoritative and rejects illegal targets via
   // `command_rejected`. `validTargets`, when populated, still highlights a
   // hint set of hexes without restricting which ones are clickable.
-  function handleHexClick(coord: HexCoord) {
+  function handleHexClick(hex: Hex, event: ReactMouseEvent<SVGGElement>) {
+    const { coord } = hex;
+    onHexInspect?.(coord);
+    if (devPowerChargeTargeting) {
+      const hasOwnedBuilding = interactivePlayerId !== undefined
+        && hex.structures.some((structure) => (
+          structure.owner === interactivePlayerId
+          && structure.kind !== 'Satellite'
+          && structure.kind !== 'SpaceStation'
+        ));
+      if (hasOwnedBuilding) {
+        onPowerChargeStructureClick?.(hex);
+      } else {
+        onContextDismiss?.();
+      }
+      return;
+    }
     if (onHexClick) {
       if (!validSet.has(hexKey(coord.q, coord.r))) return;
       onHexClick(coord);
       return;
     }
-    if (!selectedAction) return;
+    if (!selectedAction) {
+      const spaceship = shipByHexKey.get(hexKey(coord.q, coord.r));
+      if (spaceship && onSpaceshipClick) {
+        onSpaceshipClick(spaceship, { x: event.clientX, y: event.clientY });
+        return;
+      }
+      const ownStructure = interactivePlayerId === undefined
+        ? undefined
+        : hex.structures.find((structure) => structure.owner === interactivePlayerId);
+      if (ownStructure && onOwnedStructureClick) {
+        onOwnedStructureClick(hex, { x: event.clientX, y: event.clientY });
+      } else if (hex.planet && hex.structures.length === 0 && onPlanetClick) {
+        onPlanetClick(hex, { x: event.clientX, y: event.clientY });
+      } else {
+        onContextDismiss?.();
+      }
+      return;
+    }
+    if (allowPlanetPopupDuringSelectedAction) {
+      if (hex.planet && hex.structures.length === 0 && onPlanetClick) {
+        onPlanetClick(hex, { x: event.clientX, y: event.clientY });
+      } else {
+        onContextDismiss?.();
+      }
+      return;
+    }
     if (multiSelect) {
+      const selectedKey = hexKey(coord.q, coord.r);
+      const alreadySelected = selectedHexSet.has(selectedKey);
+      if (!alreadySelected && !federationSelectableSet.has(selectedKey)) return;
       actions.toggleHex(coord);
       return;
     }
@@ -194,21 +292,57 @@ export function GameBoard({
     }
     return keys;
   }, [players]);
-  // Hexes whose planet is already drawn directly on a sector's background
-  // art (both the 19-hex standard sectors and the 3-hex Deep Space
-  // tromino's art print their Asteroid/ProtoPlanet), so `HexCell` skips
-  // rendering a second, separate planet icon on top of it. Standard sectors
-  // use the same "within 2 rings of origin" radius their whole 19-hex disk
-  // occupies; Deep Space sectors need their exact 3 hexes instead — that
-  // radius would be far too generous for a sector this small and would
-  // wrongly swallow up unrelated neighboring hexes.
+  const rangePlayer = players.find((player) => player.player_id === rangePlayerId);
+  const navigationRange = rangePlayer
+    ? NAVIGATION_RANGE[Math.min(rangePlayer.research_tracks.navigation, NAVIGATION_RANGE.length - 1)]
+      + Number(Boolean(
+        rangePlayer.tech_tiles?.includes(12) && !rangePlayer.covered_tech_tiles?.includes(12),
+      ))
+      + rangePreviewBonus
+    : 0;
+  const navigationRangeHexKeys = useMemo(() => {
+    const reachable = new Set<string>();
+    if (!rangePlayer || navigationRange <= 0) return reachable;
+
+    const starts = rangePlayer.structures.map(({ hex }) => hex);
+    if (board.lost_planet) {
+      const lostPlanet = board.hexes[hexKey(board.lost_planet.q, board.lost_planet.r)]?.planet;
+      if (lostPlanet?.owner === rangePlayer.player_id) starts.push(board.lost_planet);
+    }
+
+    const queue = starts.map((coord) => ({ coord, distance: 0 }));
+    const distances = new Map(queue.map(({ coord }) => [hexKey(coord.q, coord.r), 0]));
+    for (let index = 0; index < queue.length; index += 1) {
+      const { coord, distance } = queue[index];
+      if (distance >= navigationRange) continue;
+      for (const [dq, dr] of HEX_DIRECTIONS) {
+        const neighbor = { q: coord.q + dq, r: coord.r + dr };
+        const key = hexKey(neighbor.q, neighbor.r);
+        if (!(key in board.hexes) || distances.has(key)) continue;
+        distances.set(key, distance + 1);
+        reachable.add(key);
+        queue.push({ coord: neighbor, distance: distance + 1 });
+      }
+    }
+    return reachable;
+  }, [board.hexes, board.lost_planet, navigationRange, rangePlayer]);
+  // Map every standard-sector hex to its owning sector so its generated art
+  // can receive the common grid treatment below.
+  const standardSectorByHexKey = useMemo(() => {
+    const sectors = new Map<string, Sector>();
+    for (const hex of hexEntries) {
+      const sector = board.sectors.find(
+        (sector) => sector.id <= 10 && axialDistance(hex.coord, sector.origin) <= 2,
+      );
+      if (sector) sectors.set(hexKey(hex.coord.q, hex.coord.r), sector);
+    }
+    return sectors;
+  }, [hexEntries, board.sectors]);
   const sectorPrintedHexKeys = useMemo(() => {
-    const keys = new Set<string>();
+    const keys = new Set(standardSectorByHexKey.keys());
     for (const hex of hexEntries) {
       const printed = board.sectors.some((sector) => {
-        if (sector.id <= 10) {
-          return axialDistance(hex.coord, sector.origin) <= 2;
-        }
+        if (sector.id <= 10) return false;
         return DEEP_SPACE_HEX_OFFSETS.some(([relQ, relR]) => {
           const [rq, rr] = rotateHexN(relQ, relR, sector.rotation);
           return hex.coord.q === rq + sector.origin.q && hex.coord.r === rr + sector.origin.r;
@@ -217,7 +351,22 @@ export function GameBoard({
       if (printed) keys.add(hexKey(hex.coord.q, hex.coord.r));
     }
     return keys;
-  }, [hexEntries, board.sectors]);
+  }, [hexEntries, board.sectors, standardSectorByHexKey]);
+  const deepSpaceHexKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (!highlightDeepSpace) return keys;
+    for (const hex of hexEntries) {
+      const inDeepSpace = board.sectors.some((sector) => {
+        if (sector.id <= 10) return false;
+        return DEEP_SPACE_HEX_OFFSETS.some(([relQ, relR]) => {
+          const [rq, rr] = rotateHexN(relQ, relR, sector.rotation);
+          return hex.coord.q === rq + sector.origin.q && hex.coord.r === rr + sector.origin.r;
+        });
+      });
+      if (inDeepSpace) keys.add(hexKey(hex.coord.q, hex.coord.r));
+    }
+    return keys;
+  }, [hexEntries, board.sectors, highlightDeepSpace]);
   const shipByHexKey = useMemo(() => {
     const map = new Map<string, SpaceshipId>();
     for (const [ship, coord] of Object.entries(board.spaceship_tiles)) {
@@ -230,8 +379,7 @@ export function GameBoard({
   // board's hexes are entirely partitioned between the two, there's nothing
   // else a hex could be. Resolves to a real per-hex background image (a
   // spaceship, Asteroid, ProtoPlanet, or the plain Blank tile) rather than
-  // leaving these hexes as bare grid cells the way `sectorImageSrc`-less ids
-  // used to.
+  // leaving these hexes as bare grid cells.
   const interspaceImageByHexKey = useMemo(() => {
     const map = new Map<string, string>();
     for (const hex of hexEntries) {
@@ -254,6 +402,23 @@ export function GameBoard({
     () => new Set([...sectorPrintedHexKeys, ...interspaceImageByHexKey.keys()]),
     [sectorPrintedHexKeys, interspaceImageByHexKey],
   );
+
+  // Mirrors HexCell's own stroke precedence (isSelected > isHighlighted > isDeepSpaceOutline >
+  // plain grid) so hexes drawn later — and thus painting over their shared edges last — are
+  // exactly the ones whose border needs to stay fully visible.
+  function strokePriority(hex: BoardState['hexes'][string]): number {
+    const { q, r } = hex.coord;
+    const key = hexKey(q, r);
+    const isSelected = onHexClick
+      ? selectedCoord !== null && selectedCoord.q === q && selectedCoord.r === r
+      : multiSelect
+        ? selectedHexSet.has(key)
+        : activePlanet !== null && activePlanet.q === q && activePlanet.r === r;
+    if (isSelected) return 3;
+    if (validSet.has(key)) return 2;
+    if (deepSpaceHexKeys.has(key) || (highlightInterspace && interspaceImageByHexKey.has(key))) return 1;
+    return 0;
+  }
 
   return (
     <div className="game-board-container">
@@ -288,7 +453,7 @@ export function GameBoard({
         {board.sectors.map((sector) => {
           const isDeepSpace = sector.id >= 11;
           const href = isDeepSpace
-            ? deepSpaceSectorImageSrc(sector.id)
+            ? deepSpaceSectorImageSrc(sector.id, deepSpaceSectorSide(sector, board.hexes))
             : sectorImageSrc(sector.id);
           if (!href) return null;
 
@@ -327,7 +492,9 @@ export function GameBoard({
           // as their "resting" orientation (see that constant's comment) —
           // the `transform` below then only needs to cover the *remaining*
           // distance from that resting state to the real `sector.rotation`.
-          const photoOffset = isDeepSpace ? DEEP_SPACE_PHOTO_ROTATION_OFFSET : 0;
+          const photoOffset = isDeepSpace
+            ? DEEP_SPACE_PHOTO_ROTATION_OFFSET
+            : STANDARD_SECTOR_PHOTO_ROTATION_OFFSET;
           const [imgCx0, imgCy0] = sectorCentroidPixel(offsets, sector.origin, photoOffset, HEX_SIZE);
           const imgCx = imgCx0 + OFFSET_X;
           const imgCy = imgCy0 + OFFSET_Y;
@@ -340,12 +507,12 @@ export function GameBoard({
           // that image's own `transform`. Referencing it from a wrapping
           // `<g>` with no transform of its own keeps that unambiguous.
           const clipHexes = sectorHexPixelPositions(offsets, sector.origin, sector.rotation, HEX_SIZE);
-          // `xMidYMid slice`'s cover-scale factor — height is the limiting
-          // dimension (818 < 822), so that's what maps 1:1 to `height`; see
-          // `DEEP_SPACE_VERTEX_OFFSET_X/Y`'s comment for why this is needed.
-          const deepSpaceScale = isDeepSpace ? height / DEEP_SPACE_PHOTO_HEIGHT : 0;
-          const imgX = imgCx - width / 2 - DEEP_SPACE_VERTEX_OFFSET_X * deepSpaceScale;
-          const imgY = imgCy - height / 2 - DEEP_SPACE_VERTEX_OFFSET_Y * deepSpaceScale;
+          const imgX = isDeepSpace
+            ? imgCx - width * DEEP_SPACE_JUNCTION_X_RATIO
+            : imgCx - width / 2;
+          const imgY = isDeepSpace
+            ? imgCy - height * DEEP_SPACE_JUNCTION_Y_RATIO
+            : imgCy - height / 2;
 
           return (
             <Fragment key={sectorKey}>
@@ -361,7 +528,7 @@ export function GameBoard({
                   y={imgY}
                   width={width}
                   height={height}
-                  preserveAspectRatio="xMidYMid slice"
+                  preserveAspectRatio="none"
                   transform={`rotate(${(sector.rotation - photoOffset) * 60} ${pivotX} ${pivotY})`}
                   style={{ pointerEvents: 'none' }}
                 />
@@ -406,8 +573,16 @@ export function GameBoard({
           );
         })}
 
-        {/* Hex cells */}
-        {hexEntries.map((hex) => {
+        {/* Hex cells — drawn in ascending stroke-prominence order (plain/grid, then Deep
+            Space/Interspace outline, then hint highlight, then selection) rather than hex-map
+            insertion order. Each hex polygon's stroke is painted over its full edge, including
+            the edges it shares with neighbors; if a plain neighbor happened to be drawn after a
+            hex with a more prominent outline, its dim grid stroke silently overpainted that
+            shared edge, leaving a gap in what should be a closed white/yellow border. Sorting by
+            prominence guarantees every hex that needs a visible border paints its edges last. */}
+        {[...hexEntries]
+          .sort((a, b) => strokePriority(a) - strokePriority(b))
+          .map((hex) => {
           const { q, r } = hex.coord;
           const [px, py] = axialToPixel(q, r, HEX_SIZE);
           const cx = px + OFFSET_X;
@@ -420,9 +595,25 @@ export function GameBoard({
               ? selectedHexSet.has(key)
               : activePlanet !== null && activePlanet.q === q && activePlanet.r === r;
           const isPrintedOnSectorArt = printedHexKeys.has(key);
+          const standardSector = standardSectorByHexKey.get(key);
+          const isStandardSectorLabel = standardSector?.origin.q === q
+            && standardSector.origin.r === r;
           const showPlanetOverlay = !isPrintedOnSectorArt
             || hex.planet?.is_gaia_formed === true
             || hex.planet?.planet_type === 'LostPlanet';
+          const isOwnedStructureInteractive =
+            interactivePlayerId !== undefined
+            && onOwnedStructureClick !== undefined
+            && hex.structures.some((structure) => structure.owner === interactivePlayerId);
+          const isPowerChargeStructureInteractive =
+            devPowerChargeTargeting
+            && interactivePlayerId !== undefined
+            && hex.structures.some((structure) => (
+              structure.owner === interactivePlayerId
+              && structure.kind !== 'Satellite'
+              && structure.kind !== 'SpaceStation'
+            ));
+          const isSpaceshipInteractive = onSpaceshipClick !== undefined && shipByHexKey.has(key);
 
           return (
             <HexCell
@@ -435,9 +626,31 @@ export function GameBoard({
               isHighlighted={isHighlighted}
               isSelected={isSelected}
               isPrintedOnSectorArt={isPrintedOnSectorArt}
+              isStandardSectorArt={standardSector !== undefined}
+              mutePrintedBackground={
+                standardSector !== undefined
+                && !CALM_STANDARD_SECTOR_IDS.has(standardSector.id)
+                && !isStandardSectorLabel
+              }
               showPlanetOverlay={showPlanetOverlay}
               hasPowerRing={powerRingHexKeys.has(key)}
-              onClick={() => handleHexClick(hex.coord)}
+              isDeepSpaceOutline={
+                deepSpaceHexKeys.has(key)
+                || (highlightInterspace && interspaceImageByHexKey.has(key))
+              }
+              isInNavigationRange={navigationRangeHexKeys.has(key)}
+              navigationRangeColor="#7dd3fc"
+              emphasizeStructure={emphasizeStructures}
+              isInspectable={
+                onHexInspect !== undefined
+                || isSpaceshipInteractive
+                || isOwnedStructureInteractive
+                || isPowerChargeStructureInteractive
+                || (multiSelect && (
+                  selectedHexSet.has(key) || federationSelectableSet.has(key)
+                ))
+              }
+              onClick={(event) => handleHexClick(hex, event)}
             />
           );
         })}

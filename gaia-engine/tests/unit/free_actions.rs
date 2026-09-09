@@ -91,7 +91,7 @@ fn power_to_qic_spends_from_bowl3_only() {
     .unwrap_or_else(|e| panic!("{e}"));
 
     let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
-    assert_eq!(player.resources.power.bowl1, 10);
+    assert_eq!(player.resources.power.bowl1, 14);
     assert_eq!(player.resources.power.bowl2, 10);
     assert_eq!(player.resources.power.bowl3, 0);
     assert_eq!(player.resources.qic, 6);

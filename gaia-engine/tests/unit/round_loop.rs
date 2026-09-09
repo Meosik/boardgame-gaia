@@ -1,7 +1,7 @@
 use gaia_engine::error::RuleError;
 use gaia_engine::game_state::{
-    BoardState, FactionId, GaiaDecisionKind, GamePhase, Hex, HexCoord, PlacedStructure, Planet,
-    PlanetType, ResearchTrack, Sector, Structure, StructureType, TechTile,
+    BoardState, Booster, FactionId, GaiaDecisionKind, GamePhase, Hex, HexCoord, PlacedStructure,
+    Planet, PlanetType, ResearchTrack, Sector, Structure, StructureType, TechTile,
 };
 use gaia_engine::rules::actions::{FreeActionKind, GameAction};
 use gaia_engine::test_utils::builders::GameStateBuilder;
@@ -82,6 +82,52 @@ fn advance_to_next_round_reopens_action_phase_and_increments_round() {
     assert!(!state.players[1].passed);
     assert!(state.used_power_actions.is_empty());
     assert!(state.used_spaceship_actions.is_empty());
+}
+
+#[test]
+fn next_round_turn_order_matches_the_order_players_passed() {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| player.booster = Some(Booster(8)))
+        .with_player_fn(1, |player| player.booster = Some(Booster(9)))
+        .with_player_fn(2, |player| player.booster = Some(Booster(10)))
+        .with_round(1)
+        .with_phase(GamePhase::ActionPhase { active_player: 1 })
+        .build();
+
+    RuleEngine::apply_action(
+        &mut state,
+        1,
+        GameAction::Pass {
+            booster_id: Some(1),
+        },
+    )
+    .unwrap_or_else(|error| panic!("player 1 pass should succeed: {error}"));
+    RuleEngine::apply_action(
+        &mut state,
+        2,
+        GameAction::Pass {
+            booster_id: Some(2),
+        },
+    )
+    .unwrap_or_else(|error| panic!("player 2 pass should succeed: {error}"));
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::Pass {
+            booster_id: Some(3),
+        },
+    )
+    .unwrap_or_else(|error| panic!("player 0 pass should succeed: {error}"));
+
+    assert_eq!(state.pass_order, vec![1, 2, 0]);
+    assert_eq!(state.phase, GamePhase::RoundScoring { round: 1 });
+
+    RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(state.turn_order, vec![1, 2, 0]);
+    assert!(state.pass_order.is_empty());
+    assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 0 });
+    assert_eq!(state.current_player_id(), Some(1));
 }
 
 #[test]
@@ -402,13 +448,83 @@ fn income_phase_charges_power_from_economy_track() {
         .with_phase(GamePhase::RoundScoring { round: 1 })
         .build();
 
-    RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|e| panic!("{e}"));
+    let events = RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|e| panic!("{e}"));
 
     // research_tracks.toml: Economy level 1 = 2 credits, charge 1 power.
     let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
     assert_eq!(player.resources.credits, 2);
     assert_eq!(player.resources.power.bowl1, 1);
     assert_eq!(player.resources.power.bowl2, 1);
+    assert!(events.iter().any(|event| matches!(
+        event,
+        gaia_engine::game_state::GameEvent::IncomeReceived {
+            player: 0,
+            round: 2,
+            credits: 2,
+            power_charge: 1,
+            ..
+        }
+    )));
+}
+
+#[test]
+fn income_phase_does_not_repeat_immediate_research_rewards() {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.faction = Some(FactionId::Xenos);
+            player.resources.qic = 0;
+            player
+                .research_tracks
+                .set(ResearchTrack::ArtificialIntelligence, 4);
+            player.research_tracks.set(ResearchTrack::Navigation, 3);
+            player.research_tracks.set(ResearchTrack::Terraforming, 3);
+            player.research_tracks.set(ResearchTrack::GaiaProject, 4);
+        })
+        .with_phase(GamePhase::RoundScoring { round: 1 })
+        .build();
+
+    RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|error| panic!("{error}"));
+
+    let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
+    assert_eq!(
+        player.resources.qic, 0,
+        "AI/Navigation rewards are immediate, not income"
+    );
+}
+
+#[test]
+fn level_five_economy_and_science_no_longer_provide_level_four_income() {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.faction = Some(FactionId::Xenos);
+            player.resources.knowledge = 0;
+            player.resources.power.bowl1 = 2;
+            player.resources.power.bowl2 = 0;
+            player.research_tracks.set(ResearchTrack::Economy, 5);
+            player.research_tracks.set(ResearchTrack::Science, 5);
+        })
+        .with_phase(GamePhase::RoundScoring { round: 1 })
+        .build();
+
+    let events =
+        RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|error| panic!("{error}"));
+
+    let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
+    assert_eq!(
+        player.resources.knowledge, 1,
+        "only the faction-board base income remains"
+    );
+    assert_eq!(player.resources.power.bowl1, 2);
+    assert_eq!(player.resources.power.bowl2, 0);
+    assert!(events.iter().any(|event| matches!(
+        event,
+        gaia_engine::game_state::GameEvent::IncomeReceived {
+            player: 0,
+            round: 2,
+            power_charge: 0,
+            ..
+        }
+    )));
 }
 
 #[test]

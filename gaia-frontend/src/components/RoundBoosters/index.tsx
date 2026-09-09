@@ -32,19 +32,20 @@ export function RoundBoosters({ availableBoosters, players }: Props) {
         if (!src) return null;
         const owner = ownerByBooster.get(id);
         return (
-          <figure
-            key={id}
-            className={`round-booster-tile ${[5, 14].includes(id) ? 'round-booster-tile--wide' : ''}`}
-          >
+          <figure key={id} className="round-booster-tile">
             <img src={src} alt={`라운드 부스터 ${id}`} />
-            {owner?.faction && (
-              <span
-                className="round-booster-owner"
-                aria-label={`${owner.nickname} 보유 중`}
-              >
-                <SatelliteToken color={FACTION_VISUAL[owner.faction].color} faction={owner.faction} size={16} />
-              </span>
-            )}
+            <span
+              className="round-booster-owner"
+              aria-label={owner?.faction ? `${owner.nickname} 보유 중` : undefined}
+            >
+              {owner?.faction && (
+                <SatelliteToken
+                  color={FACTION_VISUAL[owner.faction].color}
+                  faction={owner.faction}
+                  size={14.4}
+                />
+              )}
+            </span>
           </figure>
         );
       })}

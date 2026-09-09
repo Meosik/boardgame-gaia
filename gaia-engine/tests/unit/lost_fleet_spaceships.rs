@@ -1419,6 +1419,22 @@ fn tfmars_tech_bonus_costs_2_qic_for_2_vp_plus_1_vp_per_tech_tile() {
 }
 
 #[test]
+fn advanced_tech_16_scores_four_vp_for_the_tf_mars_qic_action() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(2);
+    state.players[0].resources.qic = 2;
+    state.players[0]
+        .advanced_tech_tiles
+        .push(AdvancedTechTile(16));
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(&mut state, 0, GameAction::TFMarsTechBonus)
+        .unwrap_or_else(|e| panic!("T F Mars QIC action should succeed: {e}"));
+
+    assert_eq!(state.players[0].vp, vp_before + 2 + 4);
+}
+
+#[test]
 fn tfmars_tech_bonus_can_only_be_used_once_per_round() {
     let mut state = base_state();
     state.players[0].explored_ships.push(2);
@@ -1558,6 +1574,22 @@ fn eclipse_planet_type_bonus_costs_2_qic_for_2_vp_plus_1_vp_per_planet_type() {
     // `board_with_extras`'s anchor hex (player 0's mine) has `planet: None`, so 0 distinct
     // colonized planet types here -> flat +2 VP only.
     assert_eq!(state.players[0].vp, vp_before + 2);
+}
+
+#[test]
+fn advanced_tech_16_scores_four_vp_for_the_eclipse_qic_action() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(3);
+    state.players[0].resources.qic = 2;
+    state.players[0]
+        .advanced_tech_tiles
+        .push(AdvancedTechTile(16));
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(&mut state, 0, GameAction::EclipsePlanetTypeBonus)
+        .unwrap_or_else(|e| panic!("Eclipse QIC action should succeed: {e}"));
+
+    assert_eq!(state.players[0].vp, vp_before + 2 + 4);
 }
 
 #[test]
@@ -1763,6 +1795,32 @@ fn twilight_replays_an_owned_federation_token_without_consuming_it() {
 }
 
 #[test]
+fn advanced_tech_16_scores_four_vp_for_the_twilight_qic_action() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(0);
+    state.players[0].resources.qic = 3;
+    state.players[0].federation_tokens.push(FederationToken(5));
+    state.players[0]
+        .advanced_tech_tiles
+        .push(AdvancedTechTile(16));
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::TwilightReplayFederationToken {
+            token_kind: 5,
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+            bonus_research_track: None,
+        },
+    )
+    .unwrap_or_else(|e| panic!("Twilight QIC action should succeed: {e}"));
+
+    assert_eq!(state.players[0].vp, vp_before + 7 + 4);
+}
+
+#[test]
 fn twilight_cannot_replay_a_federation_token_it_does_not_own() {
     let mut state = base_state();
     state.players[0].explored_ships.push(0);
@@ -1879,6 +1937,30 @@ fn rebellion_gain_tech_tile_costs_three_qic_and_advances_the_chosen_track() {
     assert!(!state.research_board.tech_tiles.contains(&tile));
     assert_eq!(state.players[0].research_tracks.science, 1);
     assert!(state.used_spaceship_actions.contains(&12));
+}
+
+#[test]
+fn advanced_tech_16_scores_four_vp_for_the_rebellion_qic_action() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(1);
+    state.players[0].resources.qic = 3;
+    state.players[0]
+        .advanced_tech_tiles
+        .push(AdvancedTechTile(16));
+    let tile = TechTile(1);
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::RebellionGainTechTile {
+            tile,
+            track: ResearchTrack::Science,
+        },
+    )
+    .unwrap_or_else(|e| panic!("Rebellion QIC action should succeed: {e}"));
+
+    assert_eq!(state.players[0].vp, vp_before + 4);
 }
 
 #[test]

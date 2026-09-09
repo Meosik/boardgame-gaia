@@ -36,7 +36,7 @@ describe('ResourcePanel', () => {
     expect(screen.getByText('광석')).toBeInTheDocument();
     expect(screen.getByText('크레딧')).toBeInTheDocument();
     expect(screen.getByText('지식')).toBeInTheDocument();
-    expect(screen.getByText('QIC')).toBeInTheDocument();
+    expect(screen.getByText('정보 큐브')).toBeInTheDocument();
   });
 });
 
@@ -97,9 +97,47 @@ describe('PlayerDashboard', () => {
 
     render(<PlayerDashboard player={player} />);
 
+    expect(screen.getByLabelText('승점 14점')).toHaveTextContent('14');
     expect(screen.getByRole('img', { name: 'Taklons 종족 보드' })).toBeInTheDocument();
-    expect(screen.getByLabelText('내 자원과 획득 타일')).toHaveTextContent('T4');
-    expect(screen.getByLabelText('내 자원과 획득 타일')).toHaveTextContent('A7');
-    expect(screen.getByLabelText('내 자원과 획득 타일')).toHaveTextContent('F2');
+    expect(screen.getByAltText('일반 기술 타일 4')).toBeInTheDocument();
+    expect(screen.getByAltText('고급 기술 타일 7')).toBeInTheDocument();
+    expect(screen.getByAltText('연방 토큰 2')).toBeInTheDocument();
+  });
+
+  it('shows only Gaiaformers that are currently available to deploy', () => {
+    const player: PlayerState = {
+      player_id: 0,
+      nickname: 'Me',
+      faction: 'Terrans',
+      resources: mockResources,
+      structures: [],
+      research_tracks: { terraforming: 0, navigation: 0, ai: 0, gaia: 1, economy: 0, science: 0 },
+      vp: 10,
+      setup_bid_vp: 0,
+      passed: false,
+      federation_tokens: [],
+      alliance_tiles: [],
+      explored_ships: [],
+      exploration_shuttles_available: 3,
+      gaiaformers_total: 3,
+      gaiaformers_deployed: 0,
+      academy_qic_action_used_this_round: false,
+      gleens_special_action_used_this_round: false,
+      space_giants_special_action_used_this_round: false,
+    };
+    const { rerender } = render(<PlayerDashboard player={player} />);
+    expect(screen.getAllByLabelText(/사용 가능한 가이아포머/)).toHaveLength(3);
+
+    rerender(
+      <PlayerDashboard
+        player={{
+          ...player,
+          resources: { ...player.resources, spent_gaia_formers: 1 },
+          gaiaformers_deployed: 1,
+          gaiaformers_in_gaia_area: 1,
+        }}
+      />,
+    );
+    expect(screen.queryByLabelText(/사용 가능한 가이아포머/)).not.toBeInTheDocument();
   });
 });

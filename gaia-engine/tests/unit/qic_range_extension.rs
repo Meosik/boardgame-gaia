@@ -161,3 +161,36 @@ fn build_within_basic_range_spends_no_qic() {
 
     assert_eq!(state.players[0].resources.qic, 5);
 }
+
+// `get_valid_actions` used to enumerate Build/GaiaFormation-family candidates only over the base
+// navigation-range `reachable_hexes` set, so a QIC-extended target like (3, 0) here — accepted by
+// `validate_action`/`apply_action` above — never appeared in its own candidate list. Fixed by
+// enumerating every board hex and letting each `validate_*` call (which already accounts for QIC
+// extension) be the single source of truth for what's actually reachable.
+#[test]
+fn get_valid_actions_includes_a_qic_extended_build_target() {
+    let state = base_state(1);
+
+    let actions = RuleEngine::get_valid_actions(&state, 0);
+
+    assert!(
+        actions.contains(&GameAction::Build {
+            coord: HexCoord::new(3, 0),
+        }),
+        "expected the QIC-reachable (3, 0) Build target to be enumerated, got: {actions:?}"
+    );
+}
+
+#[test]
+fn get_valid_actions_omits_a_build_target_still_out_of_range_with_all_available_qic() {
+    let state = base_state(0);
+
+    let actions = RuleEngine::get_valid_actions(&state, 0);
+
+    assert!(
+        !actions.contains(&GameAction::Build {
+            coord: HexCoord::new(3, 0),
+        }),
+        "target (3, 0) needs 1 QIC the player doesn't have, so it should not be enumerated"
+    );
+}

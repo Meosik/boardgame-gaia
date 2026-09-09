@@ -5,13 +5,18 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use gaia_engine::{game_state::PlayerId, MapEngine, SetupMode};
+use gaia_engine::{
+    game_state::{FactionId, GameState, PlayerId},
+    MapEngine, SetupMode,
+};
 
 use crate::{
     coordinator,
     error::{ServerError, ServerResult},
     messages::LobbyPlayer,
-    services::{game_setup::GameSetupService, reconnect::ReconnectService},
+    services::{
+        dev_game::build_dev_game_state, game_setup::GameSetupService, reconnect::ReconnectService,
+    },
     state::AppState,
 };
 
@@ -60,6 +65,23 @@ pub struct RegenerateRequest {
     pub seed: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct CreateDevGameRequest {
+    pub faction: Option<FactionId>,
+    pub seed: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct CreateDevGameResponse {
+    pub room_code: String,
+    pub player_id: PlayerId,
+    pub session_token: String,
+    pub game_setup: serde_json::Value,
+    pub game_state: GameState,
+    pub players: Vec<LobbyPlayer>,
+    pub host_player_id: PlayerId,
+}
+
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 pub async fn create_room(
@@ -89,6 +111,65 @@ pub async fn create_room(
             player_id,
             session_token,
             game_setup: serde_json::to_value(&setup).unwrap_or(serde_json::Value::Null),
+            players,
+            host_player_id,
+        }),
+    ))
+}
+
+/// Local UI-development shortcut: create a one-seat game with three virtual opponents at
+/// starting-structure placement. It skips invitations, bidding, and faction selection; the human
+/// places their structures while virtual opponents follow the normal setup order automatically.
+/// Resource spending, invalid-action rejection, and snapshots use the normal live game paths.
+/// Release builds expose it only when the operator explicitly opts in with `GAIA_DEV_MODE=1`.
+pub async fn create_dev_game(
+    State(app): State<AppState>,
+    Json(req): Json<CreateDevGameRequest>,
+) -> ServerResult<(StatusCode, Json<CreateDevGameResponse>)> {
+    let explicitly_enabled = std::env::var("GAIA_DEV_MODE").is_ok_and(|value| value == "1");
+    if !cfg!(debug_assertions) && !explicitly_enabled {
+        return Err(ServerError::RoomNotFound(
+            "dev game endpoint disabled".into(),
+        ));
+    }
+
+    let seed = req.seed.unwrap_or_else(|| "gaia-ui-dev".to_string());
+    let faction = req.faction.unwrap_or(FactionId::Terrans);
+    let (code, player_id, setup) =
+        GameSetupService::create_room(&app, "DEV", Some(seed.clone()), SetupMode::Sequential)
+            .await?;
+    let bot_player_ids = {
+        let mut rooms = app.rooms.write().await;
+        rooms.alloc_virtual_player_ids(3)
+    };
+    let game_state =
+        build_dev_game_state(&code, &seed, player_id, &bot_player_ids, &setup, faction)?;
+
+    let (players, host_player_id) = {
+        let mut rooms = app.rooms.write().await;
+        let room = rooms
+            .get_room_mut(&code)
+            .ok_or_else(|| ServerError::RoomNotFound(code.clone()))?;
+        room.state = crate::room::manager::RoomState::FactionSelection;
+        room.game_state = Some(game_state.clone());
+        room.dev_human_player = Some(player_id);
+        for (_, _, ready) in &mut room.players {
+            *ready = true;
+        }
+        (lobby_players(room), room.host_player)
+    };
+
+    let session_token = app.sessions.create_session(player_id, &code).await?;
+    app.event_bus.get_or_create(&code).await;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(CreateDevGameResponse {
+            room_code: code,
+            player_id,
+            session_token,
+            game_setup: serde_json::to_value(&setup).unwrap_or(serde_json::Value::Null),
+            game_state,
             players,
             host_player_id,
         }),

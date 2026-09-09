@@ -1,10 +1,10 @@
-import interspaceBlank from './interspace_tiles/interspace_01.jpg';
-import interspaceTFMars from './interspace_tiles/interspace_02.jpg';
-import interspaceRebellion from './interspace_tiles/interspace_03.jpg';
-import interspaceEclipse from './interspace_tiles/interspace_04.jpg';
-import interspaceTwilight from './interspace_tiles/interspace_05.jpg';
-import interspaceAsteroid from './interspace_tiles/interspace_06.jpg';
-import interspaceProtoPlanet from './interspace_tiles/interspace_07.jpg';
+import interspaceBlank from './interspace_tiles/normalized/01.webp';
+import interspaceTFMars from './interspace_tiles/normalized/02.webp';
+import interspaceRebellion from './interspace_tiles/normalized/03.webp';
+import interspaceEclipse from './interspace_tiles/normalized/04.webp';
+import interspaceTwilight from './interspace_tiles/normalized/05.webp';
+import interspaceAsteroid from './interspace_tiles/normalized/06.webp';
+import interspaceProtoPlanet from './interspace_tiles/normalized/07.webp';
 import type { SpaceshipId } from '../types/game';
 
 /**

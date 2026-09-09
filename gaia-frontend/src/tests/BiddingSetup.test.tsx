@@ -129,6 +129,9 @@ function startingStructureGameState(): GameState {
   state.players[1].faction = 'Xenos';
   state.players[2].faction = 'Taklons';
   state.players[3].faction = 'Ivits';
+  state.players.forEach((candidate, index) => {
+    candidate.setup_bid_vp = [0, 1, 2, 4][index];
+  });
   state.board.hexes = {
     '0,0': {
       coord: { q: 0, r: 0 },
@@ -159,6 +162,9 @@ function startingBoosterGameState(): GameState {
     },
   };
   state.boosters = [1, 2, 3, 4, 5, 9, 13];
+  state.players[0].booster = 10;
+  state.players[1].booster = 8;
+  state.players[2].booster = 4;
   return state;
 }
 
@@ -219,7 +225,7 @@ describe('FactionSelectView bidding interactions', () => {
   it('lets the active host bid or pass using revisioned setup commands', () => {
     render(<FactionSelectView onGameStart={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '1 VP 입찰' }));
+    fireEvent.click(screen.getByRole('button', { name: '승점 1점 입찰' }));
     expect(socket.sendCommand).toHaveBeenCalledWith(
       { type: 'place_setup_action', action: { type: 'PlaceBid', amount: 1 } },
       5,
@@ -232,17 +238,17 @@ describe('FactionSelectView bidding interactions', () => {
     );
   });
 
-  it('has no cap tied to current VP, but rejects a bid above the flat 100 sanity ceiling', () => {
+  it('has no cap tied to current 승점, but rejects a bid above the flat 100 sanity ceiling', () => {
     render(<FactionSelectView onGameStart={vi.fn()} />);
 
-    const bidInput = screen.getByLabelText('입찰 VP');
-    // Well above the fixture's 10 VP but still under the ceiling — no
-    // rulebook rule caps a bid at the bidder's current VP.
+    const bidInput = screen.getByLabelText('입찰 승점');
+    // Well above the fixture's 10 승점 but still under the ceiling — no
+    // rulebook rule caps a bid at the bidder's current 승점.
     fireEvent.change(bidInput, { target: { value: '50' } });
-    expect(screen.getByRole('button', { name: '50 VP 입찰' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '승점 50점 입찰' })).toBeEnabled();
 
     fireEvent.change(bidInput, { target: { value: '101' } });
-    expect(screen.getByRole('button', { name: '101 VP 입찰' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '승점 101점 입찰' })).toBeDisabled();
   });
 
   it('renders the fully set-up board behind the bidding controls as a popup, not in place of it', async () => {
@@ -260,7 +266,7 @@ describe('FactionSelectView bidding interactions', () => {
 
     render(<FactionSelectView onGameStart={vi.fn()} />);
 
-    await screen.findByRole('button', { name: '1 VP 입찰' });
+    await screen.findByRole('button', { name: '승점 1점 입찰' });
     expect(document.querySelector('.bidding-modal-overlay')).not.toBeNull();
     expect(document.querySelector('.game-main')).not.toBeNull();
     expect(screen.queryByText('보드를 불러오는 중...')).not.toBeInTheDocument();
@@ -283,7 +289,7 @@ describe('FactionSelectView bidding interactions', () => {
     }];
 
     render(<FactionSelectView onGameStart={vi.fn()} />);
-    await screen.findByText('4 VP로 낙찰되었습니다. 종족과 최종 순서를 선택하세요.');
+    await screen.findByText('승점 4점으로 낙찰되었습니다. 종족과 최종 순서를 선택하세요.');
     fireEvent.click(screen.getByRole('button', { name: 'Terrans 선택' }));
     fireEvent.click(screen.getByRole('button', { name: '2번' }));
     fireEvent.click(screen.getByRole('button', { name: '종족과 순서 확정' }));
@@ -308,6 +314,11 @@ describe('FactionSelectView bidding interactions', () => {
 
     render(<FactionSelectView onGameStart={vi.fn()} />);
     await screen.findByRole('heading', { name: '시작 구조물 배치' });
+    expect(document.querySelector('.starting-structure-layout.app--game')).toBeInTheDocument();
+    expect(document.querySelector('.game-reference-rail')).toBeInTheDocument();
+    expect(document.querySelector('.game-board-stage')).toBeInTheDocument();
+    expect(document.querySelector('.starting-structure-sidebar')).toBeInTheDocument();
+    expect(screen.getByText('-4점')).toBeInTheDocument();
     const confirm = screen.getByRole('button', { name: '광산 배치 확정' });
     expect(confirm).toBeDisabled();
 
@@ -337,8 +348,19 @@ describe('FactionSelectView bidding interactions', () => {
       state: startingBoosterGameState(),
     }];
 
-    render(<FactionSelectView onGameStart={vi.fn()} />);
+    const { container } = render(<FactionSelectView onGameStart={vi.fn()} />);
     await screen.findByRole('heading', { name: '초기 부스터 선택' });
+    expect(container.querySelector('.setup-game-preview.app--game')).toBeInTheDocument();
+    expect(container.querySelector('.game-reference-rail')).toBeInTheDocument();
+    expect(container.querySelector('.game-board-stage')).toBeInTheDocument();
+    expect(container.querySelector('.game-ship-list')).toBeInTheDocument();
+    const boosterSidebar = container.querySelector('.setup-booster-sidebar');
+    expect(boosterSidebar).toBeInTheDocument();
+    expect(boosterSidebar).toHaveStyle({ overflowY: 'auto' });
+    expect(screen.getByRole('img', { name: 'Host · Terrans · 부스터 #10' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'P3 · Xenos · 부스터 #8' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'P9 · Taklons · 부스터 #4' })).toBeInTheDocument();
+    expect(screen.getByText('비딩 -4점')).toBeInTheDocument();
     const confirm = screen.getByRole('button', { name: '부스터 선택 확정' });
     expect(confirm).toBeDisabled();
 

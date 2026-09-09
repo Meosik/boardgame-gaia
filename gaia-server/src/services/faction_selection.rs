@@ -1,6 +1,7 @@
 use gaia_engine::{game_state::PlayerId, rules::actions::SetupAction, GamePhase, SetupPhase};
 use gaia_protocol::{CommandId, Revision};
 
+use crate::services::dev_game::{auto_advance_dev_setup, prepare_dev_human_resources};
 use crate::{
     coordinator::{self, broadcast_snapshot, CommandResult},
     room::manager::RoomState,
@@ -24,6 +25,7 @@ impl FactionSelectionService {
     ) -> CommandResult {
         let outcome =
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
+                let dev_human_player = room.dev_human_player;
                 let game_state = room
                     .game_state
                     .as_mut()
@@ -35,9 +37,22 @@ impl FactionSelectionService {
                     action.clone(),
                 )?;
 
+                if let Some(human_player) = dev_human_player {
+                    events.extend(auto_advance_dev_setup(game_state, human_player)?);
+                }
+
                 if game_state.phase == GamePhase::Setup(SetupPhase::Complete) {
+                    if let Some(human_player) = dev_human_player {
+                        game_state.turn_order = vec![human_player];
+                        game_state.current_player = 0;
+                    }
                     room.state = RoomState::InGame;
                     events.extend(gaia_engine::RuleEngine::start_first_round(game_state)?);
+                    if let Some(human_player) = dev_human_player {
+                        prepare_dev_human_resources(game_state, human_player).map_err(|error| {
+                            gaia_engine::error::RuleError::ActionNotAllowed(error.to_string())
+                        })?;
+                    }
                 }
 
                 Ok(events)

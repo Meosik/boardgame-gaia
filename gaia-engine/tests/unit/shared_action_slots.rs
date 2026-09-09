@@ -131,6 +131,7 @@ fn power_action_1_costs_7_for_3_knowledge() {
     .unwrap_or_else(|e| panic!("{e}"));
 
     let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
+    assert_eq!(player.resources.power.bowl1, 11);
     assert_eq!(player.resources.power.bowl3, 0);
     assert_eq!(player.resources.knowledge, 3);
 }
@@ -203,7 +204,9 @@ fn power_action_7_adds_two_fresh_tokens_to_bowl1() {
     assert_eq!(player.resources.power.bowl3, 0);
     // Not a charge (which would move an *existing* token forward) — 2 brand
     // new tokens enter bowl1.
-    assert_eq!(player.resources.power.bowl1, 2);
+    // Spending the action's 3 power cycles those tokens back to bowl1, then the action adds two
+    // fresh tokens there as well.
+    assert_eq!(player.resources.power.bowl1, 5);
 }
 
 // ── Terraforming-step power actions (ids 2, 6) ──────────────────────────────

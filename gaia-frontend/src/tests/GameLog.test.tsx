@@ -16,9 +16,9 @@ describe('GameLog', () => {
     expect(screen.getByRole('listitem')).toHaveTextContent('Gaia: 광석 → 크레딧 ×3');
   });
 
-  it('stays hidden when there are no supported log entries', () => {
-    const { container } = render(<GameLog players={[]} events={[]} />);
-    expect(container).toBeEmptyDOMElement();
+  it('shows an empty state when there are no supported log entries', () => {
+    render(<GameLog players={[]} events={[]} />);
+    expect(screen.getByText('아직 기록된 행동이 없습니다.')).toBeInTheDocument();
   });
 
   it('renders regular actions, scoring, rounds, and game end events', () => {
@@ -40,7 +40,7 @@ describe('GameLog', () => {
 
     expect(screen.getByText(/Gaia: \(1,-1\)에 광산 건설/)).toBeInTheDocument();
     expect(screen.getByText(/Gaia: 항법 연구 2단계/)).toBeInTheDocument();
-    expect(screen.getByText(/라운드 타일 #4로 3 VP/)).toBeInTheDocument();
+    expect(screen.getByText(/라운드 타일 #4로 승점 3점/)).toBeInTheDocument();
     expect(screen.getByText(/Gaia: 초기 부스터 #9 선택/)).toBeInTheDocument();
     expect(screen.getByText(/Gaia: 패스 \(부스터 #7 반납\)/)).toBeInTheDocument();
     expect(screen.getByText('1라운드 종료')).toBeInTheDocument();

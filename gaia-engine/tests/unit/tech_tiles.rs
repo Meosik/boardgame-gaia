@@ -17,13 +17,13 @@ use gaia_engine::test_utils::builders::GameStateBuilder;
 use gaia_engine::RuleEngine;
 use std::collections::HashMap;
 
-fn board_with_mine() -> BoardState {
-    let mine = HexCoord::new(0, 0);
+fn board_with_trading_station() -> BoardState {
+    let trading_station = HexCoord::new(0, 0);
     let mut hexes = HashMap::new();
     hexes.insert(
-        mine,
+        trading_station,
         Hex {
-            coord: mine,
+            coord: trading_station,
             planet: Some(Planet {
                 planet_type: PlanetType::Terra,
                 is_gaia_formed: false,
@@ -32,7 +32,7 @@ fn board_with_mine() -> BoardState {
             space_tile_kind: None,
             structures: vec![PlacedStructure {
                 owner: 0,
-                kind: StructureType::Mine,
+                kind: StructureType::TradingStation,
             }],
             satellites: vec![],
         },
@@ -41,12 +41,21 @@ fn board_with_mine() -> BoardState {
         sectors: vec![Sector {
             id: 1,
             rotation: 0,
-            origin: mine,
+            origin: trading_station,
         }],
         hexes,
         lost_planet: None,
         spaceship_tiles: HashMap::new(),
     }
+}
+
+fn board_with_mine() -> BoardState {
+    let mut board = board_with_trading_station();
+    let Some(hex) = board.hexes.get_mut(&HexCoord::new(0, 0)) else {
+        panic!("test structure hex");
+    };
+    hex.structures[0].kind = StructureType::Mine;
+    board
 }
 
 fn tech_tiles_state(supply: Vec<u8>) -> gaia_engine::game_state::GameState {
@@ -57,11 +66,11 @@ fn tech_tiles_state(supply: Vec<u8>) -> gaia_engine::game_state::GameState {
             p.resources.knowledge = 10;
             p.structures = vec![Structure {
                 hex: HexCoord::new(0, 0),
-                kind: StructureType::Mine,
+                kind: StructureType::TradingStation,
             }];
         })
         .with_player(1)
-        .with_board(board_with_mine())
+        .with_board(board_with_trading_station())
         .with_phase(GamePhase::ActionPhase { active_player: 0 })
         .build();
     state.research_board.tech_tiles = supply.into_iter().map(TechTile).collect();
@@ -71,7 +80,7 @@ fn tech_tiles_state(supply: Vec<u8>) -> gaia_engine::game_state::GameState {
 fn upgrade_action(tech_tile_choice: Option<TechTileChoice>) -> GameAction {
     GameAction::Upgrade {
         coord: HexCoord::new(0, 0),
-        to: StructureType::TradingStation,
+        to: StructureType::ResearchLab,
         tech_tile_choice,
     }
 }
@@ -94,13 +103,45 @@ fn upgrade_can_take_a_standard_tile_and_advance_a_research_track() {
     .unwrap_or_else(|e| panic!("upgrade with a tech tile choice should succeed: {e}"));
 
     assert!(state.players[0].tech_tiles.contains(&TechTile(4)));
-    // Upgrade cost is 2 ore, the tile grants 1 ore + 1 QIC back.
-    assert_eq!(state.players[0].resources.ore, ore_before - 2 + 1);
+    // Trading Station -> Research Lab costs 3 ore; the tile grants 1 ore and
+    // Terraforming level 1 immediately grants its printed 2 ore reward.
+    assert_eq!(state.players[0].resources.ore, ore_before - 3 + 1 + 2);
     assert_eq!(state.players[0].resources.qic, qic_before + 1);
     assert_eq!(state.players[0].research_tracks.terraforming, 1);
     assert!(events.iter().any(
         |e| matches!(e, GameEvent::TechTileGained { player: 0, tile } if *tile == TechTile(4))
     ));
+}
+
+#[test]
+fn upper_standard_tile_automatically_advances_its_aligned_track() {
+    let mut state = tech_tiles_state(vec![4]);
+    state.research_board.tech_tile_slots = vec![
+        None,
+        Some(TechTile(4)),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    ];
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::Standard {
+            tile: TechTile(4),
+            // The server derives Navigation from slot index 1 instead of trusting clients.
+            advance_track: Some(ResearchTrack::Science),
+            bonus_build_coord: None,
+        })),
+    )
+    .unwrap_or_else(|e| panic!("aligned Standard Tech tile should succeed: {e}"));
+
+    assert_eq!(state.players[0].research_tracks.navigation, 1);
+    assert_eq!(state.players[0].research_tracks.science, 0);
 }
 
 #[test]
@@ -248,7 +289,7 @@ fn covered_standard_tile_stops_granting_its_ongoing_power_value_bonus() {
     // grant, so covering it should immediately stop it applying. Checked via the amount an
     // opponent may charge when building near the Planetary Institute (base power value 3).
     let pi = HexCoord::new(0, 0);
-    let mine = HexCoord::new(2, 0); // player 0's own Mine, used to take the covering Advanced tile
+    let mine = HexCoord::new(2, 0); // player 0's own Trading Station, used to take the Advanced tile
     let target = HexCoord::new(1, 0); // player 1's Build target, within charge-power range of `pi`
     let mut hexes = HashMap::new();
     hexes.insert(
@@ -272,7 +313,7 @@ fn covered_standard_tile_stops_granting_its_ongoing_power_value_bonus() {
             space_tile_kind: None,
             structures: vec![PlacedStructure {
                 owner: 0,
-                kind: StructureType::Mine,
+                kind: StructureType::TradingStation,
             }],
             satellites: vec![],
         },
@@ -329,7 +370,7 @@ fn covered_standard_tile_stops_granting_its_ongoing_power_value_bonus() {
                 },
                 Structure {
                     hex: mine,
-                    kind: StructureType::Mine,
+                    kind: StructureType::TradingStation,
                 },
             ];
         })
@@ -361,14 +402,14 @@ fn covered_standard_tile_stops_granting_its_ongoing_power_value_bonus() {
     RuleEngine::apply_action(&mut state, 0, GameAction::ChargePower { accept: false })
         .unwrap_or_else(|e| panic!("decline should succeed: {e}"));
 
-    // Player 0 covers tile 6 by taking an Advanced tile via upgrading their Mine.
+    // Player 0 covers tile 6 by taking an Advanced tile via upgrading their Trading Station.
     state.phase = GamePhase::ActionPhase { active_player: 0 };
     RuleEngine::apply_action(
         &mut state,
         0,
         GameAction::Upgrade {
             coord: mine,
-            to: StructureType::TradingStation,
+            to: StructureType::ResearchLab,
             tech_tile_choice: Some(TechTileChoice::Advanced {
                 track: ResearchTrack::Terraforming,
                 covered_tile: TechTile(6),
@@ -421,7 +462,8 @@ fn income_tile_grants_resources_every_income_phase() {
 
     RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|e| panic!("{e}"));
 
-    assert_eq!(state.players[0].resources.credits, credits_before + 4);
+    // 4 from the Tech tile plus the Trading Station's normal 3-credit income.
+    assert_eq!(state.players[0].resources.credits, credits_before + 7);
 }
 
 #[test]
@@ -669,7 +711,7 @@ fn special_action_tile_is_usable_once_per_round() {
 #[test]
 fn lost_fleet_free_build_mine_tile_requires_a_coord() {
     let target = HexCoord::new(1, 0);
-    let mut board = board_with_mine();
+    let mut board = board_with_trading_station();
     board.hexes.insert(
         target,
         Hex {
@@ -691,7 +733,7 @@ fn lost_fleet_free_build_mine_tile_requires_a_coord() {
             p.resources.credits = 10;
             p.structures = vec![Structure {
                 hex: HexCoord::new(0, 0),
-                kind: StructureType::Mine,
+                kind: StructureType::TradingStation,
             }];
         })
         .with_player(1)
@@ -730,9 +772,36 @@ fn lost_fleet_free_build_mine_tile_requires_a_coord() {
     // Target is the player's own home planet type (Terra), so terraforming distance is 0 either
     // way — this only confirms the flat 1-ore Mine build cost applied, not the free-step waiver
     // itself (a distance-1+ target would be needed for that, and isn't essential here). The
-    // enclosing Upgrade itself also costs 2 ore (Mine -> Trading Station), so total ore spent is
-    // 2 (upgrade) + 1 (the tile's free mine build) = 3.
-    assert_eq!(state.players[0].resources.ore, ore_before - 3);
+    // enclosing Upgrade itself costs 3 ore (Trading Station -> Research Lab), so total ore spent
+    // is 3 (upgrade) + 1 (the tile's free mine build) = 4.
+    assert_eq!(state.players[0].resources.ore, ore_before - 4);
+}
+
+#[test]
+fn mine_to_trading_station_cannot_take_a_tech_tile() {
+    let mut state = tech_tiles_state(vec![4]);
+    state.players[0].structures[0].kind = StructureType::Mine;
+    let Some(hex) = state.board.hexes.get_mut(&HexCoord::new(0, 0)) else {
+        panic!("test structure hex");
+    };
+    hex.structures[0].kind = StructureType::Mine;
+
+    let result = RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::Upgrade {
+            coord: HexCoord::new(0, 0),
+            to: StructureType::TradingStation,
+            tech_tile_choice: Some(TechTileChoice::Standard {
+                tile: TechTile(4),
+                advance_track: Some(ResearchTrack::Terraforming),
+                bonus_build_coord: None,
+            }),
+        },
+    );
+
+    assert!(result.is_err());
+    assert!(!state.players[0].tech_tiles.contains(&TechTile(4)));
 }
 
 #[test]

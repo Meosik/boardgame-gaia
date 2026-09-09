@@ -8,10 +8,10 @@ interface Props {
 type EventPayload = Record<string, unknown>;
 
 const FREE_ACTION_LABELS: Record<FreeActionKind, string> = {
-  BurnPower: '파워 희생', CreditsToQic: '크레딧 → QIC', CreditsToOre: '크레딧 → 광석',
-  CreditsToKnowledge: '크레딧 → 지식', GaiaformerToQic: '가이아포머 → QIC',
+  BurnPower: '파워 희생', CreditsToQic: '크레딧 → 정보 큐브', CreditsToOre: '크레딧 → 광석',
+  CreditsToKnowledge: '크레딧 → 지식', GaiaformerToQic: '가이아포머 → 정보 큐브',
   PowerToGaiaKnowledge: '파워 → 가이아 영역 + 지식', OreToPowerBowl3: '광석 → 3단계 파워',
-  PowerToQic: '파워 → QIC', PowerToOre: '파워 → 광석', QicToOre: 'QIC → 광석',
+  PowerToQic: '파워 → 정보 큐브', PowerToOre: '파워 → 광석', QicToOre: '정보 큐브 → 광석',
   PowerToKnowledge: '파워 → 지식', PowerToCredit: '파워 → 크레딧',
   KnowledgeToCredit: '지식 → 크레딧', OreToCredit: '광석 → 크레딧', OreToPower: '광석 → 파워 토큰',
 };
@@ -44,7 +44,7 @@ function playerName(players: PlayerState[], player: unknown): string {
 function structureLabel(value: unknown): string {
   if (typeof value === 'string') return STRUCTURE_LABELS[value] ?? value;
   const academy = asRecord(value)?.Academy;
-  return typeof academy === 'string' ? `아카데미(${academy === 'Qic' ? 'QIC' : '과학'})` : '구조물';
+  return typeof academy === 'string' ? `아카데미(${academy === 'Qic' ? '정보 큐브' : '과학'})` : '구조물';
 }
 
 function valueId(value: unknown): string {
@@ -85,11 +85,11 @@ function formatEvent(event: GameEvent, players: PlayerState[]): string | null {
   let payload = payloadFor(event, 'FactionSelected');
   if (payload) return `${playerName(players, payload.player)}: 종족 ${String(payload.faction)} 선택`;
   payload = payloadFor(event, 'BidPlaced');
-  if (payload) return `${playerName(players, payload.player)}: ${String(payload.amount)} VP 입찰`;
+  if (payload) return `${playerName(players, payload.player)}: 승점 ${String(payload.amount)}점 입찰`;
   payload = payloadFor(event, 'BidPassed');
   if (payload) return `${playerName(players, payload.player)}: 입찰 패스`;
   payload = payloadFor(event, 'BidWon');
-  if (payload) return `${playerName(players, payload.player)}: ${String(payload.amount)} VP로 ${String(payload.faction)}·${String(payload.turn_position)}번 순서 획득`;
+  if (payload) return `${playerName(players, payload.player)}: 승점 ${String(payload.amount)}점으로 ${String(payload.faction)}·${String(payload.turn_position)}번 순서 획득`;
 
   payload = payloadFor(event, 'FreeActionTaken');
   if (payload) {
@@ -99,15 +99,34 @@ function formatEvent(event: GameEvent, players: PlayerState[]): string | null {
   payload = payloadFor(event, 'ResourceChanged');
   if (payload) {
     const delta = asRecord(payload.delta) ?? {};
-    const labels: [string, string][] = [['ore', '광석'], ['credits', '크레딧'], ['knowledge', '지식'], ['qic', 'QIC']];
+    const labels: [string, string][] = [['ore', '광석'], ['credits', '크레딧'], ['knowledge', '지식'], ['qic', '정보 큐브']];
     const changes = labels.flatMap(([key, label]) => {
       const amount = delta[key];
       return typeof amount === 'number' && amount !== 0 ? [`${label} ${amount > 0 ? '+' : ''}${amount}`] : [];
     });
     return `${playerName(players, payload.player)}: 자원 변화 ${changes.join(', ') || '없음'}`;
   }
+  payload = payloadFor(event, 'IncomeReceived');
+  if (payload) {
+    const income = payload;
+    const labels: [string, string][] = [
+      ['ore', '광석'], ['credits', '크레딧'], ['knowledge', '지식'], ['qic', '정보 큐브'],
+    ];
+    const gains = labels.flatMap(([key, label]) => {
+      const amount = income[key];
+      return typeof amount === 'number' && amount > 0 ? [`${label} +${amount}`] : [];
+    });
+    if (typeof income.power_charge === 'number' && income.power_charge > 0) {
+      gains.push(`파워 충전 +${income.power_charge}`);
+    }
+    if (typeof income.power_tokens === 'number' && income.power_tokens > 0) {
+      gains.push(`파워 토큰 +${income.power_tokens}`);
+    }
+    if (typeof income.vp === 'number' && income.vp > 0) gains.push(`승점 +${income.vp}점`);
+    return `${playerName(players, income.player)}: ${String(income.round)}라운드 수입 ${gains.join(', ') || '없음'}`;
+  }
   payload = payloadFor(event, 'VpAwarded');
-  if (payload) return `${playerName(players, payload.player)}: ${vpReason(payload.reason)}로 ${String(payload.amount)} VP`;
+  if (payload) return `${playerName(players, payload.player)}: ${vpReason(payload.reason)}로 승점 ${String(payload.amount)}점`;
 
   payload = payloadFor(event, 'StructureBuilt');
   if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)}에 ${structureLabel(payload.kind)} 건설`;
@@ -119,6 +138,8 @@ function formatEvent(event: GameEvent, players: PlayerState[]): string | null {
   if (payload) return `${playerName(players, payload.player)}: 연방 형성 (토큰 #${valueId(payload.token)})`;
   payload = payloadFor(event, 'ResearchAdvanced');
   if (payload) return `${playerName(players, payload.player)}: ${TRACK_LABELS[String(payload.track)] ?? String(payload.track)} 연구 ${String(payload.level)}단계`;
+  payload = payloadFor(event, 'LostPlanetPlaced');
+  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)}에 검은 행성 배치`;
   payload = payloadFor(event, 'GaiaFormingStarted');
   if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)} 가이아포밍 시작`;
   payload = payloadFor(event, 'GaiaFormingComplete');
@@ -127,6 +148,13 @@ function formatEvent(event: GameEvent, players: PlayerState[]): string | null {
   if (payload) return `${playerName(players, payload.player)}: 초기 부스터 #${valueId(payload.booster)} 선택`;
   payload = payloadFor(event, 'PlayerPassed');
   if (payload) return `${playerName(players, payload.player)}: 패스${valueId(payload.booster) === '0' ? '' : ` (부스터 #${valueId(payload.booster)} 반납)`}`;
+
+  payload = payloadFor(event, 'UndoRequested');
+  if (payload) return `${playerName(players, payload.requester)}: 직전 차례 되돌리기 요청`;
+  payload = payloadFor(event, 'UndoRejected');
+  if (payload) return `${playerName(players, payload.responder)}: ${playerName(players, payload.requester)}님의 되돌리기 거절`;
+  payload = payloadFor(event, 'UndoApplied');
+  if (payload) return `${playerName(players, payload.requester)}: ${payload.free_action_only ? '이번 차례 자유행동 전부' : '직전 차례'} 되돌림`;
 
   payload = payloadFor(event, 'ShipExplored');
   if (payload) return `${playerName(players, payload.player)}: 함선 ${String(payload.ship_id)} 탐사`;
@@ -154,14 +182,16 @@ export function GameLog({ events, players }: Props) {
     .filter((entry): entry is { index: number; text: string } => entry.text !== null)
     .slice(-30)
     .reverse();
-  if (entries.length === 0) return null;
-
   return (
     <section className="game-log" aria-label="게임 로그">
       <h3 className="game-log-title">게임 로그</h3>
-      <ol className="game-log-list">
-        {entries.map(({ index, text }) => <li key={index}>{text}</li>)}
-      </ol>
+      {entries.length === 0 ? (
+        <p className="game-log-empty">아직 기록된 행동이 없습니다.</p>
+      ) : (
+        <ol className="game-log-list">
+          {entries.map(({ index, text }) => <li key={index}>{text}</li>)}
+        </ol>
+      )}
     </section>
   );
 }

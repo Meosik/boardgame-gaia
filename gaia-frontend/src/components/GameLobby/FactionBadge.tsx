@@ -46,18 +46,11 @@ export function FactionBadge({
   const r = size / 2;
 
   const circle = imageSrc ? (
-    <img
-      src={imageSrc}
-      alt={faction}
-      width={size}
-      height={size}
-      // Exploration Board portraits are 480x1332 with the character art in a
-      // ~480x480 band starting ~60px (~7% of the 852px vertical overflow
-      // once cover-scaled to a square) from the top — the default 50%
-      // vertical center instead lands on the stats table in the board's
-      // midsection. Verified against terraner/ambas/bal_t_ak/lantida/itar
-      // crops at this offset: face fully visible and centered for all.
-      style={{ borderRadius: '50%', objectFit: 'cover', objectPosition: '50% 7%', display: 'block' }}
+    <span
+      className="faction-badge-portrait"
+      role="img"
+      aria-label={faction}
+      style={{ width: size, height: size, backgroundImage: `url(${imageSrc})` }}
     />
   ) : (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>

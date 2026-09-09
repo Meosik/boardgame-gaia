@@ -86,6 +86,31 @@ impl GameRepository {
         }
     }
 
+    /// Loads the exact committed snapshot used by an undo checkpoint. Room
+    /// revisions remain monotonic; the loaded state is written again as a new
+    /// revision rather than moving the room's revision counter backwards.
+    pub async fn load_snapshot_at_revision(
+        &self,
+        room_code: &str,
+        revision: u64,
+    ) -> ServerResult<Option<GameState>> {
+        let revision = i64::try_from(revision)
+            .map_err(|_| ServerError::Internal("snapshot revision overflow".into()))?;
+        let row: Option<(serde_json::Value,)> = sqlx::query_as(
+            "SELECT snapshot FROM game_snapshots
+             WHERE room_code = $1 AND revision = $2",
+        )
+        .bind(room_code)
+        .bind(revision)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        row.map(|(json,)| {
+            GameState::deserialize(json).map_err(|error| ServerError::Internal(error.to_string()))
+        })
+        .transpose()
+    }
+
     // ── Events ────────────────────────────────────────────────────────────────
 
     pub async fn load_events_since(

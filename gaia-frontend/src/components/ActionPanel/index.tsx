@@ -1,9 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { shallow } from 'zustand/shallow';
 import { useGameStore } from '../../store/gameStore';
 import { hexKey } from '../GameBoard/hex-utils';
+import { validateFederationSelection } from '../federationSelection';
 import { roundBoosterImageSrc } from '../../assets/roundBoosterImages';
+import { tinkeringTileImageSrc } from '../../assets/tinkeringTileImages';
+import rangeIcon from '../../assets/icons/normalized/range.webp';
+import {
+  FREE_ACTIONS,
+  maxFreeActionCount,
+  isFreeActionAvailableToPlayer,
+} from '../freeActions';
+import {
+  REQUIRED_SPACESHIP_BY_ACTION,
+  SPACESHIP_ACTION_SLOT_BY_TYPE,
+} from '../boardActionSpaces';
 import type {
   FederationTokenChoice,
   FreeActionKind,
@@ -16,20 +28,22 @@ import type {
   StructureType,
   TechTileChoice,
 } from '../../types/game';
+import { activeActionPlayerId } from '../../types/game';
 
 interface Props {
   gameState: GameState;
   myPlayerId: PlayerId;
+  /** Shows only the details for an action already selected on the board. */
+  focusedAction?: boolean;
 }
 
 type ActionKind = GameAction['type'];
 
 const ACTION_BUTTONS: { label: string; actionType: ActionKind; shortcut?: string }[] = [
   { label: '광산 건설', actionType: 'Build', shortcut: 'M' },
-  { label: '구조물 업그레이드', actionType: 'Upgrade', shortcut: 'U' },
   { label: '연구', actionType: 'ResearchAdvance', shortcut: 'R' },
   { label: '연방 형성', actionType: 'FormFederation', shortcut: 'F' },
-  { label: '파워 액션', actionType: 'PowerAction', shortcut: 'P' },
+  { label: '공용 파워 액션', actionType: 'PowerAction', shortcut: 'P' },
   { label: '가이아 프로젝트', actionType: 'GaiaFormation', shortcut: 'G' },
   { label: '부스터 즉시 가이아포밍', actionType: 'RoundBoosterImmediateGaiaFormation' },
   { label: '부스터 +3 사거리 광산 건설', actionType: 'RoundBoosterRangeBuild' },
@@ -46,16 +60,16 @@ const ACTION_BUTTONS: { label: string; actionType: ActionKind; shortcut?: string
   { label: '아티팩트 조사', actionType: 'ExamineArtifact', shortcut: 'A' },
   { label: '함선 크레딧 액션 (테라포밍 1단계 무료)', actionType: 'SpaceshipCreditTerraform' },
   { label: 'Twilight 무료 업그레이드 (교역소→연구소)', actionType: 'TwilightFreeResearchLab' },
-  { label: 'Twilight 연방 토큰 효과 재사용 (QIC 3)', actionType: 'TwilightReplayFederationToken' },
+  { label: 'Twilight 연방 토큰 효과 재사용 (정보 큐브 3)', actionType: 'TwilightReplayFederationToken' },
   { label: 'Twilight +3 사거리 광산 건설 (지식 1)', actionType: 'TwilightRangeBuild' },
   { label: 'Twilight +3 사거리 가이아 프로젝트 (지식 1)', actionType: 'TwilightRangeGaiaFormation' },
   { label: 'Twilight +3 사거리 함선 탐사 (지식 1)', actionType: 'TwilightRangeExploreSpaceship' },
   { label: 'Rebellion 무료 업그레이드 (광산→교역소)', actionType: 'RebellionFreeTradingStation' },
-  { label: 'Rebellion 지식 액션 (지식 2 → 크레딧 2 + QIC 1)', actionType: 'RebellionCreditsAndQic' },
-  { label: 'Rebellion 표준 기술 타일 획득 (QIC 3)', actionType: 'RebellionGainTechTile' },
-  { label: 'T F Mars QIC 액션 (QIC 2 → 2 + 기술 타일당 1점)', actionType: 'TFMarsTechBonus' },
+  { label: 'Rebellion 지식 액션 (지식 2 → 크레딧 2 + 정보 큐브 1)', actionType: 'RebellionCreditsAndQic' },
+  { label: 'Rebellion 표준 기술 타일 획득 (정보 큐브 3)', actionType: 'RebellionGainTechTile' },
+  { label: 'T F Mars 정보 큐브 액션 (정보 큐브 2 → 2 + 기술 타일당 1점)', actionType: 'TFMarsTechBonus' },
   { label: 'T F Mars 즉시 가이아포밍 (파워 2)', actionType: 'TFMarsGaiaFormation' },
-  { label: 'Eclipse QIC 액션 (QIC 2 → 2 + 행성 종류당 1점)', actionType: 'EclipsePlanetTypeBonus' },
+  { label: 'Eclipse 정보 큐브 액션 (정보 큐브 2 → 2 + 행성 종류당 1점)', actionType: 'EclipsePlanetTypeBonus' },
   { label: 'Eclipse 연구 부스트 (파워 3 + 지식 2)', actionType: 'EclipseResearchBoost' },
   { label: 'Eclipse 소행성 광산 (크레딧 6)', actionType: 'EclipseAsteroidMine' },
   { label: 'Gleens 특수 능력: 광산 건설 (+2 사거리)', actionType: 'GleensBuildMine' },
@@ -63,6 +77,14 @@ const ACTION_BUTTONS: { label: string; actionType: ActionKind; shortcut?: string
   { label: 'Gleens 특수 능력: 함선 탐사 (+2 사거리)', actionType: 'GleensExploreSpaceship' },
   { label: 'Space Giants 특수 능력: 광산 건설 (테라포밍 2단계 무료)', actionType: 'SpaceGiantsBuildMine' },
 ];
+
+const PRIMARY_ACTION_TYPES = new Set<ActionKind>([
+  'Build',
+  'ResearchAdvance',
+  'FormFederation',
+  'PowerAction',
+  'GaiaFormation',
+]);
 
 // Lost Fleet Exploration Board special action (`GP_Exp_Rule_EN_V1_Web.pdf` p.10): the Gleens'
 // three action modes share one once-per-round flag (`PlayerState.gleens_special_action_used_this_round`),
@@ -90,9 +112,9 @@ const REQUIRED_FACTION_BY_ACTION: Partial<
 // with free terraforming steps and need a board hex; the rest are flat resource gains.
 const TINKEROIDS_TILE_LABELS: Record<number, string> = {
   1: '광산 건설 (테라포밍 1단계 무료)',
-  2: 'QIC 1 획득',
+  2: '정보 큐브 1 획득',
   3: '파워 4 충전',
-  4: 'QIC 2 획득',
+  4: '정보 큐브 2 획득',
   5: '광산 건설 (테라포밍 3단계 무료)',
   6: '지식 3 획득',
 };
@@ -113,7 +135,7 @@ const TRACK_ORDER: ResearchTrack[] = [
 const TECH_TILE_LABELS: Record<number, string> = {
   2: '수입: 광석 1 + 파워 충전 1',
   3: '수입: 크레딧 4',
-  4: '즉시: 광석 1 + QIC 1',
+  4: '즉시: 광석 1 + 정보 큐브 1',
   5: '수입: 지식 1 + 크레딧 1',
   6: '행성의회/아카데미 파워 가치 +1',
   7: '즉시: 7점',
@@ -142,12 +164,12 @@ const ADVANCED_TECH_TILE_LABELS: Record<number, string> = {
   13: '즉시: 대형 건물당 6점',
   14: '패스 시: 소행성당 2점',
   15: '패스 시: 딥스페이스 섹터당 2점',
-  16: 'QIC 액션 시 +4점',
+  16: '정보 큐브 액션 시 +4점',
   17: '테라포밍 단계 사용 시 +2점',
   19: '패스 시: 행성 종류당 1점',
   20: '특수 능력: 지식 3 획득',
   21: '특수 능력: 광석 3 획득',
-  22: '특수 능력: QIC 1 + 크레딧 5 획득',
+  22: '특수 능력: 정보 큐브 1 + 크레딧 5 획득',
 };
 
 const TECH_TILE_SPECIAL_ACTION_IDS = new Set([10]);
@@ -172,29 +194,12 @@ const REQUIRED_ROUND_BOOSTER_BY_ACTION: Partial<Record<ActionKind, number>> = {
   RoundBoosterRangeExploreSpaceship: 8,
 };
 
-const SPACESHIP_ACTION_SLOT_BY_TYPE: Partial<Record<ActionKind, number>> = {
-  SpaceshipCreditTerraform: 1,
-  TwilightFreeResearchLab: 2,
-  TwilightReplayFederationToken: 10,
-  TwilightRangeBuild: 11,
-  TwilightRangeGaiaFormation: 11,
-  TwilightRangeExploreSpaceship: 11,
-  RebellionFreeTradingStation: 3,
-  RebellionCreditsAndQic: 4,
-  RebellionGainTechTile: 12,
-  TFMarsTechBonus: 5,
-  TFMarsGaiaFormation: 6,
-  EclipsePlanetTypeBonus: 7,
-  EclipseResearchBoost: 8,
-  EclipseAsteroidMine: 9,
-};
-
 const TERRANS_GAIA_CONVERSIONS: {
   kind: Extract<FreeActionKind, 'PowerToQic' | 'PowerToOre' | 'PowerToKnowledge' | 'PowerToCredit'>;
   cost: number;
   label: string;
 }[] = [
-  { kind: 'PowerToQic', cost: 4, label: '가이아 파워 4 → QIC 1' },
+  { kind: 'PowerToQic', cost: 4, label: '가이아 파워 4 → 정보 큐브 1' },
   { kind: 'PowerToOre', cost: 3, label: '가이아 파워 3 → 광석 1' },
   { kind: 'PowerToKnowledge', cost: 4, label: '가이아 파워 4 → 지식 1' },
   { kind: 'PowerToCredit', cost: 1, label: '가이아 파워 1 → 크레딧 1' },
@@ -216,7 +221,7 @@ const SPACESHIPS: { id: SpaceshipId; label: string }[] = [
 // Standard Tech tile of choice (needs `bonus_tech_tile`).
 const FEDERATION_TOKEN_LABELS: Record<number, string> = {
   1: '12점',
-  2: '8점 + QIC 1',
+  2: '8점 + 정보 큐브 1',
   3: '8점 + 파워 2',
   4: '7점 + 광석 2',
   5: '7점 + 크레딧 6',
@@ -225,7 +230,7 @@ const FEDERATION_TOKEN_LABELS: Record<number, string> = {
   8: '[함선] 8점 + 크레딧 8',
   9: '[함선] 12점',
   10: '[함선] 4점 + 지식 4',
-  11: '[함선] 4점 + 광석 2 + QIC 1',
+  11: '[함선] 4점 + 광석 2 + 정보 큐브 1',
   12: '[함선] 기술 타일 1개 선택',
   13: '[함선] 7점 + 파워 2 (Area III 신규)',
   14: '[함선] 자유 테라포밍 3단계 무료 광산 건설',
@@ -244,7 +249,7 @@ const ARTIFACT_LABELS: Record<number, string> = {
   4: '가이아 프로젝트 레벨당 3점',
   5: '과학 레벨당 3점',
   6: '크레딧 3 + 광석 3',
-  7: '지식 3 + QIC 1',
+  7: '지식 3 + 정보 큐브 1',
   8: '7점',
   9: '크레딧 5 + 광석 2',
   10: '보유한 연방 토큰 효과 복사',
@@ -284,141 +289,14 @@ const UPGRADE_TARGETS: { label: string; to: StructureType }[] = [
   { label: '연구소', to: 'ResearchLab' },
   { label: '행성의회', to: 'PlanetaryInstitute' },
   { label: '아카데미(과학)', to: { Academy: 'Science' } },
-  { label: '아카데미(QIC)', to: { Academy: 'Qic' } },
+  { label: '아카데미(정보 큐브)', to: { Academy: 'Qic' } },
 ];
 
 // Rulebook p.15 free-action conversions — unlike every other action here,
 // these don't consume the turn, so the panel renders them as a persistent
 // list (always visible on the player's turn) rather than a selectable
-// action that needs a confirm step.
-type FreeActionResource =
-  | 'ore'
-  | 'credits'
-  | 'knowledge'
-  | 'qic'
-  | 'bowl2'
-  | 'bowl3'
-  | 'gaiaformer';
-
-interface FreeActionOption {
-  label: string;
-  kind: FreeActionKind;
-  cost: { resource: FreeActionResource; amount: number };
-  faction?: GameState['players'][number]['faction'];
-  requiresPlanetaryInstitute?: boolean;
-}
-
-const MAX_FREE_ACTION_COUNT = 30;
-
-const FREE_ACTIONS: FreeActionOption[] = [
-  {
-    label: '파워 희생: 2단계 2개 → 3단계 1개',
-    kind: 'BurnPower',
-    cost: { resource: 'bowl2', amount: 2 },
-  },
-  {
-    label: '크레딧 4 → QIC 1 (Hadsch Hallas)',
-    kind: 'CreditsToQic',
-    cost: { resource: 'credits', amount: 4 },
-    faction: 'HadschHallas',
-    requiresPlanetaryInstitute: true,
-  },
-  {
-    label: '크레딧 3 → 광석 1 (Hadsch Hallas)',
-    kind: 'CreditsToOre',
-    cost: { resource: 'credits', amount: 3 },
-    faction: 'HadschHallas',
-    requiresPlanetaryInstitute: true,
-  },
-  {
-    label: '크레딧 4 → 지식 1 (Hadsch Hallas)',
-    kind: 'CreditsToKnowledge',
-    cost: { resource: 'credits', amount: 4 },
-    faction: 'HadschHallas',
-    requiresPlanetaryInstitute: true,
-  },
-  {
-    label: '가이아포머 1 → QIC 1 (Bal T’aks)',
-    kind: 'GaiaformerToQic',
-    cost: { resource: 'gaiaformer', amount: 1 },
-    faction: 'BalTaks',
-  },
-  {
-    label: '파워 1(3단계) → 가이아 영역 + 지식 1 (Nevlas)',
-    kind: 'PowerToGaiaKnowledge',
-    cost: { resource: 'bowl3', amount: 1 },
-    faction: 'Nevlas',
-  },
-  {
-    label: '광석 1 → 파워 1(3단계) (Xenos)',
-    kind: 'OreToPowerBowl3',
-    cost: { resource: 'ore', amount: 1 },
-    faction: 'Xenos',
-  },
-  { label: '파워 4 → QIC 1', kind: 'PowerToQic', cost: { resource: 'bowl3', amount: 4 } },
-  { label: '파워 3 → 광석 1', kind: 'PowerToOre', cost: { resource: 'bowl3', amount: 3 } },
-  { label: 'QIC 1 → 광석 1', kind: 'QicToOre', cost: { resource: 'qic', amount: 1 } },
-  {
-    label: '파워 4 → 지식 1',
-    kind: 'PowerToKnowledge',
-    cost: { resource: 'bowl3', amount: 4 },
-  },
-  {
-    label: '파워 1 → 크레딧 1',
-    kind: 'PowerToCredit',
-    cost: { resource: 'bowl3', amount: 1 },
-  },
-  {
-    label: '지식 1 → 크레딧 1',
-    kind: 'KnowledgeToCredit',
-    cost: { resource: 'knowledge', amount: 1 },
-  },
-  { label: '광석 1 → 크레딧 1', kind: 'OreToCredit', cost: { resource: 'ore', amount: 1 } },
-  {
-    label: '광석 1 → 파워 토큰 1 (1단계)',
-    kind: 'OreToPower',
-    cost: { resource: 'ore', amount: 1 },
-  },
-];
-
-function availableFreeActionResource(
-  player: GameState['players'][number] | undefined,
-  resource: FreeActionResource,
-): number {
-  if (!player) return 0;
-  if (resource === 'gaiaformer') {
-    return Math.max(
-      0,
-      player.gaiaformers_total
-        - player.gaiaformers_deployed
-        - player.resources.spent_gaia_formers
-        - (player.gaiaformers_in_gaia_area ?? 0),
-    );
-  }
-  if (resource === 'bowl2' || resource === 'bowl3') return player.resources.power[resource];
-  return player.resources[resource];
-}
-
-function maxFreeActionCount(
-  player: GameState['players'][number] | undefined,
-  option: FreeActionOption,
-): number {
-  return Math.min(
-    MAX_FREE_ACTION_COUNT,
-    Math.floor(availableFreeActionResource(player, option.cost.resource) / option.cost.amount),
-  );
-}
-
-function isFreeActionAvailableToPlayer(
-  player: GameState['players'][number] | undefined,
-  option: FreeActionOption,
-): boolean {
-  if (!player || (option.faction && player.faction !== option.faction)) return false;
-  if (!option.requiresPlanetaryInstitute) return true;
-  return player.structures.some(
-    (structure) => structure.kind === 'PlanetaryInstitute',
-  );
-}
+// action that needs a confirm step. Shared with SidebarTurnControls via
+// '../freeActions' so the two panels can't drift apart on cost/faction logic.
 
 // Rulebook Appendix III power-action board slots 1-7 (confirmed against
 // gaia-frontend/src/assets/boards/research_board.jpg — the rulebook prose
@@ -476,10 +354,11 @@ function availableSpaceshipFederationTokens(
     .map((b) => ({ ship: b.id, kind: b.federation_token as number }));
 }
 
-export function ActionPanel({ gameState, myPlayerId }: Props) {
-  const { selectedAction, activePlanet, selectedHexes, actions } = useGameStore(
+export function ActionPanel({ gameState, myPlayerId, focusedAction = false }: Props) {
+  const { selectedAction, selectedPowerActionId, activePlanet, selectedHexes, actions } = useGameStore(
     (s) => ({
       selectedAction: s.selectedAction,
+      selectedPowerActionId: s.selectedPowerActionId,
       activePlanet: s.activePlanet,
       selectedHexes: s.selectedHexes,
       actions: s.actions,
@@ -488,7 +367,6 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
   );
 
   const [upgradeTarget, setUpgradeTarget] = useState<StructureType | null>(null);
-  const [powerActionId, setPowerActionId] = useState<number | null>(null);
   const [passBoosterId, setPassBoosterId] = useState<number | null>(null);
   const [spaceshipId, setSpaceshipId] = useState<SpaceshipId | null>(null);
   const [replayFederationKind, setReplayFederationKind] = useState<number | null>(null);
@@ -499,7 +377,6 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
     null,
   );
   const [federationBonusTechTile, setFederationBonusTechTile] = useState<number | null>(null);
-  const [tinkeroidsTile, setTinkeroidsTile] = useState<number | null>(null);
   const [upgradeTechTile, setUpgradeTechTile] = useState<
     { kind: 'Standard'; tile: number } | { kind: 'Advanced'; track: ResearchTrack } | null
   >(null);
@@ -508,11 +385,6 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
     null,
   );
   const [upgradeCoveredTile, setUpgradeCoveredTile] = useState<number | null>(null);
-  // Which of the board-clicked `selectedHexes` are satellite placements rather than colonized
-  // planets being federated — rulebook p.14, "Connecting Planets": satellites bridge planets
-  // that aren't directly adjacent, cost 1 power each, and never count toward the federation's
-  // power total.
-  const [satelliteHexKeys, setSatelliteHexKeys] = useState<Set<string>>(new Set());
   const [freeActionCounts, setFreeActionCounts] = useState<
     Partial<Record<FreeActionKind, number>>
   >({});
@@ -527,12 +399,112 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
   ]));
   const requiresBoosterChoice = gameState.round < 6 && currentPlayer?.booster != null;
 
+  useEffect(() => {
+    setUpgradeTarget(null);
+    setSpaceshipId(null);
+    setReplayFederationKind(null);
+    setExamineArtifactId(null);
+    setSelectedResearchTrack(null);
+    setFederationToken(null);
+    setFederationBonusCoord(null);
+    setFederationBonusTechTile(null);
+    setUpgradeTechTile(null);
+    setUpgradeAdvanceTrack(null);
+    setUpgradeBonusCoord(null);
+    setUpgradeCoveredTile(null);
+  }, [selectedAction]);
+
+  const federationSelectionKey = selectedHexes
+    .map(({ q, r }) => hexKey(q, r))
+    .sort()
+    .join('|');
+  useEffect(() => {
+    if (selectedAction !== 'FormFederation') return;
+    setFederationToken(null);
+    setFederationBonusCoord(null);
+    setFederationBonusTechTile(null);
+  }, [federationSelectionKey, selectedAction]);
+
   const phase = gameState.phase;
+  const selectedTinkeringTile = currentPlayer?.tinkeroids_selected_tile ?? null;
+  const federationSelection = validateFederationSelection(gameState, myPlayerId, selectedHexes);
+  const federationSatelliteHexKeys = new Set(
+    federationSelection.satelliteHexes.map((coord) => hexKey(coord.q, coord.r)),
+  );
 
   // ── Passive-action phase pauses take over the whole panel ────────────────
 
-  if (typeof phase === 'object' && 'ChargePowerPending' in phase) {
-    const entry = phase.ChargePowerPending.queue[0];
+  if (typeof phase === 'object' && 'TinkeroidsTileSelectionPending' in phase) {
+    const { player, round } = phase.TinkeroidsTileSelectionPending;
+    if (player !== myPlayerId) {
+      const name = gameState.players.find((candidate) => candidate.player_id === player)?.nickname ?? '상대';
+      return <WaitingPanel text={`${name}님이 팅커링 타일을 선택 중입니다...`} />;
+    }
+    return (
+      <div className="action-panel">
+        <h3 className="action-panel-title">라운드 {round} · 팅커링 타일 선택</h3>
+        <p className="action-hint">
+          이번 라운드에 사용할 타일 하나를 선택하세요. 사용하지 않아도 라운드 종료 시 제거됩니다.
+        </p>
+        <div className="action-buttons">
+          {tinkeroidsAvailableTiles(round, currentPlayer?.tinkeroids_tiles_used).map((tile) => (
+            <button
+              key={tile}
+              className="btn action-btn tinkering-tile-btn"
+              onClick={() => actions.sendAction({ type: 'SelectTinkeringTile', tile })}
+            >
+              <img
+                className="tinkering-tile-image"
+                src={tinkeringTileImageSrc(tile)}
+                alt={`팅커링 타일 ${tile}`}
+              />
+              <span>{TINKEROIDS_TILE_LABELS[tile]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (typeof phase === 'object' && 'LostPlanetPlacementPending' in phase) {
+    const pendingPlayer = phase.LostPlanetPlacementPending.player;
+    if (pendingPlayer !== myPlayerId) {
+      const name = gameState.players.find((p) => p.player_id === pendingPlayer)?.nickname ?? '상대';
+      return <WaitingPanel text={`${name}님이 검은 행성 위치를 선택 중입니다...`} />;
+    }
+    return (
+      <div className="action-panel">
+        <h3 className="action-panel-title">항해술 5단계 — 검은 행성</h3>
+        <p className="action-hint">
+          맵에서 비어 있는 칸을 선택하세요. 기본 사거리는 4이며 부족한 사거리는 필요한 만큼의
+          정보 큐브가 자동 사용됩니다. 배치된 검은 행성은 광산과 새로운 행성 종류로 계산됩니다.
+        </p>
+        {activePlanet && (
+          <p className="action-hint">
+            선택 좌표: ({activePlanet.q}, {activePlanet.r})
+          </p>
+        )}
+        <button
+          className="btn btn-primary confirm-btn"
+          disabled={!activePlanet}
+          onClick={() => {
+            if (activePlanet) actions.sendAction({ type: 'PlaceLostPlanet', coord: activePlanet });
+          }}
+        >
+          이 위치에 검은 행성 배치
+        </button>
+      </div>
+    );
+  }
+
+  const chargeQueue =
+    typeof phase === 'object' && 'ChargePowerPending' in phase
+      ? phase.ChargePowerPending.queue
+      : typeof phase === 'object' && 'LostPlanetChargePowerPending' in phase
+        ? phase.LostPlanetChargePowerPending.queue
+        : null;
+  if (chargeQueue) {
+    const entry = chargeQueue[0];
     if (!entry) return <WaitingPanel text="파워 충전 대기열 처리 중..." />;
     if (entry.player !== myPlayerId) {
       const name = gameState.players.find((p) => p.player_id === entry.player)?.nickname ?? '상대';
@@ -545,7 +517,7 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
       <div className="action-panel">
         <h3 className="action-panel-title">파워 충전</h3>
         <p className="action-hint">
-          최대 {entry.max_power}까지 충전할 수 있습니다 ({entry.max_power - 1} VP 소모). 충전하시겠습니까?
+          최대 {entry.max_power}까지 충전할 수 있습니다 (승점 {entry.max_power - 1}점 소모). 충전하시겠습니까?
         </p>
         {hasTaklonsPi ? (
           <>
@@ -696,41 +668,19 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
     );
   }
 
-  const isMyTurn =
-    typeof phase === 'object' &&
-    'ActionPhase' in phase &&
-    phase.ActionPhase.active_player === myPlayerId;
+  const activePlayerId = activeActionPlayerId(gameState);
+  const isMyTurn = activePlayerId === myPlayerId;
 
   if (!isMyTurn) {
-    const activeIdx =
-      typeof phase === 'object' && 'ActionPhase' in phase ? phase.ActionPhase.active_player : null;
     const activeName =
-      activeIdx !== null
-        ? (gameState.players[activeIdx]?.nickname ?? `Player ${activeIdx}`)
+      activePlayerId !== null
+        ? (gameState.players.find((player) => player.player_id === activePlayerId)?.nickname ??
+          `Player ${activePlayerId}`)
         : '?';
     return <WaitingPanel text={`${activeName}의 턴입니다...`} />;
   }
 
-  function resetSubSelection() {
-    setUpgradeTarget(null);
-    setPowerActionId(null);
-    setSpaceshipId(null);
-    setReplayFederationKind(null);
-    setExamineArtifactId(null);
-    setSelectedResearchTrack(null);
-    setFederationToken(null);
-    setFederationBonusCoord(null);
-    setFederationBonusTechTile(null);
-    setSatelliteHexKeys(new Set());
-    setTinkeroidsTile(null);
-    setUpgradeTechTile(null);
-    setUpgradeAdvanceTrack(null);
-    setUpgradeBonusCoord(null);
-    setUpgradeCoveredTile(null);
-  }
-
   function handleActionSelect(actionType: ActionKind) {
-    resetSubSelection();
     actions.selectAction(actionType === selectedAction ? null : actionType);
   }
 
@@ -804,17 +754,11 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
         // handled per-track-button below (no separate confirm step)
         break;
       case 'FormFederation':
-        if (selectedHexes.length > 0 && federationToken) {
-          const planetHexes = selectedHexes.filter(
-            (h) => !satelliteHexKeys.has(hexKey(h.q, h.r)),
-          );
-          const satelliteHexes = selectedHexes.filter((h) =>
-            satelliteHexKeys.has(hexKey(h.q, h.r)),
-          );
+        if (federationSelection.valid && federationToken) {
           actions.sendAction({
             type: 'FormFederation',
-            hexes: planetHexes,
-            satellite_hexes: satelliteHexes,
+            hexes: federationSelection.planetHexes,
+            satellite_hexes: federationSelection.satelliteHexes,
             token: federationToken,
             bonus_build_coord: federationBonusCoord,
             bonus_tech_tile: federationBonusTechTile,
@@ -824,8 +768,8 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
       case 'PowerAction':
         // Only the two coord-taking slots (2, 6) reach this confirm step —
         // the rest send immediately when clicked, see POWER_ACTIONS below.
-        if (powerActionId !== null && activePlanet) {
-          actions.sendAction({ type: 'PowerAction', id: powerActionId, coord: activePlanet });
+        if (selectedPowerActionId !== null && activePlanet) {
+          actions.sendAction({ type: 'PowerAction', id: selectedPowerActionId, coord: activePlanet });
         }
         break;
       case 'SpecialAction':
@@ -856,8 +800,12 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
       case 'TinkeroidsUseTile':
         // Resource tiles (no coord needed) dispatch directly from their picker button below;
         // this only fires for the two "Build a Mine" tiles once a board hex is also selected.
-        if (tinkeroidsTile !== null && activePlanet) {
-          actions.sendAction({ type: 'TinkeroidsUseTile', tile: tinkeroidsTile, coord: activePlanet });
+        if (selectedTinkeringTile !== null && activePlanet) {
+          actions.sendAction({
+            type: 'TinkeroidsUseTile',
+            tile: selectedTinkeringTile,
+            coord: activePlanet,
+          });
         }
         break;
       case 'MoweydsPlacePowerRing':
@@ -984,8 +932,8 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
 
   const selectedPowerActionNeedsCoord =
     selectedAction === 'PowerAction' &&
-    powerActionId !== null &&
-    (POWER_ACTIONS.find((a) => a.id === powerActionId)?.needsCoord ?? false);
+    selectedPowerActionId !== null &&
+    (POWER_ACTIONS.find((a) => a.id === selectedPowerActionId)?.needsCoord ?? false);
 
   // Artifact 10 ("copy the effect of a Federation Token you own") reuses the same
   // `replayFederationKind`/follow-up state as `TwilightReplayFederationToken` below, since it's
@@ -1031,7 +979,7 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
   const federationNeedsBuildCoord = federationKind === 14 || federationKind === 15;
   const federationNeedsTechTile = federationKind === 12;
   const federationReady =
-    selectedHexes.length > 0 &&
+    federationSelection.valid &&
     federationKind !== null &&
     (!federationNeedsBuildCoord || !!federationBonusCoord) &&
     (!federationNeedsTechTile || federationBonusTechTile !== null);
@@ -1058,8 +1006,8 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
       !!selectedResearchTrack) ||
     (selectedAction === 'IvitsPlaceSpaceStation' && !!activePlanet) ||
     (selectedAction === 'TinkeroidsUseTile' &&
-      tinkeroidsTile !== null &&
-      tinkeroidsTileNeedsCoord(tinkeroidsTile) &&
+      selectedTinkeringTile !== null &&
+      tinkeroidsTileNeedsCoord(selectedTinkeringTile) &&
       !!activePlanet) ||
     (selectedAction === 'MoweydsPlacePowerRing' && !!activePlanet) ||
     (selectedAction === 'ExamineArtifact' &&
@@ -1087,48 +1035,137 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
     (selectedAction === 'SpaceGiantsBuildMine' && !!activePlanet) ||
     (selectedPowerActionNeedsCoord && !!activePlanet);
 
+  const availableActionButtons = ACTION_BUTTONS.filter(
+    ({ actionType }) =>
+      (actionType !== 'SpecialAction' || currentPlayer?.faction === 'SpaceGiants') &&
+      (REQUIRED_FACTION_BY_ACTION[actionType] === undefined ||
+        currentPlayer?.faction === REQUIRED_FACTION_BY_ACTION[actionType]) &&
+      (!GLEENS_SPECIAL_ACTION_TYPES.includes(actionType) || currentPlayer?.faction === 'Gleens') &&
+      (actionType !== 'SpaceGiantsBuildMine' || currentPlayer?.faction === 'SpaceGiants') &&
+      (REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType] === undefined ||
+        currentPlayer?.booster === REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType]),
+  );
+  const primaryActionButtons = availableActionButtons.filter(({ actionType }) =>
+    PRIMARY_ACTION_TYPES.has(actionType),
+  );
+  const specialActionButtons = availableActionButtons.filter(
+    ({ actionType }) => !PRIMARY_ACTION_TYPES.has(actionType),
+  );
+  const selectedActionLabel =
+    ACTION_BUTTONS.find(({ actionType }) => actionType === selectedAction)?.label ?? selectedAction;
+  const selectedPowerActionLabel = selectedPowerActionId === null
+    ? null
+    : POWER_ACTIONS.find(({ id }) => id === selectedPowerActionId)?.label ?? null;
+  const focusedActionTitle = selectedAction === 'FormFederation'
+    ? '연방 구축'
+    : selectedAction === 'PowerAction' && selectedPowerActionLabel
+      ? selectedPowerActionLabel
+      : selectedActionLabel;
+  const actionInstruction = !selectedAction
+    ? '1. 필요하면 무료 행동으로 자원을 준비한 뒤, 할 주 행동을 선택하세요.'
+    : needsCoord && !activePlanet
+      ? '2. 게임 보드에서 대상 헥스를 선택하세요.'
+      : canConfirm
+        ? '3. 선택 내용을 확인한 뒤 실행하세요.'
+        : '2. 아래에서 세부 옵션을 선택하세요.';
+
+  function renderLabelWithRangeIcon(label: string) {
+    const pattern = /\+(\d+) 사거리/g;
+    const nodes: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(label)) !== null) {
+      if (match.index > lastIndex) nodes.push(label.slice(lastIndex, match.index));
+      nodes.push(
+        <span className="inline-range-badge" key={match.index}>
+          <img src={rangeIcon} alt="사거리" />+{match[1]}
+        </span>,
+      );
+      lastIndex = match.index + match[0].length;
+    }
+    nodes.push(label.slice(lastIndex));
+    return nodes;
+  }
+
+  function renderActionButton({ label, actionType, shortcut }: (typeof ACTION_BUTTONS)[number]) {
+    const spaceshipSlot = SPACESHIP_ACTION_SLOT_BY_TYPE[actionType];
+    const requiredSpaceship = REQUIRED_SPACESHIP_BY_ACTION[actionType];
+    const requiredSpaceshipBoard = gameState.spaceship_boards.find(
+      (board) => board.id === requiredSpaceship,
+    );
+    const lacksSpaceshipAccess =
+      requiredSpaceshipBoard !== undefined &&
+      !requiredSpaceshipBoard.explorers.includes(myPlayerId);
+    const usedThisRound =
+      (spaceshipSlot !== undefined && gameState.used_spaceship_actions.includes(spaceshipSlot)) ||
+      (GLEENS_SPECIAL_ACTION_TYPES.includes(actionType) &&
+        !!currentPlayer?.gleens_special_action_used_this_round) ||
+      (actionType === 'SpaceGiantsBuildMine' &&
+        !!currentPlayer?.space_giants_special_action_used_this_round) ||
+      (REQUIRED_FACTION_BY_ACTION[actionType] !== undefined &&
+        !!currentPlayer?.faction_special_action_used_this_round) ||
+      (REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType] !== undefined &&
+        !!currentPlayer?.round_booster_special_action_used_this_round);
+    const needsTinkeringTile =
+      actionType === 'TinkeroidsUseTile' && selectedTinkeringTile === null;
+    const unavailableReason = usedThisRound
+      ? '이번 라운드 사용됨'
+      : needsTinkeringTile
+        ? '이번 라운드 타일 선택 필요'
+      : lacksSpaceshipAccess
+        ? `${requiredSpaceship} 함선 진입 필요`
+        : null;
+
+    return (
+      <button
+        key={actionType}
+        className={clsx(
+          'btn action-btn',
+          unavailableReason ? 'action-btn--unavailable' : 'action-btn--available',
+          selectedAction === actionType && 'action-btn--selected',
+        )}
+        disabled={usedThisRound || lacksSpaceshipAccess || needsTinkeringTile}
+        title={unavailableReason ?? undefined}
+        onClick={() => handleActionSelect(actionType)}
+      >
+        <span className="action-label">
+          {unavailableReason ? `${label} (${unavailableReason})` : renderLabelWithRangeIcon(label)}
+        </span>
+        {shortcut && <kbd className="action-shortcut">{shortcut}</kbd>}
+      </button>
+    );
+  }
+
   return (
     <div className="action-panel">
-      <h3 className="action-panel-title">내 턴</h3>
-      <div className="action-buttons">
-        {ACTION_BUTTONS.filter(
-          ({ actionType }) =>
-            (actionType !== 'SpecialAction' || currentPlayer?.faction === 'SpaceGiants') &&
-            (REQUIRED_FACTION_BY_ACTION[actionType] === undefined ||
-              currentPlayer?.faction === REQUIRED_FACTION_BY_ACTION[actionType]) &&
-            (!GLEENS_SPECIAL_ACTION_TYPES.includes(actionType) || currentPlayer?.faction === 'Gleens') &&
-            (actionType !== 'SpaceGiantsBuildMine' || currentPlayer?.faction === 'SpaceGiants') &&
-            (REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType] === undefined ||
-              currentPlayer?.booster === REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType]),
-        ).map(({ label, actionType, shortcut }) => {
-          const spaceshipSlot = SPACESHIP_ACTION_SLOT_BY_TYPE[actionType];
-          const usedThisRound =
-            (spaceshipSlot !== undefined && gameState.used_spaceship_actions.includes(spaceshipSlot)) ||
-            (GLEENS_SPECIAL_ACTION_TYPES.includes(actionType) &&
-              !!currentPlayer?.gleens_special_action_used_this_round) ||
-            (actionType === 'SpaceGiantsBuildMine' &&
-              !!currentPlayer?.space_giants_special_action_used_this_round) ||
-            (REQUIRED_FACTION_BY_ACTION[actionType] !== undefined &&
-              !!currentPlayer?.faction_special_action_used_this_round) ||
-            (REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType] !== undefined &&
-              !!currentPlayer?.round_booster_special_action_used_this_round);
-          return (
-            <button
-              key={actionType}
-              className={clsx('btn action-btn', selectedAction === actionType && 'action-btn--selected')}
-              disabled={usedThisRound}
-              onClick={() => handleActionSelect(actionType)}
-            >
-              <span className="action-label">
-                {usedThisRound ? `${label} (이번 라운드 사용됨)` : label}
-              </span>
-              {shortcut && <kbd className="action-shortcut">{shortcut}</kbd>}
-            </button>
-          );
-        })}
-      </div>
+      <h3 className="action-panel-title">
+        {focusedAction && focusedActionTitle ? focusedActionTitle : '내 턴 · 행동'}
+      </h3>
+      {!focusedAction && (
+        <div className="action-guide" aria-live="polite">
+          {selectedActionLabel && <strong>{selectedActionLabel} 선택됨</strong>}
+          <p>{actionInstruction}</p>
+          <span>빛나는 버튼은 현재 선택할 수 있습니다.</span>
+        </div>
+      )}
+      {selectedAction ? (
+        <button className="btn btn-ghost action-change-btn" onClick={() => actions.selectAction(null)}>
+          {focusedAction ? `${focusedActionTitle ?? '행동'} 취소` : '다른 행동 선택'}
+        </button>
+      ) : (
+        <>
+          <h4 className="action-panel-subtitle">기본 행동</h4>
+          <div className="action-buttons">{primaryActionButtons.map(renderActionButton)}</div>
+          {specialActionButtons.length > 0 && (
+            <details className="action-more">
+              <summary>특수·확장 행동 ({specialActionButtons.length})</summary>
+              <div className="action-buttons">{specialActionButtons.map(renderActionButton)}</div>
+            </details>
+          )}
+        </>
+      )}
 
-      {currentPlayer &&
+      {!focusedAction && !selectedAction && currentPlayer &&
         ((currentPlayer.tech_tiles ?? []).some((t) => TECH_TILE_SPECIAL_ACTION_IDS.has(t)) ||
           (currentPlayer.advanced_tech_tiles ?? []).some((t) =>
             ADVANCED_TECH_TILE_SPECIAL_ACTION_IDS.has(t),
@@ -1247,27 +1284,29 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
       {selectedAction === 'TinkeroidsUseTile' && currentPlayer && (
         <>
           <div className="action-buttons">
-            {tinkeroidsAvailableTiles(gameState.round, currentPlayer.tinkeroids_tiles_used).map(
-              (tile) => (
+            {selectedTinkeringTile !== null && (
                 <button
-                  key={tile}
-                  className={clsx(
-                    'btn action-btn',
-                    tinkeroidsTile === tile && 'action-btn--selected',
-                  )}
+                  className="btn action-btn tinkering-tile-btn action-btn--selected"
                   onClick={() => {
-                    setTinkeroidsTile(tile);
-                    if (!tinkeroidsTileNeedsCoord(tile)) {
-                      actions.sendAction({ type: 'TinkeroidsUseTile', tile, coord: null });
+                    if (!tinkeroidsTileNeedsCoord(selectedTinkeringTile)) {
+                      actions.sendAction({
+                        type: 'TinkeroidsUseTile',
+                        tile: selectedTinkeringTile,
+                        coord: null,
+                      });
                     }
                   }}
                 >
-                  {TINKEROIDS_TILE_LABELS[tile]}
+                  <img
+                    className="tinkering-tile-image"
+                    src={tinkeringTileImageSrc(selectedTinkeringTile)}
+                    alt={`팅커링 타일 ${selectedTinkeringTile}`}
+                  />
+                  <span>{TINKEROIDS_TILE_LABELS[selectedTinkeringTile]}</span>
                 </button>
-              ),
             )}
           </div>
-          {tinkeroidsTile !== null && tinkeroidsTileNeedsCoord(tinkeroidsTile) && (
+          {selectedTinkeringTile !== null && tinkeroidsTileNeedsCoord(selectedTinkeringTile) && (
             <p className="action-hint">보드에서 광산을 건설할 헥스를 선택한 뒤 확인을 누르세요.</p>
           )}
         </>
@@ -1304,7 +1343,10 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
         </div>
       )}
 
-      {selectedAction === 'Upgrade' && upgradeTarget && currentPlayer && (
+      {selectedAction === 'Upgrade'
+        && upgradeTarget
+        && (upgradeTarget === 'ResearchLab' || typeof upgradeTarget === 'object')
+        && currentPlayer && (
         <>
           <h4 className="action-panel-subtitle">기술 타일 선택 (선택사항)</h4>
           <div className="action-buttons">
@@ -1440,19 +1482,21 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
 
       {selectedAction === 'PowerAction' && (
         <div className="action-buttons">
-          {POWER_ACTIONS.map(({ id, label, needsCoord: idNeedsCoord }) => {
+          {POWER_ACTIONS
+            .filter(({ id }) => !focusedAction || selectedPowerActionId === null || id === selectedPowerActionId)
+            .map(({ id, label, needsCoord: idNeedsCoord }) => {
             const taken = gameState.used_power_actions.includes(id);
             return (
               <button
                 key={id}
                 className={clsx(
                   'btn action-btn',
-                  powerActionId === id && 'action-btn--selected',
+                  selectedPowerActionId === id && 'action-btn--selected',
                 )}
                 disabled={taken}
                 onClick={() => {
                   if (idNeedsCoord) {
-                    setPowerActionId(id);
+                    actions.selectPowerAction(id);
                   } else {
                     actions.sendAction({ type: 'PowerAction', id, coord: null });
                   }
@@ -1564,82 +1608,88 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
         <>
           <p className="action-hint">
             연방을 이룰 헥스를 보드에서 여러 개 선택하세요 ({selectedHexes.length}개 선택됨). 서로
-            인접하지 않은 행성을 연결하려면 그 사이 빈 헥스도 선택한 뒤 아래에서 위성으로
-            표시하세요 (위성 1개당 파워 1 소모, 다른 연방에 재사용 불가).
+            인접하지 않은 행성을 연결하려면 그 사이 빈 우주 헥스도 선택하세요. 빈 우주는 위성으로
+            자동 분류됩니다 (위성 1개당 파워 1 소모, 다른 연방에 재사용 불가).
           </p>
           {currentPlayer?.faction === 'Ivits' && (currentPlayer.federated_hexes?.length ?? 0) > 0 && (
             <p className="action-hint">
               Ivits는 하나의 연방만 계속 확장합니다: 새로 선택한 헥스는 기존 연방과 연결되어야
               하며, 누적 파워가 7 × (보유 연방 토큰 수 + 1) 이상이어야 합니다. 이번 확장에 쓰는
-              위성은 파워 대신 QIC 1개씩 소모합니다.
+              위성은 파워 대신 정보 큐브 1개씩 소모합니다.
             </p>
           )}
           {selectedHexes.length > 0 && (
             <div className="action-buttons">
               {selectedHexes.map((h) => {
                 const key = hexKey(h.q, h.r);
-                const isSatellite = satelliteHexKeys.has(key);
+                const isSatellite = federationSatelliteHexKeys.has(key);
                 return (
-                  <button
+                  <span
                     key={key}
-                    className={clsx('btn action-btn', isSatellite && 'action-btn--selected')}
-                    onClick={() =>
-                      setSatelliteHexKeys((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(key)) {
-                          next.delete(key);
-                        } else {
-                          next.add(key);
-                        }
-                        return next;
-                      })
-                    }
+                    className={clsx('federation-selected-hex', isSatellite && 'is-satellite')}
                   >
-                    ({h.q}, {h.r}) {isSatellite ? '위성' : '행성'}
-                  </button>
+                    ({h.q}, {h.r}) {isSatellite ? '위성' : '내 건물'}
+                  </span>
                 );
               })}
             </div>
           )}
-          <h4 className="action-panel-subtitle">획득할 연방 토큰</h4>
-          <div className="action-buttons">
-            {Array.from(new Set(gameState.research_board.federation_tokens)).map((kind) => (
-              <button
-                key={`supply-${kind}`}
-                className={clsx(
-                  'btn action-btn',
-                  federationToken?.source === 'Supply' &&
-                    federationToken.kind === kind &&
-                    'action-btn--selected',
-                )}
-                onClick={() => {
-                  setFederationToken({ source: 'Supply', kind });
-                  setFederationBonusCoord(null);
-                  setFederationBonusTechTile(null);
-                }}
-              >
-                {FEDERATION_TOKEN_LABELS[kind] ?? `토큰 ${kind}`}
-              </button>
-            ))}
-            {availableSpaceshipFederationTokens(gameState, myPlayerId).map(({ ship, kind }) => (
-              <button
-                key={`ship-${ship}`}
-                className={clsx(
-                  'btn action-btn',
-                  federationToken?.source === 'Spaceship' &&
-                    federationToken.ship === ship &&
-                    'action-btn--selected',
-                )}
-                onClick={() => {
-                  setFederationToken({ source: 'Spaceship', ship });
-                  setFederationBonusCoord(null);
-                  setFederationBonusTechTile(null);
-                }}
-              >
-                {ship}: {FEDERATION_TOKEN_LABELS[kind] ?? `토큰 ${kind}`}
-              </button>
-            ))}
-          </div>
+          <p
+            className={clsx(
+              'federation-validation-status',
+              federationSelection.valid && 'is-valid',
+            )}
+            role="status"
+          >
+            파워 {federationSelection.power}/{federationSelection.minimumPower}
+            {' · '}위성 {federationSelection.satelliteHexes.length}개
+            {' · '}{federationSelection.reason}
+          </p>
+          {federationSelection.valid && (
+            <>
+              <h4 className="action-panel-subtitle">획득할 연방 토큰</h4>
+              <div className="action-buttons">
+                {Array.from(new Set(gameState.research_board.federation_tokens))
+                  .filter((kind) => kind !== 7)
+                  .map((kind) => (
+                  <button
+                    key={`supply-${kind}`}
+                    className={clsx(
+                      'btn action-btn',
+                      federationToken?.source === 'Supply' &&
+                        federationToken.kind === kind &&
+                        'action-btn--selected',
+                    )}
+                    onClick={() => {
+                      setFederationToken({ source: 'Supply', kind });
+                      setFederationBonusCoord(null);
+                      setFederationBonusTechTile(null);
+                    }}
+                  >
+                    {FEDERATION_TOKEN_LABELS[kind] ?? `토큰 ${kind}`}
+                  </button>
+                  ))}
+                {availableSpaceshipFederationTokens(gameState, myPlayerId).map(({ ship, kind }) => (
+                  <button
+                    key={`ship-${ship}`}
+                    className={clsx(
+                      'btn action-btn',
+                      federationToken?.source === 'Spaceship' &&
+                        federationToken.ship === ship &&
+                        'action-btn--selected',
+                    )}
+                    onClick={() => {
+                      setFederationToken({ source: 'Spaceship', ship });
+                      setFederationBonusCoord(null);
+                      setFederationBonusTechTile(null);
+                    }}
+                  >
+                    {ship}: {FEDERATION_TOKEN_LABELS[kind] ?? `토큰 ${kind}`}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
 
           {federationNeedsBuildCoord && (
             <div className="federation-bonus-coord">
@@ -1708,20 +1758,20 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
         </button>
       )}
 
-      {hasAcademyQic(gameState, myPlayerId) && (
+      {!focusedAction && hasAcademyQic(gameState, myPlayerId) && (
         <button
           className="btn btn-secondary confirm-btn"
           disabled={academyQicActionUsedThisRound(gameState, myPlayerId)}
           onClick={handleAcademyQicAction}
         >
           {academyQicActionUsedThisRound(gameState, myPlayerId)
-            ? '아카데미(QIC) 행동 — 이번 라운드 사용 완료'
-            : '아카데미(QIC) 행동 — QIC 획득'}
+            ? '아카데미(정보 큐브) 행동 — 이번 라운드 사용 완료'
+            : '아카데미(정보 큐브) 행동 — 정보 큐브 획득'}
         </button>
       )}
 
-      <div className="free-actions">
-        <h4 className="action-panel-subtitle">무료 행동 (턴 소모 없음)</h4>
+      {!focusedAction && <div className="free-actions">
+        <h4 className="action-panel-subtitle">무료 행동 · 주 행동 전/중 사용 가능</h4>
         <div className="action-buttons">
           {FREE_ACTIONS.filter((option) =>
             isFreeActionAvailableToPlayer(currentPlayer, option),
@@ -1755,9 +1805,9 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
             );
           })}
         </div>
-      </div>
+      </div>}
 
-      {currentPlayer?.booster != null && (
+      {!focusedAction && currentPlayer?.booster != null && (
         <div className="action-hint current-booster">
           <span>현재 라운드 부스터:</span>
           {roundBoosterImageSrc(currentPlayer.booster) && (
@@ -1769,7 +1819,7 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
           )}
         </div>
       )}
-      {gameState.round < 6 && gameState.boosters.length > 0 && (
+      {!focusedAction && gameState.round < 6 && gameState.boosters.length > 0 && (
         <div className="action-buttons booster-picker">
           {gameState.boosters.map((id) => (
             <button
@@ -1786,13 +1836,15 @@ export function ActionPanel({ gameState, myPlayerId }: Props) {
           ))}
         </div>
       )}
-      <button
-        className="btn btn-ghost pass-btn"
-        disabled={requiresBoosterChoice && passBoosterId === null}
-        onClick={handlePass}
-      >
-        {requiresBoosterChoice && passBoosterId === null ? '새 부스터를 선택하세요' : '패스'}
-      </button>
+      {!focusedAction && (
+        <button
+          className="btn btn-ghost pass-btn"
+          disabled={requiresBoosterChoice && passBoosterId === null}
+          onClick={handlePass}
+        >
+          {requiresBoosterChoice && passBoosterId === null ? '새 부스터를 선택하세요' : '패스'}
+        </button>
+      )}
     </div>
   );
 }

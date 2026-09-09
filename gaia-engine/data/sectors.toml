@@ -905,8 +905,9 @@ rel_r = -1
 
 # ── Deep Space Sectors 11-18 (Lost Fleet expansion) ─────────────────────────────
 # 3-hex tiles — always all 8 included in 4-player Lost Fleet games.
-# Planet data: placeholder values transcribed from arch doc example.
-# Actual data must be verified against the physical Lost Fleet expansion tiles.
+# Planet data verified against the isolated physical tile scans. In the scan's
+# resting orientation the visible top-right / bottom-right / left cells map to
+# local coordinates (0,0) / (1,0) / (0,1), respectively.
 
 [[sectors]]
 id = 11
@@ -931,10 +932,10 @@ side = "B"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 0
+planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
-planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
@@ -950,10 +951,10 @@ planet = "ProtoPlanet"
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
-planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
+planet = "Transdim"
 
 [[sectors]]
 id = 12
@@ -965,7 +966,6 @@ rel_r = 0
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
-planet = "ProtoPlanet"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
@@ -978,7 +978,6 @@ side = "A"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 0
-planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
@@ -986,6 +985,7 @@ planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
+planet = "Transdim"
 
 [[sectors]]
 id = 13
@@ -1001,7 +1001,6 @@ planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
-planet = "Asteroid"
 
 [[sectors]]
 id = 14
@@ -1026,14 +1025,13 @@ side = "B"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 0
-planet = "ProtoPlanet"
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
+planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
-planet = "Asteroid"
 
 [[sectors]]
 id = 15
@@ -1042,13 +1040,13 @@ side = "A"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 0
-planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
+planet = "ProtoPlanet"
 
 [[sectors]]
 id = 15
@@ -1060,10 +1058,11 @@ rel_r = 0
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
+planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
-planet = "Asteroid"
+planet = "ProtoPlanet"
 
 [[sectors]]
 id = 16
@@ -1072,10 +1071,10 @@ side = "A"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 0
-planet = "ProtoPlanet"
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
+planet = "ProtoPlanet"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
@@ -1090,10 +1089,11 @@ rel_r = 0
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
-planet = "ProtoPlanet"
+planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
+planet = "Asteroid"
 
 [[sectors]]
 id = 17
@@ -1102,14 +1102,13 @@ side = "A"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 0
-planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
-planet = "ProtoPlanet"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
+planet = "Transdim"
 
 [[sectors]]
 id = 17
@@ -1118,14 +1117,13 @@ side = "B"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 0
+planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
-planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
-planet = "ProtoPlanet"
 
 [[sectors]]
 id = 18
@@ -1134,15 +1132,13 @@ side = "A"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 0
-planet = "ProtoPlanet"
 [[sectors.hexes]]
 rel_q = 1
 rel_r = 0
-planet = "Asteroid"
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
-planet = "Asteroid"
+planet = "ProtoPlanet"
 
 [[sectors]]
 id = 18
@@ -1158,4 +1154,3 @@ rel_r = 0
 [[sectors.hexes]]
 rel_q = 0
 rel_r = 1
-planet = "ProtoPlanet"

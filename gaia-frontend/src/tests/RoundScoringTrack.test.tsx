@@ -20,8 +20,8 @@ describe('RoundScoringTrack', () => {
       expect(imageSrc).toBeDefined();
       expect(imageSrc).not.toMatch(/round_scoring_\d+_score_.*\.jpg$/);
     }
-    expect(roundScoringTileImageSrc(1)).toBe('/assets/gaiaproject/round_mine2.png');
-    expect(roundScoringTileImageSrc(12)).toContain('round_scoring_12_tile.webp');
+    expect(roundScoringTileImageSrc(1)).toContain('/normalized/round_01.webp');
+    expect(roundScoringTileImageSrc(12)).toContain('/normalized/round_12.webp');
     expect(roundScoringTileImageSrc(0)).toBeUndefined();
     expect(roundScoringTileImageSrc(13)).toBeUndefined();
   });
@@ -32,7 +32,7 @@ describe('RoundScoringTrack', () => {
     expect(screen.getByText('2 / 6')).toBeInTheDocument();
     expect(screen.getAllByRole('article')).toHaveLength(6);
     expect(screen.getByText('테라포밍 단계 사용')).toBeInTheDocument();
-    expect(screen.getAllByText('단위당 +2 VP')).toHaveLength(2);
+    expect(screen.getAllByText('단위당 승점 +2점')).toHaveLength(2);
     expect(screen.getByRole('article', { current: 'step' })).toHaveTextContent('R2');
     expect(screen.getByAltText('라운드 2: 테라포밍 단계 사용')).toBeInTheDocument();
   });

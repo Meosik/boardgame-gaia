@@ -16,6 +16,7 @@ use crate::{
 pub fn build_router(state: AppState) -> Router {
     let api = Router::new()
         .route("/rooms", post(rest::create_room))
+        .route("/dev-games", post(rest::create_dev_game))
         .route("/rooms/:code/join", post(rest::join_room))
         .route("/rooms/:code", get(rest::get_room))
         .route("/rooms/:code/regenerate", post(rest::regenerate_setup))

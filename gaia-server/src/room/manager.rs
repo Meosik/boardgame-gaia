@@ -55,6 +55,10 @@ pub struct Room {
     /// Set once gameplay has started and a required seat disconnects; cleared
     /// once all seats are reconnected. Never changes `revision`.
     pub paused: bool,
+    /// The only interactive seat in a local development sandbox. The game state may contain
+    /// virtual opponents so setup order, adjacency, and opponent-dependent costs can be tested,
+    /// but those opponents are advanced automatically and are not room members.
+    pub dev_human_player: Option<PlayerId>,
 }
 
 impl Room {
@@ -170,6 +174,7 @@ impl RoomManager {
             revision: 0,
             connected: HashSet::new(),
             paused: false,
+            dev_human_player: None,
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))
@@ -220,6 +225,10 @@ impl RoomManager {
         let id = self.next_player_id;
         self.next_player_id = self.next_player_id.wrapping_add(1);
         id
+    }
+
+    pub fn alloc_virtual_player_ids(&mut self, count: usize) -> Vec<PlayerId> {
+        (0..count).map(|_| self.alloc_player_id()).collect()
     }
 }
 

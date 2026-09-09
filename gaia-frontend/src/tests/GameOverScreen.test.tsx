@@ -71,8 +71,8 @@ describe('GameOverScreen', () => {
     );
 
     expect(screen.getByText('Bob').closest('li')).toHaveClass('game-over-row--winner');
-    expect(screen.getByText('58 VP')).toBeInTheDocument();
-    expect(screen.getByText('42 VP')).toBeInTheDocument();
+    expect(screen.getByText('승점 58점')).toBeInTheDocument();
+    expect(screen.getByText('승점 42점')).toBeInTheDocument();
   });
 
   it('invokes the return-to-lobby callback', () => {

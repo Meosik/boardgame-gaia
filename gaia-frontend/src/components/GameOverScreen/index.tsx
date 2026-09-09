@@ -16,7 +16,7 @@ export function GameOverScreen({ result, players, myPlayerId, onReturnToLobby }:
   return (
     <div className="app app--game-over">
       <div className="game-over-card">
-        <span className="game-over-eyebrow">GAME OVER</span>
+        <span className="game-over-eyebrow">게임 종료</span>
         <h1 className="game-over-title">게임 종료</h1>
         <ol className="game-over-standings">
           {ranked.map(([playerId, vp], index) => {
@@ -41,7 +41,7 @@ export function GameOverScreen({ result, players, myPlayerId, onReturnToLobby }:
                   {player?.nickname ?? `Player ${playerId}`}
                   {isWinner && <span className="game-over-crown" aria-label="승자">👑</span>}
                 </span>
-                <span className="game-over-vp">{vp} VP</span>
+                <span className="game-over-vp">승점 {vp}점</span>
               </li>
             );
           })}

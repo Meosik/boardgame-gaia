@@ -37,14 +37,14 @@ function mockPlayer(overrides: Partial<PlayerState> = {}): PlayerState {
 }
 
 describe('RoundBoosters', () => {
-  it('uses clean tile assets instead of board-context JPG crops', () => {
+  it('uses one normalized high-resolution asset set for every booster', () => {
     for (let id = 1; id <= 14; id += 1) {
       const imageSrc = roundBoosterImageSrc(id);
       expect(imageSrc).toBeDefined();
-      expect(imageSrc).not.toMatch(/booster_\d+_.*\.jpg$/);
+      expect(imageSrc).toContain(
+        `round_boosters/normalized/booster_${String(id).padStart(2, '0')}.webp`,
+      );
     }
-    expect(roundBoosterImageSrc(1)).toBe('/assets/gaiaproject/booster_rl.png');
-    expect(roundBoosterImageSrc(14)).toContain('booster_14_tile.webp');
   });
 
   it('renders every booster in the available pool as a real tile image', () => {
@@ -60,20 +60,21 @@ describe('RoundBoosters', () => {
     render(<RoundBoosters availableBoosters={[1, 2]} players={players} />);
 
     expect(screen.getByAltText('라운드 부스터 9')).toBeInTheDocument();
-    expect(screen.getByLabelText('Alice 보유 중')).toBeInTheDocument();
+    const ownerMarker = screen.getByLabelText('Alice 보유 중');
+    expect(ownerMarker).toBeInTheDocument();
+    expect(ownerMarker.querySelector('img')).toHaveAttribute('width', '14.4');
+    expect(ownerMarker.querySelector('img')).toHaveAttribute('height', '14.4');
   });
 
-  it('renders the corrected booster 6 crop at the standard tile width', () => {
+  it('renders base and expansion boosters without source-specific transforms', () => {
     render(<RoundBoosters availableBoosters={[5, 6, 14]} players={[]} />);
 
-    for (const id of [5, 14]) {
-      expect(screen.getByAltText(`라운드 부스터 ${id}`).closest('figure')).toHaveClass(
-        'round-booster-tile--wide',
-      );
+    for (const id of [5, 6, 14]) {
+      const tile = screen.getByAltText(`라운드 부스터 ${id}`).closest('figure');
+      expect(tile).toHaveClass('round-booster-tile');
+      expect(tile).not.toHaveClass('round-booster-tile--extension');
+      expect(tile).not.toHaveClass('round-booster-tile--inverted-source');
     }
-    expect(screen.getByAltText('라운드 부스터 6').closest('figure')).not.toHaveClass(
-      'round-booster-tile--wide',
-    );
   });
 
   it('renders nothing when there are no boosters in play', () => {

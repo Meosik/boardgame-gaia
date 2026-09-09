@@ -4,8 +4,12 @@
 // tests/property/prng_vectors.rs
 
 use crate::error::SetupError;
-use crate::game_state::{Booster, FactionId, FinalScoringTile};
+use crate::game_state::{Booster, FactionId, FinalScoringTile, PlanetType};
 use serde::{Deserialize, Serialize};
+
+pub const ADVANCED_TECH_TILE_IDS: [u8; 21] = [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22,
+];
 
 // ── Randomizer ────────────────────────────────────────────────────────────────
 
@@ -126,12 +130,11 @@ impl Randomizer {
             .iter()
             .flat_map(|id| std::iter::repeat_n(*id, 4))
             .collect();
-        let known_advanced_tech_tile_ids: [u8; 21] = [
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22,
-        ];
-        let mut advanced_tech_tile_ids: Vec<u8> = known_advanced_tech_tile_ids.to_vec();
+        let mut advanced_tech_tile_ids: Vec<u8> = ADVANCED_TECH_TILE_IDS.to_vec();
         self.shuffle(&mut advanced_tech_tile_ids);
-        let advanced_tech_tile_ids: Vec<u8> = advanced_tech_tile_ids.into_iter().take(6).collect();
+        // Six tiles go above the Research Board tracks and the seventh goes on Lost Fleet's
+        // 25-VP / three-exploration-shuttle requirement board.
+        let advanced_tech_tile_ids: Vec<u8> = advanced_tech_tile_ids.into_iter().take(7).collect();
 
         // Step 6: Sector layout
         // Center Balance sectors 01-04 fixed at center positions
@@ -140,6 +143,21 @@ impl Randomizer {
 
         // Step 7: Deep Space Sectors (Lost Fleet) — always all 8 (ids 11-18)
         let deep_space_layout = self.build_deep_space_layout();
+
+        // Lost Fleet p.7: fill spaces 1-7 of the Moweyds/Tinkeroids Terraforming board with
+        // one base-game color each. Use a domain-separated RNG so adding this setup component
+        // does not perturb the established sector/tile shuffle sequence for the same room seed.
+        let mut terraforming_color_order = vec![
+            PlanetType::Terra,
+            PlanetType::Swamp,
+            PlanetType::Desert,
+            PlanetType::Oxide,
+            PlanetType::Titanium,
+            PlanetType::Volcanic,
+            PlanetType::Ice,
+        ];
+        Randomizer::new(&format!("{seed}:terraforming-color-order"))
+            .shuffle(&mut terraforming_color_order);
 
         GameSetup {
             seed: seed.to_string(),
@@ -151,6 +169,7 @@ impl Randomizer {
             tech_tile_ids,
             tech_tile_slot_ids,
             advanced_tech_tile_ids,
+            terraforming_color_order,
             sector_layout,
             deep_space_layout,
         }
@@ -301,10 +320,13 @@ pub struct GameSetup {
     /// Nine ids in physical Research Board slot order (six track-linked, then three free-choice).
     #[serde(default)]
     pub tech_tile_slot_ids: Vec<u8>,
-    /// One Advanced Tech tile id per research track (`ResearchTrack::all()` order), drawn from
-    /// the known kinds — see `Randomizer::generate_setup`.
+    /// One Advanced Tech tile id per research track (`ResearchTrack::all()` order), followed by
+    /// the Lost Fleet requirement-board tile, drawn from the known kinds.
     #[serde(default)]
     pub advanced_tech_tile_ids: Vec<u8>,
+    /// Numbered 1-7 order on the Lost Fleet Moweyds/Tinkeroids Terraforming board.
+    #[serde(default)]
+    pub terraforming_color_order: Vec<PlanetType>,
     /// 10 standard sector placements (ids 1-10). Always 4-player; no player_count branching.
     pub sector_layout: Vec<SectorPlacement>,
     /// 8 Deep Space sector placements (ids 11-18, Lost Fleet expansion). Always included.

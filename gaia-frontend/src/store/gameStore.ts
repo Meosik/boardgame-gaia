@@ -21,6 +21,8 @@ interface GameStore {
    * FormFederation) — `activePlanet` covers every single-hex action. */
   selectedHexes: HexCoord[];
   selectedAction: ActionType;
+  /** Exact shared power-action slot selected from the research board. */
+  selectedPowerActionId: number | null;
   wsClient: GaiaWebSocket | null;
   finalResult: FinalResult | null;
 
@@ -30,7 +32,12 @@ interface GameStore {
     selectPlanet: (coord: HexCoord | null) => void;
     toggleHex: (coord: HexCoord) => void;
     selectAction: (action: ActionType) => void;
+    selectPowerAction: (id: number | null) => void;
     sendAction: (action: GameAction) => void;
+    triggerDevPowerCharge: (coord: HexCoord) => void;
+    undoFreeAction: () => void;
+    requestTurnUndo: () => void;
+    respondTurnUndo: (approve: boolean) => void;
     setWsClient: (client: GaiaWebSocket | null) => void;
     setFinalResult: (result: FinalResult) => void;
     reset: () => void;
@@ -43,6 +50,7 @@ const initialState = {
   activePlanet: null,
   selectedHexes: [] as HexCoord[],
   selectedAction: null as ActionType,
+  selectedPowerActionId: null as number | null,
   wsClient: null,
   finalResult: null as FinalResult | null,
 };
@@ -75,14 +83,69 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     selectAction(action) {
-      set({ selectedAction: action, activePlanet: null, selectedHexes: [] });
+      set({
+        selectedAction: action,
+        selectedPowerActionId: action === 'PowerAction' ? get().selectedPowerActionId : null,
+        activePlanet: null,
+        selectedHexes: [],
+      });
+    },
+
+    selectPowerAction(id) {
+      set({
+        selectedAction: id === null ? null : 'PowerAction',
+        selectedPowerActionId: id,
+        activePlanet: null,
+        selectedHexes: [],
+      });
     },
 
     sendAction(action) {
       const { wsClient } = get();
       const revision = useRoomStore.getState().revision;
       wsClient?.sendCommand({ type: 'place_game_action', action }, revision);
-      set({ selectedAction: null, activePlanet: null, selectedHexes: [] });
+      set({
+        selectedAction: null,
+        selectedPowerActionId: null,
+        activePlanet: null,
+        selectedHexes: [],
+      });
+    },
+
+    triggerDevPowerCharge(coord) {
+      const { wsClient } = get();
+      const revision = useRoomStore.getState().revision;
+      wsClient?.sendCommand({ type: 'trigger_dev_power_charge', coord }, revision);
+      set({
+        selectedAction: null,
+        selectedPowerActionId: null,
+        activePlanet: null,
+        selectedHexes: [],
+      });
+    },
+
+    undoFreeAction() {
+      const { wsClient } = get();
+      wsClient?.sendCommand(
+        { type: 'undo_free_action' },
+        useRoomStore.getState().revision,
+      );
+    },
+
+    requestTurnUndo() {
+      const { wsClient } = get();
+      wsClient?.sendCommand(
+        { type: 'request_turn_undo' },
+        useRoomStore.getState().revision,
+      );
+    },
+
+    respondTurnUndo(approve) {
+      const { wsClient } = get();
+      wsClient?.sendCommand(
+        { type: 'respond_turn_undo', approve },
+        useRoomStore.getState().revision,
+      );
     },
 
     setWsClient(client) {

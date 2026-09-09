@@ -256,7 +256,7 @@ describe('WaitingRoomView lobby controls and overlays', () => {
     expect(useRoomStore.getState().revision).toBe(11);
   });
 
-  it('opens and closes scoring, booster, and spaceship panels from the top bar', async () => {
+  it('opens and closes scoring, booster, and personal-board panels from the top bar', async () => {
     seedWaitingRoom();
     render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />);
 
@@ -270,11 +270,11 @@ describe('WaitingRoomView lobby controls and overlays', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByText('Mock round boosters content')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '함선 보드' }));
-    expect(screen.getByRole('dialog', { name: '함선 보드' })).toHaveAttribute('aria-modal', 'false');
     expect(screen.getByText('Mock spaceship boards content')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '닫기' }));
-    expect(screen.queryByText('Mock spaceship boards content')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '개인 보드' }));
+    expect(screen.getByRole('dialog', { name: '개인 보드' })).toHaveAttribute('aria-modal', 'false');
+    fireEvent.click(screen.getByRole('button', { name: '개인 보드' }));
+    expect(screen.queryByRole('dialog', { name: '개인 보드' })).not.toBeInTheDocument();
   });
 });
 

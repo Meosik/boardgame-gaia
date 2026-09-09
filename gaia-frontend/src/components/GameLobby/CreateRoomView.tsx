@@ -85,7 +85,7 @@ export function CreateRoomView({ onRoomCreated, onBack }: Props) {
             onChange={() => setSetupMode('bidding')}
           />
           <span>
-            <strong>VP 비딩</strong>
+            <strong>승점 비딩</strong>
             <small>방장부터 입찰하고 종족과 최종 순서를 선택합니다.</small>
           </span>
         </label>
@@ -136,7 +136,7 @@ function SetupPreview({ setup }: { setup: GameSetup }) {
       <div className="preview-row">
         <span className="preview-label">선택 방식:</span>
         <span className="preview-value">
-          {setup.setup_mode === 'bidding' ? 'VP 비딩' : '순차 선택'}
+          {setup.setup_mode === 'bidding' ? '승점 비딩' : '순차 선택'}
         </span>
       </div>
       <div className="preview-row">

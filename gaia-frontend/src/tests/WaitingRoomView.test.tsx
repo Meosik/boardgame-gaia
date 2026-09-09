@@ -151,16 +151,15 @@ describe('WaitingRoomView board preview', () => {
 
     expect(topbar).toHaveTextContent('라운드·게임 종료 목표');
     expect(topbar).toHaveTextContent('라운드 부스터');
-    expect(topbar).toHaveTextContent('함선 보드');
+    expect(topbar).toHaveTextContent('개인 보드');
     expect(topbar).not.toHaveTextContent('보드 보기');
     expect(panel).not.toHaveTextContent('라운드·게임 종료 목표');
     expect(panel).not.toHaveTextContent('라운드 부스터');
     expect(boardRail).toHaveTextContent('연구 트랙');
-    expect(boardRail).not.toHaveTextContent('함선 보드');
-    expect(screen.getByLabelText('개인 보드 영역')).toHaveTextContent('종족 확정 후');
-    expect(boardRail?.querySelector('.waiting-room-personal-placeholder')).toBe(
-      screen.getByLabelText('개인 보드 영역'),
-    );
+    expect(boardRail).toHaveTextContent('함선 보드');
+    expect(screen.getByLabelText('함선 보드 영역')).toHaveClass('waiting-room-ship-list');
+    expect(boardRail).toContainElement(screen.getByLabelText('함선 보드 영역'));
+    expect(screen.queryByRole('dialog', { name: '개인 보드' })).not.toBeInTheDocument();
     expect(screen.queryByText('보드 보기')).not.toBeInTheDocument();
     expect(screen.queryByText('보드 미리보기 불러오는 중...')).not.toBeInTheDocument();
   });
@@ -178,15 +177,16 @@ describe('WaitingRoomView board preview', () => {
     await waitFor(() => expect(api.getPreviewBoard).toHaveBeenCalledTimes(2));
   });
 
-  it('opens ship boards in a non-modal panel so the map remains interactive', async () => {
+  it('keeps ship boards docked and opens the personal board as a non-modal drawer', async () => {
     const { container } = render(
       <WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />,
     );
     await waitFor(() => expect(api.getPreviewBoard).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByRole('button', { name: '함선 보드' }));
+    expect(screen.getByLabelText('함선 보드 영역')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '개인 보드' }));
 
-    expect(screen.getByRole('dialog', { name: '함선 보드' })).toHaveAttribute('aria-modal', 'false');
+    expect(screen.getByRole('dialog', { name: '개인 보드' })).toHaveAttribute('aria-modal', 'false');
     expect(container.querySelector('.board-overlay-backdrop')).not.toBeInTheDocument();
   });
 });

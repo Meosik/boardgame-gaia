@@ -1,6 +1,6 @@
 import { explorationBoardImageSrc } from '../../assets/explorationBoardImages';
+import { explorationShuttleImageSrc } from '../../assets/explorationShuttleImages';
 import type { FactionId } from '../../types/game';
-import { FACTION_VISUAL } from '../GameLobby/FactionBadge';
 
 const EXPLORATION_SHUTTLE_COUNT = 3;
 
@@ -17,7 +17,7 @@ interface Props {
 export function ExplorationBoard({ faction, shuttlesAvailable }: Props) {
   const imageSrc = explorationBoardImageSrc(faction);
   const available = Math.max(0, Math.min(EXPLORATION_SHUTTLE_COUNT, shuttlesAvailable));
-  const factionColor = FACTION_VISUAL[faction].color;
+  const shuttleImageSrc = explorationShuttleImageSrc(faction);
 
   if (!imageSrc) return null;
 
@@ -33,10 +33,9 @@ export function ExplorationBoard({ faction, shuttlesAvailable }: Props) {
             <span
               key={slot}
               className={`exploration-shuttle exploration-shuttle--${slot + 1}`}
-              style={{ '--shuttle-color': factionColor } as React.CSSProperties}
               aria-label={`대기 중인 탐사 셔틀 ${slot + 1}`}
             >
-              <span aria-hidden>◆</span>
+              <img src={shuttleImageSrc} alt="" aria-hidden />
             </span>
           ) : null
         ))}

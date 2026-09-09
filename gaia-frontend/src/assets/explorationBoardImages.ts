@@ -1,6 +1,6 @@
 import type { FactionId } from '../types/game';
 
-const EXPLORATION_BOARD_IMAGES = import.meta.glob('./exploration_boards/*.jpg', {
+const EXPLORATION_BOARD_IMAGES = import.meta.glob('./exploration_boards/normalized/*.webp', {
   eager: true,
   import: 'default',
 }) as Record<string, string>;
@@ -9,34 +9,24 @@ const EXPLORATION_BOARD_IMAGES = import.meta.glob('./exploration_boards/*.jpg', 
  * Maps each `FactionId` to its Lost Fleet Exploration Board image under
  * `exploration_boards/`.
  *
- * Base-game factions map directly by name (German rulebook naming for a
- * couple of assets: `terraner` = Terrans). `Ivits` and `Bescods` map to
- * `der_schwarm` / `mad_androids` respectively — inferred by elimination
- * (these are the only unmatched base-faction image files) and lore fit
- * (Ivits' hive/swarm-like federation growth; Bescods' robotic theme) rather
- * than an explicit label in the source art; verify against the rulebook art
- * if this ever looks wrong. `Lantids` has two unused alternate-board variants
- * on disk (`lantida_b.jpg`, `lantida_c.jpg`) that are intentionally not
- * referenced here since `FactionId` has only one Lantids entry.
- *
- * The four Lost Fleet expansion factions map directly by (snake_cased) name,
- * same as the base-game factions.
+ * Runtime and archival files use stable `FactionId` snake-case names. The explicit map keeps
+ * server identifiers decoupled from filenames without preserving scan-era aliases or typos.
  */
 export const EXPLORATION_BOARD_IMAGE_FILE: Record<FactionId, string> = {
-  Terrans: 'terraner',
-  Lantids: 'lantida',
+  Terrans: 'terrans',
+  Lantids: 'lantids',
   Xenos: 'xenos',
-  Gleens: 'gleen',
+  Gleens: 'gleens',
   Taklons: 'taklons',
   Ambas: 'ambas',
   HadschHallas: 'hadsch_halla',
-  Ivits: 'der_schwarm',
-  Geodens: 'geoden',
-  BalTaks: 'bal_t_ak',
+  Ivits: 'ivits',
+  Geodens: 'geodens',
+  BalTaks: 'bal_taks',
   Firaks: 'firaks',
-  Bescods: 'mad_androids',
-  Nevlas: 'nevla',
-  Itars: 'itar',
+  Bescods: 'bescods',
+  Nevlas: 'nevlas',
+  Itars: 'itars',
   Tinkeroids: 'tinkeroids',
   Moweyds: 'moweyds',
   SpaceGiants: 'space_giants',
@@ -45,5 +35,5 @@ export const EXPLORATION_BOARD_IMAGE_FILE: Record<FactionId, string> = {
 
 export function explorationBoardImageSrc(faction: FactionId): string | null {
   const file = EXPLORATION_BOARD_IMAGE_FILE[faction];
-  return EXPLORATION_BOARD_IMAGES[`./exploration_boards/${file}.jpg`] ?? null;
+  return EXPLORATION_BOARD_IMAGES[`./exploration_boards/normalized/${file}.webp`] ?? null;
 }

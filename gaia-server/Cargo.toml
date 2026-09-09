@@ -23,6 +23,7 @@ sha2 = "0.10"
 
 [dev-dependencies]
 axum-test = { version = "15", features = ["ws"] }
+gaia-engine = { path = "../gaia-engine", features = ["test-utils"] }
 tokio = { version = "1", features = ["full", "test-util"] }
 
 [lints.clippy]

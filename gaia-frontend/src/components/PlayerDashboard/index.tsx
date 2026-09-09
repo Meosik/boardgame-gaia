@@ -2,7 +2,7 @@ import { clsx } from 'clsx';
 import { ExplorationBoard } from './ExplorationBoard';
 import { FactionBoard } from './FactionBoard';
 import { PowerCycle } from './PowerCycle';
-import { ResourcePanel } from './ResourcePanel';
+import { VictoryPointToken } from '../ResourceTokens';
 import type { PlayerState } from '../../types/game';
 
 interface Props {
@@ -22,13 +22,33 @@ export function PlayerDashboard({ player }: Props) {
               {player.faction}
             </span>
           )}
-          <span className="player-vp">{player.vp} VP</span>
+          <VictoryPointToken value={player.vp} />
           {player.passed && <span className="passed-badge">패스</span>}
         </div>
         <div className="player-dashboard-content">
           {player.faction && (
             <div className="player-body-top">
-              <FactionBoard faction={player.faction} structures={player.structures} />
+              <FactionBoard
+                faction={player.faction}
+                structures={player.structures}
+                resources={player.resources}
+                power={player.resources.power}
+                gaiaformersAvailable={Math.max(
+                  0,
+                  player.gaiaformers_total
+                    - player.gaiaformers_deployed
+                    - player.resources.spent_gaia_formers
+                    - (player.gaiaformers_in_gaia_area ?? 0),
+                )}
+                techTiles={player.tech_tiles}
+                advancedTechTiles={player.advanced_tech_tiles}
+                coveredTechTiles={player.covered_tech_tiles}
+                federationTokens={player.federation_tokens}
+                grayFederationTokens={player.gray_federation_tokens}
+                booster={player.booster}
+                expensiveTerraformingPlanetTypes={player.expensive_terraforming_planet_types}
+                selectedTinkeringTile={player.tinkeroids_selected_tile}
+              />
               <ExplorationBoard
                 faction={player.faction}
                 shuttlesAvailable={player.exploration_shuttles_available}
@@ -37,38 +57,11 @@ export function PlayerDashboard({ player }: Props) {
           )}
           <aside className="player-personal-summary" aria-label="내 자원과 획득 타일">
             <div className="player-resource-summary">
-              <ResourcePanel resources={player.resources} />
               <PowerCycle power={player.resources.power} faction={player.faction ?? undefined} />
             </div>
-            <PersonalHoldings
-              label="기술"
-              values={[
-                ...(player.tech_tiles ?? []).map((id) => `T${id}`),
-                ...(player.advanced_tech_tiles ?? []).map((id) => `A${id}`),
-              ]}
-            />
-            <PersonalHoldings
-              label="연방"
-              values={player.federation_tokens.map((id) => `F${id}`)}
-            />
           </aside>
         </div>
       </div>
     </div>
-  );
-}
-
-function PersonalHoldings({ label, values }: { label: string; values: string[] }) {
-  return (
-    <section className="personal-holdings">
-      <strong>{label}</strong>
-      <div className="personal-holdings-list">
-        {values.length > 0 ? (
-          values.map((value) => <span key={value}>{value}</span>)
-        ) : (
-          <small>없음</small>
-        )}
-      </div>
-    </section>
   );
 }

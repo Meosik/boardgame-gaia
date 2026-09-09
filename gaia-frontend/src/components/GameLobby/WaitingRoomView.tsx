@@ -2,14 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import { shallow } from 'zustand/shallow';
 import { useRoomStore } from '../../store/roomStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { factionBoardImageSrc } from '../../assets/factionBoardImages';
 import { isGameState } from '../../types/game';
 import { GameBoard } from '../GameBoard';
 import { ScoringBoard } from '../ScoringBoard';
 import { RoundBoosters } from '../RoundBoosters';
+import { FederationTokens } from '../FederationTokens';
 import { SpaceshipBoards } from '../SpaceshipBoards';
 import { BoardOverlay } from '../BoardOverlay';
-import { FloatingBoardPanel } from '../FloatingBoardPanel';
+import { PersonalBoardDrawer } from '../PersonalBoardDrawer';
+import { FactionBoard } from '../PlayerDashboard/FactionBoard';
 import { ResearchBoard } from '../PlayerDashboard/ResearchBoard';
+import { LostFleetTechRequirementBoard } from '../LostFleetTechRequirementBoard';
 
 interface Props {
   onGameStart: () => void;
@@ -48,7 +52,7 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
 
   const { isConnected, send, sendCommand, messages } = useWebSocket(roomCode);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeOverlay, setActiveOverlay] = useState<'scoring' | 'boosters' | 'spaceships' | null>(null);
+  const [activeOverlay, setActiveOverlay] = useState<'scoring' | 'boosters' | 'personal' | null>(null);
 
   useEffect(() => {
     if (isConnected && sessionToken) {
@@ -160,21 +164,21 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
         <nav className="waiting-room-topbar" aria-label="게임 정보">
           <button
             className="waiting-room-top-control"
-            onClick={() => setActiveOverlay('scoring')}
+            onClick={() => setActiveOverlay((current) => current === 'scoring' ? null : 'scoring')}
           >
             라운드·게임 종료 목표
           </button>
           <button
             className="waiting-room-top-control"
-            onClick={() => setActiveOverlay('boosters')}
+            onClick={() => setActiveOverlay((current) => current === 'boosters' ? null : 'boosters')}
           >
             라운드 부스터
           </button>
           <button
             className="waiting-room-top-control"
-            onClick={() => setActiveOverlay('spaceships')}
+            onClick={() => setActiveOverlay((current) => current === 'personal' ? null : 'personal')}
           >
-            함선 보드
+            개인 보드
           </button>
         </nav>
       )}
@@ -184,15 +188,21 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
             <h3>연구 트랙</h3>
             <ResearchBoard players={[]} board={previewBoard.research_board} />
           </section>
-          <section className="waiting-room-personal-placeholder" aria-label="개인 보드 영역">
-            <strong>개인 보드 영역</strong>
-            <span>종족 확정 후 종족 보드 · 자원 · 기술 · 연방 토큰이 표시됩니다.</span>
+          <section className="waiting-room-ship-list" aria-label="함선 보드 영역">
+            <h3>함선 보드</h3>
+            <SpaceshipBoards spaceshipBoards={previewBoard.spaceship_boards} players={[]} />
           </section>
         </aside>
       )}
       <div className="waiting-room-backdrop">
         {previewBoard ? (
-          <GameBoard board={previewBoard.board} />
+          <>
+            <GameBoard board={previewBoard.board} highlightDeepSpace highlightInterspace />
+            <LostFleetTechRequirementBoard
+              side={previewBoard.research_board?.lost_fleet_advanced_tech_requirement}
+              tileId={previewBoard.research_board?.lost_fleet_advanced_tech_tile}
+            />
+          </>
         ) : (
           <p className="preview-loading">보드 미리보기 불러오는 중...</p>
         )}
@@ -236,13 +246,28 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
             <div className="setup-info">
               <div>
                 <span>방식: </span>
-                <strong>{gameSetup.setup_mode === 'bidding' ? 'VP 비딩' : '순차 선택'}</strong>
+                <strong>{gameSetup.setup_mode === 'bidding' ? '승점 비딩' : '순차 선택'}</strong>
               </div>
               <div className="setup-factions-pool">
-                <span>이번 게임 종족 풀: </span>
-                {gameSetup.factions.map((faction) => (
-                  <span key={faction} className="faction-pool-badge">{faction}</span>
-                ))}
+                <span className="setup-factions-pool-label">이번 게임 종족 풀</span>
+                <div className="faction-pool-list">
+                  {gameSetup.factions.map((faction) => {
+                    const portraitSource = factionBoardImageSrc(faction);
+                    return (
+                      <span key={faction} className="faction-pool-badge">
+                        {portraitSource && (
+                          <span
+                            className="faction-pool-portrait"
+                            role="img"
+                            aria-label={`${faction} 캐릭터`}
+                            style={{ backgroundImage: `url(${portraitSource})` }}
+                          />
+                        )}
+                        <span>{faction}</span>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
@@ -289,15 +314,41 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
           />
         </BoardOverlay>
       )}
-      {activeOverlay === 'boosters' && gameSetup && (
-        <BoardOverlay title="라운드 부스터" onClose={() => setActiveOverlay(null)}>
+      {activeOverlay === 'boosters' && gameSetup && previewBoard && (
+        <BoardOverlay title="라운드 부스터 · 연방 토큰" onClose={() => setActiveOverlay(null)}>
           <RoundBoosters availableBoosters={gameSetup.boosters} players={[]} />
+          <FederationTokens
+            availableTokens={previewBoard.research_board?.federation_tokens ?? []}
+            players={[]}
+          />
         </BoardOverlay>
       )}
-      {activeOverlay === 'spaceships' && previewBoard && (
-        <FloatingBoardPanel title="함선 보드" onClose={() => setActiveOverlay(null)}>
-          <SpaceshipBoards spaceshipBoards={previewBoard.spaceship_boards} players={[]} />
-        </FloatingBoardPanel>
+      {activeOverlay === 'personal' && (
+        <PersonalBoardDrawer onClose={() => setActiveOverlay(null)}>
+          <div className="waiting-room-personal-board-example">
+            <FactionBoard
+              faction="Terrans"
+              structures={[]}
+              resources={{
+                ore: 4,
+                knowledge: 4,
+                qic: 6,
+                credits: 19,
+                power: { bowl1: 4, bowl2: 4, bowl3: 0, gaia_bowl: 0, gaia_forming: 0 },
+                spent_gaia_formers: 0,
+              }}
+              power={{ bowl1: 4, bowl2: 4, bowl3: 0, gaia_bowl: 0, gaia_forming: 0 }}
+              gaiaformersAvailable={1}
+              techTiles={[1, 2, 3, 4, 5, 6]}
+              advancedTechTiles={[2, 3]}
+              coveredTechTiles={[1, 2]}
+              federationTokens={[1, 2, 3, 4, 5]}
+              grayFederationTokens={[6]}
+              booster={3}
+              artifacts={[2, 7]}
+            />
+          </div>
+        </PersonalBoardDrawer>
       )}
     </div>
   );

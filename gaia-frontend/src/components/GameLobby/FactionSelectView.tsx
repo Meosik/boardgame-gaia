@@ -5,8 +5,12 @@ import { useGameStore } from '../../store/gameStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { GameBoard } from '../GameBoard';
 import { PlayerDashboard } from '../PlayerDashboard';
+import { ResearchBoard } from '../PlayerDashboard/ResearchBoard';
 import { OpponentPanels } from '../OpponentPanels';
+import { SpaceshipBoards } from '../SpaceshipBoards';
+import { LostFleetTechRequirementBoard } from '../LostFleetTechRequirementBoard';
 import { FactionBadge } from './FactionBadge';
+import { TerraformingSelectionBoard } from './TerraformingSelectionBoard';
 import { explorationBoardImageSrc } from '../../assets/explorationBoardImages';
 import { roundBoosterImageSrc } from '../../assets/roundBoosterImages';
 import type {
@@ -28,6 +32,7 @@ import { isGameState } from '../../types/game';
 
 interface Props {
   onGameStart: () => void;
+  emphasizeStructures?: boolean;
 }
 
 function initialSelectionState(
@@ -75,7 +80,7 @@ type StartingBoosterPhase = Extract<SetupPhase, { StartingBoosters: unknown }>['
 
 /// Not a rulebook limit — mirrors `gaia_engine::bidding::MAX_BID`, a flat
 /// sanity ceiling only (a bid may legitimately exceed the bidder's current
-/// VP and just run their final score negative). Matching it here just lets
+/// 승점 and just run their final score negative). Matching it here just lets
 /// the UI reject an obvious garbage input before it round-trips to the
 /// server.
 const MAX_BID = 100;
@@ -125,7 +130,7 @@ function structureLabel(kind: StructureType): string {
   return '아카데미';
 }
 
-export function FactionSelectView({ onGameStart }: Props) {
+export function FactionSelectView({ onGameStart, emphasizeStructures = false }: Props) {
   const {
     roomCode,
     sessionToken,
@@ -148,9 +153,10 @@ export function FactionSelectView({ onGameStart }: Props) {
     }),
     shallow,
   );
+  const initialGameState = useGameStore((state) => state.gameState);
   const setGameState = useGameStore((state) => state.actions.setGameState);
   const { isConnected, send, sendCommand, messages } = useWebSocket(roomCode);
-  const [setupGameState, setSetupGameState] = useState<GameState | null>(null);
+  const [setupGameState, setSetupGameState] = useState<GameState | null>(initialGameState);
   const [bidAmount, setBidAmount] = useState(1);
   const [selectedFaction, setSelectedFaction] = useState<FactionId | null>(null);
   const [selectedTurnPosition, setSelectedTurnPosition] = useState<number | null>(null);
@@ -268,7 +274,9 @@ export function FactionSelectView({ onGameStart }: Props) {
   }, [startingBooster?.selection_index]);
 
   function playerLabel(id: PlayerId) {
-    return playerNames.get(id) ?? `P${id}`;
+    return playerNames.get(id)
+      ?? setupGameState?.players.find((player) => player.player_id === id)?.nickname
+      ?? `P${id}`;
   }
 
   function sendSetupAction(action: SetupAction) {
@@ -289,6 +297,7 @@ export function FactionSelectView({ onGameStart }: Props) {
         validTargets={validStartingTargets}
         errorMessage={errorMessage}
         playerLabel={playerLabel}
+        emphasizeStructures={emphasizeStructures}
         onSelectHex={(coord) => {
           if (isMyTurn) setSelectedStartingHex(coord);
         }}
@@ -311,6 +320,7 @@ export function FactionSelectView({ onGameStart }: Props) {
         selectedBooster={selectedStartingBooster}
         errorMessage={errorMessage}
         playerLabel={playerLabel}
+        emphasizeStructures={emphasizeStructures}
         onSelectBooster={(boosterId) => {
           if (isMyTurn) setSelectedStartingBooster(boosterId);
         }}
@@ -342,7 +352,11 @@ export function FactionSelectView({ onGameStart }: Props) {
               <PlayerDashboard
                 player={setupGameState.players.find((p) => p.player_id === playerId) ?? setupGameState.players[0]}
               />
-              <GameBoard board={setupGameState.board} players={setupGameState.players} />
+              <GameBoard
+                board={setupGameState.board}
+                players={setupGameState.players}
+                emphasizeStructures={emphasizeStructures}
+              />
             </div>
             <div className="game-sidebar">
               <OpponentPanels
@@ -369,6 +383,11 @@ export function FactionSelectView({ onGameStart }: Props) {
               isConnected={isConnected}
               errorMessage={errorMessage}
               playerLabel={playerLabel}
+              terraformingColorOrder={
+                setupGameState?.terraforming_color_order
+                  ?? gameSetup?.terraforming_color_order
+                  ?? []
+              }
               onBidAmountChange={setBidAmount}
               onSelectFaction={setSelectedFaction}
               onSelectTurnPosition={setSelectedTurnPosition}
@@ -397,9 +416,17 @@ export function FactionSelectView({ onGameStart }: Props) {
   return (
     <div className="faction-selection-view">
       <SetupHeader
-        kicker="OFFICIAL CLOCKWISE SETUP"
+        kicker="공식 시계방향 배치"
         title="종족 선택"
         isConnected={isConnected}
+      />
+
+      <TerraformingSelectionBoard
+        colorOrder={
+          setupGameState?.terraforming_color_order
+            ?? gameSetup?.terraforming_color_order
+            ?? []
+        }
       />
 
       <section className="faction-selection-order" aria-label="종족 선택 순서">
@@ -463,6 +490,7 @@ interface StartingStructureSetupProps {
   validTargets: HexCoord[];
   errorMessage: string | null;
   playerLabel: (id: PlayerId) => string;
+  emphasizeStructures: boolean;
   onSelectHex: (coord: HexCoord) => void;
   onConfirm: () => void;
 }
@@ -477,81 +505,113 @@ function StartingStructureSetup({
   validTargets,
   errorMessage,
   playerLabel,
+  emphasizeStructures,
   onSelectHex,
   onConfirm,
 }: StartingStructureSetupProps) {
   const structure = structureLabel(placement.kind);
   const homePlanet = HOME_PLANET_BY_FACTION[activeFaction];
-
+  const activePlayer = game.players.find((player) => player.player_id === placement.active_player);
+  const factionPlacementNumber =
+    (activePlayer?.structures.filter((candidate) => candidate.kind === placement.kind).length ?? 0) + 1;
   return (
-    <div className="faction-selection-view starting-structure-view">
-      <SetupHeader kicker="ADVANCED VARIABLE SETUP" title="시작 구조물 배치" isConnected={isConnected} />
+    <div className="app app--game setup-game-preview starting-structure-layout">
+      <nav className="game-topbar" aria-label="초기 설정 상태">
+        <span className="game-top-control setup-phase-indicator">
+          테란 초기 설정 · {factionPlacementNumber}번째 {structure} · 전체 {placement.placement_index + 1}단계
+        </span>
+      </nav>
+      <aside className="game-reference-rail" aria-label="게임 참조 보드">
+        <section className="game-reference-card">
+          <h2>연구 트랙</h2>
+          <ResearchBoard players={game.players} board={game.research_board} />
+        </section>
+        <section className="game-ship-list" aria-label="함선 보드 영역">
+          <h2>함선 보드</h2>
+          <SpaceshipBoards spaceshipBoards={game.spaceship_boards} players={game.players} />
+        </section>
+      </aside>
+      <main className="game-board-stage">
+        <GameBoard
+          board={game.board}
+          players={game.players}
+          validTargets={validTargets}
+          selectedCoord={selectedHex}
+          onHexClick={onSelectHex}
+          emphasizeStructures={emphasizeStructures}
+        />
+        <LostFleetTechRequirementBoard
+          side={game.research_board.lost_fleet_advanced_tech_requirement}
+          tileId={game.research_board.lost_fleet_advanced_tech_tile}
+        />
+      </main>
+      <aside className="game-sidebar starting-structure-sidebar">
+        <div className="faction-selection-view starting-structure-view">
+          <SetupHeader kicker="INITIAL PLACEMENT" title="시작 구조물 배치" isConnected={isConnected} />
 
-      <section className="faction-selection-order" aria-label="시작 구조물 배치 현황">
-        {game.turn_order.map((id, index) => {
-          const player = game.players.find((candidate) => candidate.player_id === id);
-          const isActive = id === placement.active_player;
-          return (
-            <div key={id} className={`faction-selection-player ${isActive ? 'active' : ''}`}>
-              <span className="faction-selection-position">{index + 1}</span>
-              <strong>{playerLabel(id)}</strong>
-              <span className="starting-player-status">
-                {player?.faction && (
-                  <FactionBadge
-                    faction={player.faction}
-                    size={26}
-                    imageSrc={explorationBoardImageSrc(player.faction) ?? undefined}
-                  />
-                )}
-                <small>{player?.structures.length ?? 0}개 배치</small>
-              </span>
+          <section className="faction-selection-order" aria-label="시작 구조물 배치 현황">
+            {game.turn_order.map((id, index) => {
+              const player = game.players.find((candidate) => candidate.player_id === id);
+              const isActive = id === placement.active_player;
+              return (
+                <div key={id} className={`faction-selection-player ${isActive ? 'active' : ''}`}>
+                  <span className="faction-selection-position">{index + 1}</span>
+                  <strong>{playerLabel(id)}</strong>
+                  <span className="starting-player-status">
+                    {player?.faction && (
+                      <FactionBadge
+                        faction={player.faction}
+                        size={26}
+                        imageSrc={explorationBoardImageSrc(player.faction) ?? undefined}
+                      />
+                    )}
+                    <small>{player?.structures.length ?? 0}개 배치</small>
+                    {player && (
+                      <strong className="starting-player-bid">
+                        -{player.setup_bid_vp}점
+                      </strong>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </section>
+
+          <section className="faction-selection-panel starting-structure-panel">
+            <div className="faction-selection-prompt">
+              {isMyTurn
+                ? `${homePlanet} 행성을 눌러 ${structure}을(를) 배치하세요.`
+                : `${playerLabel(placement.active_player)}님이 ${structure}을(를) 배치하는 중입니다.`}
             </div>
-          );
-        })}
-      </section>
-
-      <section className="faction-selection-panel starting-structure-panel">
-        <div className="faction-selection-prompt">
-          {isMyTurn
-            ? `${homePlanet} 행성 하나를 선택해 ${structure}을(를) 배치하세요.`
-            : `${playerLabel(placement.active_player)}님이 ${structure}을(를) 배치하는 중입니다.`}
+            <div className="starting-placement-meta">
+              <span>단계 {placement.placement_index + 1}</span>
+              <span>{activeFaction}</span>
+              <strong>{structure}</strong>
+            </div>
+            <div className="starting-placement-controls">
+              <span>
+                {selectedHex
+                  ? `배치 좌표: (${selectedHex.q}, ${selectedHex.r})`
+                  : isMyTurn
+                    ? `노란 테두리의 ${homePlanet} 행성을 선택하세요.`
+                    : '현재 플레이어의 배치를 기다리고 있습니다.'}
+              </span>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!isMyTurn || selectedHex === null}
+                onClick={onConfirm}
+              >
+                {structure} 배치 확정
+              </button>
+            </div>
+            {validTargets.length === 0 && (
+              <p className="error-msg">배치할 수 있는 홈 행성이 없습니다.</p>
+            )}
+            {errorMessage && <p className="error-msg">{errorMessage}</p>}
+          </section>
         </div>
-        <div className="starting-placement-meta">
-          <span>배치 단계 {placement.placement_index + 1}</span>
-          <span>{activeFaction}</span>
-          <strong>{structure}</strong>
-        </div>
-        <div className="starting-structure-board">
-          <GameBoard
-            board={game.board}
-            players={game.players}
-            validTargets={validTargets}
-            selectedCoord={selectedHex}
-            onHexClick={onSelectHex}
-          />
-        </div>
-        <div className="starting-placement-controls">
-          <span>
-            {selectedHex
-              ? `선택 좌표: (${selectedHex.q}, ${selectedHex.r})`
-              : isMyTurn
-                ? `노란색으로 표시된 ${homePlanet} 행성을 선택하세요.`
-                : '현재 플레이어의 배치를 기다리고 있습니다.'}
-          </span>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!isMyTurn || selectedHex === null}
-            onClick={onConfirm}
-          >
-            {structure} 배치 확정
-          </button>
-        </div>
-        {validTargets.length === 0 && (
-          <p className="error-msg">배치할 수 있는 홈 행성이 없습니다.</p>
-        )}
-        {errorMessage && <p className="error-msg">{errorMessage}</p>}
-      </section>
+      </aside>
     </div>
   );
 }
@@ -564,6 +624,7 @@ interface StartingBoosterSetupProps {
   selectedBooster: number | null;
   errorMessage: string | null;
   playerLabel: (id: PlayerId) => string;
+  emphasizeStructures: boolean;
   onSelectBooster: (boosterId: number) => void;
   onConfirm: () => void;
 }
@@ -576,72 +637,120 @@ function StartingBoosterSetup({
   selectedBooster,
   errorMessage,
   playerLabel,
+  emphasizeStructures,
   onSelectBooster,
   onConfirm,
 }: StartingBoosterSetupProps) {
   const selectionOrder = [...game.turn_order].reverse();
 
   return (
-    <div className="faction-selection-view starting-booster-view">
-      <SetupHeader kicker="REVERSE TURN ORDER" title="초기 부스터 선택" isConnected={isConnected} />
+    <div className="app app--game setup-game-preview">
+      <nav className="game-topbar" aria-label="초기 설정 상태">
+        <span className="game-top-control setup-phase-indicator">테란 초기 설정 · 부스터 선택</span>
+      </nav>
+      <aside className="game-reference-rail" aria-label="게임 참조 보드">
+        <section className="game-reference-card">
+          <h2>연구 트랙</h2>
+          <ResearchBoard players={game.players} board={game.research_board} />
+        </section>
+        <section className="game-ship-list" aria-label="함선 보드 영역">
+          <h2>함선 보드</h2>
+          <SpaceshipBoards spaceshipBoards={game.spaceship_boards} players={game.players} />
+        </section>
+      </aside>
+      <main className="game-board-stage">
+        <GameBoard
+          board={game.board}
+          players={game.players}
+          emphasizeStructures={emphasizeStructures}
+        />
+        <LostFleetTechRequirementBoard
+          side={game.research_board.lost_fleet_advanced_tech_requirement}
+          tileId={game.research_board.lost_fleet_advanced_tech_tile}
+        />
+      </main>
+      <aside className="game-sidebar setup-booster-sidebar" style={{ overflowY: 'auto' }}>
+        <div className="faction-selection-view starting-booster-view">
+            <SetupHeader kicker="REVERSE TURN ORDER" title="초기 부스터 선택" isConnected={isConnected} />
 
-      <section className="faction-selection-order" aria-label="초기 부스터 선택 순서">
-        {selectionOrder.map((id, index) => {
-          const player = game.players.find((candidate) => candidate.player_id === id);
-          const isActive = id === selection.active_player;
-          const selected = player?.booster ?? null;
-          return (
-            <div
-              key={id}
-              className={`faction-selection-player ${isActive ? 'active' : ''} ${selected !== null ? 'complete' : ''}`}
-            >
-              <span className="faction-selection-position">{index + 1}</span>
-              <strong>{playerLabel(id)}</strong>
-              <span>{selected === null ? (isActive ? '선택 중' : '대기') : `부스터 #${selected}`}</span>
-            </div>
-          );
-        })}
-      </section>
+            <section className="faction-selection-order" aria-label="초기 부스터 선택 순서">
+              {selectionOrder.map((id, index) => {
+                const player = game.players.find((candidate) => candidate.player_id === id);
+                const isActive = id === selection.active_player;
+                const selected = player?.booster ?? null;
+                return (
+                  <div
+                    key={id}
+                    className={`faction-selection-player ${isActive ? 'active' : ''} ${selected !== null ? 'complete' : ''}`}
+                  >
+                    <span className="faction-selection-position">{index + 1}</span>
+                    <div className="starting-booster-player-identity">
+                      <strong>{playerLabel(id)}</strong>
+                      {player?.faction && <small>{player.faction}</small>}
+                      {player && (
+                        <small className="starting-booster-player-bid">
+                          비딩 -{player.setup_bid_vp}점
+                        </small>
+                      )}
+                    </div>
+                    <div className="starting-booster-player-choice">
+                      {selected === null ? (
+                        <span>{isActive ? '선택 중' : '대기'}</span>
+                      ) : (
+                        <>
+                          {roundBoosterImageSrc(selected) && (
+                            <img
+                              src={roundBoosterImageSrc(selected) ?? undefined}
+                              alt={`${playerLabel(id)} · ${player?.faction ?? '종족 미정'} · 부스터 #${selected}`}
+                            />
+                          )}
+                          <strong>부스터 #{selected}</strong>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
 
-      <section className="faction-selection-panel starting-booster-panel">
-        <div className="faction-selection-prompt">
-          {isMyTurn
-            ? '이번 라운드에 사용할 부스터 하나를 선택하세요.'
-            : `${playerLabel(selection.active_player)}님이 부스터를 선택하는 중입니다.`}
-        </div>
-        <p className="bidding-rule-note">
-          시작 구조물 배치가 끝났으므로 마지막 플레이어부터 역순으로 선택합니다. 모두 선택하면 1라운드 수입을 받습니다.
-        </p>
-        <div className="starting-booster-grid">
-          {game.boosters.map((boosterId) => {
-            const imageSrc = roundBoosterImageSrc(boosterId);
-            const selected = selectedBooster === boosterId;
-            return (
+            <section className="faction-selection-panel starting-booster-panel">
+              <div className="faction-selection-prompt">
+                {isMyTurn
+                  ? '이번 라운드에 사용할 부스터 하나를 선택하세요.'
+                  : `${playerLabel(selection.active_player)}님이 부스터를 선택하는 중입니다.`}
+              </div>
+              <div className="starting-booster-grid">
+                {game.boosters.map((boosterId) => {
+                  const imageSrc = roundBoosterImageSrc(boosterId);
+                  const selected = selectedBooster === boosterId;
+                  return (
+                    <button
+                      key={boosterId}
+                      type="button"
+                      className={`starting-booster-choice ${selected ? 'selected' : ''}`}
+                      disabled={!isMyTurn}
+                      aria-label={`부스터 #${boosterId} 선택`}
+                      aria-pressed={selected}
+                      onClick={() => onSelectBooster(boosterId)}
+                    >
+                      {imageSrc && <img src={imageSrc} alt="" />}
+                      <strong>부스터 #{boosterId}</strong>
+                    </button>
+                  );
+                })}
+              </div>
               <button
-                key={boosterId}
                 type="button"
-                className={`starting-booster-choice ${selected ? 'selected' : ''}`}
-                disabled={!isMyTurn}
-                aria-label={`부스터 #${boosterId} 선택`}
-                aria-pressed={selected}
-                onClick={() => onSelectBooster(boosterId)}
+                className="btn btn-primary starting-booster-confirm"
+                disabled={!isMyTurn || selectedBooster === null}
+                onClick={onConfirm}
               >
-                {imageSrc && <img src={imageSrc} alt="" />}
-                <strong>부스터 #{boosterId}</strong>
+                부스터 선택 확정
               </button>
-            );
-          })}
+              {errorMessage && <p className="error-msg">{errorMessage}</p>}
+            </section>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary starting-booster-confirm"
-          disabled={!isMyTurn || selectedBooster === null}
-          onClick={onConfirm}
-        >
-          부스터 선택 확정
-        </button>
-        {errorMessage && <p className="error-msg">{errorMessage}</p>}
-      </section>
+      </aside>
     </div>
   );
 }
@@ -657,6 +766,7 @@ interface BiddingSetupProps {
   isConnected: boolean;
   errorMessage: string | null;
   playerLabel: (id: PlayerId) => string;
+  terraformingColorOrder: PlanetType[];
   onBidAmountChange: (amount: number) => void;
   onSelectFaction: (faction: FactionId) => void;
   onSelectTurnPosition: (position: number) => void;
@@ -676,6 +786,7 @@ function BiddingSetup({
   isConnected,
   errorMessage,
   playerLabel,
+  terraformingColorOrder,
   onBidAmountChange,
   onSelectFaction,
   onSelectTurnPosition,
@@ -697,7 +808,9 @@ function BiddingSetup({
 
   return (
     <div className="faction-selection-view bidding-view">
-      <SetupHeader kicker="CLOCKWISE VP AUCTION" title="종족 비딩" isConnected={isConnected} />
+      <SetupHeader kicker="시계방향 승점 경매" title="종족 비딩" isConnected={isConnected} />
+
+      <TerraformingSelectionBoard colorOrder={terraformingColorOrder} />
 
       <section className="faction-selection-order" aria-label="비딩 참가 순서">
         {bidding.clockwise_order.map((id, index) => {
@@ -719,7 +832,7 @@ function BiddingSetup({
                       size={28}
                       imageSrc={explorationBoardImageSrc(assignment.faction) ?? undefined}
                     />
-                    <small>순서 {assignment.turn_position} · -{assignment.bid_vp} VP</small>
+                    <small>순서 {assignment.turn_position} · 승점 -{assignment.bid_vp}점</small>
                   </span>
                 ) : hasPassed ? (
                   '패스'
@@ -739,7 +852,7 @@ function BiddingSetup({
           <div className="bidding-summary" aria-label="현재 입찰 상태">
             <div>
               <span>현재 최고 입찰</span>
-              <strong>{bidding.highest_bid} VP</strong>
+              <strong>승점 {bidding.highest_bid}점</strong>
             </div>
             <div>
               <span>최고 입찰자</span>
@@ -750,17 +863,17 @@ function BiddingSetup({
               </strong>
             </div>
             <div>
-              <span>현재 보유 VP</span>
-              <strong>{myVp} VP</strong>
+              <span>현재 보유 승점</span>
+              <strong>승점 {myVp}점</strong>
             </div>
           </div>
           <div className="faction-selection-prompt">
             {isMyTurn
-              ? '현재 최고 입찰보다 높은 VP를 제시하거나 패스하세요.'
+              ? '현재 최고 입찰보다 높은 승점을 제시하거나 패스하세요.'
               : `${actor === null ? '경매 종료' : playerLabel(actor)}님의 결정을 기다리는 중입니다.`}
           </div>
           <div className="bidding-controls">
-            <label htmlFor="bid-amount">입찰 VP</label>
+            <label htmlFor="bid-amount">입찰 승점</label>
             <input
               id="bid-amount"
               type="number"
@@ -772,20 +885,20 @@ function BiddingSetup({
               onChange={(event) => onBidAmountChange(Number(event.target.value))}
             />
             <button className="btn btn-primary" disabled={!canPlaceBid} onClick={onPlaceBid}>
-              {bidAmount} VP 입찰
+              승점 {bidAmount}점 입찰
             </button>
             <button className="btn btn-secondary" disabled={!isMyTurn} onClick={onPass}>
               패스
             </button>
           </div>
-          <p className="bidding-rule-note">입찰 VP는 게임 도중 유지되고 최종 점수에서 차감됩니다.</p>
+          <p className="bidding-rule-note">입찰 승점은 게임 도중 유지되고 최종 점수에서 차감됩니다.</p>
           {errorMessage && <p className="error-msg">{errorMessage}</p>}
         </section>
       ) : winnerChoice ? (
         <section className="faction-selection-panel bidding-panel">
           <div className="faction-selection-prompt">
             {isMyTurn
-              ? `${winnerChoice.bid_vp} VP로 낙찰되었습니다. 종족과 최종 순서를 선택하세요.`
+              ? `승점 ${winnerChoice.bid_vp}점으로 낙찰되었습니다. 종족과 최종 순서를 선택하세요.`
               : `${playerLabel(winnerChoice.winner)}님이 종족과 순서를 선택하는 중입니다.`}
           </div>
           <div className="bidding-choice-heading">종족</div>

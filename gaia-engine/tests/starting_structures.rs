@@ -270,10 +270,17 @@ fn base_factions_place_clockwise_then_counterclockwise_with_exceptions_last() {
         .unwrap_or_else(|| panic!("Terrans player should exist"));
     let events = RuleEngine::start_first_round(&mut game)
         .unwrap_or_else(|error| panic!("first-round income should start: {error}"));
-    assert!(matches!(
-        events.as_slice(),
-        [GameEvent::RoundStarted { round: 1 }]
-    ));
+    assert!(events
+        .iter()
+        .any(|event| matches!(event, GameEvent::RoundStarted { round: 1 })));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        GameEvent::IncomeReceived {
+            player: 7,
+            round: 1,
+            ..
+        }
+    )));
     assert_eq!(
         game.player(7).map(|player| player.resources.qic),
         Some(terrans_qic_before_income + 1),

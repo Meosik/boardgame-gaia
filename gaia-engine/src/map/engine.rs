@@ -2,11 +2,13 @@ use crate::bidding::BiddingPolicy;
 use crate::data::sectors::{load_sectors, SectorFile};
 use crate::error::RuleError;
 use crate::game_state::{
-    ArtifactId, BoardState, FederationToken, GamePhase, GameState, Hex, HexCoord, Planet,
-    PlanetType, PlayerId, PlayerState, PowerCycle, ResearchBoard, ResearchTracks, Resources,
-    RoomCode, RoundTile, Sector, SetupPhase, SpaceshipBoard, SpaceshipId, StructureType,
+    ArtifactId, BoardState, EconomyResearchTileSide, FederationToken, GamePhase, GameState, Hex,
+    HexCoord, Planet, PlanetType, PlayerId, PlayerState, PowerCycle, ResearchBoard, ResearchTracks,
+    Resources, RoomCode, RoundTile, Sector, SetupPhase, SpaceshipBoard, SpaceshipId, StructureType,
 };
-use crate::randomizer::{lost_fleet_sector_origins, GameSetup, Randomizer, SectorPlacement};
+use crate::randomizer::{
+    lost_fleet_sector_origins, GameSetup, Randomizer, SectorPlacement, ADVANCED_TECH_TILE_IDS,
+};
 use crate::setup_policy::SetupPolicy;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -707,6 +709,8 @@ impl MapEngine {
                 geodens_rewarded_planet_types: Vec::new(),
                 federated_hexes: Vec::new(),
                 tinkeroids_tiles_used: Vec::new(),
+                tinkeroids_selected_tile: None,
+                expensive_terraforming_planet_types: Vec::new(),
                 moweyds_power_ring_hexes: Vec::new(),
                 tech_tile_special_actions_used_this_round: Vec::new(),
                 advanced_tech_tile_special_actions_used_this_round: Vec::new(),
@@ -730,6 +734,21 @@ impl MapEngine {
             .map_or(GamePhase::Setup(SetupPhase::Complete), |active_player| {
                 GamePhase::Setup(SetupPhase::FactionSelection { active_player })
             });
+
+        let mut terraforming_color_order = setup.terraforming_color_order.clone();
+        if terraforming_color_order.len() != 7 {
+            terraforming_color_order = vec![
+                PlanetType::Terra,
+                PlanetType::Swamp,
+                PlanetType::Desert,
+                PlanetType::Oxide,
+                PlanetType::Titanium,
+                PlanetType::Volcanic,
+                PlanetType::Ice,
+            ];
+            Randomizer::new(&format!("{seed}:terraforming-color-order"))
+                .shuffle(&mut terraforming_color_order);
+        }
 
         GameState {
             room_code: RoomCode(room_code.to_string()),
@@ -767,23 +786,54 @@ impl MapEngine {
                 for (index, &id) in setup.advanced_tech_tile_ids.iter().take(6).enumerate() {
                     rb.advanced_tech_tiles[index] = Some(crate::game_state::AdvancedTechTile(id));
                 }
-                // Base game Federation token supply (rulebook p.2 components): 19 tokens across
-                // 7 reward kinds (`federation_token_kind` in rules/engine.rs) — 12 VP x3; 8 VP +
-                // 1 ore x3; 8 VP + 2 power x3; 7 VP + 2 ore x3; 7 VP + 6 credits x3; 6 VP + 2
-                // knowledge x3; 1 ore + 1 knowledge + 2 credits (no VP) x1.
+                let lost_fleet_advanced_tech_id =
+                    setup.advanced_tech_tile_ids.get(6).copied().or_else(|| {
+                        // Rooms created before the Lost Fleet slot was modeled persisted only six
+                        // ids. Deterministically choose an unused seventh tile so those rooms also
+                        // render a complete requirement board without requiring a reroll.
+                        let mut unused = ADVANCED_TECH_TILE_IDS
+                            .into_iter()
+                            .filter(|id| !setup.advanced_tech_tile_ids.contains(id))
+                            .collect::<Vec<_>>();
+                        let mut fallback_rng =
+                            Randomizer::new(&format!("{seed}:lost-fleet-advanced-tile"));
+                        fallback_rng.shuffle(&mut unused);
+                        unused.into_iter().next()
+                    });
+                rb.lost_fleet_advanced_tech_tile =
+                    lost_fleet_advanced_tech_id.map(crate::game_state::AdvancedTechTile);
+                // Rulebook p.309: for 3-4 players, use the Scoring Board Extension side
+                // showing "3 Exploration Shuttles"; the "25 victory points" side is only
+                // for 2-player games. This project is fixed at 4 players (see project
+                // memory), so this is never randomized between the two sides.
+                rb.lost_fleet_advanced_tech_requirement =
+                    crate::game_state::LostFleetAdvancedTechRequirement::ExplorationShuttles;
+                // Base game Federation token supply: 18 tokens across 6 reward kinds — three
+                // copies of each standard reward. The 1 ore + 1 knowledge + 2 credits token is
+                // Gleens-only and is granted as id 16 by their Planetary Institute.
                 let mut federation_tokens: Vec<FederationToken> =
-                    [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7]
+                    [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6]
                         .into_iter()
                         .map(FederationToken)
                         .collect();
                 Randomizer::new(seed).shuffle(&mut federation_tokens);
+                rb.terraforming_level_5_token = federation_tokens.pop();
                 rb.federation_tokens = federation_tokens;
+                let mut economy_tile_rng = Randomizer::new(&format!("{seed}:economy-tile"));
+                rb.economy_research_tile_side = if economy_tile_rng.random_int(2) == 0 {
+                    EconomyResearchTileSide::Power
+                } else {
+                    EconomyResearchTileSide::VictoryPoints
+                };
                 rb
             },
+            terraforming_color_order,
             faction_selection: Some(faction_selection),
             bidding: None,
             turn_order: player_order,
+            pass_order: Vec::new(),
             current_player: 0,
+            undo_state: Default::default(),
             used_power_actions: Vec::new(),
             spaceship_boards: Self::initial_spaceship_boards(seed),
             used_spaceship_actions: Vec::new(),

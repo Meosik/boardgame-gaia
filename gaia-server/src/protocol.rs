@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 use gaia_engine::{
-    game_state::{GameEvent, PlayerId},
+    game_state::{GameEvent, HexCoord, PlayerId},
     rules::actions::{GameAction, SetupAction},
 };
 use gaia_protocol::{CommandEnvelope, Digest32, ServerEnvelope};
@@ -34,6 +34,17 @@ pub enum ClientCommand {
     PlaceSetupAction { action: SetupAction },
     /// In-game action.
     PlaceGameAction { action: GameAction },
+    /// Development sandbox only: open the normal passive-power decision for
+    /// the human seat using the selected owned structure.
+    TriggerDevPowerCharge { coord: HexCoord },
+    /// Active player only: restore the state immediately before their most
+    /// recent free action without consuming the action turn.
+    UndoFreeAction,
+    /// Ask the other real room members to restore the requester's latest
+    /// completed action turn.
+    RequestTurnUndo,
+    /// Approve or reject the currently pending completed-turn undo request.
+    RespondTurnUndo { approve: bool },
 }
 
 /// Top-level shape of every client->server WebSocket frame. `Join` precedes
@@ -243,6 +254,34 @@ mod tests {
                 matches!(result, Ok(ClientFrame::Command(_))),
                 "setup action should decode: {result:?}"
             );
+        }
+    }
+
+    #[test]
+    fn dev_power_charge_command_decodes_through_the_command_envelope() {
+        let mut value = valid_command_frame();
+        value["command"] = json!({
+            "type": "trigger_dev_power_charge",
+            "coord": "2,-1"
+        });
+
+        let result = decode_client_frame(&value.to_string());
+        assert!(matches!(result, Ok(ClientFrame::Command(_))));
+    }
+
+    #[test]
+    fn undo_commands_decode_through_the_command_envelope() {
+        for command in [
+            json!({ "type": "undo_free_action" }),
+            json!({ "type": "request_turn_undo" }),
+            json!({ "type": "respond_turn_undo", "approve": true }),
+        ] {
+            let mut value = valid_command_frame();
+            value["command"] = command;
+            assert!(matches!(
+                decode_client_frame(&value.to_string()),
+                Ok(ClientFrame::Command(_))
+            ));
         }
     }
 

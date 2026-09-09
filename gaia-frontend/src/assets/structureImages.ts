@@ -11,44 +11,58 @@ export type StructureAssetColor =
   | 'white'
   | 'yellow';
 
-type StructureAssetName =
+export type StructureAssetName =
   | 'academy'
+  | 'gaiaformer'
   | 'marker'
   | 'mine'
   | 'planetary_institute'
-  | 'researchlab'
-  | 'structure6';
+  | 'research_lab'
+  | 'trading_station';
 
-const STRUCTURE_IMAGES = import.meta.glob('./structures/*.png', {
+const UPSCALED_STRUCTURE_IMAGES = import.meta.glob('./structures/upscaled/*.png', {
   eager: true,
   import: 'default',
 }) as Record<string, string>;
 
 export const FACTION_STRUCTURE_COLOR: Record<FactionId, StructureAssetColor> = {
-  Terrans: 'cyan',
-  Lantids: 'pink',
-  Xenos: 'pink',
-  Gleens: 'cyan',
-  Taklons: 'orange',
-  Ambas: 'cyan',
-  HadschHallas: 'yellow',
+  Terrans: 'blue',
+  Lantids: 'blue',
+  Xenos: 'yellow',
+  Gleens: 'yellow',
+  Taklons: 'brown',
+  Ambas: 'brown',
+  HadschHallas: 'red',
   Ivits: 'red',
-  Geodens: 'yellow',
+  Geodens: 'orange',
   BalTaks: 'orange',
-  Firaks: 'pink',
+  Firaks: 'gray',
   Bescods: 'gray',
-  Nevlas: 'cyan',
-  Itars: 'orange',
-  Tinkeroids: 'blue',
+  Nevlas: 'white',
+  Itars: 'white',
+  Tinkeroids: 'pink',
   Moweyds: 'cyan',
-  SpaceGiants: 'yellow',
-  Darkanians: 'red',
+  SpaceGiants: 'cyan',
+  Darkanians: 'pink',
+};
+
+/** Screen-safe equivalents of the physical player-piece colors. */
+export const STRUCTURE_COLOR_HEX: Record<StructureAssetColor, string> = {
+  blue: '#3b82f6',
+  brown: '#a16207',
+  cyan: '#06b6d4',
+  gray: '#94a3b8',
+  orange: '#f97316',
+  pink: '#ec4899',
+  red: '#ef4444',
+  white: '#f8fafc',
+  yellow: '#facc15',
 };
 
 export function structureAssetName(kind: StructureType): StructureAssetName | null {
   if (kind === 'Mine') return 'mine';
-  if (kind === 'TradingStation') return 'structure6';
-  if (kind === 'ResearchLab') return 'researchlab';
+  if (kind === 'TradingStation') return 'trading_station';
+  if (kind === 'ResearchLab') return 'research_lab';
   if (kind === 'PlanetaryInstitute') return 'planetary_institute';
   if (kind === 'Satellite') return 'marker';
   if (kind === 'SpaceStation') return 'marker';
@@ -60,6 +74,5 @@ export function structureImageSrc(
   color: StructureAssetColor,
   assetName: StructureAssetName,
 ): string {
-  return STRUCTURE_IMAGES[`./structures/${color}_${assetName}.png`];
+  return UPSCALED_STRUCTURE_IMAGES[`./structures/upscaled/${color}_${assetName}.png`];
 }
-

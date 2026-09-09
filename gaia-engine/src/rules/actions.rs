@@ -69,6 +69,12 @@ pub enum GameAction {
     /// Advance one level on a research track.
     ResearchAdvance { track: ResearchTrack },
 
+    /// Resolve Navigation level 5's immediate Lost Planet placement. The triggering research
+    /// action has already completed; while this decision is pending, no other action is legal.
+    /// Range is 4 from Navigation level 5 and the minimum required QIC extension is computed
+    /// automatically, exactly like `Build`.
+    PlaceLostPlanet { coord: HexCoord },
+
     /// Form a new federation from a connected set of `hexes` (planets the player has already
     /// colonized) plus, when those colonized planets aren't all directly adjacent, freshly built
     /// `satellite_hexes` bridging them (rulebook p.14, "Connecting Planets": "To connect planets
@@ -130,6 +136,9 @@ pub enum GameAction {
     /// starting point and as power value 1 toward Ivits' one-and-only, ever-growing federation
     /// (rulebook Appendix I).
     IvitsPlaceSpaceStation { coord: HexCoord },
+
+    /// Start-of-round Tinkeroids decision: choose the current round's Tinkering tile.
+    SelectTinkeringTile { tile: u8 },
 
     /// Tinkeroids Planetary Institute special action: use the effect printed on the player's
     /// currently-chosen Tinkering tile (rulebook Appendix I). `tile` is one of 6 ids (1-3 usable
@@ -396,9 +405,10 @@ pub enum FederationTokenChoice {
 // ── TechTileChoice ───────────────────────────────────────────────────────────
 
 /// Which Tech tile to take as part of a `GameAction::Upgrade` (rulebook p.15). `advance_track`
-/// is the research track to advance one level in, if any — see `GameAction::Upgrade`'s doc
-/// comment for why this engine doesn't restrict it to whichever track a Standard tile happens to
-/// sit under. Taking an Advanced tile removes it permanently from that track's level-4/5 slot.
+/// is the research track to advance one level in, if any. For one of the six Standard tiles
+/// directly beneath a research area, the engine derives and uses that aligned track regardless
+/// of this field; it remains a choice for the three lower-row and Lost Fleet spaceship tiles.
+/// Taking an Advanced tile removes it permanently from that track's level-4/5 slot.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "PascalCase")]
 pub enum TechTileChoice {

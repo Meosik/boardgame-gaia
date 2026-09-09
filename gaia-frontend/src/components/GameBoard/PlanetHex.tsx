@@ -9,7 +9,7 @@ import titaniumPng from '../../assets/planets/titanium.png';
 import volcanicPng from '../../assets/planets/volcanic.png';
 import transdimPng from '../../assets/planets/transdim.png';
 import gaiaPng     from '../../assets/planets/gaia.png';
-import lostPng     from '../../assets/planets/lost.png';
+import lostPng     from '../../assets/boards/normalized/lost_planet.webp';
 
 const PLANET_IMAGE: Partial<Record<PlanetType, string>> = {
   Terra:      terraPng,

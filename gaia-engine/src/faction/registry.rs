@@ -12,8 +12,8 @@ use crate::game_state::FactionId;
 
 /// Holds one `FactionAbility` implementation per faction.
 ///
-/// Initialised with `DefaultFactionAbility` stubs for all 18 factions.
-/// Future work: replace individual entries with real implementations.
+/// Initialised with a standard no-op hook for all 18 factions. Rules that need this trait replace
+/// that entry below; stateful faction actions and exceptions are implemented in `rules::engine`.
 pub struct FactionRegistry {
     map: HashMap<FactionId, Box<dyn FactionAbility>>,
 }
@@ -47,8 +47,8 @@ impl FactionRegistry {
             map.insert(fid, Box::new(DefaultFactionAbility { faction_id: fid }));
         }
 
-        // Real implementations replace the stub as each faction's ability is coded.
-        // Tinkeroids/Moweyds stay on the stub too, like Ambas/Firaks/Bescods/Ivits above them:
+        // Trait-based implementations replace the standard hook where useful.
+        // Tinkeroids/Moweyds stay on the standard hook, like Ambas/Firaks/Bescods/Ivits:
         // their abilities (Tinkering tiles, Power Rings, and the opponent-dependent 3-vs-1
         // terraforming split) are state-dependent in ways this trait's stateless per-faction
         // methods can't express, so `rules::engine` implements them directly via

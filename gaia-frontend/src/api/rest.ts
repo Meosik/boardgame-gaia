@@ -1,5 +1,6 @@
 import type {
   CreateRoomResponse,
+  DevGameResponse,
   JoinRoomResponse,
   RoomInfo,
   GameSetup,
@@ -29,6 +30,13 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  createDevGame(faction = 'Terrans', seed = 'gaia-ui-dev'): Promise<DevGameResponse> {
+    return request(`${BASE}/dev-games`, {
+      method: 'POST',
+      body: JSON.stringify({ faction, seed }),
+    });
+  },
+
   createRoom(
     nickname: string,
     seed?: string,

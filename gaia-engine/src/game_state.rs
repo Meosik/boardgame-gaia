@@ -552,11 +552,18 @@ pub struct PlayerState {
     /// requiring a new `FormFederation` submission, so this list only grows via that action.
     #[serde(default)]
     pub federated_hexes: Vec<HexCoord>,
-    /// Tinkeroids only: ids (1-6) of the Tinkering tiles this player has already used via
-    /// `GameAction::TinkeroidsUseTile` — each of the 6 tiles is usable at most once per game
-    /// (rulebook Appendix I: "each tile is only used once").
+    /// Tinkeroids only: ids (1-6) of Tinkering tiles removed from play after selection. A used
+    /// tile is recorded immediately; an unused current tile is recorded during Clean-up.
     #[serde(default)]
     pub tinkeroids_tiles_used: Vec<u8>,
+    /// Tinkeroids only: the Tinkering tile chosen for the current round. It remains here until
+    /// Clean-up, whether or not its Planetary Institute action was used.
+    #[serde(default)]
+    pub tinkeroids_selected_tile: Option<u8>,
+    /// Tinkeroids/Moweyds only: the three base-game planet types that cost exactly three
+    /// terraforming steps, resolved from the shared Terraforming board after faction choice.
+    #[serde(default)]
+    pub expensive_terraforming_planet_types: Vec<PlanetType>,
     /// Moweyds only: hexes where this player has placed one of their (at most 6) Power Rings via
     /// `GameAction::MoweydsPlacePowerRing`. Each hex in this list adds +2 to that hex's structure
     /// power value for federation power and opponent charge-power purposes (rulebook Appendix I).
@@ -753,7 +760,36 @@ pub struct ResearchBoard {
     #[serde(default)]
     pub tech_tile_slots: Vec<Option<TechTile>>,
     pub advanced_tech_tiles: [Option<AdvancedTechTile>; 6],
+    /// The random Federation token placed on Terraforming level 5 during setup.
+    #[serde(default)]
+    pub terraforming_level_5_token: Option<FederationToken>,
+    /// Lost Fleet's additional Advanced Tech tile placed on the separate requirement board.
+    #[serde(default)]
+    pub lost_fleet_advanced_tech_tile: Option<AdvancedTechTile>,
+    /// Which side of the Lost Fleet requirement board is face up for this game.
+    #[serde(default)]
+    pub lost_fleet_advanced_tech_requirement: LostFleetAdvancedTechRequirement,
     pub federation_tokens: Vec<FederationToken>,
+    /// Lost Fleet's double-sided overlay covering Economy levels 3 and 4. A side is selected
+    /// deterministically from the room seed when the game board is initialized.
+    #[serde(default)]
+    pub economy_research_tile_side: EconomyResearchTileSide,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum LostFleetAdvancedTechRequirement {
+    #[default]
+    #[serde(rename = "exploration-shuttles")]
+    ExplorationShuttles,
+    #[serde(rename = "25-vp")]
+    VictoryPoints,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum EconomyResearchTileSide {
+    #[default]
+    Power,
+    VictoryPoints,
 }
 
 impl ResearchBoard {
@@ -767,7 +803,11 @@ impl ResearchBoard {
             tech_tiles: Vec::new(),
             tech_tile_slots: Vec::new(),
             advanced_tech_tiles: [None, None, None, None, None, None],
+            terraforming_level_5_token: None,
+            lost_fleet_advanced_tech_tile: None,
+            lost_fleet_advanced_tech_requirement: LostFleetAdvancedTechRequirement::default(),
             federation_tokens: Vec::new(),
+            economy_research_tile_side: EconomyResearchTileSide::default(),
         }
     }
 }
@@ -864,6 +904,20 @@ pub enum GamePhase {
     ActionPhase {
         active_player: usize,
     },
+    /// Navigation level 5 pauses whatever flow produced the research advance until that player
+    /// places the Lost Planet. `resume_phase` preserves ordinary turns as well as rarer free
+    /// research advances made during Gaia or another pending decision.
+    LostPlanetPlacementPending {
+        player: PlayerId,
+        resume_phase: Box<GamePhase>,
+    },
+    /// Opponents may charge through a newly placed Lost Planet as normal. This separate pending
+    /// variant can resume any phase (including an earlier charge queue), unlike the ordinary
+    /// Action-Phase-only `ChargePowerPending` representation.
+    LostPlanetChargePowerPending {
+        queue: Vec<PendingCharge>,
+        resume_phase: Box<GamePhase>,
+    },
     /// Rulebook p.16-17, "Passive Action: Charge Power" — `ActionPhase` is
     /// paused right after a Build/Upgrade while eligible opponents decide,
     /// in clockwise order, whether to charge power. `queue.front()` is the
@@ -894,6 +948,12 @@ pub enum GamePhase {
     /// next queued player decides.
     GaiaDecisionPending {
         queue: Vec<PendingGaiaDecision>,
+        round: u8,
+    },
+    /// Tinkeroids choose one eligible Tinkering tile at the start of every round, after the
+    /// automatic Income/Gaia processing and before the first action turn opens.
+    TinkeroidsTileSelectionPending {
+        player: PlayerId,
         round: u8,
     },
     RoundScoring {
@@ -1012,6 +1072,20 @@ pub enum GameEvent {
         player: PlayerId,
         delta: ResourceDelta,
     },
+    /// Per-round income summary retained in the durable event log so clients can show what was
+    /// gained instead of only the post-income resource totals. `power_charge` is the printed
+    /// charge amount; `power_tokens` counts newly gained tokens placed into power bowls.
+    IncomeReceived {
+        player: PlayerId,
+        round: u8,
+        ore: u8,
+        credits: u8,
+        knowledge: u8,
+        qic: u8,
+        power_charge: u8,
+        power_tokens: u8,
+        vp: u8,
+    },
     /// Human-readable audit event for a free-action conversion. The
     /// accompanying `ResourceChanged` event remains the numeric state delta.
     FreeActionTaken {
@@ -1057,6 +1131,10 @@ pub enum GameEvent {
         player: PlayerId,
         track: ResearchTrack,
         level: u8,
+    },
+    LostPlanetPlaced {
+        player: PlayerId,
+        hex: HexCoord,
     },
     GaiaFormingStarted {
         player: PlayerId,
@@ -1107,6 +1185,17 @@ pub enum GameEvent {
     },
     GameEnded {
         final_scores: [i32; 4],
+    },
+    UndoRequested {
+        requester: PlayerId,
+    },
+    UndoRejected {
+        requester: PlayerId,
+        responder: PlayerId,
+    },
+    UndoApplied {
+        requester: PlayerId,
+        free_action_only: bool,
     },
 }
 
@@ -1175,6 +1264,43 @@ pub enum RoundCondition {
     UpgradeResearchLab,
 }
 
+// ── Undo checkpoints ─────────────────────────────────────────────────────────
+
+/// Start of the action turn currently in progress. Free-action revisions are
+/// stacked so the active player can undo them one at a time without ending or
+/// consuming their action turn.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UndoOpenTurn {
+    pub player: PlayerId,
+    pub start_revision: u64,
+    pub free_action_revisions: Vec<u64>,
+}
+
+/// A completed action turn remains requestable until two later action turns
+/// have completed. Restoring `start_revision` also restores every intervening
+/// state mutation, which is why all other real players must approve.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UndoCompletedTurn {
+    pub player: PlayerId,
+    pub start_revision: u64,
+    pub completed_revision: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UndoRequestState {
+    pub requester: PlayerId,
+    pub target_revision: u64,
+    pub required_approvals: Vec<PlayerId>,
+    pub approvals: Vec<PlayerId>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UndoState {
+    pub open_turn: Option<UndoOpenTurn>,
+    pub recent_turns: Vec<UndoCompletedTurn>,
+    pub pending_request: Option<UndoRequestState>,
+}
+
 // ── GameState ─────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1192,13 +1318,25 @@ pub struct GameState {
     pub boosters: Vec<Booster>,
     pub final_scoring_tiles: [FinalScoringTile; 2],
     pub research_board: ResearchBoard,
+    /// The seven base-game planet colors in the numbered order shown on the Lost Fleet
+    /// Moweyds/Tinkeroids Terraforming board.
+    #[serde(default)]
+    pub terraforming_color_order: Vec<PlanetType>,
     pub faction_selection: Option<FactionSelectionState>,
     /// Present only when the optional fixed four-player bidding setup is used.
     #[serde(default)]
     pub bidding: Option<BiddingState>,
 
     pub turn_order: Vec<PlayerId>,
+    /// Players in the order they passed during the current round. At the
+    /// following round transition this becomes `turn_order`, then is cleared.
+    #[serde(default)]
+    pub pass_order: Vec<PlayerId>,
     pub current_player: usize,
+
+    /// Durable turn/free-action checkpoints and any room-wide approval request.
+    #[serde(default)]
+    pub undo_state: UndoState,
 
     /// Power-action board slot ids (rulebook Appendix III) already taken
     /// this round — shared across all players (whoever takes a slot first

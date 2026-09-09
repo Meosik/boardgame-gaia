@@ -74,6 +74,7 @@ impl AppState {
             revision: revision as u64,
             connected: HashSet::new(),
             paused: false,
+            dev_human_player: None,
         };
 
         let mut rooms = self.rooms.write().await;
