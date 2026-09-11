@@ -8,10 +8,12 @@ from pathlib import Path
 
 from PIL import Image
 
+from asset_names import ADVANCED_TECH_TILES, STANDARD_TECH_TILES, asset_filename
+
 
 GROUPS = {
-    "standard": ("std", (178, 134)),
-    "advanced": ("adv", (167, 132)),
+    "standard": ("std", (178, 134), STANDARD_TECH_TILES),
+    "advanced": ("adv", (167, 132), ADVANCED_TECH_TILES),
 }
 
 
@@ -44,7 +46,7 @@ def main() -> None:
 
     groups = ("standard", "advanced") if args.include_advanced else ("standard",)
     for group in groups:
-        prefix, physical_size = GROUPS[group]
+        prefix, physical_size, names = GROUPS[group]
         sources = sorted((args.source_dir / group).glob(f"{prefix}_*.png"))
         if not sources:
             raise FileNotFoundError(f"no normalized {group} tech tiles found")
@@ -56,7 +58,8 @@ def main() -> None:
                 raise ValueError(
                     f"{source} is {image.width}x{image.height}; expected {physical_width}:{physical_height}"
                 )
-            output = args.output_dir / f"{source.stem}.webp"
+            tile_id = int(source.stem.split("_")[1])
+            output = args.output_dir / asset_filename(prefix, tile_id, names, "webp")
             image.save(output, format="WEBP", lossless=True, method=6, exact=True)
             print(f"{source.name} -> {output} ({image.width}x{image.height})")
 

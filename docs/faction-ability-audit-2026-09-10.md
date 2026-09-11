@@ -10,7 +10,7 @@ faction_boards/normalized·exploration_boards/normalized·tinkering_tiles 이미
 gaia-engine/src/rules/engine.rs와 src/faction/impls, frontend ActionPanel·PlayerActionShelf·federationSelection.
 
 ## 이번 반영
-- 사용자 업스케일 뒷면 707b3cfa-3620-457a-aec7-15dcf7f729e5.png(1165×1350 RGBA)를 원본 그대로 연결.
+- 사용자 업스케일 뒷면 707b3cfa-3620-457a-aec7-15dcf7f729e5.png(1165×1350 RGBA, 현재 파일명 `round_00_뒷면.png`)를 원본 그대로 연결.
   완료 라운드만 뒤집히는 기존 위치·시점·애니메이션 유지, 남색 사각형 제거. 이미지 재생성/편집 없음.
 - 다카니안: PI 후 미점유 우주/깊은 우주 섹터의 첫 식민화마다 크레딧2·지식1.
   같은 섹터 추가 건설·PI 전 점유 섹터·인터스페이스 제외. 검은 행성도 점유에 포함.

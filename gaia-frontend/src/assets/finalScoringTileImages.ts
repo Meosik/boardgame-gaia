@@ -1,25 +1,14 @@
-import tile01 from './final_scoring_tiles/normalized/final_01.webp';
-import tile02 from './final_scoring_tiles/normalized/final_02.webp';
-import tile03 from './final_scoring_tiles/normalized/final_03.webp';
-import tile04 from './final_scoring_tiles/normalized/final_04.webp';
-import tile05 from './final_scoring_tiles/normalized/final_05.webp';
-import tile06 from './final_scoring_tiles/normalized/final_06.webp';
-import tile08 from './final_scoring_tiles/normalized/final_08.webp';
-import tile09 from './final_scoring_tiles/normalized/final_09.webp';
-import tile10 from './final_scoring_tiles/normalized/final_10.webp';
+import { indexAssetsById } from './assetIndex';
 
-const images: Record<number, string> = {
-  1: tile01,
-  2: tile02,
-  3: tile03,
-  4: tile04,
-  5: tile05,
-  6: tile06,
-  8: tile08,
-  9: tile09,
-  10: tile10,
-};
+// Ids follow `FinalScoringTile::IDS` in gaia-engine (1-6, 8-10; there is no tile 7).
+const finalScoringTiles = indexAssetsById(
+  import.meta.glob('./final_scoring_tiles/normalized/final_*.webp', {
+    eager: true,
+    import: 'default',
+  }) as Record<string, string>,
+  'final',
+);
 
 export function finalScoringTileImageSrc(tileId: number): string | undefined {
-  return images[tileId];
+  return finalScoringTiles.get(tileId);
 }

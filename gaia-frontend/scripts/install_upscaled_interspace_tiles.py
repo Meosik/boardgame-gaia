@@ -15,6 +15,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from asset_names import INTERSPACE_TILES, asset_filename
+
 
 INTERSPACE_IDS = range(1, 8)
 
@@ -102,8 +104,12 @@ def main() -> None:
         for tile_id in INTERSPACE_IDS:
             stem = f"{tile_id:02d}"
             master_path = args.interspace_master_dir / f"{stem}.png"
-            reference_path = assets_dir / f"interspace_tiles/{tile_id}.png"
-            output_path = args.interspace_output_dir / f"{stem}.webp"
+            reference_path = assets_dir / "interspace_tiles" / asset_filename(
+                "interspace", tile_id, INTERSPACE_TILES, "png", "원본"
+            )
+            output_path = args.interspace_output_dir / asset_filename(
+                "interspace", tile_id, INTERSPACE_TILES, "webp"
+            )
             runtime = build_runtime_asset(
                 master_path,
                 reference_path,

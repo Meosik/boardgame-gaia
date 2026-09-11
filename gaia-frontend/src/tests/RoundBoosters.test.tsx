@@ -42,7 +42,7 @@ describe('RoundBoosters', () => {
       const imageSrc = roundBoosterImageSrc(id);
       expect(imageSrc).toBeDefined();
       expect(imageSrc).toContain(
-        `round_boosters/normalized/booster_${String(id).padStart(2, '0')}.webp`,
+        `round_boosters/normalized/booster_${String(id).padStart(2, '0')}_`,
       );
     }
   });

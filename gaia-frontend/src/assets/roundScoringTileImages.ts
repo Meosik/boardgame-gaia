@@ -1,15 +1,15 @@
-export { default as roundScoringTileBackImageSrc } from './round_scoring_tiles/normalized/707b3cfa-3620-457a-aec7-15dcf7f729e5.png';
+import { indexAssetsById } from './assetIndex';
 
-const normalized = import.meta.glob('./round_scoring_tiles/normalized/*.webp', {
+const normalized = import.meta.glob('./round_scoring_tiles/normalized/round_*.{webp,png}', {
   eager: true,
   import: 'default',
 }) as Record<string, string>;
 
-function normalizedRoundTile(tileId: number): string | undefined {
-  const stem = String(tileId).padStart(2, '0');
-  return normalized[`./round_scoring_tiles/normalized/round_${stem}.webp`];
-}
+// Id 0 is the shared face-down back; ids 1-12 are the printed round tiles.
+const roundTiles = indexAssetsById(normalized, 'round');
+
+export const roundScoringTileBackImageSrc = roundTiles.get(0) as string;
 
 export function roundScoringTileImageSrc(tileId: number): string | undefined {
-  return normalizedRoundTile(tileId);
+  return tileId === 0 ? undefined : roundTiles.get(tileId);
 }

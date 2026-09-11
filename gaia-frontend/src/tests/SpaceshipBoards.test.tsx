@@ -163,7 +163,7 @@ describe('SpaceshipBoards', () => {
     expect(screen.getByAltText('T F 마스 연방 토큰 9')).toBeInTheDocument();
     expect(screen.getByAltText('트와일라잇 연방 토큰 8')).toHaveAttribute(
       'src',
-      expect.stringContaining('federation_tokens_lost_fleet/normalized/fed_08.png'),
+      expect.stringContaining('federation_tokens_lost_fleet/normalized/fed_08_'),
     );
   });
 

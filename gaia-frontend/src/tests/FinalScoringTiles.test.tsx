@@ -26,9 +26,9 @@ describe('FinalScoringTiles', () => {
     for (const id of [1, 2, 3, 4, 5, 6, 8, 9, 10]) {
       const imageSrc = finalScoringTileImageSrc(id);
       expect(imageSrc).toBeDefined();
-      expect(imageSrc).toContain(`final_${String(id).padStart(2, '0')}.webp`);
+      expect(imageSrc).toContain(`final_${String(id).padStart(2, '0')}_`);
     }
-    expect(finalScoringTileImageSrc(4)).toContain('final_04.webp');
+    expect(finalScoringTileImageSrc(4)).toContain('final_04_');
     expect(finalScoringTileImageSrc(7)).toBeUndefined();
   });
 

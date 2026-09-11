@@ -8,13 +8,15 @@ from pathlib import Path
 
 from PIL import Image
 
+from asset_names import ARTIFACTS, asset_filename
+
 
 FRONTEND_DIR = Path(__file__).resolve().parents[1]
 ASSETS_DIR = FRONTEND_DIR / "src/assets"
 
 ARTIFACT_SOURCES = {
-    artifact_id: f"artifact_{artifact_id:02d}.png"
-    for artifact_id in range(1, 14)
+    artifact_id: asset_filename("artifact", artifact_id, ARTIFACTS, "png", "원본")
+    for artifact_id in ARTIFACTS
 }
 
 BOARD_SOURCES = (
@@ -85,7 +87,7 @@ def main() -> None:
     for artifact_id, source_name in ARTIFACT_SOURCES.items():
         convert(
             artifact_dir / source_name,
-            artifact_dir / "normalized" / f"artifact_{artifact_id:02d}.webp",
+            artifact_dir / "normalized" / asset_filename("artifact", artifact_id, ARTIFACTS, "webp"),
         )
 
     exploration_dir = ASSETS_DIR / "exploration_boards"

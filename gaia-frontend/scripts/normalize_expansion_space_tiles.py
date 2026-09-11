@@ -20,6 +20,8 @@ from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
+from asset_names import INTERSPACE_TILES, asset_filename
+
 
 FRONTEND_DIR = Path(__file__).resolve().parents[1]
 PROJECT_DIR = FRONTEND_DIR.parent
@@ -404,7 +406,8 @@ def backup_outputs() -> Path | None:
             for side in (1, 2)
         ],
         "interspace-png": [
-            INTERSPACE_DIR / f"{tile_id}.png" for tile_id in range(1, 8)
+            INTERSPACE_DIR / asset_filename("interspace", tile_id, INTERSPACE_TILES, "png", "원본")
+            for tile_id in range(1, 8)
         ],
     }
     directory_groups = {
@@ -534,8 +537,8 @@ def normalize_interspace() -> None:
     output_mask = interspace_mask(INTERSPACE_OUTPUT_SIZE)
     for tile_id in range(1, 8):
         source_path = INTERSPACE_DIR / f"interspace_{tile_id:02d}.jpg"
-        png_path = INTERSPACE_DIR / f"{tile_id}.png"
-        webp_path = INTERSPACE_WEBP_DIR / f"{tile_id:02d}.webp"
+        png_path = INTERSPACE_DIR / asset_filename("interspace", tile_id, INTERSPACE_TILES, "png", "원본")
+        webp_path = INTERSPACE_WEBP_DIR / asset_filename("interspace", tile_id, INTERSPACE_TILES, "webp")
         save_outputs(
             source_path,
             png_path,
@@ -568,8 +571,8 @@ def repair_current_outlines() -> None:
             print(f"outline: {png_path.relative_to(FRONTEND_DIR)}")
 
     for tile_id in range(1, 8):
-        png_path = INTERSPACE_DIR / f"{tile_id}.png"
-        webp_path = INTERSPACE_WEBP_DIR / f"{tile_id:02d}.webp"
+        png_path = INTERSPACE_DIR / asset_filename("interspace", tile_id, INTERSPACE_TILES, "png", "원본")
+        webp_path = INTERSPACE_WEBP_DIR / asset_filename("interspace", tile_id, INTERSPACE_TILES, "webp")
         with Image.open(png_path) as opened:
             output = repair_outline(
                 opened.convert("RGBA"),

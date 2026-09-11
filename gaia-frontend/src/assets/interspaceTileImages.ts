@@ -1,11 +1,27 @@
-import interspaceBlank from './interspace_tiles/normalized/01.webp';
-import interspaceEclipse from './interspace_tiles/normalized/02.webp';
-import interspaceTFMars from './interspace_tiles/normalized/03.webp';
-import interspaceRebellion from './interspace_tiles/normalized/04.webp';
-import interspaceTwilight from './interspace_tiles/normalized/05.webp';
-import interspaceAsteroid from './interspace_tiles/normalized/06.webp';
-import interspaceProtoPlanet from './interspace_tiles/normalized/07.webp';
 import type { SpaceshipId } from '../types/game';
+import { indexAssetsById } from './assetIndex';
+
+const interspaceTiles = indexAssetsById(
+  import.meta.glob('./interspace_tiles/normalized/interspace_*.webp', {
+    eager: true,
+    import: 'default',
+  }) as Record<string, string>,
+  'interspace',
+);
+
+function interspaceTile(tileId: number): string {
+  const src = interspaceTiles.get(tileId);
+  if (!src) throw new Error(`missing Interspace tile asset ${tileId}`);
+  return src;
+}
+
+const interspaceBlank = interspaceTile(1);
+const interspaceEclipse = interspaceTile(2);
+const interspaceTFMars = interspaceTile(3);
+const interspaceRebellion = interspaceTile(4);
+const interspaceTwilight = interspaceTile(5);
+const interspaceAsteroid = interspaceTile(6);
+const interspaceProtoPlanet = interspaceTile(7);
 
 /**
  * The 7 physical Interspace tile faces (Lost Fleet expansion, rulebook p.5:

@@ -20,8 +20,8 @@ describe('RoundScoringTrack', () => {
       expect(imageSrc).toBeDefined();
       expect(imageSrc).not.toMatch(/round_scoring_\d+_score_.*\.jpg$/);
     }
-    expect(roundScoringTileImageSrc(1)).toContain('/normalized/round_01.webp');
-    expect(roundScoringTileImageSrc(12)).toContain('/normalized/round_12.webp');
+    expect(roundScoringTileImageSrc(1)).toContain('/normalized/round_01_');
+    expect(roundScoringTileImageSrc(12)).toContain('/normalized/round_12_');
     expect(roundScoringTileImageSrc(0)).toBeUndefined();
     expect(roundScoringTileImageSrc(13)).toBeUndefined();
   });

@@ -55,7 +55,7 @@ describe('FederationTokens', () => {
 
     expect(screen.getByAltText('연방 토큰 1')).toHaveAttribute(
       'src',
-      expect.stringContaining('federation_tokens/normalized/fed_01.webp'),
+      expect.stringContaining('federation_tokens/normalized/fed_01_'),
     );
     expect(screen.queryByLabelText(/연방 토큰 7 보급/)).not.toBeInTheDocument();
   });
@@ -67,7 +67,7 @@ describe('FederationTokens', () => {
 
     expect(screen.getByAltText('Alice 보유 연방 토큰 8')).toHaveAttribute(
       'src',
-      expect.stringContaining('federation_tokens_lost_fleet/normalized/fed_08.png'),
+      expect.stringContaining('federation_tokens_lost_fleet/normalized/fed_08_'),
     );
   });
 
@@ -89,7 +89,7 @@ describe('FederationTokens', () => {
     expect(flipped).toHaveClass('federation-token-mini--flipped');
     expect(flipped).toHaveAttribute(
       'src',
-      expect.stringContaining('federation_tokens/normalized/back/runtime/fed_06.webp'),
+      expect.stringContaining('federation_tokens/normalized/back/runtime/fed_06_'),
     );
   });
 
@@ -100,7 +100,7 @@ describe('FederationTokens', () => {
 
     expect(screen.getByAltText('Alice 사용(회색면) 연방 토큰 1')).toHaveAttribute(
       'src',
-      expect.stringContaining('federation_tokens/normalized/fed_01.webp'),
+      expect.stringContaining('federation_tokens/normalized/fed_01_'),
     );
   });
 

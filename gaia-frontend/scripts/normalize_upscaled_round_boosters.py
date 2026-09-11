@@ -15,6 +15,8 @@ from pathlib import Path
 
 from PIL import Image, ImageChops
 
+from asset_names import ROUND_BOOSTERS, asset_filename
+
 
 BOOSTER_IDS = range(1, 15)
 TARGET_SIZE = (720, 2104)  # 2x the prepared 360x1052 physical tile canvas.
@@ -113,7 +115,7 @@ def main() -> None:
         if not source.is_file() or not alpha_reference.is_file():
             raise FileNotFoundError(f"missing source pair for round booster {stem}")
 
-        output = args.output_dir / f"booster_{stem}.webp"
+        output = args.output_dir / asset_filename("booster", booster_id, ROUND_BOOSTERS, "webp")
         normalized = normalize_booster(source, alpha_reference)
         normalized.save(output, format="WEBP", lossless=True, method=6, exact=True)
         print(
