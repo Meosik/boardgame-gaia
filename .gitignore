@@ -42,3 +42,6 @@ __pycache__/
 coverage/
 test-results/
 playwright-report/
+
+# Third-party reference material (copyrighted articles/images), kept locally only
+/docs/references/

@@ -20,7 +20,7 @@ from PIL import Image
 
 FRONTEND_DIR = Path(__file__).resolve().parents[1]
 PROJECT_DIR = FRONTEND_DIR.parent
-SOURCE_DIR = FRONTEND_DIR / "public/assets/gaiaproject"
+SOURCE_DIR = FRONTEND_DIR / "asset-sources/gaiaproject"
 OUTPUT_DIR = FRONTEND_DIR / "src/assets/space_sectors"
 BACKUP_ROOT = PROJECT_DIR / ".omh/backups/space_sectors"
 

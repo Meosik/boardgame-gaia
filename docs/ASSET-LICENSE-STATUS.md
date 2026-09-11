@@ -6,9 +6,9 @@ No redistribution permission has been established in this repository for the bun
 
 - `docs/EN_Gaia_rulebook_lo.pdf`
 - `docs/GP_Exp_Rule_EN_V1_Web.pdf`
-- `assets/images/**`
-- `gaia-frontend/public/assets/**`
+- `gaia-frontend/asset-sources/**`
 - `gaia-frontend/src/assets/**`
+- `docs/references/**` (third-party strategy articles and images; git-ignored, local only)
 
 These files are useful as local implementation references but must not be assumed safe for public redistribution. Before publishing a repository:
 

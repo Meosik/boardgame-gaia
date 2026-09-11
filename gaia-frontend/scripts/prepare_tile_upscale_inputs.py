@@ -63,7 +63,7 @@ def physical_slot_mask(reference_name: str, size: tuple[int, int]) -> Image.Imag
     """Scale an original cutout silhouette without carrying its edge fringe."""
     project_root = Path(__file__).resolve().parents[1]
     reference = (
-        Image.open(project_root / "public/assets/gaiaproject" / reference_name)
+        Image.open(project_root / "asset-sources/gaiaproject" / reference_name)
         .convert("RGBA")
         .getchannel("A")
         .point(lambda alpha: 255 if alpha >= 128 else 0)
