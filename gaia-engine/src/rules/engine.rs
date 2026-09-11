@@ -1,23 +1,32 @@
+#[path = "ai.rs"]
+mod ai;
+pub use ai::{AiActionError, AiDecision};
+
 use super::actions::{
     FederationTokenChoice, FreeActionKind, GameAction, SetupAction, TechTileChoice, TechTileRef,
 };
 use super::terraforming::{cost_for_distance, ring_distance};
 use crate::bidding::{BiddingPolicy, BiddingStage, BiddingState};
 use crate::error::RuleError;
-use crate::faction::ability::{FactionAbility, FederationPowerRule};
+use crate::faction::ability::FactionAbility;
 use crate::faction::registry::global as faction_registry;
 use crate::game_state::{
     AcademyType, ArtifactId, Booster, BrainstoneLocation, EconomyResearchTileSide, FactionId,
     FederationToken, FinalScoringCondition, GaiaDecisionKind, GameEvent, GamePhase, GameState,
-    HexCoord, PendingCharge, PendingGaiaDecision, PendingIncomeOrder, PlacedStructure, Planet,
-    PlanetType, PlayerId, PlayerState, PowerCycle, ResearchTrack, ResourceDelta, ResourceKind,
-    Resources, RoundCondition, SetupPhase, ShipId, SpaceshipId, StructureType, TechTile, VpReason,
+    HexCoord, LostFleetAdvancedTechRequirement, PendingCharge, PendingGaiaDecision,
+    PendingIncomeOrder, PlacedStructure, Planet, PlanetType, PlayerId, PlayerState, PowerCycle,
+    ResearchTrack, ResourceDelta, ResourceKind, Resources, RoundCondition, SetupPhase, ShipId,
+    SpaceshipId, StructureType, TechTile, VpReason,
 };
 use crate::map::MapEngine;
 use crate::scoring::ScoringEngine;
 use crate::setup_policy::SetupPolicy;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+
+#[cfg(test)]
+#[path = "tech_tile_audit_tests.rs"]
+mod tech_tile_audit_tests;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -180,8 +189,22 @@ impl RuleEngine {
         if let GameAction::TerransGaiaConversion { kind, count } = action {
             return validate_terrans_gaia_conversion(state, player_id, kind, *count);
         }
-        if let GameAction::ItarsGaiaTechTile { tile, track } = action {
-            return validate_itars_gaia_tech_tile(state, player_id, tile, *track);
+        if let GameAction::ItarsGaiaTechChoice { choice } = action {
+            return validate_itars_gaia_tech_choice(state, player_id, choice);
+        }
+        if let GameAction::ItarsGaiaTechTile {
+            tile,
+            track,
+            bonus_build_coord,
+        } = action
+        {
+            return validate_itars_gaia_tech_tile(
+                state,
+                player_id,
+                tile,
+                *track,
+                *bonus_build_coord,
+            );
         }
         if matches!(action, GameAction::FinishGaiaDecision) {
             return validate_finish_gaia_decision(state, player_id);
@@ -214,14 +237,18 @@ impl RuleEngine {
                 token,
                 bonus_build_coord,
                 bonus_tech_tile,
+                bonus_research_track,
             } => validate_federation(
                 state,
                 player_id,
                 hexes,
                 satellite_hexes,
                 *token,
-                *bonus_build_coord,
-                bonus_tech_tile.as_ref(),
+                FederationBonus {
+                    build_coord: *bonus_build_coord,
+                    tech_tile: bonus_tech_tile.as_ref(),
+                    research_track: *bonus_research_track,
+                },
             ),
             GameAction::PowerAction { id, coord } => {
                 validate_power_action(state, player_id, *id, *coord)
@@ -289,9 +316,15 @@ impl RuleEngine {
             GameAction::SpaceshipCreditTerraform { coord } => {
                 validate_spaceship_credit_terraform(state, player_id, *coord)
             }
-            GameAction::TwilightFreeResearchLab { coord } => {
-                validate_twilight_free_research_lab(state, player_id, *coord)
-            }
+            GameAction::TwilightFreeResearchLab {
+                coord,
+                tech_tile_choice,
+            } => validate_twilight_free_research_lab(
+                state,
+                player_id,
+                *coord,
+                tech_tile_choice.as_ref(),
+            ),
             GameAction::TwilightReplayFederationToken {
                 token_kind,
                 bonus_build_coord,
@@ -320,8 +353,19 @@ impl RuleEngine {
             GameAction::RebellionCreditsAndQic => {
                 validate_rebellion_credits_and_qic(state, player_id)
             }
-            GameAction::RebellionGainTechTile { tile, track } => {
-                validate_rebellion_gain_tech_tile(state, player_id, tile, *track)
+            GameAction::RebellionGainTechTile {
+                tile,
+                track,
+                bonus_build_coord,
+            } => validate_rebellion_gain_tech_tile(
+                state,
+                player_id,
+                tile,
+                *track,
+                *bonus_build_coord,
+            ),
+            GameAction::SpaceGiantsGainTechTile { choice } => {
+                validate_space_giants_gain_tech_tile(state, player_id, choice)
             }
             GameAction::TFMarsTechBonus => validate_tfmars_tech_bonus(state, player_id),
             GameAction::TFMarsGaiaFormation { coord } => {
@@ -353,6 +397,7 @@ impl RuleEngine {
             GameAction::ChooseIncomeOrder { .. } => unreachable!("handled above"),
             GameAction::TerransGaiaConversion { .. }
             | GameAction::ItarsGaiaTechTile { .. }
+            | GameAction::ItarsGaiaTechChoice { .. }
             | GameAction::FinishGaiaDecision
             | GameAction::SelectTinkeringTile { .. } => unreachable!("handled above"),
         }
@@ -410,14 +455,18 @@ impl RuleEngine {
                 token,
                 bonus_build_coord,
                 bonus_tech_tile,
+                bonus_research_track,
             } => apply_federation(
                 state,
                 player_id,
                 hexes,
                 satellite_hexes,
                 token,
-                bonus_build_coord,
-                bonus_tech_tile,
+                FederationBonus {
+                    build_coord: bonus_build_coord,
+                    tech_tile: bonus_tech_tile,
+                    research_track: bonus_research_track,
+                },
             ),
             GameAction::PowerAction { id, coord } => {
                 apply_power_action(state, player_id, id, coord)
@@ -486,9 +535,10 @@ impl RuleEngine {
             GameAction::SpaceshipCreditTerraform { coord } => {
                 apply_spaceship_credit_terraform(state, player_id, coord)
             }
-            GameAction::TwilightFreeResearchLab { coord } => {
-                apply_twilight_free_research_lab(state, player_id, coord)
-            }
+            GameAction::TwilightFreeResearchLab {
+                coord,
+                tech_tile_choice,
+            } => apply_twilight_free_research_lab(state, player_id, coord, tech_tile_choice),
             GameAction::TwilightReplayFederationToken {
                 token_kind,
                 bonus_build_coord,
@@ -515,8 +565,13 @@ impl RuleEngine {
                 apply_rebellion_free_trading_station(state, player_id, coord)
             }
             GameAction::RebellionCreditsAndQic => apply_rebellion_credits_and_qic(state, player_id),
-            GameAction::RebellionGainTechTile { tile, track } => {
-                apply_rebellion_gain_tech_tile(state, player_id, tile, track)
+            GameAction::RebellionGainTechTile {
+                tile,
+                track,
+                bonus_build_coord,
+            } => apply_rebellion_gain_tech_tile(state, player_id, tile, track, bonus_build_coord),
+            GameAction::SpaceGiantsGainTechTile { choice } => {
+                apply_space_giants_gain_tech_tile(state, player_id, choice)
             }
             GameAction::TFMarsTechBonus => apply_tfmars_tech_bonus(state, player_id),
             GameAction::TFMarsGaiaFormation { coord } => {
@@ -551,9 +606,12 @@ impl RuleEngine {
             GameAction::TerransGaiaConversion { kind, count } => {
                 apply_terrans_gaia_conversion(state, player_id, kind, count)
             }
-            GameAction::ItarsGaiaTechTile { tile, track } => {
-                apply_itars_gaia_tech_tile(state, player_id, tile, track)
-            }
+            GameAction::ItarsGaiaTechChoice { choice } => apply_itars_gaia_tech_choice(state, player_id, choice),
+            GameAction::ItarsGaiaTechTile {
+                tile,
+                track,
+                bonus_build_coord,
+            } => apply_itars_gaia_tech_tile(state, player_id, tile, track, bonus_build_coord),
             GameAction::FinishGaiaDecision => apply_finish_gaia_decision(state, player_id),
         }
     }
@@ -610,15 +668,10 @@ impl RuleEngine {
                     }
                 }
                 GaiaDecisionKind::ItarsTechTile => {
-                    for tile in &state.research_board.tech_tiles {
-                        for &track in &ResearchTrack::all() {
-                            let candidate = GameAction::ItarsGaiaTechTile {
-                                tile: tile.clone(),
-                                track,
-                            };
-                            if Self::validate_action(state, player_id, &candidate).is_ok() {
-                                actions.push(candidate);
-                            }
+                    for choice in valid_tech_tile_choices(state, player_id) {
+                        let candidate = GameAction::ItarsGaiaTechChoice { choice };
+                        if Self::validate_action(state, player_id, &candidate).is_ok() {
+                            actions.push(candidate);
                         }
                     }
                 }
@@ -672,6 +725,12 @@ impl RuleEngine {
         for s in &player.structures {
             let targets = upgrade_targets(player, s.kind);
             for to in targets {
+                if to == StructureType::PlanetaryInstitute && player.faction == Some(FactionId::SpaceGiants) {
+                    for choice in valid_tech_tile_choices(state, player_id) {
+                        let action = GameAction::Upgrade { coord: s.hex, to, tech_tile_choice: Some(choice) };
+                        if Self::validate_action(state, player_id, &action).is_ok() { actions.push(action); }
+                    }
+                }
                 if validate_upgrade(state, player_id, s.hex, to, None).is_ok() {
                     actions.push(GameAction::Upgrade {
                         coord: s.hex,
@@ -799,6 +858,14 @@ impl RuleEngine {
                 }
             }
         }
+        if player.faction == Some(FactionId::SpaceGiants) {
+            for choice in valid_tech_tile_choices(state, player_id) {
+                let candidate = GameAction::SpaceGiantsGainTechTile { choice };
+                if Self::validate_action(state, player_id, &candidate).is_ok() {
+                    actions.push(candidate);
+                }
+            }
+        }
 
         // Explore a Lost Fleet Spaceship
         for ship in SpaceshipId::all() {
@@ -831,7 +898,11 @@ impl RuleEngine {
                     continue;
                 }
                 let mut replay_token_kinds = Vec::new();
-                for token in &player.federation_tokens {
+                for token in player
+                    .federation_tokens
+                    .iter()
+                    .chain(player.gray_federation_tokens.iter())
+                {
                     if replay_token_kinds.contains(&token.0) {
                         continue;
                     }
@@ -853,18 +924,24 @@ impl RuleEngine {
                             }
                         }
                         FederationTokenKind::LostFleetTechTileOfChoice => {
-                            for tile in &state.research_board.tech_tiles {
-                                for &track in &ResearchTrack::all() {
-                                    let candidate = GameAction::ExamineArtifact {
-                                        artifact,
-                                        copy_federation_token_kind: Some(token.0),
-                                        bonus_build_coord: None,
-                                        bonus_tech_tile: Some(tile.clone()),
-                                        bonus_research_track: Some(track),
-                                    };
-                                    if Self::validate_action(state, player_id, &candidate).is_ok() {
-                                        actions.push(candidate);
-                                    }
+                            for choice in valid_standard_tech_tile_choices(state, player_id) {
+                                let TechTileChoice::Standard {
+                                    tile,
+                                    advance_track,
+                                    bonus_build_coord,
+                                } = choice
+                                else {
+                                    continue;
+                                };
+                                let candidate = GameAction::ExamineArtifact {
+                                    artifact,
+                                    copy_federation_token_kind: Some(token.0),
+                                    bonus_build_coord,
+                                    bonus_tech_tile: Some(tile),
+                                    bonus_research_track: advance_track,
+                                };
+                                if Self::validate_action(state, player_id, &candidate).is_ok() {
+                                    actions.push(candidate);
                                 }
                             }
                         }
@@ -896,16 +973,23 @@ impl RuleEngine {
         // Twilight's free TradingStation -> ResearchLab action
         for s in &player.structures {
             if s.kind == StructureType::TradingStation
-                && validate_twilight_free_research_lab(state, player_id, s.hex).is_ok()
+                && validate_twilight_free_research_lab(state, player_id, s.hex, None).is_ok()
             {
-                actions.push(GameAction::TwilightFreeResearchLab { coord: s.hex });
+                actions.push(GameAction::TwilightFreeResearchLab {
+                    coord: s.hex,
+                    tech_tile_choice: None,
+                });
             }
         }
 
         // Twilight's Federation-token replay. Targeted Lost Fleet tokens are expanded into
         // their concrete legal choices so AI callers never receive an incomplete action.
         let mut replay_token_kinds = Vec::new();
-        for token in &player.federation_tokens {
+        for token in player
+            .federation_tokens
+            .iter()
+            .chain(player.gray_federation_tokens.iter())
+        {
             if replay_token_kinds.contains(&token.0) {
                 continue;
             }
@@ -926,17 +1010,23 @@ impl RuleEngine {
                     }
                 }
                 FederationTokenKind::LostFleetTechTileOfChoice => {
-                    for tile in &state.research_board.tech_tiles {
-                        for &track in &ResearchTrack::all() {
-                            let candidate = GameAction::TwilightReplayFederationToken {
-                                token_kind: token.0,
-                                bonus_build_coord: None,
-                                bonus_tech_tile: Some(tile.clone()),
-                                bonus_research_track: Some(track),
-                            };
-                            if Self::validate_action(state, player_id, &candidate).is_ok() {
-                                actions.push(candidate);
-                            }
+                    for choice in valid_standard_tech_tile_choices(state, player_id) {
+                        let TechTileChoice::Standard {
+                            tile,
+                            advance_track,
+                            bonus_build_coord,
+                        } = choice
+                        else {
+                            continue;
+                        };
+                        let candidate = GameAction::TwilightReplayFederationToken {
+                            token_kind: token.0,
+                            bonus_build_coord,
+                            bonus_tech_tile: Some(tile),
+                            bonus_research_track: advance_track,
+                        };
+                        if Self::validate_action(state, player_id, &candidate).is_ok() {
+                            actions.push(candidate);
                         }
                     }
                 }
@@ -984,16 +1074,30 @@ impl RuleEngine {
             actions.push(GameAction::RebellionCreditsAndQic);
         }
 
-        // Rebellion's Standard Tech tile action includes the research track advanced by the
-        // acquisition, matching the explicit selection used by the client.
-        for tile in &state.research_board.tech_tiles {
-            for &track in &ResearchTrack::all() {
-                if validate_rebellion_gain_tech_tile(state, player_id, tile, track).is_ok() {
-                    actions.push(GameAction::RebellionGainTechTile {
-                        tile: tile.clone(),
-                        track,
-                    });
-                }
+        // Rebellion's Standard Tech tile action includes every legal research/bonus-Mine
+        // follow-up, including tiles on spaceships the player has explored.
+        for choice in valid_standard_tech_tile_choices(state, player_id) {
+            let TechTileChoice::Standard {
+                tile,
+                advance_track,
+                bonus_build_coord,
+            } = choice
+            else {
+                continue;
+            };
+            let Some(track) =
+                advance_track.or_else(|| standard_tech_tile_aligned_track(state, &tile))
+            else {
+                continue;
+            };
+            if validate_rebellion_gain_tech_tile(state, player_id, &tile, track, bonus_build_coord)
+                .is_ok()
+            {
+                actions.push(GameAction::RebellionGainTechTile {
+                    tile,
+                    track,
+                    bonus_build_coord,
+                });
             }
         }
 
@@ -1117,6 +1221,34 @@ impl RuleEngine {
             };
             Ok(events)
         }
+    }
+
+    /// Computes final scoring and moves the game into the terminal `GamePhase::Ended`, closing
+    /// the gap where final results only ever reached clients via a one-time server broadcast
+    /// (never part of the authoritative, snapshotted state — a client reconnecting after that
+    /// broadcast fired saw the board frozen with no explanation). Valid from round 6's
+    /// `RoundScoring` (the normal path, right after `TurnManagementService::end_round` sees
+    /// `round >= 6`); calling it again while already `Ended` is a no-op returning the same
+    /// result, so retries/duplicate calls stay idempotent per FR-3.
+    pub fn finalize_game(state: &mut GameState) -> Result<Vec<GameEvent>, RuleError> {
+        if let GamePhase::Ended { .. } = state.phase {
+            return Ok(vec![]);
+        }
+        let GamePhase::RoundScoring { round: 6 } = state.phase else {
+            return Err(RuleError::WrongPhase);
+        };
+        let final_scores = ScoringEngine::calculate_final_scoring(state);
+        let top_vp = final_scores.iter().map(|(_, vp)| *vp).max().unwrap_or(0);
+        let winners = final_scores
+            .iter()
+            .filter(|(_, vp)| *vp == top_vp)
+            .map(|(player_id, _)| *player_id)
+            .collect();
+        state.phase = GamePhase::Ended {
+            final_scores,
+            winners,
+        };
+        Ok(vec![])
     }
 }
 
@@ -1308,7 +1440,7 @@ fn apply_lost_planet_placement(
             player
                 .geodens_rewarded_planet_types
                 .push(PlanetType::LostPlanet);
-            player.resources.knowledge = player.resources.knowledge.saturating_add(3);
+            player.resources.gain_knowledge(3);
         }
         events.push(GameEvent::ResourceChanged {
             player: player_id,
@@ -1321,11 +1453,6 @@ fn apply_lost_planet_placement(
 
     if let Some(ability) = ability_for(state, player_id) {
         let ability_events = ability.on_build(state, player_id, coord);
-        if !ability_events.is_empty() {
-            if let Some(player) = state.player_mut(player_id) {
-                player.first_colonization_bonus_used = true;
-            }
-        }
         for event in &ability_events {
             apply_ability_event(state, event);
         }
@@ -1381,6 +1508,17 @@ fn validate_build(
     validate_build_impl(state, player_id, coord, 0, 0, false, 0)
 }
 
+#[derive(Debug, Clone, Copy)]
+struct BuildOptions {
+    free_terraform_steps: u8,
+    power_cost: u8,
+    unlimited_range: bool,
+    bonus_range: u8,
+    waive_mine_cost: bool,
+    waive_asteroid_former: bool,
+    complete_turn: bool,
+}
+
 /// Shared by the normal `Build` action, the power-action board's two
 /// "build a mine with N free terraforming steps" slots (rulebook Appendix
 /// III, ids 2 and 6), and Federation-token-granted free builds:
@@ -1399,6 +1537,37 @@ fn validate_build_impl(
     unlimited_range: bool,
     bonus_range: u8,
 ) -> Result<(), RuleError> {
+    validate_build_impl_with_options(
+        state,
+        player_id,
+        coord,
+        BuildOptions {
+            free_terraform_steps,
+            power_cost,
+            unlimited_range,
+            bonus_range,
+            waive_mine_cost: false,
+            waive_asteroid_former: false,
+            complete_turn: true,
+        },
+    )
+}
+
+fn validate_build_impl_with_options(
+    state: &GameState,
+    player_id: PlayerId,
+    coord: HexCoord,
+    options: BuildOptions,
+) -> Result<(), RuleError> {
+    let BuildOptions {
+        free_terraform_steps,
+        power_cost,
+        unlimited_range,
+        bonus_range,
+        waive_mine_cost,
+        waive_asteroid_former,
+        complete_turn: _,
+    } = options;
     let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
 
     // Structure limit
@@ -1469,12 +1638,12 @@ fn validate_build_impl(
     let is_lantids_cohabitation = is_lantids_cohabitation_target(state, player_id, coord);
     if is_lantids_cohabitation {
         let qic_cost = qic_for_range;
-        if player.resources.ore < MINE_ORE_COST {
+        if !waive_mine_cost && player.resources.ore < MINE_ORE_COST {
             return Err(RuleError::InsufficientResources(
                 crate::game_state::ResourceKind::Ore,
             ));
         }
-        if player.resources.credits < MINE_CREDITS_COST {
+        if !waive_mine_cost && player.resources.credits < MINE_CREDITS_COST {
             return Err(RuleError::InsufficientResources(
                 crate::game_state::ResourceKind::Credits,
             ));
@@ -1493,7 +1662,7 @@ fn validate_build_impl(
     }
 
     if target_type == PlanetType::Asteroid {
-        if player.gaiaformers_available() == 0 {
+        if !waive_asteroid_former && player.gaiaformers_available() == 0 {
             return Err(RuleError::NoGaiaformerAvailable);
         }
         if player.resources.qic < qic_for_range {
@@ -1510,10 +1679,13 @@ fn validate_build_impl(
     }
 
     let (terraform_ore, qic_cost) =
-        if planet.is_gaia_formed && player.faction == Some(FactionId::Gleens) {
+        if target_type == PlanetType::Gaia && player.faction == Some(FactionId::Gleens) {
             // Gleens always pay 1 ore rather than QIC to colonize Gaia planets.
             (1u8, 0u8)
-        } else if planet.is_gaia_formed {
+        } else if planet.is_gaia_formed && planet.planet_type == PlanetType::Transdim && planet.owner == Some(player_id) {
+            // Gaiaformed Transdim planets do not charge the Gaia-entry QIC.
+            (0u8, 0u8)
+        } else if target_type == PlanetType::Gaia {
             (0u8, gaia_qic_cost(state, player_id)) // rulebook p.11; some factions override
         } else if target_type == PlanetType::ProtoPlanet {
             let steps = 3u8.saturating_sub(free_terraform_steps);
@@ -1533,13 +1705,19 @@ fn validate_build_impl(
         };
     let qic_cost = qic_cost.saturating_add(qic_for_range);
 
-    let total_ore = MINE_ORE_COST.saturating_add(terraform_ore);
+    let base_mine_ore = if waive_mine_cost { 0 } else { MINE_ORE_COST };
+    let base_mine_credits = if waive_mine_cost {
+        0
+    } else {
+        MINE_CREDITS_COST
+    };
+    let total_ore = base_mine_ore.saturating_add(terraform_ore);
     if player.resources.ore < total_ore {
         return Err(RuleError::InsufficientResources(
             crate::game_state::ResourceKind::Ore,
         ));
     }
-    if player.resources.credits < MINE_CREDITS_COST {
+    if player.resources.credits < base_mine_credits {
         return Err(RuleError::InsufficientResources(
             crate::game_state::ResourceKind::Credits,
         ));
@@ -1574,6 +1752,37 @@ fn apply_build_impl(
     unlimited_range: bool,
     bonus_range: u8,
 ) -> Vec<GameEvent> {
+    apply_build_impl_with_options(
+        state,
+        player_id,
+        coord,
+        BuildOptions {
+            free_terraform_steps,
+            power_cost,
+            unlimited_range,
+            bonus_range,
+            waive_mine_cost: false,
+            waive_asteroid_former: false,
+            complete_turn: true,
+        },
+    )
+}
+
+fn apply_build_impl_with_options(
+    state: &mut GameState,
+    player_id: PlayerId,
+    coord: HexCoord,
+    options: BuildOptions,
+) -> Vec<GameEvent> {
+    let BuildOptions {
+        free_terraform_steps,
+        power_cost,
+        unlimited_range,
+        bonus_range,
+        waive_mine_cost,
+        waive_asteroid_former,
+        complete_turn,
+    } = options;
     let mut events = Vec::new();
 
     let hex = match state.board.hexes.get(&coord) {
@@ -1624,9 +1833,12 @@ fn apply_build_impl(
         .is_some_and(|player| player.faction == Some(FactionId::Gleens));
     let (terraform_ore, qic_cost) = if is_lantids_cohabitation {
         (0u8, 0u8)
-    } else if is_gaia_formed && is_gleens {
+    } else if scoring_planet_type == Some(PlanetType::Gaia) && is_gleens {
         (1u8, 0u8)
-    } else if is_gaia_formed {
+    } else if is_gaia_formed && planet_type_raw == Some(PlanetType::Transdim)
+        && hex.planet.as_ref().is_some_and(|planet| planet.owner == Some(player_id)) {
+        (0u8, 0u8)
+    } else if scoring_planet_type == Some(PlanetType::Gaia) {
         (0u8, gaia_qic_cost(state, player_id))
     } else if is_asteroid {
         (0u8, 0u8)
@@ -1657,6 +1869,8 @@ fn apply_build_impl(
     // the mine" — waives the base mine cost entirely, not just terraforming.
     let (ore_cost, credits_cost) = if is_asteroid && !is_lantids_cohabitation {
         (0u8, 0u8)
+    } else if waive_mine_cost {
+        (terraform_ore, 0u8)
     } else {
         (MINE_ORE_COST + terraform_ore, MINE_CREDITS_COST)
     };
@@ -1677,12 +1891,20 @@ fn apply_build_impl(
             delta,
         });
 
+        if is_gaia_formed
+            && planet_type_raw == Some(PlanetType::Transdim)
+            && !is_lantids_cohabitation
+            && hex.structures.is_empty()
+            && hex.planet.as_ref().is_some_and(|planet| planet.owner == Some(player_id))
+        {
+            player.gaiaformers_deployed = player.gaiaformers_deployed.saturating_sub(1);
+        }
         player.structures.push(crate::game_state::Structure {
             hex: coord,
             kind: StructureType::Mine,
         });
 
-        if is_asteroid && !is_lantids_cohabitation {
+        if is_asteroid && !is_lantids_cohabitation && !waive_asteroid_former {
             player.resources.spent_gaia_formers =
                 player.resources.spent_gaia_formers.saturating_add(1);
         }
@@ -1691,6 +1913,11 @@ fn apply_build_impl(
             // starting planet — that exception can't trigger yet since no currently-implemented
             // faction starts on a Protoplanet.
             player.vp = player.vp.saturating_add(6);
+            events.push(GameEvent::VpAwarded {
+                player: player_id,
+                amount: 6,
+                reason: VpReason::ProtoPlanetColony,
+            });
         }
     }
 
@@ -1767,7 +1994,7 @@ fn apply_build_impl(
     if let Some(planet_type) = scoring_planet_type.filter(|_| grants_geodens_knowledge) {
         if let Some(player) = state.player_mut(player_id) {
             player.geodens_rewarded_planet_types.push(planet_type);
-            player.resources.knowledge = player.resources.knowledge.saturating_add(3);
+            player.resources.gain_knowledge(3);
         }
         events.push(GameEvent::ResourceChanged {
             player: player_id,
@@ -1778,16 +2005,10 @@ fn apply_build_impl(
         });
     }
 
-    // Faction ability hook (e.g. Darkanians' first-colonization bonus).
-    // A non-empty result is currently always a one-shot "first colonization"
-    // bonus, so mark it used here rather than asking `on_build` to mutate state.
+    // Faction hooks decide their own per-colony eligibility; rewards are not
+    // globally one-shot (Darkanians can earn one in each new sector).
     if let Some(ability) = ability_for(state, player_id) {
         let ability_events = ability.on_build(state, player_id, coord);
-        if !ability_events.is_empty() {
-            if let Some(p) = state.player_mut(player_id) {
-                p.first_colonization_bonus_used = true;
-            }
-        }
         for event in &ability_events {
             apply_ability_event(state, event);
         }
@@ -1850,7 +2071,7 @@ fn apply_build_impl(
         ));
     }
 
-    if !maybe_enter_charge_power_phase(state, player_id, coord) {
+    if !maybe_enter_charge_power_phase(state, player_id, coord) && complete_turn {
         advance_turn(state);
     }
     events
@@ -1872,7 +2093,7 @@ fn apply_lantids_planetary_institute_bonus(
     }
 
     if let Some(player) = state.player_mut(player_id) {
-        player.resources.knowledge = player.resources.knowledge.saturating_add(2);
+        player.resources.gain_knowledge(2);
     }
     events.push(GameEvent::ResourceChanged {
         player: player_id,
@@ -1892,7 +2113,13 @@ fn validate_upgrade(
     to: StructureType,
     tech_tile_choice: Option<&TechTileChoice>,
 ) -> Result<(), RuleError> {
-    let grants_tech_tile = matches!(to, StructureType::ResearchLab | StructureType::Academy(_));
+    let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
+    let space_giants_pi = player.faction == Some(FactionId::SpaceGiants)
+        && to == StructureType::PlanetaryInstitute && !player.pi_ability_used;
+    let grants_tech_tile = matches!(to, StructureType::ResearchLab | StructureType::Academy(_)) || space_giants_pi;
+    if space_giants_pi && tech_tile_choice.is_none() && !valid_tech_tile_choices(state, player_id).is_empty() {
+        return Err(RuleError::ActionNotAllowed("choose the Space Giants institute technology with the upgrade".into()));
+    }
     if tech_tile_choice.is_some() && !grants_tech_tile {
         return Err(RuleError::ActionNotAllowed(
             "this structure upgrade does not grant a Tech tile".to_string(),
@@ -2144,6 +2371,13 @@ fn apply_upgrade_impl(
         events.extend(check_tech_tile_event_bonus(state, player_id, &condition, 1));
     }
 
+    if to == StructureType::PlanetaryInstitute {
+        if let Some(player) = state.player_mut(player_id) {
+            if player.faction == Some(FactionId::SpaceGiants) {
+                player.pi_ability_used = true;
+            }
+        }
+    }
     if let Some(choice) = tech_tile_choice {
         events.extend(apply_tech_tile_choice(state, player_id, &choice));
     }
@@ -2163,11 +2397,10 @@ fn apply_upgrade_impl(
 // of taking a standard tech tile, you can take an advanced tech tile [if] your player token
 // [is] on level 4 or 5 of the research area [it sits under]. When you take an advanced tech
 // tile, you may advance in any research area." Standard tile ids 2-10 are the base game's 9
-// tiles; ids 11-14 are the Lost Fleet expansion's Appendix V "New Tech Tiles" (added to the
-// standard pool — the expansion's own components list, "12 Standard Tech tiles," is the best
-// available read of where these 4 belong, since Appendix V doesn't say). Advanced tile ids are
+// tiles; ids 11-13 are the Lost Fleet expansion's three spaceship Standard Tech tile types
+// (four physical copies of each). Advanced tile ids are
 // 1-22, minus 18 (that scan is missing — see `gaia-frontend/src/assets/tech_tiles/advanced/`).
-// Effects confirmed against those scans plus, for the 4 Lost Fleet ones, the expansion rulebook
+// Effects confirmed against those scans plus, for the 3 Lost Fleet ones, the expansion rulebook
 // text directly (`docs/GP_Exp_Rule_EN_V1_Web.pdf` p.15, Appendix V).
 
 /// Lost Fleet Appendix V tile: "Immediately and only once receive a 'Build a Mine' action with
@@ -2199,6 +2432,111 @@ fn standard_tech_tile_aligned_track(state: &GameState, tile: &TechTile) -> Optio
         .map(|index| ResearchTrack::all()[index])
 }
 
+fn standard_tech_tile_choice(
+    tile: &TechTile,
+    advance_track: Option<ResearchTrack>,
+    bonus_build_coord: Option<HexCoord>,
+) -> TechTileChoice {
+    TechTileChoice::Standard {
+        tile: tile.clone(),
+        advance_track,
+        bonus_build_coord,
+    }
+}
+
+fn available_standard_tech_tiles_for_player(
+    state: &GameState,
+    player: &PlayerState,
+) -> Vec<TechTile> {
+    let mut tiles = state.research_board.tech_tiles.clone();
+    for board in &state.spaceship_boards {
+        if !player
+            .explored_ships
+            .contains(&spaceship_id_to_ship_id(board.id))
+        {
+            continue;
+        }
+        for tile in &board.tech_tiles {
+            if !tiles.contains(tile) {
+                tiles.push(tile.clone());
+            }
+        }
+    }
+    tiles
+}
+
+fn valid_standard_tech_tile_choices(state: &GameState, player_id: PlayerId) -> Vec<TechTileChoice> {
+    let Some(player) = state.player(player_id) else {
+        return Vec::new();
+    };
+    let mut choices = Vec::new();
+    for tile in available_standard_tech_tiles_for_player(state, player) {
+        let tracks: Vec<Option<ResearchTrack>> =
+            if standard_tech_tile_aligned_track(state, &tile).is_some() {
+                vec![None]
+            } else {
+                std::iter::once(None)
+                    .chain(ResearchTrack::all().into_iter().map(Some))
+                    .collect()
+            };
+        let coords: Vec<Option<HexCoord>> = if tile.0 == TECH_TILE_LOST_FLEET_FREE_BUILD_MINE {
+            state.board.hexes.keys().copied().map(Some).collect()
+        } else {
+            vec![None]
+        };
+        for advance_track in &tracks {
+            for bonus_build_coord in &coords {
+                let choice = standard_tech_tile_choice(&tile, *advance_track, *bonus_build_coord);
+                if validate_tech_tile_choice(state, player_id, &choice).is_ok() {
+                    choices.push(choice);
+                }
+            }
+        }
+    }
+    choices
+}
+
+fn valid_tech_tile_choices(state: &GameState, player_id: PlayerId) -> Vec<TechTileChoice> {
+    let Some(player) = state.player(player_id) else {
+        return Vec::new();
+    };
+    let mut choices = valid_standard_tech_tile_choices(state, player_id);
+    let advance_tracks = std::iter::once(None)
+        .chain(ResearchTrack::all().into_iter().map(Some))
+        .collect::<Vec<_>>();
+    let uncovered_tiles = player
+        .tech_tiles
+        .iter()
+        .filter(|tile| !player.covered_tech_tiles.contains(tile));
+
+    for covered_tile in uncovered_tiles.clone() {
+        for track in ResearchTrack::all() {
+            for advance_track in &advance_tracks {
+                let choice = TechTileChoice::Advanced {
+                    track,
+                    covered_tile: covered_tile.clone(),
+                    advance_track: *advance_track,
+                };
+                if validate_tech_tile_choice(state, player_id, &choice).is_ok() {
+                    choices.push(choice);
+                }
+            }
+        }
+    }
+    for covered_tile in uncovered_tiles {
+        for advance_track in &advance_tracks {
+            let choice = TechTileChoice::LostFleetAdvanced {
+                covered_tile: covered_tile.clone(),
+                advance_track: *advance_track,
+            };
+            if validate_tech_tile_choice(state, player_id, &choice).is_ok() {
+                choices.push(choice);
+            }
+        }
+    }
+    choices
+}
+
 fn validate_tech_tile_choice(
     state: &GameState,
     player_id: PlayerId,
@@ -2225,7 +2563,20 @@ fn validate_tech_tile_choice(
                 let coord = bonus_build_coord.ok_or_else(|| {
                     RuleError::ActionNotAllowed("this Tech tile requires a target hex".to_string())
                 })?;
-                validate_build_impl(state, player_id, coord, 2, 0, false, 0)?;
+                validate_build_impl_with_options(
+                    state,
+                    player_id,
+                    coord,
+                    BuildOptions {
+                        free_terraform_steps: 2,
+                        power_cost: 0,
+                        unlimited_range: false,
+                        bonus_range: 0,
+                        waive_mine_cost: true,
+                        waive_asteroid_former: false,
+                        complete_turn: false,
+                    },
+                )?;
             } else if bonus_build_coord.is_some() {
                 return Err(RuleError::ActionNotAllowed(
                     "this Tech tile doesn't take a target hex".to_string(),
@@ -2255,7 +2606,32 @@ fn validate_tech_tile_choice(
                     "requires level 4 or 5 on that research track".to_string(),
                 ));
             }
-            validate_has_a_green_federation_token(player)?;
+            validate_advanced_tech_research_token_cost(player, *advance_track)?;
+            if !player.tech_tiles.contains(covered_tile) {
+                return Err(RuleError::ActionNotAllowed(
+                    "must cover one of your own Standard Tech tiles".to_string(),
+                ));
+            }
+            if player.covered_tech_tiles.contains(covered_tile) {
+                return Err(RuleError::ActionNotAllowed(
+                    "that Standard Tech tile is already covered".to_string(),
+                ));
+            }
+            if let Some(t) = advance_track {
+                validate_free_research_advance(state, player_id, *t)?;
+            }
+        }
+        TechTileChoice::LostFleetAdvanced {
+            covered_tile,
+            advance_track,
+        } => {
+            if state.research_board.lost_fleet_advanced_tech_tile.is_none() {
+                return Err(RuleError::ActionNotAllowed(
+                    "the Lost Fleet Advanced Tech tile has already been taken".to_string(),
+                ));
+            }
+            validate_lost_fleet_advanced_tech_requirement(state, player)?;
+            validate_advanced_tech_research_token_cost(player, *advance_track)?;
             if !player.tech_tiles.contains(covered_tile) {
                 return Err(RuleError::ActionNotAllowed(
                     "must cover one of your own Standard Tech tiles".to_string(),
@@ -2272,6 +2648,32 @@ fn validate_tech_tile_choice(
         }
     }
     Ok(())
+}
+
+/// The Lost Fleet extra Advanced Tech tile's first condition (expansion rulebook p.9: "you do not
+/// need to meet the first condition for taking an Advanced Tech... instead, the conditions shown
+/// on the Scoring Board Extension are applied — either you have at least 25 victory points or
+/// have explored 3 different spaceships"). This project is fixed at 4 players, so
+/// `lost_fleet_advanced_tech_requirement` is always `ExplorationShuttles`; `VictoryPoints` is
+/// handled too since the field exists and nothing else pins it to one variant forever.
+fn validate_lost_fleet_advanced_tech_requirement(
+    state: &GameState,
+    player: &PlayerState,
+) -> Result<(), RuleError> {
+    let met = match state.research_board.lost_fleet_advanced_tech_requirement {
+        LostFleetAdvancedTechRequirement::ExplorationShuttles => {
+            let distinct_ships: HashSet<ShipId> = player.explored_ships.iter().copied().collect();
+            distinct_ships.len() >= 3
+        }
+        LostFleetAdvancedTechRequirement::VictoryPoints => player.vp >= 25,
+    };
+    if met {
+        Ok(())
+    } else {
+        Err(RuleError::ActionNotAllowed(
+            "requires 25 victory points or 3 distinct explored spaceships".to_string(),
+        ))
+    }
 }
 
 fn apply_tech_tile_choice(
@@ -2296,7 +2698,20 @@ fn apply_tech_tile_choice(
                 events.extend(apply_tech_tile_immediate_reward(state, player_id, tile.0));
                 if tile.0 == TECH_TILE_LOST_FLEET_FREE_BUILD_MINE {
                     if let Some(coord) = bonus_build_coord {
-                        events.extend(apply_build_impl(state, player_id, *coord, 2, 0, false, 0));
+                        events.extend(apply_build_impl_with_options(
+                            state,
+                            player_id,
+                            *coord,
+                            BuildOptions {
+                                free_terraform_steps: 2,
+                                power_cost: 0,
+                                unlimited_range: false,
+                                bonus_range: 0,
+                                waive_mine_cost: true,
+                                waive_asteroid_former: false,
+                                complete_turn: false,
+                            },
+                        ));
                     }
                 }
             }
@@ -2313,6 +2728,28 @@ fn apply_tech_tile_choice(
         } => {
             let index = research_track_index(*track);
             if let Some(tile) = state.research_board.advanced_tech_tiles[index].take() {
+                if let Some(player) = state.player_mut(player_id) {
+                    player.advanced_tech_tiles.push(tile.clone());
+                    player.covered_tech_tiles.push(covered_tile.clone());
+                    flip_a_federation_token(player);
+                }
+                events.push(GameEvent::AdvancedTechTileGained {
+                    player: player_id,
+                    tile: tile.clone(),
+                });
+                events.extend(apply_advanced_tech_tile_immediate_reward(
+                    state, player_id, tile.0,
+                ));
+            }
+            if let Some(t) = advance_track {
+                events.extend(apply_free_research_advance(state, player_id, *t));
+            }
+        }
+        TechTileChoice::LostFleetAdvanced {
+            covered_tile,
+            advance_track,
+        } => {
+            if let Some(tile) = state.research_board.lost_fleet_advanced_tech_tile.take() {
                 if let Some(player) = state.player_mut(player_id) {
                     player.advanced_tech_tiles.push(tile.clone());
                     player.covered_tech_tiles.push(covered_tile.clone());
@@ -2403,7 +2840,9 @@ fn tech_tile_counter_value(
             .iter()
             .filter(|s| s.kind == StructureType::TradingStation)
             .count() as u32,
-        TechTileCounter::FederationTokensOwned => player.federation_tokens.len() as u32,
+        TechTileCounter::FederationTokensOwned => {
+            (player.federation_tokens.len() + player.gray_federation_tokens.len()) as u32
+        }
         TechTileCounter::StandardSectorsColonized => {
             distinct_colonized_sector_count(state, player_id, crate::data::SectorCategory::Standard)
         }
@@ -2481,7 +2920,7 @@ fn tech_tile_counter_value(
 /// One-time rewards applied the moment a Standard Tech tile is taken (rulebook p.15 wording:
 /// "immediately and only once"). Ids not listed here either grant no immediate reward (the 3
 /// "income" tiles, applied during Income phase — see `tech_tile_income`), have an ongoing effect
-/// wired elsewhere (6, 8, 12, 14 — see the sections below), are a special action (10), or are the
+/// wired elsewhere (6, 8, 12 — see the sections below), are a special action (10), or are the
 /// free-build-mine tile (11, handled by its caller since it needs a target coord).
 fn apply_tech_tile_immediate_reward(
     state: &mut GameState,
@@ -2532,22 +2971,19 @@ fn apply_tech_tile_immediate_reward(
             }
         }
         13 => {
-            // LF3: immediately score 6 VP per Planetary Institute/Academy plus 4 VP per Deep
-            // Space sector colonized (Appendix V's one combined-condition tile).
-            let large =
-                tech_tile_counter_value(state, player_id, TechTileCounter::LargeBuildingsOwned);
-            let deep = tech_tile_counter_value(
-                state,
-                player_id,
-                TechTileCounter::DeepSpaceSectorsColonized,
-            );
-            let vp = 6 * large as i32 + 4 * deep as i32;
-            events.extend(grant_vp(
-                state,
-                player_id,
-                vp,
-                VpReason::TechTile { tile_id: id },
-            ));
+            // LF3: immediately gain 1 ore and 3 knowledge.
+            if let Some(player) = state.player_mut(player_id) {
+                add_resource(player, ResourceKind::Ore, 1);
+                add_resource(player, ResourceKind::Knowledge, 3);
+            }
+            events.push(GameEvent::ResourceChanged {
+                player: player_id,
+                delta: ResourceDelta {
+                    ore: 1,
+                    knowledge: 3,
+                    ..ResourceDelta::zero()
+                },
+            });
         }
         _ => {}
     }
@@ -2772,7 +3208,7 @@ fn apply_tech_tile_special_action(
 /// `apply_advanced_tech_qic_action_bonus` at the four Lost Fleet QIC action spaces instead.
 fn tech_tile_event_vp_per_unit(id: u8, condition: &RoundCondition) -> Option<i32> {
     match (id, condition) {
-        (8, RoundCondition::BuildMineOnGaia) => Some(8), // std_08
+        (8, RoundCondition::BuildMineOnGaia) => Some(3), // std_08
         _ => None,
     }
 }
@@ -2846,16 +3282,6 @@ fn apply_advanced_tech_qic_action_bonus(
     }
 }
 
-/// "When you pass" Tech tiles (rulebook p.15 wording e.g. "when you pass, you gain 2 victory
-/// points for each asteroid that you have colonized") — a live final tally at the moment the
-/// player passes, distinct from `check_tech_tile_event_bonus`'s per-action triggers.
-fn tech_tile_pass_bonus(id: u8) -> Option<(TechTileCounter, i32)> {
-    match id {
-        14 => Some((TechTileCounter::AsteroidsColonized, 2)), // LF4
-        _ => None,
-    }
-}
-
 fn advanced_tech_tile_pass_bonus(id: u8) -> Option<(TechTileCounter, i32)> {
     match id {
         7 => Some((TechTileCounter::ResearchLabsOwned, 3)),
@@ -2872,18 +3298,6 @@ fn apply_tech_tile_pass_bonus(state: &mut GameState, player_id: PlayerId) -> Vec
         return vec![];
     };
     let mut events = Vec::new();
-    for tile_id in player_active_tech_tile_ids(player) {
-        if let Some((counter, vp_per_unit)) = tech_tile_pass_bonus(tile_id) {
-            let count = tech_tile_counter_value(state, player_id, counter);
-            events.extend(grant_vp(
-                state,
-                player_id,
-                vp_per_unit * count as i32,
-                VpReason::TechTile { tile_id },
-            ));
-        }
-    }
-    let player = state.player(player_id).unwrap_or_else(|| unreachable!());
     for tile_id in player
         .advanced_tech_tiles
         .iter()
@@ -3177,6 +3591,16 @@ fn validate_ivits_place_space_station(
     coord: HexCoord,
 ) -> Result<(), RuleError> {
     validate_base_faction_special_action(state, player_id, FactionId::Ivits, true)?;
+    let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
+    if player
+        .structures
+        .iter()
+        .filter(|structure| structure.kind == StructureType::SpaceStation)
+        .count()
+        >= 6
+    {
+        return Err(RuleError::StructureLimit(StructureType::SpaceStation));
+    }
     let hex = state
         .board
         .hexes
@@ -3379,7 +3803,7 @@ fn apply_tinkeroids_use_tile(
                 });
             }
             6 => {
-                player.resources.knowledge = player.resources.knowledge.saturating_add(3);
+                player.resources.gain_knowledge(3);
                 events.push(GameEvent::ResourceChanged {
                     player: player_id,
                     delta: ResourceDelta {
@@ -3502,6 +3926,22 @@ fn validate_has_a_green_federation_token(player: &PlayerState) -> Result<(), Rul
     if player.federation_tokens.is_empty() {
         return Err(RuleError::ActionNotAllowed(
             "requires flipping a Federation token from green to gray, but none are owned"
+                .to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_advanced_tech_research_token_cost(
+    player: &PlayerState,
+    advance_track: Option<ResearchTrack>,
+) -> Result<(), RuleError> {
+    let reaches_level_five =
+        advance_track.is_some_and(|track| player.research_tracks.get(track) == 4);
+    let required_tokens = if reaches_level_five { 2 } else { 1 };
+    if player.federation_tokens.len() < required_tokens {
+        return Err(RuleError::ActionNotAllowed(
+            "taking the Advanced Tech tile and advancing to research level 5 require two green Federation tokens"
                 .to_string(),
         ));
     }
@@ -4254,14 +4694,33 @@ fn federation_touches_an_existing_federation(
     })
 }
 
+struct FederationBonus<T> {
+    build_coord: Option<HexCoord>,
+    tech_tile: Option<T>,
+    research_track: Option<ResearchTrack>,
+}
+
+fn federation_minimum_power(player: &PlayerState, is_ivits_growth: bool) -> u32 {
+    if is_ivits_growth {
+        // Research never decreases; level 5 identifies the bonus in old saves too.
+        // Flipping a token does not relinquish ownership.
+        let owned = player.federation_tokens.len() + player.gray_federation_tokens.len();
+        let bonus = usize::from(player.research_tracks.terraforming == 5);
+        FEDERATION_MIN_POWER.saturating_mul(owned.saturating_sub(bonus) as u32 + 1)
+    } else if player.faction == Some(FactionId::Xenos) && player_has_planetary_institute(player) {
+        6
+    } else {
+        FEDERATION_MIN_POWER
+    }
+}
+
 fn validate_federation(
     state: &GameState,
     player_id: PlayerId,
     hexes: &[HexCoord],
     satellite_hexes: &[HexCoord],
     token: FederationTokenChoice,
-    bonus_build_coord: Option<HexCoord>,
-    bonus_tech_tile: Option<&TechTile>,
+    bonus: FederationBonus<&TechTile>,
 ) -> Result<(), RuleError> {
     if hexes.is_empty() {
         return Err(RuleError::FederationDisconnected);
@@ -4320,7 +4779,7 @@ fn validate_federation(
         ));
     }
 
-    if is_ivits_growth {
+    if player.faction == Some(FactionId::Ivits) {
         let qic_cost = satellite_hexes.len() as u32;
         if u32::from(player.resources.qic) < qic_cost {
             return Err(RuleError::InsufficientResources(ResourceKind::Qic));
@@ -4354,21 +4813,7 @@ fn validate_federation(
         &player.federated_hexes,
         is_ivits_growth,
     );
-    let minimum_power = if is_ivits_growth {
-        // "at least to 7X, where X is the number of federation tokens you own plus one (not
-        // including the federation token from level 5 of 'Terraforming')" — that specific bonus
-        // token isn't a mechanic this engine grants yet, so `federation_tokens.len()` already
-        // excludes it and needs no separate subtraction.
-        FEDERATION_MIN_POWER.saturating_mul(player.federation_tokens.len() as u32 + 1)
-    } else {
-        match ability_for(state, player_id)
-            .map(FactionAbility::federation_power_rule)
-            .unwrap_or(FederationPowerRule::Standard)
-        {
-            FederationPowerRule::Custom(minimum) => minimum,
-            FederationPowerRule::Standard | FederationPowerRule::IvitsRule => FEDERATION_MIN_POWER,
-        }
-    };
+    let minimum_power = federation_minimum_power(player, is_ivits_growth);
     if power < minimum_power {
         return Err(RuleError::FederationInsufficientPower); // unit variant
     }
@@ -4400,7 +4845,7 @@ fn validate_federation(
     let kind = resolve_federation_token_choice(state, player_id, token)?;
     match federation_token_kind(kind) {
         FederationTokenKind::LostFleetFreeBuildUnlimitedRange => {
-            let coord = bonus_build_coord.ok_or_else(|| {
+            let coord = bonus.build_coord.ok_or_else(|| {
                 RuleError::ActionNotAllowed(
                     "this Federation token requires a target hex".to_string(),
                 )
@@ -4408,7 +4853,7 @@ fn validate_federation(
             validate_build_impl(state, player_id, coord, 0, 0, true, 0)?;
         }
         FederationTokenKind::LostFleetFreeBuild3Steps => {
-            let coord = bonus_build_coord.ok_or_else(|| {
+            let coord = bonus.build_coord.ok_or_else(|| {
                 RuleError::ActionNotAllowed(
                     "this Federation token requires a target hex".to_string(),
                 )
@@ -4416,14 +4861,13 @@ fn validate_federation(
             validate_build_impl(state, player_id, coord, 3, 0, false, 0)?;
         }
         FederationTokenKind::LostFleetTechTileOfChoice => {
-            let tile = bonus_tech_tile.ok_or_else(|| {
-                RuleError::ActionNotAllowed(
-                    "this Federation token requires choosing a Tech tile".to_string(),
-                )
-            })?;
-            if !state.research_board.tech_tiles.contains(tile) {
+            if let Some(tile) = bonus.tech_tile {
+                let choice =
+                    standard_tech_tile_choice(tile, bonus.research_track, bonus.build_coord);
+                validate_tech_tile_choice(state, player_id, &choice)?;
+            } else if !valid_standard_tech_tile_choices(state, player_id).is_empty() {
                 return Err(RuleError::ActionNotAllowed(
-                    "that Tech tile isn't available".to_string(),
+                    "this Federation token requires choosing a Tech tile".to_string(),
                 ));
             }
         }
@@ -4436,10 +4880,15 @@ fn validate_federation(
 /// Applies the VP and direct-resource portion of a Federation token effect. Follow-up effects
 /// needing a target or selection are handled by the caller. This lets Twilight repeat a token
 /// without gaining or consuming another physical Federation token.
-fn apply_federation_token_direct_reward(state: &mut GameState, player_id: PlayerId, kind: u8) {
+fn apply_federation_token_direct_reward(
+    state: &mut GameState,
+    player_id: PlayerId,
+    kind: u8,
+) -> Vec<GameEvent> {
     let Some(player) = state.player_mut(player_id) else {
-        return;
+        return Vec::new();
     };
+    let vp_before = player.vp;
     match federation_token_kind(kind) {
         FederationTokenKind::Flat12Vp | FederationTokenKind::LostFleetFlat12Vp => {
             player.vp = player.vp.saturating_add(12);
@@ -4490,6 +4939,16 @@ fn apply_federation_token_direct_reward(state: &mut GameState, player_id: Player
         | FederationTokenKind::LostFleetFreeBuild3Steps
         | FederationTokenKind::LostFleetTechTileOfChoice => {}
     }
+    let amount = player.vp - vp_before;
+    if amount == 0 {
+        Vec::new()
+    } else {
+        vec![GameEvent::VpAwarded {
+            player: player_id,
+            amount,
+            reason: VpReason::FederationToken { token_kind: kind },
+        }]
+    }
 }
 
 fn apply_federation(
@@ -4498,8 +4957,7 @@ fn apply_federation(
     hexes: Vec<HexCoord>,
     satellite_hexes: Vec<HexCoord>,
     token: FederationTokenChoice,
-    bonus_build_coord: Option<HexCoord>,
-    bonus_tech_tile: Option<TechTile>,
+    bonus: FederationBonus<TechTile>,
 ) -> Vec<GameEvent> {
     let mut events = Vec::new();
 
@@ -4509,13 +4967,11 @@ fn apply_federation(
 
     // Build the satellites — normally "discard one power" per satellite (drains bowl1 then
     // bowl2 then bowl3, matching `ExamineArtifact`'s identical "discard N power" pattern), but
-    // an Ivits player growing their one-and-only federation instead "spend[s] one Q.I.C." per
-    // satellite (rulebook p.20) — and mark every hex used here as permanently committed to this
+    // Ivits always spend one Q.I.C. per satellite, including their first federation
+    // (rulebook p.20) — and mark every hex used here as permanently committed to this
     // federation (`PlayerState.federated_hexes`).
     if let Some(player) = state.player_mut(player_id) {
-        let is_ivits_growth =
-            player.faction == Some(FactionId::Ivits) && !player.federated_hexes.is_empty();
-        if is_ivits_growth {
+        if player.faction == Some(FactionId::Ivits) {
             player.resources.qic = player
                 .resources
                 .qic
@@ -4565,16 +5021,12 @@ fn apply_federation(
         player.federation_tokens.push(federation_token.clone());
     }
 
-    apply_federation_token_direct_reward(state, player_id, kind);
+    events.extend(apply_federation_token_direct_reward(state, player_id, kind));
 
     if let FederationTokenKind::LostFleetTechTileOfChoice = federation_token_kind(kind) {
-        if let Some(tile) = bonus_tech_tile {
-            if transfer_tech_tile_to_player(state, player_id, &tile) {
-                events.push(GameEvent::TechTileGained {
-                    player: player_id,
-                    tile,
-                });
-            }
+        if let Some(tile) = bonus.tech_tile.as_ref() {
+            let choice = standard_tech_tile_choice(tile, bonus.research_track, bonus.build_coord);
+            events.extend(apply_tech_tile_choice(state, player_id, &choice));
         }
     }
 
@@ -4596,14 +5048,14 @@ fn apply_federation(
     // `advance_turn` again afterward here would double-advance the turn.
     match federation_token_kind(kind) {
         FederationTokenKind::LostFleetFreeBuildUnlimitedRange => {
-            if let Some(coord) = bonus_build_coord {
+            if let Some(coord) = bonus.build_coord {
                 events.extend(apply_build_impl(state, player_id, coord, 0, 0, true, 0));
             } else {
                 advance_turn(state);
             }
         }
         FederationTokenKind::LostFleetFreeBuild3Steps => {
-            if let Some(coord) = bonus_build_coord {
+            if let Some(coord) = bonus.build_coord {
                 events.extend(apply_build_impl(state, player_id, coord, 3, 0, false, 0));
             } else {
                 advance_turn(state);
@@ -4724,6 +5176,38 @@ fn apply_special_action(state: &mut GameState, player_id: PlayerId, id: u8) -> V
         apply_ability_event(state, event);
     }
     advance_turn(state);
+    events
+}
+
+fn validate_space_giants_gain_tech_tile(
+    state: &GameState,
+    player_id: PlayerId,
+    choice: &TechTileChoice,
+) -> Result<(), RuleError> {
+    let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
+    if player.faction != Some(FactionId::SpaceGiants) || !player_has_planetary_institute(player) {
+        return Err(RuleError::ActionNotAllowed(
+            "requires the Space Giants Planetary Institute".to_string(),
+        ));
+    }
+    if player.pi_ability_used {
+        return Err(RuleError::ActionNotAllowed(
+            "Space Giants Planetary Institute ability already used this game".to_string(),
+        ));
+    }
+    validate_tech_tile_choice(state, player_id, choice)
+}
+
+fn apply_space_giants_gain_tech_tile(
+    state: &mut GameState,
+    player_id: PlayerId,
+    choice: TechTileChoice,
+) -> Vec<GameEvent> {
+    let events = apply_tech_tile_choice(state, player_id, &choice);
+    if let Some(player) = state.player_mut(player_id) {
+        player.pi_ability_used = true;
+    }
+    // Compatibility recovery for an institute built before bundled technology selection.
     events
 }
 
@@ -4850,8 +5334,7 @@ fn apply_gaia_formation_impl(
 
 /// Shared rule for effects that start and complete a Gaia Project in the same action without
 /// moving power into the Gaia area. The player must still have a Gaiaformer available and may
-/// still pay QIC for range, but the Gaiaformer is returned immediately and therefore never
-/// increments `gaiaformers_deployed`.
+/// still pay QIC for range, but the Gaiaformer stays deployed until the reserved planet is colonized.
 fn validate_immediate_gaia_formation_impl(
     state: &GameState,
     player_id: PlayerId,
@@ -4914,6 +5397,7 @@ fn apply_immediate_gaia_formation_impl(
 
     if let Some(player) = state.player_mut(player_id) {
         player.resources.qic = player.resources.qic.saturating_sub(qic_for_range);
+        player.gaiaformers_deployed += 1;
     }
     if let Some(planet) = state
         .board
@@ -5063,6 +5547,14 @@ fn apply_round_booster_range_explore_spaceship(
 // see the plan this was implemented from for the scope note.
 
 const SPACESHIP_DEPLOY_VP_COST: i32 = 5;
+
+fn spaceship_deploy_vp_cost(player: &PlayerState) -> i32 {
+    if player.faction == Some(FactionId::BalTaks) { 7 } else { SPACESHIP_DEPLOY_VP_COST }
+}
+
+fn spaceship_discards_power(player: &PlayerState) -> bool {
+    matches!(player.faction, Some(FactionId::Nevlas | FactionId::Itars))
+}
 const ARTIFACT_EXAMINE_POWER_COST: u8 = 6;
 /// Appendix II action space id for `SpaceshipCreditTerraform` in `used_spaceship_actions`.
 const SPACESHIP_ACTION_CREDIT_TERRAFORM: u8 = 1;
@@ -5143,7 +5635,14 @@ fn validate_explore_spaceship_impl(
         ));
     }
 
-    if player.vp < SPACESHIP_DEPLOY_VP_COST {
+    if spaceship_discards_power(player)
+        && player.resources.power.bowl1 == 0
+        && player.resources.power.bowl2 == 0
+        && player.resources.power.bowl3 == 0
+    {
+        return Err(RuleError::InsufficientResources(ResourceKind::Power));
+    }
+    if player.vp < spaceship_deploy_vp_cost(player) {
         return Err(RuleError::ActionNotAllowed(
             "insufficient VP to deploy an Exploration Shuttle".to_string(),
         ));
@@ -5202,7 +5701,15 @@ fn apply_explore_spaceship_impl(
         .unwrap_or(0);
 
     if let Some(player) = state.player_mut(player_id) {
-        player.vp -= SPACESHIP_DEPLOY_VP_COST;
+        player.vp -= spaceship_deploy_vp_cost(player);
+        if spaceship_discards_power(player) {
+            for bowl in [&mut player.resources.power.bowl1, &mut player.resources.power.bowl2, &mut player.resources.power.bowl3] {
+                if *bowl > 0 {
+                    *bowl -= 1;
+                    break;
+                }
+            }
+        }
         player.resources.qic = player.resources.qic.saturating_sub(qic_for_range);
         player.exploration_shuttles_available =
             player.exploration_shuttles_available.saturating_sub(1);
@@ -5258,17 +5765,6 @@ fn validate_examine_artifact(
     if total_power < u32::from(ARTIFACT_EXAMINE_POWER_COST) {
         return Err(RuleError::InsufficientResources(ResourceKind::Power));
     }
-    if player.faction == Some(FactionId::Taklons)
-        && !matches!(
-            player.resources.power.brainstone,
-            Some(BrainstoneLocation::Area1 | BrainstoneLocation::Area2 | BrainstoneLocation::Area3)
-        )
-    {
-        return Err(RuleError::ActionNotAllowed(
-            "Taklons must additionally move their Brainstone to the Gaia area".to_string(),
-        ));
-    }
-
     let has_artifact = state
         .spaceship_boards
         .iter()
@@ -5307,13 +5803,13 @@ enum ArtifactEffect {
     /// Defensive fallback for an unknown artifact id: retain the historical 7 VP behavior without
     /// inventing a virtual planet type.
     FlatVp7,
-    /// "Immediately and only once receive 2 victory points for each Deep Space sector in which
+    /// "Immediately and only once receive 3 victory points for each Deep Space sector in which
     /// you have colonized at least 1 planet." (`gaia-frontend/src/assets/artifacts/artifact_01`)
     VpPerDeepSpaceSector,
     /// "Gain 2 power as income. Place them in Area III." (`artifact_02`)
     PowerToBowl3Two,
-    /// "Immediately and only once receive 1 knowledge and 1 ore." (`artifact_03`)
-    OreAndKnowledgeOne,
+    /// "Gain 1 ore and 1 knowledge as income." (`artifact_03`)
+    OreAndKnowledgeIncome,
     /// "Immediately and only once receive 3 victory points for each level in the Gaia Project
     /// research area." (`artifact_04`)
     VpPerGaiaProjectLevel,
@@ -5359,7 +5855,7 @@ fn artifact_effect(id: ArtifactId) -> ArtifactEffect {
     match id.0 {
         1 => ArtifactEffect::VpPerDeepSpaceSector,
         2 => ArtifactEffect::PowerToBowl3Two,
-        3 => ArtifactEffect::OreAndKnowledgeOne,
+        3 => ArtifactEffect::OreAndKnowledgeIncome,
         4 => ArtifactEffect::VpPerGaiaProjectLevel,
         5 => ArtifactEffect::VpPerScienceLevel,
         6 => ArtifactEffect::CreditsThreeAndOreThree,
@@ -5433,9 +5929,6 @@ fn apply_examine_artifact(
         remaining -= from_bowl2;
         let from_bowl3 = remaining.min(player.resources.power.bowl3);
         player.resources.power.bowl3 -= from_bowl3;
-        if player.faction == Some(FactionId::Taklons) {
-            move_brainstone_to_gaia(&mut player.resources.power);
-        }
     }
 
     let taken = state
@@ -5448,6 +5941,9 @@ fn apply_examine_artifact(
         });
 
     if let Some(artifact) = taken {
+        if let Some(player) = state.player_mut(player_id) {
+            player.artifacts.push(artifact);
+        }
         // Computed against `&state` before the mutable borrow below, since these all need read
         // access to the board/player before `player_mut` takes an exclusive borrow.
         let deep_space_sectors = count_colonized_deep_space_sectors(state, player_id);
@@ -5480,15 +5976,9 @@ fn apply_examine_artifact(
         } else if let Some(player) = state.player_mut(player_id) {
             match effect {
                 ArtifactEffect::VpPerDeepSpaceSector => {
-                    player.vp = player.vp.saturating_add(deep_space_sectors as i32 * 2);
+                    player.vp = player.vp.saturating_add(deep_space_sectors as i32 * 3);
                 }
-                ArtifactEffect::PowerToBowl3Two => {
-                    player.resources.power.bowl3 = player.resources.power.bowl3.saturating_add(2);
-                }
-                ArtifactEffect::OreAndKnowledgeOne => {
-                    add_resource(player, ResourceKind::Ore, 1);
-                    add_resource(player, ResourceKind::Knowledge, 1);
-                }
+                ArtifactEffect::PowerToBowl3Two | ArtifactEffect::OreAndKnowledgeIncome => {}
                 ArtifactEffect::VpPerGaiaProjectLevel => {
                     let vp = i32::from(player.research_tracks.gaia) * 3;
                     player.vp = player.vp.saturating_add(vp);
@@ -5599,7 +6089,13 @@ fn validate_spaceship_credit_terraform(
         return Err(RuleError::InsufficientResources(ResourceKind::Credits));
     }
 
-    validate_build_impl(state, player_id, coord, 1, 0, false, 0)
+    // Validate the mine against the balance AFTER the activation fee, just as
+    // application does. Asteroids still have no separate mine credit cost.
+    let mut after_activation = state.clone();
+    if let Some(player) = after_activation.player_mut(player_id) {
+        player.resources.credits -= SPACESHIP_CREDIT_TERRAFORM_COST;
+    }
+    validate_build_impl(&after_activation, player_id, coord, 1, 0, false, 0)
 }
 
 fn apply_spaceship_credit_terraform(
@@ -5635,6 +6131,7 @@ fn validate_twilight_free_research_lab(
     state: &GameState,
     player_id: PlayerId,
     coord: HexCoord,
+    tech_tile_choice: Option<&TechTileChoice>,
 ) -> Result<(), RuleError> {
     let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
 
@@ -5652,7 +6149,7 @@ fn validate_twilight_free_research_lab(
             "this spaceship action space has already been used this round".to_string(),
         ));
     }
-    if spendable_power_value(&player.resources.power) < TWILIGHT_RESEARCH_LAB_POWER_COST {
+    if spendable_power_value(&player.resources.power) < power_action_token_cost(player, TWILIGHT_RESEARCH_LAB_POWER_COST) {
         return Err(RuleError::InsufficientResources(
             crate::game_state::ResourceKind::Power,
         ));
@@ -5669,7 +6166,7 @@ fn validate_twilight_free_research_lab(
         coord,
         StructureType::ResearchLab,
         true,
-        None,
+        tech_tile_choice,
     )
 }
 
@@ -5677,15 +6174,14 @@ fn apply_twilight_free_research_lab(
     state: &mut GameState,
     player_id: PlayerId,
     coord: HexCoord,
+    tech_tile_choice: Option<TechTileChoice>,
 ) -> Vec<GameEvent> {
     state
         .used_spaceship_actions
         .push(SPACESHIP_ACTION_TWILIGHT_RESEARCH_LAB);
     if let Some(player) = state.player_mut(player_id) {
-        spend_power(
-            &mut player.resources.power,
-            TWILIGHT_RESEARCH_LAB_POWER_COST,
-        );
+        let cost = power_action_token_cost(player, TWILIGHT_RESEARCH_LAB_POWER_COST);
+        spend_power(&mut player.resources.power, cost);
         player.resources.ore = player
             .resources
             .ore
@@ -5697,7 +6193,7 @@ fn apply_twilight_free_research_lab(
         coord,
         StructureType::ResearchLab,
         true,
-        None,
+        tech_tile_choice,
     )
 }
 
@@ -5744,6 +6240,7 @@ fn validate_owned_federation_token_effect(
     if !player
         .federation_tokens
         .iter()
+        .chain(player.gray_federation_tokens.iter())
         .any(|token| token.0 == token_kind)
     {
         return Err(RuleError::ActionNotAllowed(
@@ -5758,7 +6255,20 @@ fn validate_owned_federation_token_effect(
                     "this Federation token requires a target hex".to_string(),
                 )
             })?;
-            validate_build_impl(state, player_id, coord, 0, 0, true, 0)?;
+            validate_build_impl_with_options(
+                state,
+                player_id,
+                coord,
+                BuildOptions {
+                    free_terraform_steps: 0,
+                    power_cost: 0,
+                    unlimited_range: true,
+                    bonus_range: 0,
+                    waive_mine_cost: true,
+                    waive_asteroid_former: false,
+                    complete_turn: false,
+                },
+            )?;
         }
         FederationTokenKind::LostFleetFreeBuild3Steps => {
             let coord = bonus_build_coord.ok_or_else(|| {
@@ -5766,25 +6276,31 @@ fn validate_owned_federation_token_effect(
                     "this Federation token requires a target hex".to_string(),
                 )
             })?;
-            validate_build_impl(state, player_id, coord, 3, 0, false, 0)?;
+            validate_build_impl_with_options(
+                state,
+                player_id,
+                coord,
+                BuildOptions {
+                    free_terraform_steps: 3,
+                    power_cost: 0,
+                    unlimited_range: false,
+                    bonus_range: 0,
+                    waive_mine_cost: true,
+                    waive_asteroid_former: false,
+                    complete_turn: false,
+                },
+            )?;
         }
         FederationTokenKind::LostFleetTechTileOfChoice => {
-            let tile = bonus_tech_tile.ok_or_else(|| {
-                RuleError::ActionNotAllowed(
-                    "this Federation token requires choosing a Tech tile".to_string(),
-                )
-            })?;
-            if !state.research_board.tech_tiles.contains(tile) {
+            if let Some(tile) = bonus_tech_tile {
+                let choice =
+                    standard_tech_tile_choice(tile, bonus_research_track, bonus_build_coord);
+                validate_tech_tile_choice(state, player_id, &choice)?;
+            } else if !valid_standard_tech_tile_choices(state, player_id).is_empty() {
                 return Err(RuleError::ActionNotAllowed(
-                    "that Tech tile isn't available".to_string(),
+                    "this Federation token requires choosing a Tech tile".to_string(),
                 ));
             }
-            let track = bonus_research_track.ok_or_else(|| {
-                RuleError::ActionNotAllowed(
-                    "gaining a Tech tile requires choosing a research track".to_string(),
-                )
-            })?;
-            validate_free_research_advance(state, player_id, track)?;
         }
         _ => {}
     }
@@ -5803,28 +6319,52 @@ fn apply_owned_federation_token_effect(
     bonus_research_track: Option<ResearchTrack>,
 ) -> Vec<GameEvent> {
     let mut events = Vec::new();
-    apply_federation_token_direct_reward(state, player_id, token_kind);
+    events.extend(apply_federation_token_direct_reward(
+        state, player_id, token_kind,
+    ));
 
     match federation_token_kind(token_kind) {
         FederationTokenKind::LostFleetFreeBuildUnlimitedRange => {
             if let Some(coord) = bonus_build_coord {
-                events.extend(apply_build_impl(state, player_id, coord, 0, 0, true, 0));
+                events.extend(apply_build_impl_with_options(
+                    state,
+                    player_id,
+                    coord,
+                    BuildOptions {
+                        free_terraform_steps: 0,
+                        power_cost: 0,
+                        unlimited_range: true,
+                        bonus_range: 0,
+                        waive_mine_cost: true,
+                        waive_asteroid_former: false,
+                        complete_turn: false,
+                    },
+                ));
             }
         }
         FederationTokenKind::LostFleetFreeBuild3Steps => {
             if let Some(coord) = bonus_build_coord {
-                events.extend(apply_build_impl(state, player_id, coord, 3, 0, false, 0));
+                events.extend(apply_build_impl_with_options(
+                    state,
+                    player_id,
+                    coord,
+                    BuildOptions {
+                        free_terraform_steps: 3,
+                        power_cost: 0,
+                        unlimited_range: false,
+                        bonus_range: 0,
+                        waive_mine_cost: true,
+                        waive_asteroid_former: false,
+                        complete_turn: false,
+                    },
+                ));
             }
         }
         FederationTokenKind::LostFleetTechTileOfChoice => {
-            if let (Some(tile), Some(track)) = (bonus_tech_tile, bonus_research_track) {
-                if transfer_tech_tile_to_player(state, player_id, &tile) {
-                    events.push(GameEvent::TechTileGained {
-                        player: player_id,
-                        tile,
-                    });
-                    events.extend(apply_free_research_advance(state, player_id, track));
-                }
+            if let Some(tile) = bonus_tech_tile.as_ref() {
+                let choice =
+                    standard_tech_tile_choice(tile, bonus_research_track, bonus_build_coord);
+                events.extend(apply_tech_tile_choice(state, player_id, &choice));
             }
         }
         _ => {}
@@ -6029,7 +6569,7 @@ fn validate_rebellion_free_trading_station(
             "this spaceship action space has already been used this round".to_string(),
         ));
     }
-    if spendable_power_value(&player.resources.power) < REBELLION_TRADING_STATION_POWER_COST {
+    if spendable_power_value(&player.resources.power) < power_action_token_cost(player, REBELLION_TRADING_STATION_POWER_COST) {
         return Err(RuleError::InsufficientResources(
             crate::game_state::ResourceKind::Power,
         ));
@@ -6059,10 +6599,8 @@ fn apply_rebellion_free_trading_station(
         .used_spaceship_actions
         .push(SPACESHIP_ACTION_REBELLION_TRADING_STATION);
     if let Some(player) = state.player_mut(player_id) {
-        spend_power(
-            &mut player.resources.power,
-            REBELLION_TRADING_STATION_POWER_COST,
-        );
+        let cost = power_action_token_cost(player, REBELLION_TRADING_STATION_POWER_COST);
+        spend_power(&mut player.resources.power, cost);
         player.resources.ore = player
             .resources
             .ore
@@ -6146,6 +6684,7 @@ fn validate_rebellion_gain_tech_tile(
     player_id: PlayerId,
     tile: &TechTile,
     track: ResearchTrack,
+    bonus_build_coord: Option<HexCoord>,
 ) -> Result<(), RuleError> {
     let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
     let rebellion = spaceship_id_to_ship_id(SpaceshipId::Rebellion);
@@ -6165,12 +6704,8 @@ fn validate_rebellion_gain_tech_tile(
     if player.resources.qic < REBELLION_GAIN_TECH_TILE_QIC_COST {
         return Err(RuleError::InsufficientResources(ResourceKind::Qic));
     }
-    if !state.research_board.tech_tiles.contains(tile) {
-        return Err(RuleError::ActionNotAllowed(
-            "that Tech tile isn't available".to_string(),
-        ));
-    }
-    validate_free_research_advance(state, player_id, track)
+    let choice = standard_tech_tile_choice(tile, Some(track), bonus_build_coord);
+    validate_tech_tile_choice(state, player_id, &choice)
 }
 
 fn apply_rebellion_gain_tech_tile(
@@ -6178,6 +6713,7 @@ fn apply_rebellion_gain_tech_tile(
     player_id: PlayerId,
     tile: TechTile,
     track: ResearchTrack,
+    bonus_build_coord: Option<HexCoord>,
 ) -> Vec<GameEvent> {
     state
         .used_spaceship_actions
@@ -6196,13 +6732,8 @@ fn apply_rebellion_gain_tech_tile(
             },
         });
     }
-    if transfer_tech_tile_to_player(state, player_id, &tile) {
-        events.push(GameEvent::TechTileGained {
-            player: player_id,
-            tile,
-        });
-        events.extend(apply_free_research_advance(state, player_id, track));
-    }
+    let choice = standard_tech_tile_choice(&tile, Some(track), bonus_build_coord);
+    events.extend(apply_tech_tile_choice(state, player_id, &choice));
     events.extend(apply_advanced_tech_qic_action_bonus(state, player_id));
     advance_turn(state);
     events
@@ -6260,6 +6791,11 @@ fn apply_tfmars_tech_bonus(state: &mut GameState, player_id: PlayerId) -> Vec<Ga
             .saturating_sub(TFMARS_TECH_BONUS_QIC_COST);
         let vp = 2 + player.tech_tiles.len() as i32;
         player.vp = player.vp.saturating_add(vp);
+        events.push(GameEvent::VpAwarded {
+            player: player_id,
+            amount: vp,
+            reason: VpReason::QicAction,
+        });
         let delta = ResourceDelta {
             qic: -(TFMARS_TECH_BONUS_QIC_COST as i8),
             ..ResourceDelta::zero()
@@ -6298,7 +6834,7 @@ fn validate_tfmars_gaia_formation(
             "this spaceship action space has already been used this round".to_string(),
         ));
     }
-    if spendable_power_value(&player.resources.power) < TFMARS_GAIA_FORMATION_POWER_COST {
+    if spendable_power_value(&player.resources.power) < power_action_token_cost(player, TFMARS_GAIA_FORMATION_POWER_COST) {
         return Err(RuleError::InsufficientResources(
             crate::game_state::ResourceKind::Power,
         ));
@@ -6315,10 +6851,8 @@ fn apply_tfmars_gaia_formation(
         .used_spaceship_actions
         .push(SPACESHIP_ACTION_TFMARS_GAIA_FORMATION);
     if let Some(player) = state.player_mut(player_id) {
-        spend_power(
-            &mut player.resources.power,
-            TFMARS_GAIA_FORMATION_POWER_COST,
-        );
+        let cost = power_action_token_cost(player, TFMARS_GAIA_FORMATION_POWER_COST);
+        spend_power(&mut player.resources.power, cost);
     }
     apply_immediate_gaia_formation_impl(state, player_id, coord, 0)
 }
@@ -6371,6 +6905,11 @@ fn apply_eclipse_planet_type_bonus(state: &mut GameState, player_id: PlayerId) -
             .saturating_sub(ECLIPSE_PLANET_TYPE_BONUS_QIC_COST);
         let vp = 2 + colonized_planet_types as i32;
         player.vp = player.vp.saturating_add(vp);
+        events.push(GameEvent::VpAwarded {
+            player: player_id,
+            amount: vp,
+            reason: VpReason::QicAction,
+        });
         let delta = ResourceDelta {
             qic: -(ECLIPSE_PLANET_TYPE_BONUS_QIC_COST as i8),
             ..ResourceDelta::zero()
@@ -6409,7 +6948,7 @@ fn validate_eclipse_research_boost(
             "this spaceship action space has already been used this round".to_string(),
         ));
     }
-    if spendable_power_value(&player.resources.power) < ECLIPSE_RESEARCH_BOOST_POWER_COST {
+    if spendable_power_value(&player.resources.power) < power_action_token_cost(player, ECLIPSE_RESEARCH_BOOST_POWER_COST) {
         return Err(RuleError::InsufficientResources(
             crate::game_state::ResourceKind::Power,
         ));
@@ -6435,10 +6974,8 @@ fn apply_eclipse_research_boost(
         .push(SPACESHIP_ACTION_ECLIPSE_RESEARCH_BOOST);
 
     if let Some(player) = state.player_mut(player_id) {
-        spend_power(
-            &mut player.resources.power,
-            ECLIPSE_RESEARCH_BOOST_POWER_COST,
-        );
+        let cost = power_action_token_cost(player, ECLIPSE_RESEARCH_BOOST_POWER_COST);
+        spend_power(&mut player.resources.power, cost);
         player.resources.knowledge = player
             .resources
             .knowledge
@@ -6479,11 +7016,20 @@ fn apply_eclipse_research_boost(
     events
 }
 
-/// Alternative to the normal `Build` action's Asteroid branch: costs 6 credits (activation fee,
-/// deducted separately) instead of the Asteroid branch's usual zero ore/credit cost, but
-/// otherwise reuses it as-is (Gaiaformer availability, reachability extendable with QIC).
-/// Restricted to Asteroid targets specifically — `validate_build_impl`/`apply_build_impl` would
-/// otherwise accept any buildable planet type.
+/// Lost Fleet Appendix II (p.14): pay 6 credits, with no Gaiaformer required or
+/// discarded. All other mine limits, occupancy and QIC-extendable range still apply.
+fn eclipse_asteroid_build_options() -> BuildOptions {
+    BuildOptions {
+        free_terraform_steps: 0,
+        power_cost: 0,
+        unlimited_range: false,
+        bonus_range: 0,
+        waive_mine_cost: false,
+        waive_asteroid_former: true,
+        complete_turn: true,
+    }
+}
+
 fn validate_eclipse_asteroid_mine(
     state: &GameState,
     player_id: PlayerId,
@@ -6520,7 +7066,7 @@ fn validate_eclipse_asteroid_mine(
         return Err(RuleError::InvalidTarget(coord));
     }
 
-    validate_build_impl(state, player_id, coord, 0, 0, false, 0)
+    validate_build_impl_with_options(state, player_id, coord, eclipse_asteroid_build_options())
 }
 
 fn apply_eclipse_asteroid_mine(
@@ -6537,7 +7083,7 @@ fn apply_eclipse_asteroid_mine(
             .credits
             .saturating_sub(ECLIPSE_ASTEROID_MINE_CREDITS_COST);
     }
-    apply_build_impl(state, player_id, coord, 0, 0, false, 0)
+    apply_build_impl_with_options(state, player_id, coord, eclipse_asteroid_build_options())
 }
 
 // ── Lost Fleet Exploration Board special actions (Gleens / Space Giants) ────────
@@ -6864,8 +7410,13 @@ fn validate_free_action(
         ResourceKind::Qic => player.resources.qic,
         ResourceKind::Power => spendable_power_value(&player.resources.power),
     };
-    let total_cost = u16::from(spend_amount) * u16::from(count);
-    if u16::from(available) < total_cost {
+    let printed_cost = spend_amount.saturating_mul(count);
+    let total_cost = if spend_kind == ResourceKind::Power && !matches!(kind, FreeActionKind::PowerToGaiaKnowledge) {
+        power_action_token_cost(player, printed_cost)
+    } else {
+        printed_cost
+    };
+    if available < total_cost {
         return Err(RuleError::InsufficientResources(spend_kind));
     }
     Ok(())
@@ -6881,7 +7432,7 @@ fn apply_free_action(
     count: u8,
 ) -> Vec<GameEvent> {
     let (spend_kind, spend_amount) = free_action_cost(&kind);
-    let total_spend = spend_amount.saturating_mul(count);
+    let printed_spend = spend_amount.saturating_mul(count);
     let mut delta = ResourceDelta::zero();
     if let Some(player) = state.player_mut(player_id) {
         if matches!(kind, FreeActionKind::BurnPower) {
@@ -6910,6 +7461,18 @@ fn apply_free_action(
             delta.qic += count as i8;
             return free_action_events(player_id, kind, count, delta);
         }
+        let total_spend = if spend_kind == ResourceKind::Power {
+            power_action_token_cost(player, printed_spend)
+        } else {
+            printed_spend
+        };
+        if matches!(kind, FreeActionKind::PowerToGaiaKnowledge) {
+            player.resources.power.bowl3 -= count;
+            player.resources.power.gaia_forming = player.resources.power.gaia_forming.saturating_add(count);
+            player.resources.gain_knowledge(count);
+            delta.knowledge += count as i8;
+            return free_action_events(player_id, kind, count, delta);
+        }
         match spend_kind {
             ResourceKind::Ore => {
                 player.resources.ore = player.resources.ore.saturating_sub(total_spend);
@@ -6936,11 +7499,6 @@ fn apply_free_action(
             player.resources.power.bowl1 = player.resources.power.bowl1.saturating_add(count);
         } else if matches!(kind, FreeActionKind::OreToPowerBowl3) {
             player.resources.power.bowl3 = player.resources.power.bowl3.saturating_add(count);
-        } else if matches!(kind, FreeActionKind::PowerToGaiaKnowledge) {
-            player.resources.power.gaia_forming =
-                player.resources.power.gaia_forming.saturating_add(count);
-            player.resources.knowledge = player.resources.knowledge.saturating_add(count);
-            delta.knowledge += count as i8;
         } else {
             let (gain_kind, gain_amount) = free_action_gain(&kind);
             let total_gain = gain_amount.saturating_mul(count);
@@ -7510,7 +8068,7 @@ fn seed_starting_resources(state: &mut GameState) {
                 continue;
             }
             if let Some(effect) = crate::data::get_level_effect(&bonus.track, bonus.level) {
-                player.resources.ore = player.resources.ore.saturating_add(effect.ore.max(0) as u8);
+                player.resources.gain_ore(effect.ore.max(0) as u8);
                 player.resources.credits = player
                     .resources
                     .credits
@@ -7986,9 +8544,7 @@ fn apply_gaia_phase(state: &mut GameState) -> (Vec<GameEvent>, Vec<PendingGaiaDe
                 planet.is_gaia_formed = true;
             }
         }
-        if let Some(player) = state.player_mut(owner) {
-            player.gaiaformers_deployed = player.gaiaformers_deployed.saturating_sub(1);
-        }
+        // Conversion finishes here; the Gaiaformer remains until a Mine replaces it.
         events.push(GameEvent::GaiaFormingComplete {
             player: owner,
             hex: coord,
@@ -8025,7 +8581,7 @@ fn apply_gaia_phase(state: &mut GameState) -> (Vec<GameEvent>, Vec<PendingGaiaDe
             Some(FactionId::Itars)
                 if has_pi
                     && amount >= 4
-                    && itars_has_available_standard_tech_choice(state, player_id) =>
+                    && !valid_tech_tile_choices(state, player_id).is_empty() =>
             {
                 Some(GaiaDecisionKind::ItarsTechTile)
             }
@@ -8051,20 +8607,6 @@ fn player_has_planetary_institute(player: &PlayerState) -> bool {
         .structures
         .iter()
         .any(|structure| structure.kind == StructureType::PlanetaryInstitute)
-}
-
-fn itars_has_available_standard_tech_choice(state: &GameState, player_id: PlayerId) -> bool {
-    let Some(player) = state.player(player_id) else {
-        return false;
-    };
-    state
-        .research_board
-        .tech_tiles
-        .iter()
-        .any(|tile| !player.tech_tiles.contains(tile))
-        && ResearchTrack::all()
-            .into_iter()
-            .any(|track| player.research_tracks.get(track) < 5)
 }
 
 fn move_remaining_gaia_power(state: &mut GameState, player_id: PlayerId) {
@@ -8199,7 +8741,13 @@ fn validate_itars_gaia_tech_tile(
     player_id: PlayerId,
     tile: &TechTile,
     track: ResearchTrack,
+    bonus_build_coord: Option<HexCoord>,
 ) -> Result<(), RuleError> {
+    let choice = standard_tech_tile_choice(tile, Some(track), bonus_build_coord);
+    validate_itars_gaia_tech_choice(state, player_id, &choice)
+}
+
+fn validate_itars_gaia_tech_choice(state: &GameState, player_id: PlayerId, choice: &TechTileChoice) -> Result<(), RuleError> {
     let entry = ensure_gaia_decision_phase(state, player_id)?;
     if entry.kind != GaiaDecisionKind::ItarsTechTile {
         return Err(RuleError::ActionNotAllowed(
@@ -8215,17 +8763,7 @@ fn validate_itars_gaia_tech_tile(
     if player.resources.power.gaia_forming < 4 {
         return Err(RuleError::InsufficientResources(ResourceKind::Power));
     }
-    if player.tech_tiles.contains(tile) {
-        return Err(RuleError::ActionNotAllowed(
-            "a player cannot own two copies of the same Standard Tech tile".into(),
-        ));
-    }
-    if !state.research_board.tech_tiles.contains(tile) {
-        return Err(RuleError::ActionNotAllowed(
-            "that Tech tile isn't available".into(),
-        ));
-    }
-    validate_free_research_advance(state, player_id, track)
+    validate_tech_tile_choice(state, player_id, choice)
 }
 
 fn apply_itars_gaia_tech_tile(
@@ -8233,7 +8771,13 @@ fn apply_itars_gaia_tech_tile(
     player_id: PlayerId,
     tile: TechTile,
     track: ResearchTrack,
+    bonus_build_coord: Option<HexCoord>,
 ) -> Vec<GameEvent> {
+    let choice = standard_tech_tile_choice(&tile, Some(track), bonus_build_coord);
+    apply_itars_gaia_tech_choice(state, player_id, choice)
+}
+
+fn apply_itars_gaia_tech_choice(state: &mut GameState, player_id: PlayerId, choice: TechTileChoice) -> Vec<GameEvent> {
     if let Some(player) = state.player_mut(player_id) {
         player.resources.power.gaia_forming = player.resources.power.gaia_forming.saturating_sub(4);
     }
@@ -8242,15 +8786,7 @@ fn apply_itars_gaia_tech_tile(
             entry.remaining_power = entry.remaining_power.saturating_sub(4);
         }
     }
-    let mut events = Vec::new();
-    if transfer_tech_tile_to_player(state, player_id, &tile) {
-        events.push(GameEvent::TechTileGained {
-            player: player_id,
-            tile,
-        });
-        events.extend(apply_free_research_advance(state, player_id, track));
-    }
-    events
+    apply_tech_tile_choice(state, player_id, &choice)
 }
 
 fn validate_finish_gaia_decision(state: &GameState, player_id: PlayerId) -> Result<(), RuleError> {
@@ -8367,7 +8903,7 @@ fn apply_income_phase(
                     }
                     player.resources.ore =
                         player.resources.ore.saturating_add(effect.ore.max(0) as u8);
-                    player.resources.credits = player.resources.credits.saturating_add(credits);
+                    player.resources.gain_credits(credits);
                     player.resources.knowledge = player
                         .resources
                         .knowledge
@@ -8378,8 +8914,8 @@ fn apply_income_phase(
                     player.vp = player.vp.saturating_add(income_vp);
                 }
             }
-            player.resources.ore = player.resources.ore.saturating_add(passive.ore);
-            player.resources.credits = player.resources.credits.saturating_add(passive.credits);
+            player.resources.gain_ore(passive.ore);
+            player.resources.gain_credits(passive.credits);
             player.resources.knowledge =
                 player.resources.knowledge.saturating_add(passive.knowledge);
             add_resource(player, ResourceKind::Qic, passive.qic);
@@ -8401,6 +8937,14 @@ fn apply_income_phase(
                 .power
                 .bowl3
                 .saturating_add(passive.power.bowl3);
+            if player.artifacts.contains(&ArtifactId(2)) {
+                player.resources.power.bowl3 = player.resources.power.bowl3.saturating_add(2);
+                power_token_income = power_token_income.saturating_add(2);
+            }
+            if player.artifacts.contains(&ArtifactId(3)) {
+                player.resources.gain_ore(1);
+                add_resource(player, ResourceKind::Knowledge, 1);
+            }
             let (booster_charge, booster_tokens) = apply_round_booster_income(player);
             power_charge_income = power_charge_income.saturating_add(booster_charge);
             power_token_income = power_token_income.saturating_add(booster_tokens);
@@ -8458,16 +9002,16 @@ fn apply_round_booster_income(player: &mut PlayerState) -> (u8, u8) {
     };
     match booster_id {
         1 => {
-            player.resources.knowledge = player.resources.knowledge.saturating_add(1);
+            player.resources.gain_knowledge(1);
             (0, 0)
         }
         2 => {
-            player.resources.ore = player.resources.ore.saturating_add(1);
+            player.resources.gain_ore(1);
             player.resources.power.bowl1 = player.resources.power.bowl1.saturating_add(2);
             (0, 2)
         }
         3 | 6 | 7 | 10 => {
-            player.resources.ore = player.resources.ore.saturating_add(1);
+            player.resources.gain_ore(1);
             (0, 0)
         }
         4 => {
@@ -8479,25 +9023,25 @@ fn apply_round_booster_income(player: &mut PlayerState) -> (u8, u8) {
             (2, 0)
         }
         9 => {
-            player.resources.credits = player.resources.credits.saturating_add(2);
+            player.resources.gain_credits(2);
             add_resource(player, ResourceKind::Qic, 1);
             (0, 0)
         }
         11 => {
-            player.resources.credits = player.resources.credits.saturating_add(4);
+            player.resources.gain_credits(4);
             (0, 0)
         }
         12 => {
-            player.resources.credits = player.resources.credits.saturating_add(2);
+            player.resources.gain_credits(2);
             (0, 0)
         }
         13 => {
-            player.resources.ore = player.resources.ore.saturating_add(1);
-            player.resources.knowledge = player.resources.knowledge.saturating_add(1);
+            player.resources.gain_ore(1);
+            player.resources.gain_knowledge(1);
             (0, 0)
         }
         14 => {
-            player.resources.credits = player.resources.credits.saturating_add(3);
+            player.resources.gain_credits(3);
             (0, 0)
         }
         _ => (0, 0),
@@ -8512,14 +9056,14 @@ fn apply_tech_tile_income(player: &mut PlayerState) -> u8 {
     for tile_id in player_active_tech_tile_ids(player) {
         match tile_id {
             2 => {
-                player.resources.ore = player.resources.ore.saturating_add(1);
+                player.resources.gain_ore(1);
                 apply_power_charge(&mut player.resources.power, 1);
                 power_charge = power_charge.saturating_add(1);
             }
-            3 => player.resources.credits = player.resources.credits.saturating_add(4),
+            3 => player.resources.gain_credits(4),
             5 => {
-                player.resources.knowledge = player.resources.knowledge.saturating_add(1);
-                player.resources.credits = player.resources.credits.saturating_add(1);
+                player.resources.gain_knowledge(1);
+                player.resources.gain_credits(1);
             }
             _ => {}
         }
@@ -8594,13 +9138,9 @@ fn add_resource(player: &mut PlayerState, kind: ResourceKind, amount: u8) -> Res
         kind
     };
     match actual_kind {
-        ResourceKind::Ore => player.resources.ore = player.resources.ore.saturating_add(amount),
-        ResourceKind::Credits => {
-            player.resources.credits = player.resources.credits.saturating_add(amount)
-        }
-        ResourceKind::Knowledge => {
-            player.resources.knowledge = player.resources.knowledge.saturating_add(amount)
-        }
+        ResourceKind::Ore => player.resources.gain_ore(amount),
+        ResourceKind::Credits => player.resources.gain_credits(amount),
+        ResourceKind::Knowledge => player.resources.gain_knowledge(amount),
         ResourceKind::Qic => player.resources.qic = player.resources.qic.saturating_add(amount),
         ResourceKind::Power => apply_power_charge(&mut player.resources.power, amount),
     }
@@ -8624,7 +9164,7 @@ fn apply_structure_income(player: &mut PlayerState, data: &crate::data::FactionD
         .count();
     let mine_income = UNIVERSAL_MINE_BASE
         .saturating_add(cumulative_table_income(&UNIVERSAL_MINE_TABLE, mine_count));
-    player.resources.ore = player.resources.ore.saturating_add(mine_income);
+    player.resources.gain_ore(mine_income);
 
     let ts_count = player
         .structures
@@ -9147,7 +9687,7 @@ fn has_colonized_sector(state: &GameState, player_id: PlayerId, sector_id: u8) -
         .any(|structure| MapEngine::sector_id_at(&state.board, structure.hex) == Some(sector_id))
 }
 
-/// QIC cost to colonize an already Gaia-formed planet, honoring a faction's
+/// QIC cost to colonize a natural or Gaia-formed planet, honoring a faction's
 /// override (see `FactionAbility::gaia_colonization_qic_cost`). Tinkeroids and Moweyds are
 /// handled directly here rather than through the trait, for the same reason as
 /// `tinkeroids_moweyds_terraforming_distance` above (rulebook Appendix I: "Making a Gaia planet
@@ -9351,19 +9891,19 @@ fn apply_power_effect(
         spend_power(&mut player.resources.power, cost);
         match id {
             1 => {
-                player.resources.knowledge += 3;
+                player.resources.gain_knowledge(3);
                 delta.knowledge = 3;
             }
             3 => {
-                player.resources.ore += 2;
+                player.resources.gain_ore(2);
                 delta.ore = 2;
             }
             4 => {
-                player.resources.credits += 7;
+                player.resources.gain_credits(7);
                 delta.credits = 7;
             }
             5 => {
-                player.resources.knowledge += 2;
+                player.resources.gain_knowledge(2);
                 delta.knowledge = 2;
             }
             7 => {

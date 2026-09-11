@@ -1,8 +1,10 @@
+mod ai_federation_search;
 mod charge_power;
 mod faction_abilities;
 mod federation_satellites;
 mod federation_tokens;
 mod free_actions;
+mod gaia_colonization;
 mod ivits;
 mod lost_fleet_map_layout;
 mod lost_fleet_spaceships;
@@ -11,6 +13,7 @@ mod moweyds;
 mod qic_range_extension;
 mod randomizer;
 mod research_levels;
+mod resource_caps;
 mod round_boosters;
 mod round_loop;
 mod rule_engine;
@@ -19,3 +22,5 @@ mod shared_action_slots;
 mod structure_income;
 mod tech_tiles;
 mod tinkeroids;
+
+mod faction_checklist;

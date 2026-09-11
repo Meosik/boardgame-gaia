@@ -364,6 +364,12 @@ pub struct Resources {
 }
 
 impl Resources {
+    /// Rulebook p.9: "The track ends at 15, so you cannot have more than 15 ore, 15 knowledge,
+    /// and 30 credits (15 per token)." QIC and power have no printed cap.
+    pub const ORE_CAP: u8 = 15;
+    pub const KNOWLEDGE_CAP: u8 = 15;
+    pub const CREDITS_CAP: u8 = 30;
+
     pub fn zero() -> Self {
         Self {
             ore: 0,
@@ -373,6 +379,26 @@ impl Resources {
             power: PowerCycle::zero(),
             spent_gaia_formers: 0,
         }
+    }
+
+    /// Every ore gain must funnel through this (never assign `self.ore` directly from a
+    /// `saturating_add`/`+=`) so the printed 15-ore track limit is enforced at the single choke
+    /// point instead of needing the cap re-applied at each of the many gain call sites.
+    pub fn gain_ore(&mut self, amount: u8) {
+        self.ore = self.ore.saturating_add(amount).min(Self::ORE_CAP);
+    }
+
+    /// See `gain_ore` — same reasoning, 15-knowledge track limit.
+    pub fn gain_knowledge(&mut self, amount: u8) {
+        self.knowledge = self
+            .knowledge
+            .saturating_add(amount)
+            .min(Self::KNOWLEDGE_CAP);
+    }
+
+    /// See `gain_ore` — same reasoning, 30-credits track limit.
+    pub fn gain_credits(&mut self, amount: u8) {
+        self.credits = self.credits.saturating_add(amount).min(Self::CREDITS_CAP);
     }
 }
 
@@ -463,6 +489,10 @@ pub struct PlayerState {
     /// and belong to no sector or federation (Lost Fleet Appendix VII).
     #[serde(default)]
     pub artifact_mines: Vec<PlanetType>,
+    /// Lost Fleet Artifacts this player has examined. Persistent ownership is needed both for
+    /// displaying the physical tokens and for the two Artifacts whose rewards recur as income.
+    #[serde(default)]
+    pub artifacts: Vec<ArtifactId>,
     pub research_tracks: ResearchTracks,
     pub vp: i32,
     /// VP promised during setup bidding. It remains separate from `vp` until
@@ -511,12 +541,8 @@ pub struct PlayerState {
     /// Institute special action (e.g. Space Giants' free tech tile).
     /// Meaningless for factions without such an ability.
     pub pi_ability_used: bool,
-    /// Whether this player has already received their faction's one-time
-    /// "first colonization" bonus (e.g. Darkanians' credits+knowledge grant).
-    /// An explicit flag rather than inferring "first" from `structures.len()`,
-    /// since structure count also depends on the (separately unimplemented)
-    /// starting-structure placement step and would silently break once that
-    /// lands. Meaningless for factions without such an ability.
+    /// Legacy snapshot field, retained for save compatibility. Darkanians now
+    /// determine first colonization per sector from the board, not this flag.
     pub first_colonization_bonus_used: bool,
     /// Whether this player has already taken their Academy(Qic) action this
     /// round (rulebook p.15: special action spaces — including Academy(Qic)
@@ -960,7 +986,16 @@ pub enum GamePhase {
         round: u8,
     },
     FinalScoring,
-    Ended,
+    /// Terminal phase reached via `RuleEngine::finalize_game` after round 6's `RoundScoring`
+    /// completes. Carrying the result here (rather than only broadcasting a one-time
+    /// `GameEnded` server message) makes it part of the authoritative, snapshotted `GameState` —
+    /// a client that only loads a later snapshot (reconnect, refresh, restart recovery) still
+    /// sees the same final scores and winners. `winners` holds every player tied for the
+    /// highest `total_vp` (rulebook: ties share the win, there is no tiebreaker).
+    Ended {
+        final_scores: [(PlayerId, i32); 4],
+        winners: Vec<PlayerId>,
+    },
 }
 
 /// One opponent's opportunity to charge power during `ChargePowerPending`.
@@ -1051,6 +1086,8 @@ pub struct FactionAssignment {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GameEvent {
+    /// Presentation-only boundary for the preceding events from one server action.
+    ActionLog { player: PlayerId, action: String, event_count: usize },
     FactionSelected {
         player: PlayerId,
         faction: FactionId,
@@ -1211,6 +1248,8 @@ pub enum VpReason {
     ShipExploration,
     AsteroidColony,
     ProtoPlanetColony,
+    QicAction,
+    FederationToken { token_kind: u8 },
     TechTile { tile_id: u8 },
 }
 
@@ -1305,6 +1344,9 @@ pub struct UndoState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
+    /// Server-created local test controller; ordinary games never set this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dev_controller: Option<PlayerId>,
     pub room_code: RoomCode,
     pub created_at: u64,
     pub version: u64,

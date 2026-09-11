@@ -162,13 +162,30 @@ impl MapEngine {
         Some(crate::data::category_for_sector(sector_id))
     }
 
+    fn sector_contains_hex(sector: &Sector, hex: HexCoord) -> bool {
+        if (11..=18).contains(&sector.id) {
+            [
+                HexCoord::new(0, 0),
+                HexCoord::new(1, 0),
+                HexCoord::new(0, 1),
+            ]
+            .into_iter()
+            .map(|offset| offset.rotate_n(sector.rotation).add(&sector.origin))
+            .any(|sector_hex| sector_hex == hex)
+        } else {
+            hex.distance(&sector.origin) <= 2
+        }
+    }
+
     /// The id of the Space/Deep Space sector containing `hex`. Interspace
-    /// tiles intentionally return `None` because they are not sectors.
+    /// tiles intentionally return `None` because they are not sectors. Deep
+    /// Space sectors use their exact three-hex footprint rather than the
+    /// radius-two footprint of ordinary Space sectors.
     pub fn sector_id_at(board: &BoardState, hex: HexCoord) -> Option<u8> {
         let sector = board
             .sectors
             .iter()
-            .find(|s| hex.distance(&s.origin) <= 2)?;
+            .find(|sector| Self::sector_contains_hex(sector, hex))?;
         Some(sector.id)
     }
 
@@ -184,10 +201,7 @@ impl MapEngine {
                 board
                     .hexes
                     .keys()
-                    .filter(|&&h| {
-                        // hex belongs to this sector if within 2 steps of sector origin
-                        h.distance(&sector.origin) <= 2
-                    })
+                    .filter(|&&hex| Self::sector_contains_hex(sector, hex))
                     .copied()
                     .collect::<Vec<_>>()
             })
@@ -199,7 +213,7 @@ impl MapEngine {
         let mut sector_ids: HashSet<u8> = HashSet::new();
         for sector in &board.sectors {
             let has_structure = board.hexes.values().any(|hex| {
-                hex.coord.distance(&sector.origin) <= 2
+                Self::sector_contains_hex(sector, hex.coord)
                     && hex.structures.iter().any(|s| s.owner == player)
             });
             if has_structure {
@@ -683,6 +697,7 @@ impl MapEngine {
                 },
                 structures: Vec::new(),
                 artifact_mines: Vec::new(),
+                artifacts: Vec::new(),
                 research_tracks: ResearchTracks::new(),
                 vp: 10,
                 setup_bid_vp: 0,
@@ -751,6 +766,7 @@ impl MapEngine {
         }
 
         GameState {
+            dev_controller: None,
             room_code: RoomCode(room_code.to_string()),
             created_at,
             version: 0,

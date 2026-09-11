@@ -183,6 +183,10 @@ fn economy_and_science_level_five_rewards_are_immediate() {
     science.players[0]
         .federation_tokens
         .push(FederationToken(1));
+    // `research_state`'s default knowledge (20) already exceeds the real 15-knowledge cap
+    // (`Resources::gain_knowledge`) — no legal game state could ever reach it. Lower it here so
+    // the level-5 reward's delta assertion below isn't clipped by that cap.
+    science.players[0].resources.knowledge = 6;
     let knowledge_before = science.players[0].resources.knowledge;
     advance(&mut science, ResearchTrack::Science);
     assert_eq!(

@@ -2,6 +2,7 @@ use crate::error::RuleError;
 use crate::faction::ability::{FactionAbility, FederationPowerRule};
 use crate::game_state::{
     FactionId, GameEvent, GameState, HexCoord, PlanetType, PlayerId, ResourceDelta, Resources,
+    StructureType,
 };
 use crate::map::MapEngine;
 
@@ -26,22 +27,40 @@ impl FactionAbility for DarkaniansAbility {
         let Some(player) = state.player(player_id) else {
             return vec![];
         };
-        if player.first_colonization_bonus_used {
+        if !player
+            .structures
+            .iter()
+            .any(|s| s.kind == StructureType::PlanetaryInstitute)
+        {
             return vec![];
         }
-        // Interspace tiles aren't modeled as sectors, so a hex that doesn't
-        // resolve to any sector correctly does not trigger the bonus.
-        match MapEngine::sector_category_at(&state.board, coord) {
-            Some(_) => vec![GameEvent::ResourceChanged {
-                player: player_id,
-                delta: ResourceDelta {
-                    credits: 2,
-                    knowledge: 1,
-                    ..ResourceDelta::zero()
-                },
-            }],
-            None => vec![],
+        let Some(sector_id) = MapEngine::sector_id_at(&state.board, coord) else {
+            return vec![];
+        };
+        // The hook runs after placement: exclude the new colony itself. Existing
+        // colonies (including pre-PI ones and the Lost Planet) already occupy a
+        // sector, so no mutable reward flag or saved-game migration is needed.
+        let already_colonized = player.structures.iter().any(|structure| {
+            structure.hex != coord
+                && MapEngine::sector_id_at(&state.board, structure.hex) == Some(sector_id)
+        }) || state.board.hexes.values().any(|hex| {
+            hex.coord != coord
+                && hex.planet.as_ref().is_some_and(|planet| {
+                    planet.planet_type == PlanetType::LostPlanet && planet.owner == Some(player_id)
+                })
+                && MapEngine::sector_id_at(&state.board, hex.coord) == Some(sector_id)
+        });
+        if already_colonized {
+            return vec![];
         }
+        vec![GameEvent::ResourceChanged {
+            player: player_id,
+            delta: ResourceDelta {
+                credits: 2,
+                knowledge: 1,
+                ..ResourceDelta::zero()
+            },
+        }]
     }
 
     fn on_research(

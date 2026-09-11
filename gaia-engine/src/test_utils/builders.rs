@@ -68,6 +68,7 @@ impl GameStateBuilder {
         let turn_order: Vec<u8> = self.players.iter().map(|p| p.player_id).collect();
 
         GameState {
+            dev_controller: None,
             room_code: RoomCode("TEST".into()),
             created_at: 0,
             version: 1,
@@ -132,6 +133,7 @@ pub fn minimal_player(player_id: u8) -> PlayerState {
         },
         structures: vec![],
         artifact_mines: vec![],
+        artifacts: vec![],
         research_tracks: ResearchTracks::new(),
         vp: 10,
         setup_bid_vp: 0,

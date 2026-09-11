@@ -1,6 +1,6 @@
 use gaia_engine::game_state::{
-    BoardState, FederationToken, GamePhase, Hex, HexCoord, PlacedStructure, Sector, SpaceshipBoard,
-    SpaceshipId, Structure, StructureType, TechTile,
+    BoardState, FederationToken, GamePhase, Hex, HexCoord, PlacedStructure, ResearchTrack, Sector,
+    SpaceshipBoard, SpaceshipId, Structure, StructureType, TechTile,
 };
 use gaia_engine::rules::actions::{FederationTokenChoice, GameAction};
 use gaia_engine::test_utils::builders::GameStateBuilder;
@@ -89,9 +89,12 @@ fn board_with_federation_structures() -> BoardState {
 fn base_state() -> gaia_engine::game_state::GameState {
     GameStateBuilder::new()
         .with_player_fn(0, |p| {
-            p.resources.ore = 15;
-            p.resources.credits = 15;
-            p.resources.knowledge = 15;
+            // Deliberately below the 15/15/30 resource caps (`Resources::gain_*`) — these tests
+            // assert exact grant deltas (`resources_before + N`), which a starting value already
+            // at the cap would silently clip.
+            p.resources.ore = 5;
+            p.resources.credits = 5;
+            p.resources.knowledge = 5;
             p.resources.qic = 15;
             p.resources.power.bowl3 = 10;
             p.vp = 10;
@@ -141,6 +144,7 @@ fn form_federation(
             token: FederationTokenChoice::Supply { kind },
             bonus_build_coord,
             bonus_tech_tile,
+            bonus_research_track: None,
         },
     )
 }
@@ -256,6 +260,7 @@ fn supply_pool_depletes_and_rejects_an_unavailable_kind() {
             token: FederationTokenChoice::Supply { kind: 2 }, // not in the (single-entry) pool
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(result.is_err());
@@ -292,6 +297,7 @@ fn kind_9_grants_flat_12_vp_via_spaceship_path() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("should succeed: {e}"));
@@ -318,6 +324,7 @@ fn kind_8_grants_8_vp_plus_8_credits() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("should succeed: {e}"));
@@ -343,6 +350,7 @@ fn kind_10_grants_4_vp_plus_4_knowledge() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("should succeed: {e}"));
@@ -369,6 +377,7 @@ fn kind_11_grants_4_vp_plus_2_ore_plus_1_qic() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("should succeed: {e}"));
@@ -395,6 +404,7 @@ fn kind_13_grants_7_vp_plus_2_fresh_power_tokens_to_bowl3() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("should succeed: {e}"));
@@ -421,6 +431,7 @@ fn spaceship_token_requires_the_ship_explored() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(result.is_err());
@@ -442,6 +453,7 @@ fn spaceship_token_requires_it_not_already_claimed() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(result.is_err());
@@ -479,6 +491,7 @@ fn kind_15_grants_a_free_build_of_unlimited_range() {
             },
             bonus_build_coord: Some(far),
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("should succeed: {e}"));
@@ -507,6 +520,7 @@ fn kind_15_requires_a_bonus_build_coord() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(result.is_err());
@@ -528,6 +542,7 @@ fn kind_15_bonus_build_advances_the_turn_exactly_once() {
             },
             bonus_build_coord: Some(target),
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("should succeed: {e}"));
@@ -556,6 +571,7 @@ fn kind_14_grants_a_free_build_with_up_to_3_terraform_steps() {
             },
             bonus_build_coord: Some(target),
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("should succeed: {e}"));
@@ -574,7 +590,10 @@ fn kind_14_grants_a_free_build_with_up_to_3_terraform_steps() {
 #[test]
 fn kind_12_grants_a_standard_tech_tile_of_choice() {
     let mut state = state_with_spaceship_token(12);
-    let chosen = TechTile(3);
+    let chosen = TechTile(4);
+    state.research_board.tech_tile_slots = vec![None; 9];
+    state.players[0].resources.ore = 0;
+    state.players[0].resources.qic = 0;
     let tiles_before = state.research_board.tech_tiles.len();
 
     RuleEngine::apply_action(
@@ -588,12 +607,16 @@ fn kind_12_grants_a_standard_tech_tile_of_choice() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: Some(chosen.clone()),
+            bonus_research_track: Some(ResearchTrack::Science),
         },
     )
     .unwrap_or_else(|e| panic!("should succeed: {e}"));
 
     assert!(state.players[0].tech_tiles.contains(&chosen));
     assert_eq!(state.research_board.tech_tiles.len(), tiles_before - 1);
+    assert_eq!(state.players[0].resources.ore, 1);
+    assert_eq!(state.players[0].resources.qic, 1);
+    assert_eq!(state.players[0].research_tracks.science, 1);
 }
 
 #[test]
@@ -611,7 +634,34 @@ fn kind_12_requires_choosing_an_available_tech_tile() {
             },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(result.is_err());
+}
+
+#[test]
+fn kind_12_skips_tech_choice_when_no_standard_tile_can_be_gained() {
+    let mut state = state_with_spaceship_token(12);
+    state.research_board.tech_tiles.clear();
+    state.research_board.tech_tile_slots.clear();
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::FormFederation {
+            satellite_hexes: vec![],
+            hexes: federation_hexes(),
+            token: FederationTokenChoice::Spaceship {
+                ship: SpaceshipId::Twilight,
+            },
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+            bonus_research_track: None,
+        },
+    )
+    .unwrap_or_else(|e| panic!("empty Tech supply should skip the reward: {e}"));
+
+    assert!(state.players[0].tech_tiles.is_empty());
+    assert_eq!(state.players[0].federation_tokens, vec![FederationToken(12)]);
 }

@@ -6,11 +6,11 @@ use crate::game_state::PlanetType;
 /// Adjacent entries cost 1 terraforming step to convert between.
 pub const PLANET_RING: [PlanetType; 7] = [
     PlanetType::Terra,
-    PlanetType::Swamp,
-    PlanetType::Desert,
     PlanetType::Oxide,
-    PlanetType::Titanium,
     PlanetType::Volcanic,
+    PlanetType::Desert,
+    PlanetType::Swamp,
+    PlanetType::Titanium,
     PlanetType::Ice,
 ];
 
@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn ring_distance_adjacent() {
-        assert_eq!(ring_distance(Terra, Swamp), Some(1));
+        assert_eq!(ring_distance(Terra, Oxide), Some(1));
         assert_eq!(ring_distance(Ice, Terra), Some(1)); // wraps around
     }
 

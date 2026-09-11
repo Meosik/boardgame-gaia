@@ -56,7 +56,7 @@ pub enum GameAction {
     /// tech tile [if] your player token [is] on level 4 or 5 of the research area [it sits
     /// under]. When you take an advanced tech tile, you may advance in any research area." This
     /// engine simplifies the "which research area a standard tile lets you advance" physical
-    /// board-layout detail (which of the 6 tracks each of the 13 standard tile types happens to
+    /// board-layout detail (which of the 6 tracks each of the 12 standard tile types happens to
     /// sit under is a random per-game setup outcome this engine doesn't model precisely) to "any
     /// track of your choice," matching what an Advanced tile already grants unconditionally.
     Upgrade {
@@ -100,6 +100,8 @@ pub enum GameAction {
         bonus_build_coord: Option<HexCoord>,
         #[serde(default)]
         bonus_tech_tile: Option<TechTile>,
+        #[serde(default)]
+        bonus_research_track: Option<ResearchTrack>,
     },
 
     /// Spend power tokens to take a power action from the shared board
@@ -212,11 +214,15 @@ pub enum GameAction {
     },
 
     /// Itars Planetary Institute, Gaia phase: discard four power tokens from
-    /// the Gaia area to gain one available Standard Tech tile and advance the
-    /// chosen research track. This may be repeated while affordable.
+    /// the Gaia area to gain an eligible standard or advanced technology.
+    /// This may be repeated while affordable, using normal technology rules.
+    ItarsGaiaTechChoice { choice: TechTileChoice },
+    /// Legacy standard-only wire format; resolved through the same technology handler.
     ItarsGaiaTechTile {
         tile: TechTile,
         track: ResearchTrack,
+        #[serde(default)]
+        bonus_build_coord: Option<HexCoord>,
     },
 
     /// End the current Terrans/Itars optional Gaia-phase ability window and
@@ -283,7 +289,11 @@ pub enum GameAction {
     /// the activation fee (rulebook: "at no additional cost"). Shared, once-per-round
     /// exclusivity (`GameState.used_spaceship_actions`), like `SpaceshipCreditTerraform`.
     /// Requires the player to have explored Twilight specifically (not any spaceship).
-    TwilightFreeResearchLab { coord: HexCoord },
+    TwilightFreeResearchLab {
+        coord: HexCoord,
+        #[serde(default)]
+        tech_tile_choice: Option<TechTileChoice>,
+    },
 
     /// Twilight's 3-QIC action: repeat every immediate effect of one Federation token the
     /// player already owns without gaining or consuming another token. Follow-up choices are
@@ -324,7 +334,13 @@ pub enum GameAction {
     RebellionGainTechTile {
         tile: TechTile,
         track: ResearchTrack,
+        #[serde(default)]
+        bonus_build_coord: Option<HexCoord>,
     },
+
+    /// Space Giants Planetary Institute: once per game, gain a Tech tile under the same
+    /// selection, eligibility, immediate-effect, and research-advance rules as an upgrade.
+    SpaceGiantsGainTechTile { choice: TechTileChoice },
 
     /// Lost Fleet expansion, T F Mars spaceship's Appendix II action space: once explored,
     /// costs 2 QIC to immediately and only once gain 2 VP plus 1 additional VP for each Standard
@@ -430,6 +446,18 @@ pub enum TechTileChoice {
     /// has no effect."
     Advanced {
         track: ResearchTrack,
+        covered_tile: TechTile,
+        #[serde(default)]
+        advance_track: Option<ResearchTrack>,
+    },
+    /// Lost Fleet expansion (rulebook p.9): the single extra Advanced Tech tile drawn onto the
+    /// Scoring Board Extension at setup (`GameState.research_board.lost_fleet_advanced_tech_tile`),
+    /// separate from the six tiles above the research tracks. Its first condition is replaced —
+    /// instead of "player token at level 4/5 of a research track," it's whichever alternative
+    /// `lost_fleet_advanced_tech_requirement` names (this project is fixed at 4 players, so
+    /// always `ExplorationShuttles`: at least 3 distinct explored Lost Fleet spaceships). The
+    /// Federation-token-flip and covered-tile conditions are unchanged from `Advanced`.
+    LostFleetAdvanced {
         covered_tile: TechTile,
         #[serde(default)]
         advance_track: Option<ResearchTrack>,

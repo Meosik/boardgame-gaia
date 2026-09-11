@@ -114,6 +114,29 @@ fn upgrade_can_take_a_standard_tile_and_advance_a_research_track() {
 }
 
 #[test]
+fn lost_fleet_resource_tile_immediately_grants_one_ore_and_three_knowledge() {
+    let mut state = tech_tiles_state(vec![13]);
+    let ore_before = state.players[0].resources.ore;
+    let knowledge_before = state.players[0].resources.knowledge;
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::Standard {
+            tile: TechTile(13),
+            advance_track: None,
+            bonus_build_coord: None,
+        })),
+    )
+    .unwrap_or_else(|error| panic!("Lost Fleet resource tile should succeed: {error}"));
+
+    // Trading Station -> Research Lab costs 3 ore; std_13 immediately returns 1 ore and grants
+    // 3 knowledge. No research advance was selected, so there are no other resource rewards.
+    assert_eq!(state.players[0].resources.ore, ore_before - 2);
+    assert_eq!(state.players[0].resources.knowledge, knowledge_before + 3);
+}
+
+#[test]
 fn upper_standard_tile_automatically_advances_its_aligned_track() {
     let mut state = tech_tiles_state(vec![4]);
     state.research_board.tech_tile_slots = vec![
@@ -261,6 +284,95 @@ fn upgrade_can_take_an_advanced_tile_only_at_level_4_or_5() {
         vec![gaia_engine::game_state::FederationToken(1)]
     );
     assert!(state.players[0].covered_tech_tiles.contains(&TechTile(7)));
+}
+
+#[test]
+fn advanced_tile_can_advance_a_different_research_track() {
+    let mut state = tech_tiles_state(vec![]);
+    state.research_board.advanced_tech_tiles[0] = Some(AdvancedTechTile(20));
+    state.players[0].research_tracks.terraforming = 4;
+    state.players[0].tech_tiles.push(TechTile(7));
+    state.players[0]
+        .federation_tokens
+        .push(gaia_engine::game_state::FederationToken(1));
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::Advanced {
+            track: ResearchTrack::Terraforming,
+            covered_tile: TechTile(7),
+            advance_track: Some(ResearchTrack::Science),
+        })),
+    )
+    .unwrap_or_else(|error| panic!("Advanced tile should advance any chosen track: {error}"));
+
+    assert_eq!(state.players[0].research_tracks.terraforming, 4);
+    assert_eq!(state.players[0].research_tracks.science, 1);
+}
+
+#[test]
+fn advanced_tile_and_level_five_research_each_flip_a_green_federation_token() {
+    let mut state = tech_tiles_state(vec![]);
+    state.research_board.advanced_tech_tiles[0] = Some(AdvancedTechTile(20));
+    state.players[0].research_tracks.terraforming = 4;
+    state.players[0].research_tracks.science = 4;
+    state.players[0].tech_tiles.push(TechTile(7));
+    state.players[0]
+        .federation_tokens
+        .push(gaia_engine::game_state::FederationToken(1));
+    let action = upgrade_action(Some(TechTileChoice::Advanced {
+        track: ResearchTrack::Terraforming,
+        covered_tile: TechTile(7),
+        advance_track: Some(ResearchTrack::Science),
+    }));
+
+    let result = RuleEngine::apply_action(&mut state, 0, action.clone());
+    assert!(
+        result.is_err(),
+        "one green token cannot pay both flip costs"
+    );
+
+    state.players[0]
+        .federation_tokens
+        .push(gaia_engine::game_state::FederationToken(2));
+    RuleEngine::apply_action(&mut state, 0, action)
+        .unwrap_or_else(|error| panic!("two green tokens should pay both costs: {error}"));
+
+    assert_eq!(state.players[0].research_tracks.science, 5);
+    assert!(state.players[0].federation_tokens.is_empty());
+    assert_eq!(state.players[0].gray_federation_tokens.len(), 2);
+}
+
+#[test]
+fn federation_count_advanced_tile_counts_green_and_gray_tokens() {
+    let mut state = tech_tiles_state(vec![]);
+    state.research_board.advanced_tech_tiles[0] = Some(AdvancedTechTile(2));
+    state.players[0].tech_tiles.push(TechTile(7));
+    state.players[0].research_tracks.terraforming = 4;
+    state.players[0].federation_tokens = vec![
+        gaia_engine::game_state::FederationToken(1),
+        gaia_engine::game_state::FederationToken(2),
+    ];
+    state.players[0].gray_federation_tokens = vec![gaia_engine::game_state::FederationToken(3)];
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::Advanced {
+            track: ResearchTrack::Terraforming,
+            covered_tile: TechTile(7),
+            advance_track: None,
+        })),
+    )
+    .unwrap_or_else(|error| panic!("federation-count Advanced Tech should succeed: {error}"));
+
+    // The acquisition flips one green token to gray, but all three are still owned and each is
+    // worth 5 VP.
+    assert_eq!(state.players[0].vp, vp_before + 15);
+    assert_eq!(state.players[0].federation_tokens.len(), 1);
+    assert_eq!(state.players[0].gray_federation_tokens.len(), 2);
 }
 
 #[test]
@@ -518,6 +630,157 @@ fn event_triggered_tile_scores_vp_when_its_condition_fires() {
 }
 
 #[test]
+fn gaia_mine_triggers_standard_8_and_advanced_4_once_each() {
+    let target = HexCoord::new(1, 0);
+    let mut board = board_with_mine();
+    board.hexes.insert(
+        target,
+        Hex {
+            coord: target,
+            planet: Some(Planet {
+                planet_type: PlanetType::Transdim,
+                is_gaia_formed: true,
+                owner: None,
+            }),
+            space_tile_kind: None,
+            structures: vec![],
+            satellites: vec![],
+        },
+    );
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.resources.ore = 10;
+            player.resources.credits = 10;
+            player.resources.qic = 10;
+            player.structures = vec![Structure {
+                hex: HexCoord::new(0, 0),
+                kind: StructureType::Mine,
+            }];
+            player.tech_tiles = vec![TechTile(8)];
+            player.advanced_tech_tiles = vec![AdvancedTechTile(4)];
+        })
+        .with_player(1)
+        .with_board(board)
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build();
+    state.round_tiles[0].condition = gaia_engine::game_state::RoundCondition::FormFederation;
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(&mut state, 0, GameAction::Build { coord: target })
+        .unwrap_or_else(|error| panic!("Gaia Mine build should succeed: {error}"));
+
+    // std_08 gives 3 VP for the Gaia Mine and adv_04 gives 3 VP for every Mine build.
+    assert_eq!(state.players[0].vp, vp_before + 6);
+}
+
+#[test]
+fn advanced_17_scores_two_vp_for_each_terraforming_step() {
+    let target = HexCoord::new(1, 0);
+    let mut board = board_with_mine();
+    board.hexes.insert(
+        target,
+        Hex {
+            coord: target,
+            planet: Some(Planet {
+                planet_type: PlanetType::Volcanic,
+                is_gaia_formed: false,
+                owner: None,
+            }),
+            space_tile_kind: None,
+            structures: vec![],
+            satellites: vec![],
+        },
+    );
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.faction = Some(FactionId::Terrans);
+            player.resources.ore = 20;
+            player.resources.credits = 10;
+            player.structures = vec![Structure {
+                hex: HexCoord::new(0, 0),
+                kind: StructureType::Mine,
+            }];
+            player.advanced_tech_tiles = vec![AdvancedTechTile(17)];
+        })
+        .with_player(1)
+        .with_board(board)
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build();
+    state.round_tiles[0].condition = gaia_engine::game_state::RoundCondition::FormFederation;
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(&mut state, 0, GameAction::Build { coord: target })
+        .unwrap_or_else(|error| panic!("two-step terraforming build should succeed: {error}"));
+
+    assert_eq!(state.players[0].vp, vp_before + 4);
+}
+
+#[test]
+fn advanced_3_scores_when_a_mine_upgrades_to_a_trading_station() {
+    let mut state = tech_tiles_state(vec![]);
+    state.players[0].structures[0].kind = StructureType::Mine;
+    state.players[0].advanced_tech_tiles = vec![AdvancedTechTile(3)];
+    let Some(hex) = state.board.hexes.get_mut(&HexCoord::new(0, 0)) else {
+        panic!("test structure hex");
+    };
+    hex.structures[0].kind = StructureType::Mine;
+    state.round_tiles[0].condition = gaia_engine::game_state::RoundCondition::FormFederation;
+    let vp_before = state.players[0].vp;
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::Upgrade {
+            coord: HexCoord::new(0, 0),
+            to: StructureType::TradingStation,
+            tech_tile_choice: None,
+        },
+    )
+    .unwrap_or_else(|error| panic!("Trading Station upgrade should succeed: {error}"));
+
+    assert_eq!(state.players[0].vp, vp_before + 3);
+}
+
+#[test]
+fn advanced_8_scores_for_paid_and_tech_tile_research_advances() {
+    let mut paid = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.resources.knowledge = 10;
+            player.advanced_tech_tiles = vec![AdvancedTechTile(8)];
+        })
+        .with_player(1)
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build();
+    paid.round_tiles[0].condition = gaia_engine::game_state::RoundCondition::FormFederation;
+    let vp_before = paid.players[0].vp;
+    RuleEngine::apply_action(
+        &mut paid,
+        0,
+        GameAction::ResearchAdvance {
+            track: ResearchTrack::Terraforming,
+        },
+    )
+    .unwrap_or_else(|error| panic!("paid research advance should succeed: {error}"));
+    assert_eq!(paid.players[0].vp, vp_before + 2);
+
+    let mut from_tech = tech_tiles_state(vec![4]);
+    from_tech.players[0].advanced_tech_tiles = vec![AdvancedTechTile(8)];
+    from_tech.round_tiles[0].condition = gaia_engine::game_state::RoundCondition::FormFederation;
+    let vp_before = from_tech.players[0].vp;
+    RuleEngine::apply_action(
+        &mut from_tech,
+        0,
+        upgrade_action(Some(TechTileChoice::Standard {
+            tile: TechTile(4),
+            advance_track: Some(ResearchTrack::Terraforming),
+            bonus_build_coord: None,
+        })),
+    )
+    .unwrap_or_else(|error| panic!("Tech-tile research advance should succeed: {error}"));
+    assert_eq!(from_tech.players[0].vp, vp_before + 2);
+}
+
+#[test]
 fn pass_time_tile_tallies_a_live_count() {
     let a = HexCoord::new(0, 0);
     let b = HexCoord::new(1, 0);
@@ -563,7 +826,8 @@ fn pass_time_tile_tallies_a_live_count() {
                     kind: StructureType::Mine,
                 },
             ];
-            p.tech_tiles = vec![TechTile(14)]; // LF4: when you pass, 2 VP per asteroid colonized
+            p.advanced_tech_tiles = vec![AdvancedTechTile(14)];
+            // adv_14: when you pass, 2 VP per asteroid colonized.
         })
         .with_player(1)
         .with_board(board)
@@ -654,6 +918,7 @@ fn power_value_tile_increases_federation_power_from_large_buildings() {
             token: gaia_engine::rules::actions::FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(
@@ -671,6 +936,7 @@ fn power_value_tile_increases_federation_power_from_large_buildings() {
             token: gaia_engine::rules::actions::FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(
@@ -717,7 +983,7 @@ fn lost_fleet_free_build_mine_tile_requires_a_coord() {
         Hex {
             coord: target,
             planet: Some(Planet {
-                planet_type: PlanetType::Terra,
+                planet_type: PlanetType::Volcanic,
                 is_gaia_formed: false,
                 owner: None,
             }),
@@ -754,6 +1020,7 @@ fn lost_fleet_free_build_mine_tile_requires_a_coord() {
     assert!(missing_coord.is_err());
 
     let ore_before = state.players[0].resources.ore;
+    let credits_before = state.players[0].resources.credits;
     RuleEngine::apply_action(
         &mut state,
         0,
@@ -769,12 +1036,12 @@ fn lost_fleet_free_build_mine_tile_requires_a_coord() {
         .structures
         .iter()
         .any(|s| s.hex == target && s.kind == StructureType::Mine));
-    // Target is the player's own home planet type (Terra), so terraforming distance is 0 either
-    // way — this only confirms the flat 1-ore Mine build cost applied, not the free-step waiver
-    // itself (a distance-1+ target would be needed for that, and isn't essential here). The
-    // enclosing Upgrade itself costs 3 ore (Trading Station -> Research Lab), so total ore spent
-    // is 3 (upgrade) + 1 (the tile's free mine build) = 4.
-    assert_eq!(state.players[0].resources.ore, ore_before - 4);
+    // The enclosing Trading Station -> Research Lab upgrade costs 3 ore and 5 credits. The
+    // Volcanic is two terraforming steps from the Terrans' Terra home type. The
+    // tile supplies both steps and waives the Mine's own 1-ore/2-credit build cost, so no further
+    // resources are spent.
+    assert_eq!(state.players[0].resources.ore, ore_before - 3);
+    assert_eq!(state.players[0].resources.credits, credits_before - 5);
 }
 
 #[test]
@@ -895,4 +1162,124 @@ fn lost_fleet_range_tile_extends_basic_navigation_range() {
         result.is_ok(),
         "tile 12's +1 range should make distance 2 reachable: {result:?}"
     );
+}
+
+// Lost Fleet expansion (`docs/GP_Exp_Rule_EN_V1_Web.pdf` p.9): the single extra Advanced Tech
+// tile on the Scoring Board Extension replaces the normal "research track at level 4/5" first
+// condition with whichever side of that board is in play — this project is fixed at 4 players,
+// so always `ExplorationShuttles` ("explored 3 different spaceships"). The Federation-token-flip
+// and covered-tile conditions are unchanged.
+
+#[test]
+fn lost_fleet_advanced_tech_tile_rejects_fewer_than_three_explored_ships() {
+    let mut state = tech_tiles_state(vec![]);
+    state.research_board.lost_fleet_advanced_tech_tile = Some(AdvancedTechTile(20));
+    state.research_board.lost_fleet_advanced_tech_requirement =
+        gaia_engine::game_state::LostFleetAdvancedTechRequirement::ExplorationShuttles;
+    state.players[0].tech_tiles.push(TechTile(7));
+    state.players[0]
+        .federation_tokens
+        .push(gaia_engine::game_state::FederationToken(1));
+    state.players[0].explored_ships = vec![0, 1]; // only 2 distinct ships
+
+    let result = RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::LostFleetAdvanced {
+            covered_tile: TechTile(7),
+            advance_track: None,
+        })),
+    );
+    assert!(result.is_err(), "2 explored ships should not be enough");
+    assert!(state.research_board.lost_fleet_advanced_tech_tile.is_some());
+}
+
+#[test]
+fn lost_fleet_advanced_tech_tile_succeeds_with_three_distinct_explored_ships() {
+    let mut state = tech_tiles_state(vec![]);
+    state.research_board.lost_fleet_advanced_tech_tile = Some(AdvancedTechTile(20));
+    state.research_board.lost_fleet_advanced_tech_requirement =
+        gaia_engine::game_state::LostFleetAdvancedTechRequirement::ExplorationShuttles;
+    state.players[0].tech_tiles.push(TechTile(7));
+    state.players[0]
+        .federation_tokens
+        .push(gaia_engine::game_state::FederationToken(1));
+    state.players[0].explored_ships = vec![0, 1, 2];
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::LostFleetAdvanced {
+            covered_tile: TechTile(7),
+            advance_track: None,
+        })),
+    )
+    .unwrap_or_else(|e| panic!("3 distinct explored ships should be eligible: {e}"));
+
+    assert!(state.players[0]
+        .advanced_tech_tiles
+        .contains(&AdvancedTechTile(20)));
+    assert!(state.research_board.lost_fleet_advanced_tech_tile.is_none());
+    assert!(state.players[0].federation_tokens.is_empty());
+    assert_eq!(
+        state.players[0].gray_federation_tokens,
+        vec![gaia_engine::game_state::FederationToken(1)]
+    );
+}
+
+#[test]
+fn lost_fleet_advanced_tech_tile_25_vp_side_ignores_explored_ship_count() {
+    let mut state = tech_tiles_state(vec![]);
+    state.research_board.lost_fleet_advanced_tech_tile = Some(AdvancedTechTile(20));
+    state.research_board.lost_fleet_advanced_tech_requirement =
+        gaia_engine::game_state::LostFleetAdvancedTechRequirement::VictoryPoints;
+    state.players[0].tech_tiles.push(TechTile(7));
+    state.players[0]
+        .federation_tokens
+        .push(gaia_engine::game_state::FederationToken(1));
+    state.players[0].explored_ships = vec![]; // no ships explored at all
+    state.players[0].vp = 10;
+
+    let too_few_vp = RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::LostFleetAdvanced {
+            covered_tile: TechTile(7),
+            advance_track: None,
+        })),
+    );
+    assert!(too_few_vp.is_err(), "10 VP should not be enough");
+
+    state.players[0].vp = 25;
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::LostFleetAdvanced {
+            covered_tile: TechTile(7),
+            advance_track: None,
+        })),
+    )
+    .unwrap_or_else(|e| panic!("25 VP should be eligible on the VictoryPoints side: {e}"));
+    assert!(state.research_board.lost_fleet_advanced_tech_tile.is_none());
+}
+
+#[test]
+fn lost_fleet_advanced_tech_tile_cannot_be_taken_once_already_gone() {
+    let mut state = tech_tiles_state(vec![]);
+    state.research_board.lost_fleet_advanced_tech_tile = None;
+    state.players[0].tech_tiles.push(TechTile(7));
+    state.players[0]
+        .federation_tokens
+        .push(gaia_engine::game_state::FederationToken(1));
+    state.players[0].explored_ships = vec![0, 1, 2];
+
+    let result = RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::LostFleetAdvanced {
+            covered_tile: TechTile(7),
+            advance_track: None,
+        })),
+    );
+    assert!(result.is_err(), "no tile left to take");
 }

@@ -250,6 +250,7 @@ fn ivits_first_federation_uses_the_flat_minimum() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("first Ivits federation at exactly 7 power should succeed: {e}"));
@@ -273,6 +274,7 @@ fn ivits_second_federation_requires_7x_and_connects_to_the_existing_network() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("first federation should succeed: {e}"));
@@ -297,6 +299,7 @@ fn ivits_second_federation_requires_7x_and_connects_to_the_existing_network() {
             token: FederationTokenChoice::Supply { kind: 2 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(
@@ -332,6 +335,7 @@ fn ivits_second_federation_rejects_when_disconnected_from_the_existing_network()
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("first federation should succeed: {e}"));
@@ -350,6 +354,7 @@ fn ivits_second_federation_rejects_when_disconnected_from_the_existing_network()
             token: FederationTokenChoice::Supply { kind: 2 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(result.is_err());
@@ -412,6 +417,7 @@ fn ivits_growth_satellites_cost_qic_instead_of_power() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("first federation should succeed: {e}"));
@@ -428,6 +434,7 @@ fn ivits_growth_satellites_cost_qic_instead_of_power() {
             token: FederationTokenChoice::Supply { kind: 6 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|e| panic!("growth with a bridging satellite should succeed: {e}"));
@@ -441,4 +448,174 @@ fn ivits_growth_satellites_cost_qic_instead_of_power() {
         .get(&bridge)
         .unwrap_or_else(|| panic!("bridge hex should exist"));
     assert_eq!(bridge_hex.satellites, vec![0]);
+}
+
+#[test]
+fn ivits_growth_counts_gray_tokens_but_excludes_terraforming_bonus_after_reload() {
+    for gray_count in 0..=2 {
+        let mut state = ivits_federation_state();
+        state.players[0].federated_hexes = (0..3).map(|q| HexCoord::new(q, 0)).collect();
+        state.players[0].research_tracks.terraforming = 5;
+        state.research_board.terraforming_level_5_token = None;
+        state.players[0].federation_tokens = vec![FederationToken(3), FederationToken(4)];
+        for _ in 0..gray_count {
+            let token = state.players[0].federation_tokens.pop().unwrap_or_else(|| panic!("earned federation token should exist"));
+            state.players[0].gray_federation_tokens.push(token);
+        }
+        let json = serde_json::to_string(&state).unwrap_or_else(|error| panic!("test value should serialize: {error}"));
+        let state = serde_json::from_str(&json).unwrap_or_else(|error| panic!("saved value should deserialize: {error}"));
+        let action = GameAction::FormFederation {
+            hexes: (3..7).map(|q| HexCoord::new(q, 0)).collect(),
+            satellite_hexes: vec![],
+            token: FederationTokenChoice::Supply { kind: 2 },
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+            bonus_research_track: None,
+        };
+        assert!(RuleEngine::validate_action(&state, 0, &action).is_ok());
+        let mut without_bonus = state.clone();
+        without_bonus.players[0].research_tracks.terraforming = 4;
+        assert!(
+            RuleEngine::validate_action(&without_bonus, 0, &action).is_err(),
+            "two actual tokens, including gray, require 21 rather than 14"
+        );
+    }
+}
+
+#[test]
+fn ivits_first_federation_satellites_always_cost_qic_not_power() {
+    for (faction, qic, power, succeeds) in [
+        (FactionId::Ivits, 2, 0, true),
+        (FactionId::Ivits, 2, 12, true),
+        (FactionId::Ivits, 1, 12, false),
+        (FactionId::Terrans, 0, 2, true),
+    ] {
+        let mut state = ivits_federation_state();
+        state.board.hexes.clear();
+        for (q, kind) in [
+            (0, StructureType::PlanetaryInstitute),
+            (3, StructureType::TradingStation),
+            (4, StructureType::TradingStation),
+        ] {
+            let coord = HexCoord::new(q, 0);
+            state
+                .board
+                .hexes
+                .insert(coord, structure_hex(coord, 0, kind));
+        }
+        for q in [1, 2] {
+            let coord = HexCoord::new(q, 0);
+            state.board.hexes.insert(coord, empty_hex(coord));
+        }
+        state.players[0].faction = Some(faction);
+        state.players[0].resources.qic = qic;
+        state.players[0].resources.power.bowl1 = power;
+        state.players[0].resources.power.bowl2 = 0;
+        state.players[0].resources.power.bowl3 = 0;
+        state.research_board.federation_tokens = vec![FederationToken(6)];
+        let before = state.clone();
+        let result = RuleEngine::apply_action(
+            &mut state,
+            0,
+            GameAction::FormFederation {
+                hexes: [0, 3, 4].map(|q| HexCoord::new(q, 0)).to_vec(),
+                satellite_hexes: [1, 2].map(|q| HexCoord::new(q, 0)).to_vec(),
+                token: FederationTokenChoice::Supply { kind: 6 },
+                bonus_build_coord: None,
+                bonus_tech_tile: None,
+                bonus_research_track: None,
+            },
+        );
+        assert_eq!(
+            result.is_ok(),
+            succeeds,
+            "{faction:?} QIC={qic} power={power}: {result:?}"
+        );
+        if succeeds {
+            let is_ivits = faction == FactionId::Ivits;
+            assert_eq!(
+                state.players[0].resources.qic,
+                qic - if is_ivits { 2 } else { 0 }
+            );
+            assert_eq!(
+                state.players[0].resources.power.bowl1,
+                power - if is_ivits { 0 } else { 2 }
+            );
+            assert_eq!(state.players[0].resources.power.bowl2, 0);
+            assert_eq!(state.players[0].resources.power.bowl3, 0);
+            for q in [1, 2] {
+                assert_eq!(state.board.hexes[&HexCoord::new(q, 0)].satellites, vec![0]);
+            }
+        } else {
+            assert!(format!("{result:?}").contains("Qic"));
+            assert_eq!(
+                serde_json::to_value(&state).unwrap_or_else(|error| panic!("test value should serialize: {error}")),
+                serde_json::to_value(&before).unwrap_or_else(|error| panic!("test value should serialize: {error}"))
+            );
+        }
+    }
+}
+
+#[test]
+fn ivits_station_range_payment_and_non_building_effects() {
+    for (navigation, qic, expected_remaining) in [(0, 1, Some(0)), (2, 0, Some(0)), (0, 0, None)] {
+        let mut state = state_with_ivits_pi();
+        let target = HexCoord::new(2, 0);
+        state.board.hexes.insert(target, empty_hex(target));
+        state.players[0].research_tracks.navigation = navigation;
+        state.players[0].resources.qic = qic;
+        // Opponent next to the placement must not get a charge offer.
+        state.board.hexes.insert(
+            HexCoord::new(3, 0),
+            structure_hex(HexCoord::new(3, 0), 1, StructureType::PlanetaryInstitute),
+        );
+        let before = serde_json::to_value(&state).unwrap_or_else(|error| panic!("test value should serialize: {error}"));
+        let vp_before = state.players[0].vp;
+        let result = RuleEngine::apply_action(
+            &mut state,
+            0,
+            GameAction::IvitsPlaceSpaceStation { coord: target },
+        );
+        if let Some(remaining) = expected_remaining {
+            let events = result.unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+            assert_eq!(state.players[0].resources.qic, remaining);
+            assert_eq!(state.players[0].vp, vp_before);
+            assert!(events.iter().all(|event| !matches!(
+                event,
+                GameEvent::StructureBuilt { .. } | GameEvent::StructureUpgraded { .. }
+            )));
+            assert!(!matches!(state.phase, GamePhase::ChargePowerPending { .. }));
+            state.phase = GamePhase::ActionPhase { active_player: 0 };
+            let retry = RuleEngine::apply_action(
+                &mut state,
+                0,
+                GameAction::IvitsPlaceSpaceStation {
+                    coord: HexCoord::new(1, 0),
+                },
+            );
+            assert!(retry.is_err(), "cannot use twice per round");
+        } else {
+            assert!(result.is_err());
+            assert_eq!(serde_json::to_value(&state).unwrap_or_else(|error| panic!("test value should serialize: {error}")), before);
+        }
+    }
+}
+
+#[test]
+fn ivits_station_supply_is_six() {
+    let mut state = state_with_ivits_pi();
+    for q in 10..16 {
+        state.players[0].structures.push(Structure {
+            hex: HexCoord::new(q, 0),
+            kind: StructureType::SpaceStation,
+        });
+    }
+    let result = RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::IvitsPlaceSpaceStation {
+            coord: HexCoord::new(1, 0),
+        },
+    );
+    assert!(result.is_err(), "a seventh station must not be allowed");
 }

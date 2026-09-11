@@ -219,7 +219,7 @@ fn booster_gaia_state(booster_id: u8, target: HexCoord) -> gaia_engine::GameStat
 }
 
 #[test]
-fn booster_five_immediately_completes_gaiaforming_and_returns_the_gaiaformer() {
+fn booster_five_immediately_completes_gaiaforming_and_keeps_the_gaiaformer() {
     let target = HexCoord::new(1, 0);
     let mut state = booster_gaia_state(5, target);
     state.players[0].research_tracks.gaia = 0;
@@ -238,8 +238,8 @@ fn booster_five_immediately_completes_gaiaforming_and_returns_the_gaiaformer() {
         .unwrap_or_else(|| panic!("target planet"));
     assert!(planet.is_gaia_formed);
     assert_eq!(planet.owner, Some(0));
-    assert_eq!(state.players[0].gaiaformers_deployed, 0);
-    assert_eq!(state.players[0].gaiaformers_available(), 1);
+    assert_eq!(state.players[0].gaiaformers_deployed, 1);
+    assert_eq!(state.players[0].gaiaformers_available(), 0);
     assert!(state.players[0].round_booster_special_action_used_this_round);
 }
 

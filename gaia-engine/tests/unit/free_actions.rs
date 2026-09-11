@@ -324,6 +324,7 @@ fn nevlas_moves_power_to_gaia_area_and_gains_knowledge() {
 
     assert_eq!(state.players[0].resources.power.bowl3, 8);
     assert_eq!(state.players[0].resources.power.gaia_forming, 2);
+    assert_eq!(state.players[0].resources.power.bowl1, 0);
     assert_eq!(state.players[0].resources.knowledge, 7);
 }
 
@@ -385,4 +386,61 @@ fn legacy_single_free_action_payload_defaults_count_to_one() {
             count: 1,
         }
     );
+}
+
+#[test]
+fn nevlas_pi_discounts_spending_but_not_gaia_transfers() {
+    use gaia_engine::game_state::{HexCoord, Structure, StructureType};
+    for (kind, count, required) in [
+        (FreeActionKind::PowerToQic, 1, 2),
+        (FreeActionKind::PowerToOre, 1, 2),
+        (FreeActionKind::PowerToKnowledge, 1, 2),
+        (FreeActionKind::PowerToCredit, 1, 1),
+        (FreeActionKind::PowerToCredit, 2, 1),
+        (FreeActionKind::PowerToOre, 2, 3),
+        (FreeActionKind::PowerToGaiaKnowledge, 2, 2),
+    ] {
+        let mut state = base_state();
+        state.players[0].faction = Some(FactionId::Nevlas);
+        state.players[0].structures.push(Structure { hex: HexCoord::new(0, 0), kind: StructureType::PlanetaryInstitute });
+        state.players[0].resources.power.bowl3 = required - 1;
+        let action = GameAction::FreeAction { kind, count };
+        assert!(RuleEngine::validate_action(&state, 0, &action).is_err());
+        state.players[0].resources.power.bowl3 = required;
+        RuleEngine::apply_action(&mut state, 0, action).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+        assert_eq!(state.players[0].resources.power.bowl3, 0);
+        assert_eq!(state.players[0].resources.power.bowl1,
+            if matches!(kind, FreeActionKind::PowerToGaiaKnowledge) { 0 } else { required });
+        assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 0 });
+    }
+}
+
+#[test]
+fn hadsch_hallas_all_conversions_gate_pi_reject_shortfall_and_repeat_after_reload() {
+    use gaia_engine::game_state::{HexCoord, Structure, StructureType};
+    for (kind, cost) in [(FreeActionKind::CreditsToQic, 4), (FreeActionKind::CreditsToOre, 3), (FreeActionKind::CreditsToKnowledge, 4)] {
+        let mut state = base_state();
+        state.players[0].faction = Some(FactionId::HadschHallas);
+        state.players[0].resources.credits = cost * 2;
+        let action = GameAction::FreeAction { kind, count: 1 };
+        let before = state.serialize();
+        assert!(RuleEngine::apply_action(&mut state, 0, action.clone()).is_err());
+        assert_eq!(state.serialize(), before);
+        state.players[0].structures.push(Structure { hex: HexCoord::new(0, 0), kind: StructureType::PlanetaryInstitute });
+        state.players[0].resources.credits = cost - 1;
+        let before = state.serialize();
+        assert!(RuleEngine::apply_action(&mut state, 0, action.clone()).is_err());
+        assert_eq!(state.serialize(), before);
+        state.players[0].resources.credits = cost * 2;
+        for _ in 0..2 {
+            RuleEngine::apply_action(&mut state, 0, action.clone()).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+            state = serde_json::from_value(state.serialize()).unwrap_or_else(|error| panic!("saved value should deserialize: {error}"));
+        }
+        let resources = &state.players[0].resources;
+        assert_eq!(resources.credits, 0);
+        assert_eq!(resources.qic, if matches!(kind, FreeActionKind::CreditsToQic) { 7 } else { 5 });
+        assert_eq!(resources.ore, if matches!(kind, FreeActionKind::CreditsToOre) { 7 } else { 5 });
+        assert_eq!(resources.knowledge, if matches!(kind, FreeActionKind::CreditsToKnowledge) { 7 } else { 5 });
+        assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 0 });
+    }
 }

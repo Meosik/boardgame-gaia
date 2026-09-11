@@ -140,6 +140,7 @@ fn form_federation(
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
 }
@@ -257,6 +258,7 @@ fn federation_hex_cannot_be_reused_in_a_later_federation() {
             token: FederationTokenChoice::Supply { kind: 2 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(result.is_err());
@@ -286,6 +288,7 @@ fn federation_rejects_a_hex_the_player_has_not_colonized() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(result.is_err());
@@ -376,6 +379,7 @@ fn federation_rejects_a_submission_with_a_redundant_hex() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(
@@ -397,6 +401,7 @@ fn federation_rejects_a_submission_with_a_redundant_hex() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(
@@ -516,6 +521,7 @@ fn federation_must_use_a_shorter_route_through_an_unselected_owned_planet() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
 
@@ -544,6 +550,7 @@ fn shortest_owned_planet_hop_is_accepted_and_included_in_the_federation() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|error| panic!("the two-satellite owned-planet hop should succeed: {error}"));
@@ -644,6 +651,7 @@ fn federation_rejects_a_new_federation_adjacent_to_an_existing_one() {
             token: FederationTokenChoice::Supply { kind: 2 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(result.is_err());

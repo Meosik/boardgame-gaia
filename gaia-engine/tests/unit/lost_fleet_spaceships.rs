@@ -1,8 +1,8 @@
 use gaia_engine::game_state::{
     AdvancedTechTile, ArtifactId, BoardState, BrainstoneLocation, FactionId, FederationToken,
-    FinalScoringCondition, GamePhase, Hex, HexCoord, PlacedStructure, Planet, PlanetType,
-    ResearchTrack, RoundTile, Sector, SpaceshipBoard, SpaceshipId, Structure, StructureType,
-    TechTile,
+    FinalScoringCondition, GameEvent, GamePhase, Hex, HexCoord, PlacedStructure, Planet,
+    PlanetType, ResearchTrack, RoundTile, Sector, SpaceshipBoard, SpaceshipId, Structure,
+    StructureType, TechTile,
 };
 use gaia_engine::rules::actions::{GameAction, TechTileRef};
 use gaia_engine::test_utils::builders::GameStateBuilder;
@@ -456,7 +456,7 @@ fn examine_artifact_succeeds() {
 }
 
 #[test]
-fn taklons_pay_the_additional_brainstone_cost_to_examine_an_artifact() {
+fn taklons_keep_their_brainstone_when_examining_an_artifact() {
     let mut state = base_state();
     state.players[0].faction = Some(FactionId::Taklons);
     state.players[0].explored_ships.push(0);
@@ -477,7 +477,7 @@ fn taklons_pay_the_additional_brainstone_cost_to_examine_an_artifact() {
 
     assert_eq!(
         state.players[0].resources.power.brainstone,
-        Some(BrainstoneLocation::Gaia)
+        Some(BrainstoneLocation::Area2)
     );
 }
 
@@ -515,7 +515,7 @@ fn build_on_protoplanet_grants_vp_and_flat_terraform_cost() {
     let mut state = base_state();
     let vp_before = state.players[0].vp;
 
-    RuleEngine::apply_action(
+    let events = RuleEngine::apply_action(
         &mut state,
         0,
         GameAction::Build {
@@ -530,6 +530,20 @@ fn build_on_protoplanet_grants_vp_and_flat_terraform_cost() {
     // +6 VP for the Protoplanet colonization, plus the builder's default round tile 1
     // ("BuildMine", 2 VP/unit) which fires for any mine build, Protoplanet included.
     assert_eq!(state.players[0].vp, vp_before + 6 + 2);
+    let logged_vp: i32 = events
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::VpAwarded {
+                player: 0, amount, ..
+            } => Some(*amount),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(
+        logged_vp,
+        state.players[0].vp - vp_before,
+        "all awarded VP must be logged exactly once"
+    );
 }
 
 #[test]
@@ -653,6 +667,41 @@ fn spaceship_credit_terraform_can_only_be_used_once_per_round() {
     assert!(result.is_err());
 }
 
+#[test]
+fn spaceship_credit_terraform_checks_activation_and_mine_cost_together() {
+    for credits in [3, 4, 5] {
+        let mut state = base_state();
+        state.players[0].explored_ships.push(2);
+        state.players[0].resources.credits = credits;
+        let action = GameAction::SpaceshipCreditTerraform { coord: HexCoord::new(0, -1) };
+        let before = state.serialize();
+        if credits < 5 {
+            assert!(RuleEngine::validate_action(&state, 0, &action).is_err());
+            assert!(!RuleEngine::get_valid_actions(&state, 0).contains(&action));
+            assert!(RuleEngine::apply_action(&mut state, 0, action).is_err());
+            assert_eq!(state.serialize(), before);
+        } else {
+            RuleEngine::apply_action(&mut state, 0, action).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+            assert_eq!(state.players[0].resources.credits, 0);
+        }
+    }
+}
+
+#[test]
+fn spaceship_credit_terraform_asteroid_only_pays_activation_credits() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(2);
+    state.players[0].resources.credits = 3;
+    state.players[0].resources.ore = 0;
+    state.players[0].gaiaformers_total = 1;
+    let coord = HexCoord::new(0, -1);
+    state.board.hexes.get_mut(&coord).unwrap_or_else(|| panic!("fixture hex should exist")).planet.as_mut().unwrap_or_else(|| panic!("fixture planet should exist")).planet_type = PlanetType::Asteroid;
+    RuleEngine::apply_action(&mut state, 0, GameAction::SpaceshipCreditTerraform { coord }).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+    assert_eq!(state.players[0].resources.credits, 0);
+    assert_eq!(state.players[0].resources.ore, 0);
+    assert_eq!(state.players[0].resources.spent_gaia_formers, 1);
+}
+
 // ── Twilight: free TradingStation -> ResearchLab ──────────────────────────────
 
 #[test]
@@ -670,6 +719,7 @@ fn twilight_free_research_lab_requires_twilight_specifically() {
         0,
         GameAction::TwilightFreeResearchLab {
             coord: HexCoord::new(5, 5),
+            tech_tile_choice: None,
         },
     );
     assert!(result.is_err());
@@ -692,6 +742,7 @@ fn twilight_free_research_lab_costs_3_power_and_2_ore_but_no_credits() {
         0,
         GameAction::TwilightFreeResearchLab {
             coord: HexCoord::new(5, 5),
+            tech_tile_choice: None,
         },
     )
     .unwrap_or_else(|e| panic!("free research lab upgrade should succeed: {e}"));
@@ -730,6 +781,7 @@ fn twilight_free_research_lab_can_only_be_used_once_per_round() {
         0,
         GameAction::TwilightFreeResearchLab {
             coord: HexCoord::new(5, 5),
+            tech_tile_choice: None,
         },
     )
     .unwrap_or_else(|e| panic!("first use should succeed: {e}"));
@@ -740,6 +792,7 @@ fn twilight_free_research_lab_can_only_be_used_once_per_round() {
         1,
         GameAction::TwilightFreeResearchLab {
             coord: HexCoord::new(6, 6),
+            tech_tile_choice: None,
         },
     );
     assert!(result.is_err());
@@ -758,7 +811,7 @@ fn set_artifact_pool(state: &mut gaia_engine::game_state::GameState, ids: &[u8])
 }
 
 #[test]
-fn artifact_1_grants_2_vp_per_deep_space_sector() {
+fn artifact_1_grants_3_vp_per_deep_space_sector() {
     let mut state = base_state();
     state.players[0].explored_ships.push(0);
     // `board_with_extras`'s only sector (id 1) is Standard; `sector_id_at` resolves a hex to
@@ -781,11 +834,12 @@ fn artifact_1_grants_2_vp_per_deep_space_sector() {
     )
     .unwrap_or_else(|e| panic!("examine artifact should succeed: {e}"));
 
-    assert_eq!(state.players[0].vp, vp_before + 2);
+    assert_eq!(state.players[0].vp, vp_before + 3);
+    assert_eq!(state.players[0].artifacts, vec![ArtifactId(1)]);
 }
 
 #[test]
-fn artifact_2_grants_2_power_to_bowl3() {
+fn artifact_2_grants_2_power_to_bowl3_as_income() {
     let mut state = base_state();
     state.players[0].explored_ships.push(0);
     set_artifact_pool(&mut state, &[2]);
@@ -804,14 +858,31 @@ fn artifact_2_grants_2_power_to_bowl3() {
     )
     .unwrap_or_else(|e| panic!("examine artifact should succeed: {e}"));
 
-    assert_eq!(state.players[0].resources.power.bowl3, bowl3_before + 2);
+    assert_eq!(state.players[0].resources.power.bowl3, bowl3_before);
+    assert_eq!(state.players[0].artifacts, vec![ArtifactId(2)]);
+
+    let mut without_artifact = state.clone();
+    without_artifact.players[0].artifacts.clear();
+    state.phase = GamePhase::RoundScoring { round: 1 };
+    without_artifact.phase = GamePhase::RoundScoring { round: 1 };
+    RuleEngine::advance_to_next_round(&mut state)
+        .unwrap_or_else(|e| panic!("income round should start: {e}"));
+    RuleEngine::advance_to_next_round(&mut without_artifact)
+        .unwrap_or_else(|e| panic!("control income round should start: {e}"));
+    assert_eq!(
+        state.players[0].resources.power.bowl3,
+        without_artifact.players[0].resources.power.bowl3 + 2,
+    );
 }
 
 #[test]
-fn artifact_3_grants_1_ore_and_1_knowledge() {
+fn artifact_3_grants_1_ore_and_1_knowledge_as_income() {
     let mut state = base_state();
     state.players[0].explored_ships.push(0);
     set_artifact_pool(&mut state, &[3]);
+    // `base_state`'s ore starts at the 15-ore cap for the spending tests elsewhere in this file;
+    // lower it here so this grant's delta assertion below isn't clipped by `Resources::gain_ore`.
+    state.players[0].resources.ore = 5;
     let ore_before = state.players[0].resources.ore;
     let knowledge_before = state.players[0].resources.knowledge;
 
@@ -828,8 +899,27 @@ fn artifact_3_grants_1_ore_and_1_knowledge() {
     )
     .unwrap_or_else(|e| panic!("examine artifact should succeed: {e}"));
 
-    assert_eq!(state.players[0].resources.ore, ore_before + 1);
-    assert_eq!(state.players[0].resources.knowledge, knowledge_before + 1);
+    assert_eq!(state.players[0].resources.ore, ore_before);
+    assert_eq!(state.players[0].resources.knowledge, knowledge_before);
+    assert_eq!(state.players[0].artifacts, vec![ArtifactId(3)]);
+
+    let mut without_artifact = state.clone();
+    without_artifact.players[0].artifacts.clear();
+    state.phase = GamePhase::RoundScoring { round: 1 };
+    without_artifact.phase = GamePhase::RoundScoring { round: 1 };
+    RuleEngine::advance_to_next_round(&mut state)
+        .unwrap_or_else(|e| panic!("income round should start: {e}"));
+    RuleEngine::advance_to_next_round(&mut without_artifact)
+        .unwrap_or_else(|e| panic!("control income round should start: {e}"));
+    assert_eq!(
+        state.players[0].resources.ore,
+        without_artifact.players[0].resources.ore + 1,
+    );
+    assert_eq!(
+        state.players[0].resources.knowledge,
+        without_artifact.players[0].resources.knowledge + 1,
+    );
+    assert_eq!(state.players[0].resources.qic, without_artifact.players[0].resources.qic);
 }
 
 #[test]
@@ -885,6 +975,8 @@ fn artifact_6_grants_3_credits_and_3_ore() {
     let mut state = base_state();
     state.players[0].explored_ships.push(0);
     set_artifact_pool(&mut state, &[6]);
+    // `base_state`'s ore starts at the 15-ore cap; lower it so the +3 grant below isn't clipped.
+    state.players[0].resources.ore = 5;
     let credits_before = state.players[0].resources.credits;
     let ore_before = state.players[0].resources.ore;
 
@@ -935,6 +1027,8 @@ fn artifact_9_grants_5_credits_and_2_ore() {
     let mut state = base_state();
     state.players[0].explored_ships.push(0);
     set_artifact_pool(&mut state, &[9]);
+    // `base_state`'s ore starts at the 15-ore cap; lower it so the +2 grant below isn't clipped.
+    state.players[0].resources.ore = 5;
     let credits_before = state.players[0].resources.credits;
     let ore_before = state.players[0].resources.ore;
 
@@ -1118,6 +1212,8 @@ fn examine_artifact_lets_the_player_choose_which_one_to_take() {
     let mut state = base_state();
     state.players[0].explored_ships.push(0); // Twilight
     set_artifact_pool(&mut state, &[3, 6, 9]);
+    // `base_state`'s ore starts at the 15-ore cap; lower it so the +2 grant below isn't clipped.
+    state.players[0].resources.ore = 5;
     let credits_before = state.players[0].resources.credits;
     let ore_before = state.players[0].resources.ore;
 
@@ -1196,13 +1292,45 @@ fn artifact_10_copies_a_flat_reward_federation_token_effect_without_consuming_it
 }
 
 #[test]
+fn artifact_10_tech_tile_copy_uses_normal_immediate_and_research_effects() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(0);
+    set_artifact_pool(&mut state, &[10]);
+    state.players[0].federation_tokens.push(FederationToken(12));
+    state.players[0].resources.ore = 0;
+    state.research_board.tech_tile_slots = vec![None; 9];
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::ExamineArtifact {
+            artifact: ArtifactId(10),
+            copy_federation_token_kind: Some(12),
+            bonus_build_coord: None,
+            bonus_tech_tile: Some(TechTile(4)),
+            bonus_research_track: Some(ResearchTrack::Science),
+        },
+    )
+    .unwrap_or_else(|error| panic!("Artifact 10 Tech-tile copy should succeed: {error}"));
+
+    assert!(state.players[0].tech_tiles.contains(&TechTile(4)));
+    assert_eq!(state.players[0].resources.ore, 1);
+    assert_eq!(state.players[0].research_tracks.science, 1);
+    assert_eq!(
+        state.players[0].federation_tokens,
+        vec![FederationToken(12)]
+    );
+}
+
+#[test]
 fn artifact_10_copies_a_federation_tokens_free_build_effect() {
     let mut state = base_state();
     state.players[0].explored_ships.push(0);
     set_artifact_pool(&mut state, &[10]);
     state.players[0].federation_tokens.push(FederationToken(14)); // free Build, 3 free steps
     let target = HexCoord::new(0, -1); // pre-seeded Volcanic planet, in range
-    let ore_before = state.players[0].resources.ore;
+    state.players[0].resources.ore = 0;
+    state.players[0].resources.credits = 0;
 
     RuleEngine::apply_action(
         &mut state,
@@ -1221,9 +1349,9 @@ fn artifact_10_copies_a_federation_tokens_free_build_effect() {
         .structures
         .iter()
         .any(|structure| structure.hex == target && structure.kind == StructureType::Mine));
-    // 3 free terraforming steps fully cover Terra -> Volcanic (2 ring steps): only the flat
-    // 1-ore Mine cost applies.
-    assert_eq!(state.players[0].resources.ore, ore_before - 1);
+    // The token covers terraforming and waives the base Mine cost.
+    assert_eq!(state.players[0].resources.ore, 0);
+    assert_eq!(state.players[0].resources.credits, 0);
 }
 
 #[test]
@@ -1410,12 +1538,26 @@ fn tfmars_tech_bonus_costs_2_qic_for_2_vp_plus_1_vp_per_tech_tile() {
     let qic_before = state.players[0].resources.qic;
     let vp_before = state.players[0].vp;
 
-    RuleEngine::apply_action(&mut state, 0, GameAction::TFMarsTechBonus)
+    let events = RuleEngine::apply_action(&mut state, 0, GameAction::TFMarsTechBonus)
         .unwrap_or_else(|e| panic!("T F Mars tech bonus should succeed: {e}"));
 
     assert_eq!(state.players[0].resources.qic, qic_before - 2);
     // 2 flat + 2 tech tiles = 4 VP.
     assert_eq!(state.players[0].vp, vp_before + 4);
+    let logged_vp: i32 = events
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::VpAwarded {
+                player: 0, amount, ..
+            } => Some(*amount),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(
+        logged_vp,
+        state.players[0].vp - vp_before,
+        "all awarded VP must be logged exactly once"
+    );
 }
 
 #[test]
@@ -1504,8 +1646,8 @@ fn tfmars_gaia_formation_costs_a_flat_2_power_regardless_of_gaia_track_level() {
     .unwrap_or_else(|e| panic!("T F Mars gaia formation should succeed: {e}"));
 
     assert_eq!(state.players[0].resources.power.bowl3, 1);
-    assert_eq!(state.players[0].gaiaformers_deployed, 0);
-    assert_eq!(state.players[0].gaiaformers_available(), 1);
+    assert_eq!(state.players[0].gaiaformers_deployed, 1);
+    assert_eq!(state.players[0].gaiaformers_available(), 0);
     let Some(hex) = state.board.hexes.get(&transdim) else {
         panic!("transdim hex should still exist");
     };
@@ -1567,13 +1709,27 @@ fn eclipse_planet_type_bonus_costs_2_qic_for_2_vp_plus_1_vp_per_planet_type() {
     let qic_before = state.players[0].resources.qic;
     let vp_before = state.players[0].vp;
 
-    RuleEngine::apply_action(&mut state, 0, GameAction::EclipsePlanetTypeBonus)
+    let events = RuleEngine::apply_action(&mut state, 0, GameAction::EclipsePlanetTypeBonus)
         .unwrap_or_else(|e| panic!("Eclipse planet type bonus should succeed: {e}"));
 
     assert_eq!(state.players[0].resources.qic, qic_before - 2);
     // `board_with_extras`'s anchor hex (player 0's mine) has `planet: None`, so 0 distinct
     // colonized planet types here -> flat +2 VP only.
     assert_eq!(state.players[0].vp, vp_before + 2);
+    let logged_vp: i32 = events
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::VpAwarded {
+                player: 0, amount, ..
+            } => Some(*amount),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(
+        logged_vp,
+        state.players[0].vp - vp_before,
+        "all awarded VP must be logged exactly once"
+    );
 }
 
 #[test]
@@ -1586,10 +1742,24 @@ fn advanced_tech_16_scores_four_vp_for_the_eclipse_qic_action() {
         .push(AdvancedTechTile(16));
     let vp_before = state.players[0].vp;
 
-    RuleEngine::apply_action(&mut state, 0, GameAction::EclipsePlanetTypeBonus)
+    let events = RuleEngine::apply_action(&mut state, 0, GameAction::EclipsePlanetTypeBonus)
         .unwrap_or_else(|e| panic!("Eclipse QIC action should succeed: {e}"));
 
     assert_eq!(state.players[0].vp, vp_before + 2 + 4);
+    let logged_vp: i32 = events
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::VpAwarded {
+                player: 0, amount, ..
+            } => Some(*amount),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(
+        logged_vp,
+        state.players[0].vp - vp_before,
+        "all awarded VP must be logged exactly once"
+    );
 }
 
 #[test]
@@ -1713,7 +1883,7 @@ fn eclipse_asteroid_mine_rejects_non_asteroid_target() {
 }
 
 #[test]
-fn eclipse_asteroid_mine_costs_6_credits_and_consumes_a_gaiaformer() {
+fn eclipse_asteroid_mine_costs_6_credits_without_consuming_a_gaiaformer() {
     let mut state = base_state();
     state.players[0].explored_ships.push(3); // Eclipse
     state.players[0].gaiaformers_total = 1;
@@ -1733,14 +1903,64 @@ fn eclipse_asteroid_mine_costs_6_credits_and_consumes_a_gaiaformer() {
     assert_eq!(state.players[0].resources.credits, credits_before - 6);
     // The reused Asteroid `Build` branch itself costs no additional ore/credits.
     assert_eq!(state.players[0].resources.ore, ore_before);
-    assert_eq!(state.players[0].resources.spent_gaia_formers, 1);
+    assert_eq!(state.players[0].resources.spent_gaia_formers, 0);
+    assert_eq!(state.players[0].gaiaformers_available(), 1);
+}
+
+#[test]
+fn eclipse_asteroid_mine_needs_no_former_but_normal_build_does() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(3);
+    state.players[0].gaiaformers_total = 0;
+    state.players[0].resources.credits = 6;
+    state.players[0].resources.ore = 0;
+    let coord = HexCoord::new(1, 0);
+    assert!(RuleEngine::validate_action(&state, 0, &GameAction::Build { coord }).is_err());
+    let action = GameAction::EclipseAsteroidMine { coord };
+    assert!(RuleEngine::get_valid_actions(&state, 0).contains(&action));
+    RuleEngine::apply_action(&mut state, 0, action)
+        .unwrap_or_else(|e| panic!("Eclipse needs no former: {e}"));
+    assert_eq!(state.players[0].resources.credits, 0);
+    assert_eq!(state.players[0].resources.ore, 0);
+    assert_eq!(state.players[0].resources.spent_gaia_formers, 0);
+    assert_eq!(state.board.hexes[&coord].planet.as_ref().and_then(|p| p.owner), Some(0));
+}
+
+#[test]
+fn eclipse_asteroid_mine_still_requires_credits_range_and_supply() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(3);
+    state.players[0].gaiaformers_total = 0;
+    state.players[0].resources.credits = 5;
+    let action = GameAction::EclipseAsteroidMine { coord: HexCoord::new(1, 0) };
+    let before = serde_json::to_value(&state).unwrap_or_else(|e| panic!("state: {e}"));
+    assert!(RuleEngine::apply_action(&mut state, 0, action.clone()).is_err());
+    assert_eq!(serde_json::to_value(&state).unwrap_or_else(|e| panic!("state: {e}")), before);
+    state.players[0].resources.credits = 6;
+    state.players[0].resources.qic = 0;
+    let far = HexCoord::new(2, 0);
+    let mut hex = state.board.hexes[&HexCoord::new(1, 0)].clone();
+    hex.coord = far;
+    state.board.hexes.insert(far, hex);
+    let far_action = GameAction::EclipseAsteroidMine { coord: far };
+    assert!(RuleEngine::validate_action(&state, 0, &far_action).is_err());
+    state.players[0].resources.qic = 1;
+    RuleEngine::apply_action(&mut state, 0, far_action)
+        .unwrap_or_else(|e| panic!("range may be extended with QIC: {e}"));
+    assert_eq!(state.players[0].resources.qic, 0);
+    assert_eq!(state.players[0].resources.spent_gaia_formers, 0);
+    state.phase = GamePhase::ActionPhase { active_player: 0 };
+    state.used_spaceship_actions.clear();
+    state.players[0].resources.credits = 6;
+    state.players[0].structures = vec![Structure { hex: HexCoord::new(0, 0), kind: StructureType::Mine }; 8];
+    assert!(RuleEngine::validate_action(&state, 0, &action).is_err());
 }
 
 #[test]
 fn eclipse_asteroid_mine_can_only_be_used_once_per_round() {
     let mut state = base_state();
     state.players[0].explored_ships.push(3);
-    state.players[0].gaiaformers_total = 1;
+    state.players[0].gaiaformers_total = 0;
     state.players[0].resources.credits = 15;
 
     RuleEngine::apply_action(
@@ -1752,16 +1972,20 @@ fn eclipse_asteroid_mine_can_only_be_used_once_per_round() {
     )
     .unwrap_or_else(|e| panic!("first use should succeed: {e}"));
 
-    // Same player, same board, tries a second Asteroid — none left in `board_with_extras`
-    // (only one Asteroid hex exists) — the shared exclusivity check happens first regardless.
-    let result = RuleEngine::apply_action(
-        &mut state,
-        0,
-        GameAction::EclipseAsteroidMine {
-            coord: HexCoord::new(1, 0),
-        },
-    );
-    assert!(result.is_err());
+    // Use a fresh, reachable target and restore the turn so only exclusivity blocks it.
+    let coord = HexCoord::new(2, 0);
+    let mut hex = state.board.hexes[&HexCoord::new(1, 0)].clone();
+    hex.coord = coord;
+    hex.structures.clear();
+    if let Some(planet) = hex.planet.as_mut() {
+        planet.owner = None;
+    }
+    state.board.hexes.insert(coord, hex);
+    state.phase = GamePhase::ActionPhase { active_player: 0 };
+    let action = GameAction::EclipseAsteroidMine { coord };
+    assert!(RuleEngine::validate_action(&state, 0, &action).is_err());
+    state.used_spaceship_actions.clear();
+    assert!(RuleEngine::validate_action(&state, 0, &action).is_ok());
 }
 
 // ── Remaining Appendix II spaceship action spaces ───────────────────────────
@@ -1775,7 +1999,7 @@ fn twilight_replays_an_owned_federation_token_without_consuming_it() {
     let vp_before = state.players[0].vp;
     let credits_before = state.players[0].resources.credits;
 
-    RuleEngine::apply_action(
+    let events = RuleEngine::apply_action(
         &mut state,
         0,
         GameAction::TwilightReplayFederationToken {
@@ -1792,6 +2016,60 @@ fn twilight_replays_an_owned_federation_token_without_consuming_it() {
     assert_eq!(state.players[0].resources.credits, credits_before + 6);
     assert_eq!(state.players[0].federation_tokens, vec![FederationToken(5)]);
     assert!(state.used_spaceship_actions.contains(&10));
+    let logged_vp: i32 = events
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::VpAwarded {
+                player: 0, amount, ..
+            } => Some(*amount),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(
+        logged_vp,
+        state.players[0].vp - vp_before,
+        "all awarded VP must be logged exactly once"
+    );
+}
+
+#[test]
+fn twilight_can_replay_a_flipped_federation_token_without_turning_it_green() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(0);
+    state.players[0].resources.qic = 3;
+    state.players[0]
+        .gray_federation_tokens
+        .push(FederationToken(5));
+    let vp_before = state.players[0].vp;
+    let credits_before = state.players[0].resources.credits;
+    assert!(RuleEngine::get_valid_actions(&state, 0)
+        .iter()
+        .any(|action| {
+            matches!(
+                action,
+                GameAction::TwilightReplayFederationToken { token_kind: 5, .. }
+            )
+        }));
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::TwilightReplayFederationToken {
+            token_kind: 5,
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+            bonus_research_track: None,
+        },
+    )
+    .unwrap_or_else(|e| panic!("Twilight should replay a gray owned token: {e}"));
+
+    assert_eq!(state.players[0].vp, vp_before + 7);
+    assert_eq!(state.players[0].resources.credits, credits_before + 6);
+    assert!(state.players[0].federation_tokens.is_empty());
+    assert_eq!(
+        state.players[0].gray_federation_tokens,
+        vec![FederationToken(5)]
+    );
 }
 
 #[test]
@@ -1846,7 +2124,9 @@ fn twilight_replay_resolves_the_tech_tile_tokens_follow_up_choice() {
     state.players[0].explored_ships.push(0);
     state.players[0].resources.qic = 3;
     state.players[0].federation_tokens.push(FederationToken(12));
-    let tile = TechTile(2);
+    state.research_board.tech_tile_slots = vec![None; 9];
+    state.players[0].resources.ore = 0;
+    let tile = TechTile(4);
 
     RuleEngine::apply_action(
         &mut state,
@@ -1863,6 +2143,8 @@ fn twilight_replay_resolves_the_tech_tile_tokens_follow_up_choice() {
     assert!(state.players[0].tech_tiles.contains(&tile));
     assert!(!state.research_board.tech_tiles.contains(&tile));
     assert_eq!(state.players[0].research_tracks.economy, 1);
+    assert_eq!(state.players[0].resources.ore, 1);
+    assert_eq!(state.players[0].resources.qic, 1);
     assert_eq!(
         state.players[0].federation_tokens,
         vec![FederationToken(12)]
@@ -1919,8 +2201,18 @@ fn rebellion_gain_tech_tile_costs_three_qic_and_advances_the_chosen_track() {
     let mut state = base_state();
     state.players[0].explored_ships.push(1); // Rebellion
     state.players[0].resources.qic = 3;
-    let tile = TechTile(1);
+    let tile = TechTile(4);
+    state.research_board.tech_tile_slots = vec![None; 9];
+    state.players[0].resources.ore = 0;
     assert!(state.research_board.tech_tiles.contains(&tile));
+
+    assert!(RuleEngine::get_valid_actions(&state, 0).contains(
+        &GameAction::RebellionGainTechTile {
+            tile: tile.clone(),
+            track: ResearchTrack::Science,
+            bonus_build_coord: None,
+        }
+    ));
 
     RuleEngine::apply_action(
         &mut state,
@@ -1928,15 +2220,40 @@ fn rebellion_gain_tech_tile_costs_three_qic_and_advances_the_chosen_track() {
         GameAction::RebellionGainTechTile {
             tile: tile.clone(),
             track: ResearchTrack::Science,
+            bonus_build_coord: None,
         },
     )
     .unwrap_or_else(|e| panic!("Rebellion tech-tile action should succeed: {e}"));
 
-    assert_eq!(state.players[0].resources.qic, 0);
     assert!(state.players[0].tech_tiles.contains(&tile));
     assert!(!state.research_board.tech_tiles.contains(&tile));
     assert_eq!(state.players[0].research_tracks.science, 1);
+    assert_eq!(state.players[0].resources.ore, 1);
+    assert_eq!(state.players[0].resources.qic, 1);
     assert!(state.used_spaceship_actions.contains(&12));
+}
+
+#[test]
+fn rebellion_valid_actions_include_spaceship_tech_tiles_and_their_required_target() {
+    let mut state = base_state();
+    state.players[0].explored_ships.push(1); // Rebellion
+    state.players[0].resources.qic = 3;
+    state.research_board.tech_tile_slots = vec![None; 9];
+    state
+        .spaceship_boards
+        .iter_mut()
+        .find(|board| board.id == SpaceshipId::Rebellion)
+        .unwrap_or_else(|| panic!("Rebellion board should exist"))
+        .tech_tiles = vec![TechTile(11)];
+    let target = HexCoord::new(0, -1);
+
+    assert!(RuleEngine::get_valid_actions(&state, 0).contains(
+        &GameAction::RebellionGainTechTile {
+            tile: TechTile(11),
+            track: ResearchTrack::Science,
+            bonus_build_coord: Some(target),
+        }
+    ));
 }
 
 #[test]
@@ -1956,6 +2273,7 @@ fn advanced_tech_16_scores_four_vp_for_the_rebellion_qic_action() {
         GameAction::RebellionGainTechTile {
             tile,
             track: ResearchTrack::Science,
+            bonus_build_coord: None,
         },
     )
     .unwrap_or_else(|e| panic!("Rebellion QIC action should succeed: {e}"));
@@ -1975,6 +2293,7 @@ fn rebellion_gain_tech_tile_rejects_an_unavailable_tile() {
         GameAction::RebellionGainTechTile {
             tile: TechTile(99),
             track: ResearchTrack::Science,
+            bonus_build_coord: None,
         },
     );
 
@@ -2247,6 +2566,7 @@ fn rebellion_gain_tech_tile_rejects_a_maxed_research_track() {
         GameAction::RebellionGainTechTile {
             tile,
             track: ResearchTrack::Science,
+            bonus_build_coord: None,
         },
     );
 
@@ -2357,4 +2677,54 @@ fn gleens_explore_spaceship_rejects_after_special_action_used() {
     );
 
     assert!(result.is_err());
+}
+
+
+#[test]
+fn tfmars_formed_gaia_build_does_not_charge_entry_qic() {
+    let mut state = base_state();
+    let coord = HexCoord::new(1, -1);
+    insert_transdim_hex(&mut state, coord);
+    state.players[0].explored_ships.push(2);
+    state.players[0].gaiaformers_total = 1;
+    state.players[0].resources.power.bowl3 = 2;
+    state.players[0].resources.qic = 0;
+    RuleEngine::apply_action(&mut state, 0, GameAction::TFMarsGaiaFormation { coord }).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+    assert!(state.board.hexes[&coord].planet.as_ref().unwrap_or_else(|| panic!("fixture planet should exist")).is_gaia_formed);
+    state.phase = GamePhase::ActionPhase { active_player: 0 };
+    RuleEngine::apply_action(&mut state, 0, GameAction::Build { coord }).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+    assert_eq!(state.players[0].gaiaformers_deployed, 0);
+    assert_eq!(state.players[0].gaiaformers_available(), 1);
+    assert_eq!(state.players[0].resources.qic, 0);
+    assert!(state.players[0].structures.iter().any(|s| s.hex == coord && s.kind == StructureType::Mine));
+}
+
+#[test]
+fn nevlas_pi_halves_all_four_spaceship_power_spends() {
+    for (ship, printed, action) in [
+        (0, 3_u8, GameAction::TwilightFreeResearchLab { coord: HexCoord::new(5, 5), tech_tile_choice: None }),
+        (1, 3, GameAction::RebellionFreeTradingStation { coord: HexCoord::new(0, 0) }),
+        (2, 2, GameAction::TFMarsGaiaFormation { coord: HexCoord::new(1, -1) }),
+        (3, 3, GameAction::EclipseResearchBoost { track: ResearchTrack::Science }),
+    ] {
+        for has_pi in [false, true] {
+            let mut state = base_state();
+            state.players[0].faction = Some(FactionId::Nevlas);
+            state.players[0].explored_ships.push(ship);
+            state.players[0].structures.push(Structure { hex: HexCoord::new(5, 5), kind: StructureType::TradingStation });
+            if has_pi {
+                state.players[0].structures.push(Structure { hex: HexCoord::new(6, 6), kind: StructureType::PlanetaryInstitute });
+            }
+            insert_transdim_hex(&mut state, HexCoord::new(1, -1));
+            state.players[0].gaiaformers_total = 1;
+            let cost = if has_pi { printed.div_ceil(2) } else { printed };
+            state.players[0].resources.power.bowl3 = cost - 1;
+            assert!(RuleEngine::validate_action(&state, 0, &action).is_err());
+            state.players[0].resources.power.bowl3 = cost;
+            let before = state.players[0].resources.power.bowl1;
+            RuleEngine::apply_action(&mut state, 0, action.clone()).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+            assert_eq!(state.players[0].resources.power.bowl3, 0);
+            assert_eq!(state.players[0].resources.power.bowl1, before + cost);
+        }
+    }
 }

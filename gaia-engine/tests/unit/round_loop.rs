@@ -62,6 +62,86 @@ fn advance_to_next_round_rejects_wrong_phase() {
 }
 
 #[test]
+fn finalize_game_rejects_wrong_phase() {
+    let mut state = GameStateBuilder::new()
+        .with_player(0)
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build();
+    let result = RuleEngine::finalize_game(&mut state);
+    assert!(matches!(result, Err(RuleError::WrongPhase)));
+}
+
+#[test]
+fn finalize_game_rejects_round_scoring_before_round_six() {
+    let mut state = GameStateBuilder::new()
+        .with_player(0)
+        .with_phase(GamePhase::RoundScoring { round: 5 })
+        .build();
+    let result = RuleEngine::finalize_game(&mut state);
+    assert!(matches!(result, Err(RuleError::WrongPhase)));
+}
+
+#[test]
+fn finalize_game_picks_the_single_highest_scorer_as_winner() {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| p.vp = 40)
+        .with_player_fn(1, |p| p.vp = 55)
+        .with_player_fn(2, |p| p.vp = 30)
+        .with_player_fn(3, |p| p.vp = 20)
+        .with_phase(GamePhase::RoundScoring { round: 6 })
+        .build();
+
+    RuleEngine::finalize_game(&mut state).unwrap_or_else(|e| panic!("{e}"));
+
+    let GamePhase::Ended {
+        final_scores,
+        winners,
+    } = &state.phase
+    else {
+        panic!("expected GamePhase::Ended, got {:?}", state.phase);
+    };
+    assert_eq!(winners.as_slice(), &[1]);
+    assert_eq!(final_scores.len(), 4);
+}
+
+#[test]
+fn finalize_game_reports_every_tied_top_scorer_as_a_winner() {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| p.vp = 50)
+        .with_player_fn(1, |p| p.vp = 50)
+        .with_player_fn(2, |p| p.vp = 30)
+        .with_player_fn(3, |p| p.vp = 10)
+        .with_phase(GamePhase::RoundScoring { round: 6 })
+        .build();
+
+    RuleEngine::finalize_game(&mut state).unwrap_or_else(|e| panic!("{e}"));
+
+    let GamePhase::Ended { winners, .. } = &state.phase else {
+        panic!("expected GamePhase::Ended, got {:?}", state.phase);
+    };
+    assert_eq!(winners.len(), 2);
+    assert!(winners.contains(&0));
+    assert!(winners.contains(&1));
+}
+
+#[test]
+fn finalize_game_is_idempotent_once_already_ended() {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| p.vp = 40)
+        .with_player_fn(1, |p| p.vp = 55)
+        .with_player_fn(2, |p| p.vp = 30)
+        .with_player_fn(3, |p| p.vp = 20)
+        .with_phase(GamePhase::RoundScoring { round: 6 })
+        .build();
+
+    RuleEngine::finalize_game(&mut state).unwrap_or_else(|e| panic!("{e}"));
+    let first = state.phase.clone();
+
+    RuleEngine::finalize_game(&mut state).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(state.phase, first, "re-finalizing should be a no-op");
+}
+
+#[test]
 fn advance_to_next_round_reopens_action_phase_and_increments_round() {
     let mut state = GameStateBuilder::new()
         .with_player(0)
@@ -150,8 +230,8 @@ fn gaia_phase_completes_owned_transdim_planets() {
         .and_then(|h| h.planet.as_ref())
         .unwrap_or_else(|| panic!("planet exists"));
     assert!(planet.is_gaia_formed);
-    assert_eq!(state.players[0].gaiaformers_deployed, 0);
-    assert_eq!(state.players[0].gaiaformers_available(), 1);
+    assert_eq!(state.players[0].gaiaformers_deployed, 1);
+    assert_eq!(state.players[0].gaiaformers_available(), 0);
 }
 
 #[test]
@@ -369,25 +449,40 @@ fn itars_planetary_institute_can_gain_standard_tech_tiles_repeatedly() {
                 kind: StructureType::PlanetaryInstitute,
             });
             player.resources.power.gaia_forming = 8;
+            player.resources.ore = 0;
+            player.resources.qic = 0;
         })
         .with_phase(GamePhase::RoundScoring { round: 1 })
         .build();
 
     RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|error| panic!("{error}"));
     resolve_income_order_if_pending(&mut state);
+    state.research_board.tech_tile_slots = vec![None; 9];
+    state.players[0].resources.ore = 0;
+    state.players[0].resources.qic = 0;
 
     for (tile, track) in [
-        (TechTile(1), ResearchTrack::Science),
+        (TechTile(4), ResearchTrack::Science),
         (TechTile(2), ResearchTrack::Economy),
     ] {
-        RuleEngine::apply_action(&mut state, 0, GameAction::ItarsGaiaTechTile { tile, track })
-            .unwrap_or_else(|error| panic!("Itars Tech tile should succeed: {error}"));
+        RuleEngine::apply_action(
+            &mut state,
+            0,
+            GameAction::ItarsGaiaTechTile {
+                tile,
+                track,
+                bonus_build_coord: None,
+            },
+        )
+        .unwrap_or_else(|error| panic!("Itars Tech tile should succeed: {error}"));
     }
 
     assert_eq!(state.players[0].resources.power.gaia_forming, 0);
-    assert_eq!(state.players[0].tech_tiles, vec![TechTile(1), TechTile(2)]);
+    assert_eq!(state.players[0].tech_tiles, vec![TechTile(4), TechTile(2)]);
     assert_eq!(state.players[0].research_tracks.science, 1);
     assert_eq!(state.players[0].research_tracks.economy, 1);
+    assert_eq!(state.players[0].resources.ore, 1);
+    assert_eq!(state.players[0].resources.qic, 1);
     assert!(matches!(state.phase, GamePhase::GaiaDecisionPending { .. }));
 
     RuleEngine::apply_action(&mut state, 0, GameAction::FinishGaiaDecision)
@@ -623,4 +718,84 @@ fn round_tile_bonus_applies_vp_immediately_when_matched() {
 
     let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
     assert_eq!(player.vp, vp_before + 3);
+}
+
+#[test]
+fn itars_can_gain_advanced_then_standard_technology_without_ending_gaia_phase() {
+    use gaia_engine::game_state::{AdvancedTechTile, FederationToken};
+    use gaia_engine::rules::actions::TechTileChoice;
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.faction = Some(FactionId::Itars);
+            player.structures.push(Structure {
+                hex: HexCoord::new(0, 0),
+                kind: StructureType::PlanetaryInstitute,
+            });
+            player.resources.power.gaia_forming = 8;
+            player.resources.ore = 0;
+            player.resources.qic = 0;
+        })
+        .with_phase(GamePhase::RoundScoring { round: 1 })
+        .build();
+
+    RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|error| panic!("{error}"));
+    resolve_income_order_if_pending(&mut state);
+    state.research_board.tech_tile_slots = vec![None; 9];
+    state.players[0].resources.ore = 0;
+    state.players[0].resources.qic = 0;
+
+
+    state.players[0].research_tracks.terraforming = 4;
+    state.players[0].tech_tiles = vec![TechTile(3)];
+    state.players[0].federation_tokens = vec![FederationToken(1)];
+    state.research_board.advanced_tech_tiles[0] = Some(AdvancedTechTile(20));
+    let advanced = GameAction::ItarsGaiaTechChoice { choice: TechTileChoice::Advanced {
+        track: ResearchTrack::Terraforming, covered_tile: TechTile(3), advance_track: Some(ResearchTrack::Science),
+    }};
+    let before = serde_json::to_string(&state).unwrap_or_else(|error| panic!("test value should serialize: {error}"));
+    let mut invalid = state.clone();
+    invalid.players[0].federation_tokens.clear();
+    assert!(RuleEngine::apply_action(&mut invalid, 0, advanced.clone()).is_err());
+    invalid = state.clone(); invalid.players[0].research_tracks.terraforming = 3;
+    assert!(RuleEngine::apply_action(&mut invalid, 0, advanced.clone()).is_err());
+    invalid = state.clone(); invalid.players[0].resources.power.gaia_forming = 3;
+    assert!(RuleEngine::apply_action(&mut invalid, 0, advanced.clone()).is_err());
+    assert_eq!(serde_json::to_string(&state).unwrap_or_else(|error| panic!("test value should serialize: {error}")), before);
+    assert!(RuleEngine::get_valid_actions(&state, 0).contains(&advanced));
+    RuleEngine::apply_action(&mut state, 0, advanced).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+    assert_eq!(state.players[0].resources.power.gaia_forming, 4);
+    assert_eq!(state.players[0].covered_tech_tiles, vec![TechTile(3)]);
+    assert_eq!(state.players[0].advanced_tech_tiles, vec![AdvancedTechTile(20)]);
+    assert_eq!(state.players[0].gray_federation_tokens, vec![FederationToken(1)]);
+    assert_eq!(state.players[0].research_tracks.science, 1);
+    assert_eq!(state.players[0].research_tracks.terraforming, 4);
+    RuleEngine::apply_action(&mut state, 0, GameAction::ItarsGaiaTechChoice { choice: TechTileChoice::Standard {
+        tile: TechTile(2), advance_track: Some(ResearchTrack::Economy), bonus_build_coord: None,
+    }}).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+    assert_eq!(state.players[0].resources.power.gaia_forming, 0);
+    assert!(matches!(state.phase, GamePhase::GaiaDecisionPending { .. }));
+}
+
+#[test]
+fn itars_gaia_window_opens_when_only_advanced_technology_is_available() {
+    use gaia_engine::game_state::{AdvancedTechTile, FederationToken};
+    let mut state = GameStateBuilder::new().with_player_fn(0, |player| {
+        player.faction = Some(FactionId::Itars);
+        player.structures.push(Structure { hex: HexCoord::new(0, 0), kind: StructureType::PlanetaryInstitute });
+        player.resources.power.gaia_forming = 4;
+        player.research_tracks.terraforming = 4;
+        player.tech_tiles = vec![TechTile(3)];
+        player.federation_tokens = vec![FederationToken(1)];
+    }).with_phase(GamePhase::RoundScoring { round: 1 }).build();
+    state.research_board.tech_tiles.clear();
+    state.research_board.tech_tile_slots = vec![None; 9];
+    state.research_board.advanced_tech_tiles = [Some(AdvancedTechTile(20)), None, None, None, None, None];
+    for board in &mut state.spaceship_boards { board.tech_tiles.clear(); }
+    RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+    resolve_income_order_if_pending(&mut state);
+    assert!(matches!(state.phase, GamePhase::GaiaDecisionPending { .. }));
+    assert_eq!(state.players[0].resources.power.gaia_forming, 4);
+    assert!(RuleEngine::get_valid_actions(&state, 0).iter().any(|action| matches!(
+        action, GameAction::ItarsGaiaTechChoice { choice: gaia_engine::rules::actions::TechTileChoice::Advanced { .. } }
+    )));
 }

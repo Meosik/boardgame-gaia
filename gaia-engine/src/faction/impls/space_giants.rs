@@ -21,10 +21,6 @@ impl FactionAbility for SpaceGiantsAbility {
         FactionId::SpaceGiants
     }
 
-    fn has_special_action(&self) -> bool {
-        true
-    }
-
     fn on_build(
         &self,
         _state: &GameState,
@@ -48,32 +44,15 @@ impl FactionAbility for SpaceGiantsAbility {
         Resources::zero()
     }
 
-    /// One-time free tech tile. `state.research_board.tech_tiles.first()` stands
-    /// in for "of your choice" — the engine doesn't yet have a way to let a
-    /// player pick among several options for a single action (see the
-    /// pre-existing "simplified" note on `Randomizer::build_setup`'s tech-tile
-    /// step); it hands out the next tile in the shuffled pool instead.
     fn special_action(
         &self,
-        state: &GameState,
-        player_id: PlayerId,
+        _state: &GameState,
+        _player_id: PlayerId,
     ) -> Result<Vec<GameEvent>, RuleError> {
-        let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
-        if player.pi_ability_used {
-            return Err(RuleError::ActionNotAllowed(
-                "Space Giants Planetary Institute ability already used this game".to_string(),
-            ));
-        }
-        let tile = state
-            .research_board
-            .tech_tiles
-            .first()
-            .cloned()
-            .ok_or_else(|| RuleError::ActionNotAllowed("no tech tiles remaining".to_string()))?;
-        Ok(vec![GameEvent::TechTileGained {
-            player: player_id,
-            tile,
-        }])
+        Err(RuleError::ActionNotAllowed(
+            "Space Giants must choose a Tech tile for their Planetary Institute ability"
+                .to_string(),
+        ))
     }
 
     fn final_scoring(&self, _state: &GameState, _player_id: PlayerId) -> i32 {

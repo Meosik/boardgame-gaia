@@ -3,10 +3,12 @@ use gaia_engine::faction::registry::global as faction_registry;
 use gaia_engine::game_state::{
     BoardState, BrainstoneLocation, FactionId, FederationToken, FinalScoringCondition, GameEvent,
     GamePhase, Hex, HexCoord, PendingCharge, PlacedStructure, Planet, PlanetType, ResearchTrack,
-    Sector, SetupPhase, SpaceshipId, Structure, StructureType,
+    Sector, SetupPhase, SpaceshipId, Structure, StructureType, TechTile,
 };
 use gaia_engine::map::MapEngine;
-use gaia_engine::rules::actions::{FederationTokenChoice, FreeActionKind, GameAction, SetupAction};
+use gaia_engine::rules::actions::{
+    FederationTokenChoice, FreeActionKind, GameAction, SetupAction, TechTileChoice,
+};
 use gaia_engine::scoring::ScoringEngine;
 use gaia_engine::test_utils::builders::GameStateBuilder;
 use gaia_engine::{RuleEngine, SetupPolicy};
@@ -276,6 +278,116 @@ fn setup_resolves_shared_opponent_colors_then_fills_from_terraforming_board_orde
         state.players[2].expensive_terraforming_planet_types,
         vec![PlanetType::Titanium, PlanetType::Terra, PlanetType::Swamp]
     );
+}
+
+#[test]
+fn one_lost_fleet_faction_uses_all_three_base_faction_colors() {
+    let mut state = GameStateBuilder::new()
+        .with_player(0)
+        .with_player(1)
+        .with_player(2)
+        .with_player(3)
+        .build();
+    state.terraforming_color_order = vec![
+        PlanetType::Ice,
+        PlanetType::Swamp,
+        PlanetType::Oxide,
+        PlanetType::Volcanic,
+        PlanetType::Terra,
+        PlanetType::Desert,
+        PlanetType::Titanium,
+    ];
+    state.spaceship_boards = MapEngine::initial_spaceship_boards("one-special-color-test");
+    state.faction_selection = Some(SetupPolicy::initialize(
+        vec![0, 1, 2, 3],
+        vec![
+            FactionId::Tinkeroids,
+            FactionId::Terrans,
+            FactionId::Xenos,
+            FactionId::Bescods,
+        ],
+    ));
+    state.phase = GamePhase::Setup(SetupPhase::FactionSelection { active_player: 0 });
+
+    for (player, faction) in [
+        (0, FactionId::Tinkeroids),
+        (1, FactionId::Terrans),
+        (2, FactionId::Xenos),
+        (3, FactionId::Bescods),
+    ] {
+        RuleEngine::apply_setup_action(&mut state, player, SetupAction::SelectFaction { faction })
+            .unwrap_or_else(|error| panic!("player {player} selects {faction:?}: {error}"));
+    }
+
+    assert_eq!(
+        state.players[0].expensive_terraforming_planet_types,
+        vec![PlanetType::Terra, PlanetType::Desert, PlanetType::Titanium]
+    );
+}
+
+#[test]
+fn two_lost_fleet_factions_without_base_opponents_split_the_random_order() {
+    let mut state = GameStateBuilder::new()
+        .with_player(0)
+        .with_player(1)
+        .build();
+    state.terraforming_color_order = vec![
+        PlanetType::Ice,
+        PlanetType::Swamp,
+        PlanetType::Desert,
+        PlanetType::Oxide,
+        PlanetType::Titanium,
+        PlanetType::Volcanic,
+        PlanetType::Terra,
+    ];
+    state.spaceship_boards = MapEngine::initial_spaceship_boards("two-special-color-test");
+    state.faction_selection = Some(SetupPolicy::initialize(
+        vec![0, 1],
+        vec![FactionId::Tinkeroids, FactionId::Moweyds],
+    ));
+    state.phase = GamePhase::Setup(SetupPhase::FactionSelection { active_player: 0 });
+
+    for (player, faction) in [(0, FactionId::Tinkeroids), (1, FactionId::Moweyds)] {
+        RuleEngine::apply_setup_action(&mut state, player, SetupAction::SelectFaction { faction })
+            .unwrap_or_else(|error| panic!("player {player} selects {faction:?}: {error}"));
+    }
+
+    assert_eq!(
+        state.players[0].expensive_terraforming_planet_types,
+        vec![PlanetType::Ice, PlanetType::Swamp, PlanetType::Desert]
+    );
+    assert_eq!(
+        state.players[1].expensive_terraforming_planet_types,
+        vec![
+            PlanetType::Oxide,
+            PlanetType::Titanium,
+            PlanetType::Volcanic
+        ]
+    );
+}
+
+#[test]
+fn base_factions_do_not_receive_lost_fleet_terraforming_colors() {
+    let mut state = GameStateBuilder::new()
+        .with_player(0)
+        .with_player(1)
+        .build();
+    state.spaceship_boards = MapEngine::initial_spaceship_boards("base-only-color-test");
+    state.faction_selection = Some(SetupPolicy::initialize(
+        vec![0, 1],
+        vec![FactionId::Terrans, FactionId::Xenos],
+    ));
+    state.phase = GamePhase::Setup(SetupPhase::FactionSelection { active_player: 0 });
+
+    for (player, faction) in [(0, FactionId::Terrans), (1, FactionId::Xenos)] {
+        RuleEngine::apply_setup_action(&mut state, player, SetupAction::SelectFaction { faction })
+            .unwrap_or_else(|error| panic!("player {player} selects {faction:?}: {error}"));
+    }
+
+    assert!(state
+        .players
+        .iter()
+        .all(|player| player.expensive_terraforming_planet_types.is_empty()));
 }
 
 fn lantids_cohabitation_state(
@@ -592,55 +704,162 @@ fn darkanians_gaia_colonization_costs_two_qic() {
 }
 
 #[test]
-fn darkanians_on_build_grants_bonus_before_first_use() {
-    let state = GameStateBuilder::new()
+fn darkanians_bonus_requires_pi_and_a_new_sector_not_a_global_first_use() {
+    let target = HexCoord::new(1, 0);
+    let mut state = GameStateBuilder::new()
         .with_player_fn(0, |p| {
             p.faction = Some(FactionId::Darkanians);
-            // first_colonization_bonus_used defaults to false — the bonus is
-            // gated on this explicit flag, not on how many structures the
-            // player happens to have (structure count depends on the
-            // separately unimplemented starting-structure placement step).
+            p.structures.clear();
+            p.first_colonization_bonus_used = true;
         })
-        .with_board(board_with_planet(HexCoord::new(1, 0), None))
+        .with_board(board_with_planet(target, None))
         .build();
-
     let ability = faction_registry().get(FactionId::Darkanians);
-    let events = ability.on_build(&state, 0, HexCoord::new(1, 0));
+    assert!(
+        ability.on_build(&state, 0, target).is_empty(),
+        "PI required"
+    );
+    state.players[0].structures.push(Structure {
+        hex: HexCoord::new(-10, 0),
+        kind: StructureType::PlanetaryInstitute,
+    });
+    let events = ability.on_build(&state, 0, target);
+    assert!(
+        matches!(events.as_slice(), [GameEvent::ResourceChanged { delta, .. }]
+        if delta.credits == 2 && delta.knowledge == 1)
+    );
+    state.players[0].structures.push(Structure {
+        hex: HexCoord::new(0, 0),
+        kind: StructureType::Mine,
+    });
+    assert!(
+        ability.on_build(&state, 0, target).is_empty(),
+        "already occupied sector"
+    );
+    state.players[0].structures.pop();
+    assert!(
+        ability.on_build(&state, 0, HexCoord::new(20, 0)).is_empty(),
+        "interspace excluded"
+    );
+}
 
-    assert_eq!(events.len(), 1);
-    match &events[0] {
-        GameEvent::ResourceChanged { player, delta } => {
-            assert_eq!(*player, 0);
-            assert_eq!(delta.credits, 2);
-            assert_eq!(delta.knowledge, 1);
-        }
-        other => panic!("expected ResourceChanged, got {other:?}"),
+#[test]
+fn darkanians_builds_reward_each_new_standard_and_deep_sector_after_reload() {
+    let mut board = board_with_planet(HexCoord::new(1, 0), None);
+    let template = board.sectors[0].clone();
+    board.sectors.extend([
+        Sector {
+            id: 2,
+            origin: HexCoord::new(5, 0),
+            ..template.clone()
+        },
+        Sector {
+            id: 11,
+            origin: HexCoord::new(10, 0),
+            ..template
+        },
+    ]);
+    for coord in [
+        HexCoord::new(0, 1),
+        HexCoord::new(5, 0),
+        HexCoord::new(10, 0),
+        HexCoord::new(11, 0),
+        HexCoord::new(16, 0),
+    ] {
+        let mut hex = board.hexes[&HexCoord::new(1, 0)].clone();
+        hex.coord = coord;
+        board.hexes.insert(coord, hex);
+    }
+    for q in -3..=16 {
+        let coord = HexCoord::new(q, 0);
+        board.hexes.entry(coord).or_insert(Hex {
+            coord,
+            planet: None,
+            structures: vec![],
+            satellites: vec![],
+            space_tile_kind: None,
+        });
+    }
+    let mut pi_hex = board.hexes[&HexCoord::new(1, 0)].clone();
+    pi_hex.coord = HexCoord::new(-3, 0);
+    pi_hex.planet.as_mut().unwrap_or_else(|| panic!("planet")).owner = Some(0);
+    pi_hex.structures = vec![PlacedStructure {
+        owner: 0,
+        kind: StructureType::PlanetaryInstitute,
+    }];
+    board.hexes.insert(pi_hex.coord, pi_hex);
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| {
+            p.faction = Some(FactionId::Darkanians);
+            p.first_colonization_bonus_used = true;
+            p.resources.ore = 100;
+            p.resources.credits = 100;
+            p.resources.qic = 100;
+            p.research_tracks.navigation = 4;
+            p.structures = vec![Structure {
+                hex: HexCoord::new(-3, 0),
+                kind: StructureType::PlanetaryInstitute,
+            }];
+        })
+        .with_board(board)
+        .build();
+    for (coord, reward) in [
+        (HexCoord::new(1, 0), true),
+        (HexCoord::new(0, 1), false),
+        (HexCoord::new(5, 0), true),
+        (HexCoord::new(10, 0), true),
+        (HexCoord::new(11, 0), false),
+        (HexCoord::new(16, 0), false),
+    ] {
+        state.phase = GamePhase::ActionPhase { active_player: 0 };
+        let events = RuleEngine::apply_action(&mut state, 0, GameAction::Build { coord })
+            .unwrap_or_else(|e| panic!("build at {coord:?}: {e}"));
+        let bonus_count = events.iter().filter(|event| matches!(event,
+            GameEvent::ResourceChanged { delta, .. } if delta.credits == 2 && delta.knowledge == 1
+        )).count();
+        assert_eq!(bonus_count, usize::from(reward), "{coord:?}");
+        state = serde_json::from_str(&serde_json::to_string(&state).unwrap_or_else(|error| panic!("serialize: {error}")))
+            .unwrap_or_else(|error| panic!("reload: {error}"));
     }
 }
 
 #[test]
-fn darkanians_on_build_no_bonus_once_flag_is_set() {
-    let state = GameStateBuilder::new()
+fn darkanians_lost_planet_marks_a_sector_as_colonized() {
+    let target = HexCoord::new(1, 0);
+    let lost = HexCoord::new(0, 0);
+    let mut state = GameStateBuilder::new()
         .with_player_fn(0, |p| {
             p.faction = Some(FactionId::Darkanians);
-            p.first_colonization_bonus_used = true;
+            p.structures = vec![Structure {
+                hex: HexCoord::new(-10, 0),
+                kind: StructureType::PlanetaryInstitute,
+            }];
         })
-        .with_board(board_with_planet(HexCoord::new(1, 0), None))
+        .with_board(board_with_planet(target, None))
         .build();
-
+    let mut hex = state.board.hexes[&target].clone();
+    hex.coord = lost;
+    hex.planet = Some(Planet {
+        planet_type: PlanetType::LostPlanet,
+        owner: Some(0),
+        is_gaia_formed: false,
+    });
+    state.board.hexes.insert(lost, hex);
+    state.board.lost_planet = Some(lost);
     let ability = faction_registry().get(FactionId::Darkanians);
-    let events = ability.on_build(&state, 0, HexCoord::new(1, 0));
-    assert!(events.is_empty(), "bonus should only trigger once");
+    assert_eq!(
+        ability.on_build(&state, 0, lost).len(),
+        1,
+        "new Lost Planet is the first colony"
+    );
+    assert!(
+        ability.on_build(&state, 0, target).is_empty(),
+        "later mine cannot reward that sector again"
+    );
 }
 
 #[test]
-fn darkanians_flat_terraforming_cost_and_bonus_apply_through_build_action() {
-    // Home planet type (Asteroid) is off the standard ring, so without the
-    // override this would fall back to a free (0-ore) terraform. With the
-    // override it's always 1 step, i.e. COST_PER_STEP[level 0] = 3 ore.
-    // The player also has a pre-existing structure (needed for reachability,
-    // since starting-structure placement isn't implemented) but hasn't used
-    // the first-colonization bonus yet, so this Build should also trigger it.
+fn darkanians_flat_terraforming_cost_does_not_grant_bonus_without_pi() {
     let mut state = GameStateBuilder::new()
         .with_player_fn(0, |p| {
             p.faction = Some(FactionId::Darkanians);
@@ -658,7 +877,6 @@ fn darkanians_flat_terraforming_cost_and_bonus_apply_through_build_action() {
         ))
         .with_phase(GamePhase::ActionPhase { active_player: 0 })
         .build();
-
     RuleEngine::apply_action(
         &mut state,
         0,
@@ -667,15 +885,9 @@ fn darkanians_flat_terraforming_cost_and_bonus_apply_through_build_action() {
         },
     )
     .unwrap_or_else(|e| panic!("build should be valid: {e}"));
-
-    let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
-    // Ore: 10 - (1 Mine cost + 3 for 1 terraforming step at level 0) = 6
-    assert_eq!(player.resources.ore, 6);
-    // Credits: 15 - 2 (Mine cost) + 2 (first-colonization bonus) = 15
-    assert_eq!(player.resources.credits, 15);
-    // Knowledge: 3 + 1 (first-colonization bonus) = 4
-    assert_eq!(player.resources.knowledge, 4);
-    assert!(player.first_colonization_bonus_used);
+    assert_eq!(state.players[0].resources.ore, 6);
+    assert_eq!(state.players[0].resources.credits, 13);
+    assert_eq!(state.players[0].resources.knowledge, 3);
 }
 
 // ── Space Giants ability ─────────────────────────────────────────────────────
@@ -700,12 +912,28 @@ fn space_giants_special_action_grants_tech_tile_once() {
     let mut state = GameStateBuilder::new()
         .with_player_fn(0, |p| {
             p.faction = Some(FactionId::SpaceGiants);
+            p.structures.push(Structure {
+                hex: HexCoord::new(0, 0),
+                kind: StructureType::PlanetaryInstitute,
+            });
+            p.resources.ore = 0;
+            p.resources.qic = 0;
         })
         .with_phase(GamePhase::ActionPhase { active_player: 0 })
         .build();
+    state.research_board.tech_tiles = vec![TechTile(4)];
+    state.research_board.tech_tile_slots = vec![None; 9];
     let tiles_before = state.research_board.tech_tiles.len();
 
-    let events = RuleEngine::apply_action(&mut state, 0, GameAction::SpecialAction { id: 1 })
+    let action = GameAction::SpaceGiantsGainTechTile {
+        choice: TechTileChoice::Standard {
+            tile: TechTile(4),
+            advance_track: Some(ResearchTrack::Science),
+            bonus_build_coord: None,
+        },
+    };
+    assert!(RuleEngine::get_valid_actions(&state, 0).contains(&action));
+    let events = RuleEngine::apply_action(&mut state, 0, action.clone())
         .unwrap_or_else(|e| panic!("first use should succeed: {e}"));
     assert!(
         events
@@ -717,13 +945,40 @@ fn space_giants_special_action_grants_tech_tile_once() {
     let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
     assert!(player.pi_ability_used);
     assert_eq!(player.tech_tiles.len(), 1);
+    assert_eq!(player.resources.ore, 1);
+    assert_eq!(player.resources.qic, 1);
+    assert_eq!(player.research_tracks.science, 1);
     assert_eq!(state.research_board.tech_tiles.len(), tiles_before - 1);
 
-    let result = RuleEngine::apply_action(&mut state, 0, GameAction::SpecialAction { id: 1 });
+    assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 0 });
+    let result = RuleEngine::apply_action(&mut state, 0, action);
     assert!(
         matches!(result, Err(RuleError::ActionNotAllowed(_))),
         "second use should be rejected, got {result:?}"
     );
+}
+
+#[test]
+fn space_giants_pi_tech_tile_requires_the_planetary_institute() {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| player.faction = Some(FactionId::SpaceGiants))
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build();
+    state.research_board.tech_tiles = vec![TechTile(4)];
+
+    let result = RuleEngine::validate_action(
+        &state,
+        0,
+        &GameAction::SpaceGiantsGainTechTile {
+            choice: TechTileChoice::Standard {
+                tile: TechTile(4),
+                advance_track: None,
+                bonus_build_coord: None,
+            },
+        },
+    );
+
+    assert!(matches!(result, Err(RuleError::ActionNotAllowed(_))));
 }
 
 #[test]
@@ -777,6 +1032,7 @@ fn xenos_can_form_a_federation_with_six_power() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .unwrap_or_else(|error| panic!("Xenos' six-power federation should be legal: {error}"));
@@ -818,6 +1074,7 @@ fn non_xenos_still_need_seven_federation_power() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(matches!(
@@ -937,6 +1194,9 @@ fn firaks_downgrades_a_lab_and_advances_research_once_per_round() {
         .with_board(board_with_faction_structures(&structures, &[]))
         .build();
 
+    state.players[0].resources.knowledge = 0;
+    let ore_before = state.players[0].resources.ore;
+    let credits_before = state.players[0].resources.credits;
     let events = RuleEngine::apply_action(
         &mut state,
         0,
@@ -951,6 +1211,16 @@ fn firaks_downgrades_a_lab_and_advances_research_once_per_round() {
     assert!(player.structures.iter().any(|structure| {
         structure.hex == lab && structure.kind == StructureType::TradingStation
     }));
+    assert_eq!(
+        state.board.hexes[&lab].structures[0].kind,
+        StructureType::TradingStation
+    );
+    assert_eq!(
+        player.resources.knowledge, 0,
+        "free research spends no knowledge"
+    );
+    assert_eq!(player.resources.ore, ore_before);
+    assert_eq!(player.resources.credits, credits_before);
     assert_eq!(player.research_tracks.science, 1);
     assert!(player.faction_special_action_used_this_round);
     assert!(events.iter().any(|event| matches!(
@@ -1056,6 +1326,7 @@ fn bescods_pi_increases_home_planet_structure_power() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     )
     .is_ok());
@@ -1226,7 +1497,10 @@ fn gleens_pi_grants_its_unique_federation_token_and_reward() {
     let mut state = GameStateBuilder::new()
         .with_player_fn(0, |player| {
             player.faction = Some(FactionId::Gleens);
-            player.resources.ore = 20;
+            // Kept below the 15-ore cap (`Resources::gain_ore`) — 20 was already an illegal
+            // starting amount no legal game state could reach; the upgrade cost (-4) then the
+            // federation reward (+1) below is what this test actually cares about.
+            player.resources.ore = 10;
             player.resources.credits = 20;
             player.resources.knowledge = 3;
             player.structures = structures
@@ -1255,7 +1529,7 @@ fn gleens_pi_grants_its_unique_federation_token_and_reward() {
     assert!(state.players[0]
         .federation_tokens
         .contains(&FederationToken(16)));
-    assert_eq!(state.players[0].resources.ore, 17);
+    assert_eq!(state.players[0].resources.ore, 7);
     assert_eq!(state.players[0].resources.credits, 16);
     assert_eq!(state.players[0].resources.knowledge, 4);
     assert!(events.iter().any(|event| matches!(
@@ -1400,6 +1674,46 @@ fn taklons_brainstone_counts_as_one_gaia_project_token_and_returns_next_round() 
 }
 
 #[test]
+fn gaia_formation_moves_the_track_cost_into_the_gaia_area() {
+    let mine = HexCoord::new(0, 0);
+    let target = HexCoord::new(1, 0);
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.structures.push(Structure {
+                hex: mine,
+                kind: StructureType::Mine,
+            });
+            player.research_tracks.gaia = 3;
+            player.gaiaformers_total = 1;
+            player.resources.power.bowl1 = 2;
+            player.resources.power.bowl2 = 2;
+            player.resources.power.bowl3 = 0;
+        })
+        .with_player(1)
+        .with_board(board_with_planet(target, Some(mine)))
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build();
+    state
+        .board
+        .hexes
+        .get_mut(&target)
+        .and_then(|hex| hex.planet.as_mut())
+        .unwrap_or_else(|| panic!("target exists"))
+        .planet_type = PlanetType::Transdim;
+    let total_before = state.players[0].resources.power.total();
+
+    RuleEngine::apply_action(&mut state, 0, GameAction::GaiaFormation { coord: target })
+        .unwrap_or_else(|error| panic!("Gaia formation should succeed: {error}"));
+
+    let power = &state.players[0].resources.power;
+    assert_eq!(power.bowl1, 0);
+    assert_eq!(power.bowl2, 0);
+    assert_eq!(power.bowl3, 0);
+    assert_eq!(power.gaia_forming, 4);
+    assert_eq!(power.total(), total_before);
+}
+
+#[test]
 fn geodens_reward_only_applies_to_new_post_pi_planet_types_once() {
     let pi = HexCoord::new(0, 0);
     let existing_mine = HexCoord::new(1, 0);
@@ -1491,4 +1805,260 @@ fn nevlas_pi_spends_each_area_three_token_as_two_power() {
     });
     assert_eq!(state.players[0].resources.power.bowl3, 0);
     assert_eq!(state.players[0].resources.knowledge, 6);
+}
+
+#[test]
+fn xenos_without_pi_cannot_form_a_six_power_federation() {
+    let a = HexCoord::new(0, 0);
+    let b = HexCoord::new(1, 0);
+    let c = HexCoord::new(0, 1);
+    let structures = [
+        (
+            a,
+            PlanetType::Desert,
+            StructureType::Academy(gaia_engine::game_state::AcademyType::Qic),
+        ),
+        (b, PlanetType::Desert, StructureType::TradingStation),
+        (c, PlanetType::Desert, StructureType::Mine),
+    ];
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.faction = Some(FactionId::Xenos);
+            player.structures = structures
+                .iter()
+                .map(|(hex, _, kind)| Structure {
+                    hex: *hex,
+                    kind: *kind,
+                })
+                .collect();
+        })
+        .with_board(board_with_faction_structures(&structures, &[]))
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build();
+    state.research_board.federation_tokens = vec![FederationToken(1)];
+
+    let result = RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::FormFederation {
+            satellite_hexes: vec![],
+            hexes: vec![a, b, c],
+            token: FederationTokenChoice::Supply { kind: 1 },
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+            bonus_research_track: None,
+        },
+    );
+
+    assert!(matches!(
+        result,
+        Err(RuleError::FederationInsufficientPower)
+    ));
+}
+
+#[test]
+fn space_giants_institute_bundles_technology_and_spends_only_one_turn() {
+    let coord = HexCoord::new(0, 0);
+    let structures = [(
+        coord,
+        PlanetType::ProtoPlanet,
+        StructureType::TradingStation,
+    )];
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| {
+            p.faction = Some(FactionId::SpaceGiants);
+            p.resources.ore = 10;
+            p.resources.credits = 15;
+            p.structures = vec![Structure {
+                hex: coord,
+                kind: StructureType::TradingStation,
+            }];
+        })
+        .with_player(1)
+        .with_board(board_with_faction_structures(&structures, &[]))
+        .with_phase(GamePhase::ActionPhase { active_player: 0 })
+        .build();
+    state.research_board.tech_tile_slots = vec![None; 9];
+    let choice = TechTileChoice::Standard {
+        tile: TechTile(2),
+        advance_track: Some(ResearchTrack::Science),
+        bonus_build_coord: None,
+    };
+    let no_choice = GameAction::Upgrade {
+        coord,
+        to: StructureType::PlanetaryInstitute,
+        tech_tile_choice: None,
+    };
+    assert!(RuleEngine::validate_action(&state, 0, &no_choice).is_err());
+    let action = GameAction::Upgrade {
+        coord,
+        to: StructureType::PlanetaryInstitute,
+        tech_tile_choice: Some(choice.clone()),
+    };
+    assert!(RuleEngine::get_valid_actions(&state, 0).contains(&action));
+    RuleEngine::apply_action(&mut state, 0, action).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+    assert_eq!(
+        state.players[0].structures[0].kind,
+        StructureType::PlanetaryInstitute
+    );
+    assert!(state.players[0].pi_ability_used);
+    assert!(state.players[0].tech_tiles.contains(&TechTile(2)));
+    assert_eq!(state.players[0].research_tracks.science, 1);
+    assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 1 });
+    state.phase = GamePhase::ActionPhase { active_player: 0 };
+    assert!(RuleEngine::validate_action(
+        &state,
+        0,
+        &GameAction::SpaceGiantsGainTechTile { choice }
+    )
+    .is_err());
+}
+
+#[test]
+fn lantids_pi_reward_repeats_after_reload_and_is_absent_without_pi() {
+    for has_pi in [false, true] {
+        let mut state = lantids_cohabitation_state(PlanetType::Ice, false);
+        let second = HexCoord::new(0, 1);
+        let mut hex = state.board.hexes[&HexCoord::new(1, 0)].clone();
+        hex.coord = second;
+        state.board.hexes.insert(second, hex);
+        state.players[1].structures.push(Structure {
+            hex: second,
+            kind: StructureType::TradingStation,
+        });
+        if !has_pi {
+            state.players[0]
+                .structures
+                .retain(|s| s.kind != StructureType::PlanetaryInstitute);
+            state.board.hexes.remove(&HexCoord::new(-1, 0));
+        }
+        for (index, coord) in [HexCoord::new(1, 0), second].into_iter().enumerate() {
+            state.phase = GamePhase::ActionPhase { active_player: 0 };
+            RuleEngine::apply_action(&mut state, 0, GameAction::Build { coord }).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+            state = serde_json::from_value(state.serialize()).unwrap_or_else(|error| panic!("saved value should deserialize: {error}"));
+            assert_eq!(
+                state.players[0].resources.knowledge,
+                3 + if has_pi { 2 * (index as u8 + 1) } else { 0 }
+            );
+        }
+        assert_eq!(state.players[0].resources.ore, 8);
+        assert_eq!(state.players[0].resources.credits, 11);
+    }
+}
+
+#[test]
+fn space_giants_pi_can_bundle_advanced_technology_with_another_research_track() {
+    use gaia_engine::game_state::AdvancedTechTile;
+    let coord = HexCoord::new(0, 0);
+    let structures = [(
+        coord,
+        PlanetType::ProtoPlanet,
+        StructureType::TradingStation,
+    )];
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| {
+            p.faction = Some(FactionId::SpaceGiants);
+            p.resources.ore = 10;
+            p.resources.credits = 15;
+            p.structures = vec![Structure {
+                hex: coord,
+                kind: StructureType::TradingStation,
+            }];
+            p.research_tracks.terraforming = 4;
+            p.tech_tiles = vec![TechTile(3)];
+            p.federation_tokens = vec![FederationToken(1)];
+        })
+        .with_player(1)
+        .with_board(board_with_faction_structures(&structures, &[]))
+        .build();
+    state.research_board.advanced_tech_tiles[0] = Some(AdvancedTechTile(20));
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::Upgrade {
+            coord,
+            to: StructureType::PlanetaryInstitute,
+            tech_tile_choice: Some(TechTileChoice::Advanced {
+                track: ResearchTrack::Terraforming,
+                covered_tile: TechTile(3),
+                advance_track: Some(ResearchTrack::Science),
+            }),
+        },
+    )
+    .unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+    state = serde_json::from_value(state.serialize()).unwrap_or_else(|error| panic!("saved value should deserialize: {error}"));
+    assert_eq!(
+        state.players[0].advanced_tech_tiles,
+        vec![AdvancedTechTile(20)]
+    );
+    assert_eq!(state.players[0].covered_tech_tiles, vec![TechTile(3)]);
+    assert_eq!(
+        state.players[0].gray_federation_tokens,
+        vec![FederationToken(1)]
+    );
+    assert_eq!(state.players[0].research_tracks.terraforming, 4);
+    assert_eq!(state.players[0].research_tracks.science, 1);
+    assert!(state.players[0].pi_ability_used);
+    assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 1 });
+}
+
+#[test]
+fn firaks_invalid_downgrades_do_not_mutate_state() {
+    for case in [
+        "no_pi",
+        "wrong_target",
+        "no_trading_station_supply",
+        "research_maxed",
+        "already_used",
+    ] {
+        let pi = HexCoord::new(0, 0);
+        let lab = HexCoord::new(1, 0);
+        let structures = [
+            (pi, PlanetType::Titanium, StructureType::PlanetaryInstitute),
+            (lab, PlanetType::Titanium, StructureType::ResearchLab),
+        ];
+        let mut state = GameStateBuilder::new()
+            .with_player_fn(0, |p| {
+                p.faction = Some(FactionId::Firaks);
+                p.structures = structures
+                    .iter()
+                    .map(|(hex, _, kind)| Structure {
+                        hex: *hex,
+                        kind: *kind,
+                    })
+                    .collect();
+            })
+            .with_player(1)
+            .with_board(board_with_faction_structures(&structures, &[]))
+            .build();
+        let mut target = lab;
+        match case {
+            "no_pi" => state.players[0]
+                .structures
+                .retain(|s| s.kind != StructureType::PlanetaryInstitute),
+            "wrong_target" => target = pi,
+            "no_trading_station_supply" => {
+                for q in 10..14 {
+                    state.players[0].structures.push(Structure {
+                        hex: HexCoord::new(q, 0),
+                        kind: StructureType::TradingStation,
+                    });
+                }
+            }
+            "research_maxed" => state.players[0].research_tracks.science = 5,
+            "already_used" => state.players[0].faction_special_action_used_this_round = true,
+            _ => unreachable!(),
+        }
+        let before = serde_json::to_value(&state).unwrap_or_else(|error| panic!("test value should serialize: {error}"));
+        let result = RuleEngine::apply_action(
+            &mut state,
+            0,
+            GameAction::FiraksDowngradeResearchLab {
+                coord: target,
+                track: ResearchTrack::Science,
+            },
+        );
+        assert!(result.is_err(), "{case}");
+        assert_eq!(serde_json::to_value(&state).unwrap_or_else(|error| panic!("test value should serialize: {error}")), before, "{case}");
+    }
 }

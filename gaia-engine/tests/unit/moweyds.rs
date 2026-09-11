@@ -220,6 +220,7 @@ fn moweyds_power_ring_increases_federation_power() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(
@@ -246,6 +247,7 @@ fn moweyds_power_ring_increases_federation_power() {
             token: FederationTokenChoice::Supply { kind: 1 },
             bonus_build_coord: None,
             bonus_tech_tile: None,
+            bonus_research_track: None,
         },
     );
     assert!(
@@ -359,4 +361,126 @@ fn moweyds_gaia_planet_costs_two_qic() {
         .unwrap_or_else(|e| panic!("build on a Gaia planet should succeed: {e}"));
 
     assert_eq!(state.players[0].resources.qic, qic_before - 2);
+}
+
+#[test]
+fn moweyds_ring_charge_matrix_including_six_power_and_vp_payment() {
+    use gaia_engine::game_state::AcademyType;
+    for (kind, tech, covered, expected) in [
+        (StructureType::Mine, false, false, 3),
+        (StructureType::TradingStation, false, false, 4),
+        (StructureType::ResearchLab, true, false, 4),
+        (StructureType::PlanetaryInstitute, false, false, 5),
+        (StructureType::Academy(AcademyType::Qic), false, false, 5),
+        (StructureType::PlanetaryInstitute, true, false, 6),
+        (StructureType::Academy(AcademyType::Qic), true, false, 6),
+        (StructureType::PlanetaryInstitute, true, true, 5),
+    ] {
+        let target = HexCoord::new(1, 0);
+        let anchor = HexCoord::new(0, 0);
+        let moweyds_hex = HexCoord::new(2, 0); // distance 1 from target
+
+        let mut hexes = HashMap::new();
+        hexes.insert(
+            target,
+            Hex {
+                coord: target,
+                planet: Some(Planet {
+                    planet_type: PlanetType::Terra,
+                    is_gaia_formed: false,
+                    owner: None,
+                }),
+                space_tile_kind: None,
+                structures: vec![],
+                satellites: vec![],
+            },
+        );
+        hexes.insert(anchor, structure_hex(anchor, 0, StructureType::Mine));
+        hexes.insert(moweyds_hex, structure_hex(moweyds_hex, 1, kind));
+        let board = BoardState {
+            sectors: vec![Sector {
+                id: 1,
+                rotation: 0,
+                origin: HexCoord::new(0, 0),
+            }],
+            hexes,
+            lost_planet: None,
+            spaceship_tiles: HashMap::new(),
+        };
+
+        let mut state = GameStateBuilder::new()
+            .with_player_fn(0, |p| {
+                p.resources.ore = 10;
+                p.resources.credits = 15;
+                p.structures = vec![Structure {
+                    hex: anchor,
+                    kind: StructureType::Mine,
+                }];
+            })
+            .with_player_fn(1, |p| {
+                p.faction = Some(FactionId::Moweyds);
+                p.moweyds_power_ring_hexes = vec![moweyds_hex];
+                p.structures = vec![Structure {
+                    hex: moweyds_hex,
+                    kind,
+                }];
+                p.resources.power.bowl1 = 10;
+                p.resources.power.bowl2 = 0;
+                p.resources.power.bowl3 = 0;
+                p.vp = 20;
+                if tech {
+                    p.tech_tiles = vec![gaia_engine::game_state::TechTile(6)];
+                }
+                if covered {
+                    p.covered_tech_tiles = vec![gaia_engine::game_state::TechTile(6)];
+                }
+            })
+            .with_board(board)
+            .with_phase(GamePhase::ActionPhase { active_player: 0 })
+            .build();
+
+        RuleEngine::apply_action(&mut state, 0, GameAction::Build { coord: target })
+            .unwrap_or_else(|e| panic!("build should succeed: {e}"));
+
+        match &state.phase {
+            GamePhase::ChargePowerPending { queue, .. } => {
+                assert_eq!(queue[0].player, 1);
+                assert_eq!(
+                    queue[0].max_power, expected,
+                    "{kind:?}, tech={tech}, covered={covered}"
+                );
+            }
+            other => panic!("expected charge offer, got {other:?}"),
+        }
+        if expected == 6 {
+            let mut limited_capacity = state.clone();
+            limited_capacity.players[1].resources.power.bowl1 = 2;
+            RuleEngine::apply_action(
+                &mut limited_capacity,
+                1,
+                GameAction::ChargePower { accept: true },
+            )
+            .unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+            assert_eq!(limited_capacity.players[1].resources.power.bowl2, 2);
+            assert_eq!(limited_capacity.players[1].vp, 19);
+
+            let mut limited_vp = state.clone();
+            limited_vp.players[1].vp = 2;
+            RuleEngine::apply_action(&mut limited_vp, 1, GameAction::ChargePower { accept: true })
+                .unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+            assert_eq!(limited_vp.players[1].resources.power.bowl2, 3);
+            assert_eq!(limited_vp.players[1].vp, 0);
+
+            let mut declined = state.clone();
+            RuleEngine::apply_action(&mut declined, 1, GameAction::ChargePower { accept: false })
+                .unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+            assert_eq!(declined.players[1].resources.power.bowl1, 10);
+            assert_eq!(declined.players[1].vp, 20);
+        }
+        RuleEngine::apply_action(&mut state, 1, GameAction::ChargePower { accept: true }).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+        assert_eq!(state.players[1].resources.power.bowl1, 10 - expected);
+        assert_eq!(state.players[1].resources.power.bowl2, expected);
+        assert_eq!(state.players[1].resources.power.bowl3, 0);
+        assert_eq!(state.players[1].vp, 20 - (expected as i32 - 1));
+    }
 }

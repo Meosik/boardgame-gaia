@@ -367,3 +367,21 @@ fn tinkeroids_gaia_planet_costs_two_qic() {
 
     assert_eq!(state.players[0].resources.qic, qic_before - 2);
 }
+
+#[test]
+fn tinkeroids_late_resource_tiles_pay_exactly_and_cannot_repeat_after_reload() {
+    for tile in [4, 6] {
+        let mut state = tinkeroids_state(4, PlanetType::Terra);
+        state.players[0].tinkeroids_selected_tile = Some(tile);
+        state.players[0].resources.knowledge = 2;
+        let action = GameAction::TinkeroidsUseTile { tile, coord: None };
+        RuleEngine::apply_action(&mut state, 0, action.clone()).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+        assert_eq!(state.players[0].resources.qic, if tile == 4 { 7 } else { 5 });
+        assert_eq!(state.players[0].resources.knowledge, if tile == 6 { 5 } else { 2 });
+        state = serde_json::from_value(state.serialize()).unwrap_or_else(|error| panic!("saved value should deserialize: {error}"));
+        state.phase = GamePhase::ActionPhase { active_player: 0 };
+        let before = state.serialize();
+        assert!(RuleEngine::apply_action(&mut state, 0, action).is_err());
+        assert_eq!(state.serialize(), before);
+    }
+}
