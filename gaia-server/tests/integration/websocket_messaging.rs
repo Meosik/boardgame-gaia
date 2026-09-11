@@ -463,3 +463,26 @@ async fn ws_join_capacity_started_and_reconnect_branches() {
     let schema_hash = SCHEMA_HASH.to_string();
     assert_eq!(snapshot["schema_hash"].as_str(), Some(schema_hash.as_str()));
 }
+
+#[tokio::test]
+#[ignore = "requires DATABASE_URL"]
+async fn query_valid_actions_answers_with_a_revision_bound_actions_list() {
+    let server = spawn_test_app().await;
+    let (room_code, mut players, _revision) = create_and_join_four(&server).await;
+    let _cleanup = RoomCleanupGuard::new(room_code.clone());
+
+    // No game has started yet for this room (only the host is `player_ready`), so
+    // `RuleEngine::get_valid_actions` has no `GameState` to consult — the handler still answers
+    // cleanly with an empty list rather than erroring.
+    players[0]
+        .ws
+        .send_json(&json!({ "type": "query_valid_actions" }))
+        .await;
+    let response = receive_message_type(&mut players[0].ws, "valid_actions").await;
+    assert_eq!(
+        response["actions"].as_array().map(Vec::len),
+        Some(0),
+        "no game_state yet should answer with an empty actions list: {response}"
+    );
+    assert!(response["revision"].as_u64().is_some());
+}

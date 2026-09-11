@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use gaia_engine::{game_state::PlayerId, GameSetup, GameState, Randomizer, SetupMode};
+use serde::Serialize;
 
 use crate::error::{ServerError, ServerResult};
 
@@ -59,9 +60,34 @@ pub struct Room {
     /// virtual opponents so setup order, adjacency, and opponent-dependent costs can be tested,
     /// but those opponents are advanced automatically and are not room members.
     pub dev_human_player: Option<PlayerId>,
+    /// Main actions taken by each virtual seat in the current DEV round. This is server-only
+    /// harness state; ordinary rooms leave it empty.
+    pub dev_bot_action_counts: HashMap<PlayerId, u8>,
+    pub dev_bot_action_round: u8,
 }
 
 impl Room {
+    /// Show all locally controlled seats without treating them as separate authenticated members.
+    pub fn display_players(&self) -> Vec<(PlayerId, String, bool)> {
+        if let Some(state) = self
+            .game_state
+            .as_ref()
+            .filter(|state| state.dev_controller == Some(self.host_player))
+        {
+            let ready = self
+                .players
+                .iter()
+                .find(|(id, _, _)| *id == self.host_player)
+                .is_some_and(|(_, _, ready)| *ready);
+            return state
+                .players
+                .iter()
+                .map(|player| (player.player_id, player.nickname.clone(), ready))
+                .collect();
+        }
+        self.players.clone()
+    }
+
     pub fn player_count(&self) -> usize {
         self.players.len()
     }
@@ -122,6 +148,15 @@ impl Room {
     }
 }
 
+/// One row of the public room browser (`GET /api/rooms`) — only ever built from rooms
+/// still in `Lobby`, since a room in any later state has already rejected `join_room`.
+#[derive(Debug, Clone, Serialize)]
+pub struct RoomSummary {
+    pub code: String,
+    pub host_nickname: String,
+    pub player_count: usize,
+}
+
 // ── RoomManager ───────────────────────────────────────────────────────────────
 
 pub struct RoomManager {
@@ -175,6 +210,8 @@ impl RoomManager {
             connected: HashSet::new(),
             paused: false,
             dev_human_player: None,
+            dev_bot_action_counts: HashMap::new(),
+            dev_bot_action_round: 0,
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))
@@ -211,6 +248,28 @@ impl RoomManager {
 
     pub fn get_room(&self, code: &str) -> Option<&Room> {
         self.rooms.get(code)
+    }
+
+    /// Every currently joinable room, newest first — rooms not in `Lobby` are omitted
+    /// since `join_room` would reject them anyway (started game or already ended).
+    pub fn list_rooms(&self) -> Vec<RoomSummary> {
+        let mut rooms: Vec<&Room> = self
+            .rooms
+            .values()
+            .filter(|room| room.state == RoomState::Lobby)
+            .collect();
+        rooms.sort_by_key(|room| std::cmp::Reverse(room.host_player));
+        rooms
+            .into_iter()
+            .map(|room| RoomSummary {
+                code: room.code.clone(),
+                host_nickname: room
+                    .nickname_of(room.host_player)
+                    .unwrap_or("")
+                    .to_string(),
+                player_count: room.player_count(),
+            })
+            .collect()
     }
 
     pub fn get_room_mut(&mut self, code: &str) -> Option<&mut Room> {
@@ -262,5 +321,24 @@ mod tests {
             .unwrap_or_else(|| panic!("created room should retain its setup"));
         assert_eq!(setup.setup_mode, SetupMode::Bidding);
         assert_eq!(setup.factions.len(), 4);
+    }
+
+    #[test]
+    fn list_rooms_omits_rooms_that_join_room_would_reject() {
+        let mut rooms = RoomManager::new();
+        let (open_code, _) = rooms
+            .create_room("Host", Some("list-rooms-open".to_string()), SetupMode::Bidding)
+            .unwrap_or_else(|error| panic!("room should be created: {error}"));
+        let (started_code, _) = rooms
+            .create_room("Host2", Some("list-rooms-started".to_string()), SetupMode::Bidding)
+            .unwrap_or_else(|error| panic!("room should be created: {error}"));
+        rooms.get_room_mut(&started_code).unwrap_or_else(|| panic!("created room should exist")).state = super::RoomState::InGame;
+
+        let listed = rooms.list_rooms();
+        assert!(listed.iter().any(|room| room.code == open_code));
+        assert!(!listed.iter().any(|room| room.code == started_code));
+        let open = listed.iter().find(|room| room.code == open_code).unwrap_or_else(|| panic!("joinable room should be listed"));
+        assert_eq!(open.host_nickname, "Host");
+        assert_eq!(open.player_count, 1);
     }
 }

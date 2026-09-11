@@ -6,3 +6,5 @@ mod harness;
 mod revision_and_recovery_flow;
 mod room_lifecycle;
 mod websocket_messaging;
+
+mod manual_dev_control;

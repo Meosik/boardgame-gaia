@@ -1,10 +1,9 @@
 use gaia_engine::{
     error::RuleError,
     game_state::{
-        BrainstoneLocation, FactionId, GameEvent, GamePhase, HexCoord, PendingCharge, PlanetType,
-        PlayerId, SetupPhase, StructureType,
+        FactionId, GameEvent, GamePhase, HexCoord, PendingCharge, PlanetType, PlayerId, SetupPhase,
     },
-    GameSetup, GameState, MapEngine, RuleEngine, SetupAction,
+    GameAction, GameSetup, GameState, MapEngine, RuleEngine, SetupAction,
 };
 use gaia_protocol::{CommandId, Revision};
 use sha2::{Digest, Sha256};
@@ -15,6 +14,26 @@ use crate::{
     room::manager::Room,
     state::AppState,
 };
+
+/// Only the authenticated controller of a server-created manual DEV game may act for a seat.
+pub(crate) fn is_manual_controller(room: &Room, player: PlayerId) -> bool {
+    room.host_player == player
+        && room.dev_human_player == Some(player)
+        && room
+            .game_state
+            .as_ref()
+            .is_some_and(|state| state.dev_controller == Some(player))
+}
+
+pub(crate) fn acting_player(room: &Room, authenticated_player: PlayerId) -> PlayerId {
+    if !is_manual_controller(room, authenticated_player) {
+        return authenticated_player;
+    }
+    room.game_state
+        .as_ref()
+        .and_then(required_player)
+        .unwrap_or(authenticated_player)
+}
 
 pub struct DevGameService;
 
@@ -49,6 +68,7 @@ fn enter_dev_power_charge(
         ));
     }
 
+    let player_id = acting_player(room, player_id);
     let state = room.game_state.as_mut().ok_or(RuleError::WrongPhase)?;
     let active_player = match state.phase {
         GamePhase::ActionPhase { active_player } => active_player,
@@ -133,17 +153,12 @@ pub fn build_dev_game_state(
 
     if !matches!(
         state.phase,
-        GamePhase::Setup(SetupPhase::StartingStructures {
-            active_player,
-            placement_index: 0,
-            kind: StructureType::Mine,
-        }) if active_player == player_id
+        GamePhase::Setup(SetupPhase::StartingStructures { .. })
     ) {
         return Err(ServerError::Internal(
-            "dev game did not reach starting mine placement".into(),
+            "dev game did not reach starting structure placement".into(),
         ));
     }
-    prepare_dev_human_resources(&mut state, player_id)?;
     state.event_log.extend(events);
 
     Ok(state)
@@ -163,33 +178,6 @@ fn assign_simulated_dev_bids(state: &mut GameState, room_code: &str) {
     }
 }
 
-/// The local UI harness is meant to exercise power actions repeatedly without playing several
-/// setup rounds first. Only the human DEV seat receives this deliberately non-standard supply;
-/// virtual opponents and ordinary games keep their normal power-cycle totals.
-pub(crate) fn prepare_dev_human_resources(
-    state: &mut GameState,
-    player_id: PlayerId,
-) -> ServerResult<()> {
-    let player = state
-        .player_mut(player_id)
-        .ok_or_else(|| ServerError::Internal("dev player disappeared during setup".into()))?;
-    player.resources.ore = 250;
-    player.resources.credits = 250;
-    player.resources.knowledge = 250;
-    player.resources.qic = 250;
-    let power = &mut player.resources.power;
-    power.bowl1 = 0;
-    power.bowl2 = 0;
-    power.bowl3 = 250;
-    if matches!(
-        power.brainstone,
-        Some(BrainstoneLocation::Area1 | BrainstoneLocation::Area2)
-    ) {
-        power.brainstone = Some(BrainstoneLocation::Area3);
-    }
-    Ok(())
-}
-
 /// Advances every virtual opponent through the normal setup actions until the human seat must
 /// act again. Opponent planets are chosen deterministically, preferring legal home planets nearest
 /// to the human's existing mines so opponent-adjacency upgrade costs are easy to exercise.
@@ -197,6 +185,9 @@ pub fn auto_advance_dev_setup(
     state: &mut GameState,
     human_player: PlayerId,
 ) -> Result<Vec<GameEvent>, RuleError> {
+    if state.dev_controller.is_some() {
+        return Ok(Vec::new());
+    }
     let mut events = Vec::new();
     loop {
         match state.phase {
@@ -238,6 +229,191 @@ pub fn auto_advance_dev_setup(
         }
     }
     Ok(events)
+}
+
+/// Runs virtual DEV seats until control returns to the human (or the human must resolve a
+/// pending decision). Each bot takes a small, deterministic number of ordinary legal actions
+/// before passing, so the harness exercises both intervening turns and pass-order changes.
+pub fn auto_advance_dev_actions(
+    room: &mut Room,
+    human_player: PlayerId,
+) -> Result<Vec<GameEvent>, RuleError> {
+    let state = room.game_state.as_mut().ok_or(RuleError::WrongPhase)?;
+    if state.dev_controller.is_some() {
+        return Ok(Vec::new());
+    }
+    if room.dev_bot_action_round != state.round {
+        room.dev_bot_action_counts.clear();
+        room.dev_bot_action_round = state.round;
+    }
+
+    let mut events = Vec::new();
+    for _ in 0..64 {
+        let Some(active_player) = required_player(state) else {
+            break;
+        };
+        if active_player == human_player {
+            break;
+        }
+
+        let action = if matches!(state.phase, GamePhase::ActionPhase { .. }) {
+            let completed = room
+                .dev_bot_action_counts
+                .get(&active_player)
+                .copied()
+                .unwrap_or(0);
+            let target = dev_bot_action_target(state, human_player, active_player);
+            if completed >= target {
+                automatic_pass(state, active_player)?
+            } else if let Some(action) = automatic_main_action(state, active_player, completed) {
+                action
+            } else {
+                automatic_pass(state, active_player)?
+            }
+        } else {
+            automatic_pending_action(state, active_player)?
+        };
+
+        let is_main_action = matches!(state.phase, GamePhase::ActionPhase { .. })
+            && !matches!(
+                action,
+                GameAction::Pass { .. } | GameAction::FreeAction { .. }
+            );
+        events.extend(super::game_action::apply_logged_action(state, active_player, action)?);
+        if is_main_action {
+            *room.dev_bot_action_counts.entry(active_player).or_insert(0) += 1;
+        }
+    }
+    Ok(events)
+}
+
+pub(crate) fn required_player(state: &GameState) -> Option<PlayerId> {
+    match &state.phase {
+        GamePhase::Setup(
+            SetupPhase::FactionSelection { active_player }
+            | SetupPhase::Bidding { active_player }
+            | SetupPhase::StartingStructures { active_player, .. }
+            | SetupPhase::StartingBoosters { active_player, .. },
+        ) => Some(*active_player),
+        GamePhase::Setup(SetupPhase::BiddingChoice { winner }) => Some(*winner),
+        GamePhase::ActionPhase { active_player } => state.turn_order.get(*active_player).copied(),
+        GamePhase::ChargePowerPending { queue, .. }
+        | GamePhase::LostPlanetChargePowerPending { queue, .. } => {
+            queue.first().map(|entry| entry.player)
+        }
+        GamePhase::LostPlanetPlacementPending { player, .. }
+        | GamePhase::TinkeroidsTileSelectionPending { player, .. } => Some(*player),
+        GamePhase::IncomeOrderPending { queue, .. } => queue.first().map(|entry| entry.player),
+        GamePhase::GaiaDecisionPending { queue, .. } => queue.first().map(|entry| entry.player),
+        _ => None,
+    }
+}
+
+fn dev_bot_action_target(state: &GameState, human_player: PlayerId, bot_player: PlayerId) -> u8 {
+    let bots = state
+        .turn_order
+        .iter()
+        .copied()
+        .filter(|player| *player != human_player)
+        .collect::<Vec<_>>();
+    let bot_index = bots
+        .iter()
+        .position(|player| *player == bot_player)
+        .unwrap_or(0);
+    let rotation = usize::from(state.round.saturating_sub(1)) % bots.len().max(1);
+    u8::try_from((bot_index + rotation) % bots.len().max(1) + 1).unwrap_or(1)
+}
+
+fn automatic_main_action(
+    state: &GameState,
+    player_id: PlayerId,
+    completed: u8,
+) -> Option<GameAction> {
+    let mut candidates = RuleEngine::get_valid_actions(state, player_id)
+        .into_iter()
+        .filter(|action| {
+            matches!(
+                action,
+                GameAction::Build { .. }
+                    | GameAction::ResearchAdvance { .. }
+                    | GameAction::GaiaFormation { .. }
+                    | GameAction::PowerAction { coord: None, .. }
+                    | GameAction::AcademyQicAction
+                    | GameAction::SpecialAction { .. }
+            )
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_by_key(|action| (automatic_action_rank(action), format!("{action:?}")));
+    if !candidates.is_empty() {
+        let rotate_by = (usize::from(player_id) + usize::from(completed)) % candidates.len();
+        candidates.rotate_left(rotate_by);
+    }
+
+    candidates.into_iter().find(|action| {
+        let mut probe = state.clone();
+        RuleEngine::apply_action(&mut probe, player_id, action.clone()).is_ok()
+            && matches!(
+                probe.phase,
+                GamePhase::ActionPhase { .. } | GamePhase::RoundScoring { .. }
+            )
+    })
+}
+
+fn automatic_action_rank(action: &GameAction) -> u8 {
+    match action {
+        GameAction::ResearchAdvance { .. } => 0,
+        GameAction::Build { .. } => 1,
+        GameAction::GaiaFormation { .. } => 2,
+        GameAction::PowerAction { .. } => 3,
+        GameAction::AcademyQicAction => 4,
+        GameAction::SpecialAction { .. } => 5,
+        _ => 6,
+    }
+}
+
+fn automatic_pass(state: &GameState, player_id: PlayerId) -> Result<GameAction, RuleError> {
+    let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
+    let booster_id = if state.round < 6 && player.booster.is_some() {
+        Some(
+            state
+                .boosters
+                .first()
+                .map(|booster| booster.0)
+                .ok_or_else(|| {
+                    RuleError::ActionNotAllowed(
+                        "virtual opponent has no available booster when passing".into(),
+                    )
+                })?,
+        )
+    } else {
+        None
+    };
+    Ok(GameAction::Pass { booster_id })
+}
+
+fn automatic_pending_action(
+    state: &GameState,
+    player_id: PlayerId,
+) -> Result<GameAction, RuleError> {
+    RuleEngine::get_valid_actions(state, player_id)
+        .into_iter()
+        .find(|action| {
+            matches!(
+                action,
+                GameAction::ChargePower { accept: false }
+                    | GameAction::ChooseIncomeOrder {
+                        charge_first: false
+                    }
+                    | GameAction::FinishGaiaDecision
+                    | GameAction::SelectTinkeringTile { .. }
+                    | GameAction::PlaceLostPlanet { .. }
+            )
+        })
+        .ok_or_else(|| {
+            RuleError::ActionNotAllowed(
+                "virtual opponent has no automatic response for its pending decision".into(),
+            )
+        })
 }
 
 fn dev_bot_factions(human_faction: FactionId) -> Vec<FactionId> {
@@ -385,9 +561,145 @@ mod tests {
                 connected: HashSet::from([7]),
                 paused: false,
                 dev_human_player: Some(7),
+                dev_bot_action_counts: std::collections::HashMap::new(),
+                dev_bot_action_round: 0,
             },
             coord,
         )
+    }
+
+    #[test]
+    fn dev_setup_accepts_expansion_factions_with_special_starting_structures() {
+        let setup = Randomizer::generate_setup("dev-expansion-colors")
+            .unwrap_or_else(|e| panic!("setup: {e}"));
+        for faction in [FactionId::Tinkeroids, FactionId::Moweyds] {
+            let state = build_dev_game_state(
+                "DEVX01",
+                "dev-expansion-colors",
+                7,
+                &[8, 9, 10],
+                &setup,
+                faction,
+            )
+            .unwrap_or_else(|e| panic!("{faction:?} setup: {e}"));
+            assert!(matches!(
+                state.phase,
+                GamePhase::Setup(SetupPhase::StartingStructures { .. })
+            ));
+            assert_eq!(
+                state
+                    .player(7)
+                    .unwrap_or_else(|| panic!("human"))
+                    .expensive_terraforming_planet_types
+                    .len(),
+                3
+            );
+        }
+    }
+
+    #[test]
+    fn manual_dev_control_keeps_bot_seats_interactive_and_authenticates_controller() {
+        let (mut room, _) = action_phase_dev_room();
+        let state = room
+            .game_state
+            .as_mut()
+            .unwrap_or_else(|| panic!("DEV state"));
+        state.dev_controller = Some(7);
+        state.phase = GamePhase::Setup(SetupPhase::StartingStructures {
+            active_player: 8,
+            placement_index: 1,
+            kind: StructureType::Mine,
+        });
+        let before = serde_json::to_value(&*state).unwrap_or_else(|e| panic!("serialize: {e}"));
+        assert!(super::auto_advance_dev_setup(state, 7)
+            .unwrap_or_else(|e| panic!("setup: {e}"))
+            .is_empty());
+        assert_eq!(
+            serde_json::to_value(&*state).unwrap_or_else(|e| panic!("serialize: {e}")),
+            before
+        );
+        assert_eq!(super::acting_player(&room, 7), 8);
+        assert_eq!(super::acting_player(&room, 9), 9);
+        room.game_state
+            .as_mut()
+            .unwrap_or_else(|| panic!("DEV state"))
+            .phase = GamePhase::ActionPhase { active_player: 2 };
+        assert_eq!(super::acting_player(&room, 7), 9);
+        assert!(super::auto_advance_dev_actions(&mut room, 7)
+            .unwrap_or_else(|e| panic!("actions: {e}"))
+            .is_empty());
+        assert_eq!(super::acting_player(&room, 7), 9);
+        room.game_state
+            .as_mut()
+            .unwrap_or_else(|| panic!("DEV state"))
+            .dev_controller = None;
+        assert_eq!(super::acting_player(&room, 7), 7);
+    }
+
+    #[test]
+    fn manual_dev_control_follows_charge_queue_and_survives_serialization() {
+        let (mut room, coord) = action_phase_dev_room();
+        let state = room
+            .game_state
+            .as_mut()
+            .unwrap_or_else(|| panic!("DEV state"));
+        state.dev_controller = Some(7);
+        state.phase = GamePhase::ChargePowerPending {
+            queue: vec![gaia_engine::game_state::PendingCharge {
+                player: 10,
+                hex: coord,
+                max_power: 2,
+            }],
+            resume_active_player: Some(1),
+        };
+        let json = serde_json::to_value(&*state).unwrap_or_else(|e| panic!("serialize: {e}"));
+        room.game_state =
+            Some(serde_json::from_value(json).unwrap_or_else(|e| panic!("deserialize: {e}")));
+        assert_eq!(super::acting_player(&room, 7), 10);
+    }
+
+    #[test]
+    fn bots_pass_and_allow_all_six_rounds_to_finish() {
+        let (mut room, _) = action_phase_dev_room();
+        room.game_state
+            .as_mut()
+            .unwrap_or_else(|| panic!("DEV state should exist"))
+            .round = 1;
+        for round in 1..=6 {
+            // Drive the human through the same pending decisions as a passive test player.
+            for _ in 0..64 {
+                super::auto_advance_dev_actions(&mut room, 7)
+                    .unwrap_or_else(|error| panic!("DEV round should advance: {error}"));
+                let state = room
+                    .game_state
+                    .as_mut()
+                    .unwrap_or_else(|| panic!("DEV state should exist"));
+                if matches!(state.phase, GamePhase::RoundScoring { .. }) {
+                    break;
+                }
+                assert_eq!(super::required_player(state), Some(7));
+                let action = if matches!(state.phase, GamePhase::ActionPhase { .. }) {
+                    super::automatic_pass(state, 7)
+                        .unwrap_or_else(|error| panic!("DEV round should advance: {error}"))
+                } else {
+                    super::automatic_pending_action(state, 7)
+                        .unwrap_or_else(|error| panic!("DEV round should advance: {error}"))
+                };
+                RuleEngine::apply_action(state, 7, action)
+                    .unwrap_or_else(|error| panic!("DEV round should advance: {error}"));
+            }
+            let state = room
+                .game_state
+                .as_mut()
+                .unwrap_or_else(|| panic!("DEV state should exist"));
+            assert_eq!(state.round, round);
+            assert!(state.players.iter().all(|player| player.passed));
+            assert!(matches!(state.phase, GamePhase::RoundScoring { .. }));
+            if round < 6 {
+                RuleEngine::advance_to_next_round(state)
+                    .unwrap_or_else(|error| panic!("DEV round should advance: {error}"));
+            }
+        }
     }
 
     #[test]
@@ -417,13 +729,13 @@ mod tests {
             .unwrap_or_else(|| panic!("dev player should exist"));
         assert_eq!(player.faction, Some(FactionId::Terrans));
         assert!(player.structures.is_empty());
-        assert_eq!(player.resources.power.bowl1, 0);
-        assert_eq!(player.resources.power.bowl2, 0);
-        assert_eq!(player.resources.power.bowl3, 250);
-        assert_eq!(player.resources.ore, 250);
-        assert_eq!(player.resources.credits, 250);
-        assert_eq!(player.resources.knowledge, 250);
-        assert_eq!(player.resources.qic, 250);
+        assert_eq!(player.resources.power.bowl1, 4);
+        assert_eq!(player.resources.power.bowl2, 4);
+        assert_eq!(player.resources.power.bowl3, 0);
+        assert_eq!(player.resources.ore, 4);
+        assert_eq!(player.resources.credits, 15);
+        assert_eq!(player.resources.knowledge, 3);
+        assert_eq!(player.resources.qic, 1);
         assert_eq!(state.players.len(), 4);
         assert_eq!(state.boosters.len(), 7);
         let mut bids = state

@@ -87,6 +87,22 @@ impl GameSetupService {
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
                 room.seed.clone_from(&new_seed);
                 room.setup = Some(setup.clone());
+                if let Some(controller) = room
+                    .game_state
+                    .as_ref()
+                    .and_then(|state| state.dev_controller)
+                {
+                    let players = room
+                        .display_players()
+                        .into_iter()
+                        .map(|(id, name, _)| (id, name))
+                        .collect::<Vec<_>>();
+                    let mut game = gaia_engine::MapEngine::init_game_state(
+                        room_code, &new_seed, &players, &setup,
+                    );
+                    game.dev_controller = Some(controller);
+                    room.game_state = Some(game);
+                }
                 for (_, _, ready) in &mut room.players {
                     *ready = false;
                 }

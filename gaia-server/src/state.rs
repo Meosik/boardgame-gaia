@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -57,10 +57,15 @@ impl AppState {
             return Ok(());
         };
 
+        // The snapshot marker is written only by the DEV endpoint, never inferred from names.
+        let dev_controller = game_state
+            .dev_controller
+            .filter(|controller| *controller == host_player);
         let players = game_state
             .players
             .iter()
-            .map(|p| (p.player_id, p.nickname.clone(), true))
+            .filter(|player| dev_controller.is_none_or(|controller| player.player_id == controller))
+            .map(|p| (p.player_id, p.nickname.clone(), state_str != "lobby"))
             .collect();
 
         let room = Room {
@@ -74,7 +79,9 @@ impl AppState {
             revision: revision as u64,
             connected: HashSet::new(),
             paused: false,
-            dev_human_player: None,
+            dev_human_player: dev_controller,
+            dev_bot_action_counts: HashMap::new(),
+            dev_bot_action_round: 0,
         };
 
         let mut rooms = self.rooms.write().await;

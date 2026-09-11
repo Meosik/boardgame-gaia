@@ -61,6 +61,11 @@ pub enum ClientFrame {
         session_token: Option<String>,
     },
     Command(CommandEnvelope<ClientCommand>),
+    /// Pure read, no envelope: "what can I legally do right now?" (`RuleEngine::get_valid_actions`
+    /// for this connection's player). Doesn't mutate room state or advance the revision, so it
+    /// skips the idempotency/revision-conflict machinery `Command` needs — answered directly with
+    /// `messages::ServerMessage::ValidActions`.
+    QueryValidActions,
 }
 
 #[derive(Debug, thiserror::Error)]

@@ -1,6 +1,6 @@
 use gaia_engine::{
     error::RuleError,
-    game_state::{GamePhase, PlayerId, UndoCompletedTurn, UndoOpenTurn},
+    game_state::{GameEvent, GamePhase, PlayerId, UndoCompletedTurn, UndoOpenTurn},
     rules::actions::GameAction,
     GameState, RuleEngine,
 };
@@ -9,7 +9,7 @@ use gaia_protocol::{CommandId, Revision};
 use crate::{
     coordinator::{self, broadcast_snapshot, CommandResult},
     error::ServerResult,
-    services::turn_management::TurnManagementService,
+    services::{dev_game::auto_advance_dev_actions, turn_management::TurnManagementService},
     state::AppState,
 };
 
@@ -26,16 +26,23 @@ impl GameActionService {
     ) -> CommandResult {
         let outcome =
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
-                let game_state = room
-                    .game_state
-                    .as_mut()
-                    .ok_or(gaia_engine::error::RuleError::WrongPhase)?;
-                apply_tracked_action(
-                    game_state,
-                    player_id,
-                    action.clone(),
-                    expected_revision.get(),
-                )
+                let acting_player = crate::services::dev_game::acting_player(room, player_id);
+                let mut events = {
+                    let game_state = room
+                        .game_state
+                        .as_mut()
+                        .ok_or(gaia_engine::error::RuleError::WrongPhase)?;
+                    apply_tracked_action(
+                        game_state,
+                        acting_player,
+                        action.clone(),
+                        expected_revision.get(),
+                    )?
+                };
+                if room.dev_human_player == Some(player_id) {
+                    events.extend(auto_advance_dev_actions(room, player_id)?);
+                }
+                Ok(events)
             })
             .await?;
 
@@ -63,7 +70,7 @@ pub(crate) fn apply_tracked_action(
         ));
     }
 
-    let is_free_action = matches!(&action, GameAction::FreeAction { .. });
+    let is_free_action = matches!(&action, GameAction::FreeAction { .. } | GameAction::SpaceGiantsGainTechTile { .. });
     if action_phase_player(state) == Some(player_id) {
         let open_turn = state
             .undo_state
@@ -85,8 +92,22 @@ pub(crate) fn apply_tracked_action(
         }
     }
 
-    let events = RuleEngine::apply_action(state, player_id, action)?;
+    let events = apply_logged_action(state, player_id, action)?;
     finalize_completed_turn(state, expected_revision.saturating_add(1), is_free_action);
+    Ok(events)
+}
+
+pub(crate) fn apply_logged_action(
+    state: &mut GameState,
+    player: PlayerId,
+    action: GameAction,
+) -> Result<Vec<GameEvent>, RuleError> {
+    let action_name = serde_json::to_value(&action)
+        .ok()
+        .and_then(|value| value.get("type").and_then(|tag| tag.as_str()).map(str::to_owned))
+        .unwrap_or_else(|| "Action".to_owned());
+    let mut events = RuleEngine::apply_action(state, player, action)?;
+    events.push(GameEvent::ActionLog { player, action: action_name, event_count: events.len() });
     Ok(events)
 }
 
@@ -150,6 +171,43 @@ mod tests {
     };
 
     use super::apply_tracked_action;
+
+    #[test]
+    fn action_log_boundary_preserves_effects_and_rejected_actions_emit_nothing() {
+        use gaia_engine::game_state::GameEvent;
+        let mut state = GameStateBuilder::new()
+            .with_player_fn(0, |p| p.resources.power.bowl3 = 4).build();
+        let action = GameAction::FreeAction { kind: FreeActionKind::PowerToQic, count: 1 };
+        let mut reference = state.clone();
+        let expected = gaia_engine::RuleEngine::apply_action(&mut reference, 0, action.clone()).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+        let events = super::apply_logged_action(&mut state, 0, action.clone()).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+        assert_eq!(state.serialize(), reference.serialize());
+        assert_eq!(serde_json::to_value(&events[..expected.len()]).unwrap_or_else(|error| panic!("test value should serialize: {error}")), serde_json::to_value(&expected).unwrap_or_else(|error| panic!("test value should serialize: {error}")));
+        assert!(matches!(events.last(), Some(GameEvent::ActionLog { player: 0, action, event_count })
+            if action == "FreeAction" && *event_count == expected.len()));
+        let before = state.serialize();
+        assert!(super::apply_logged_action(&mut state, 0, action).is_err());
+        assert_eq!(state.serialize(), before);
+        let encoded = serde_json::to_string(&events).unwrap_or_else(|error| panic!("test value should serialize: {error}"));
+        let restored: Vec<GameEvent> = serde_json::from_str(&encoded).unwrap_or_else(|error| panic!("saved value should deserialize: {error}"));
+        assert_eq!(serde_json::to_value(restored).unwrap_or_else(|error| panic!("test value should serialize: {error}")), serde_json::to_value(events).unwrap_or_else(|error| panic!("test value should serialize: {error}")));
+    }
+
+    #[test]
+    fn legacy_space_giants_technology_recovery_keeps_the_turn_open() {
+        use gaia_engine::game_state::{FactionId, HexCoord, Structure, StructureType, TechTile};
+        use gaia_engine::rules::actions::TechTileChoice;
+        let mut state = GameStateBuilder::new().with_player_fn(0, |p| {
+            p.faction = Some(FactionId::SpaceGiants);
+            p.structures.push(Structure { hex: HexCoord::new(0, 0), kind: StructureType::PlanetaryInstitute });
+        }).with_player(1).with_phase(GamePhase::ActionPhase { active_player: 0 }).build();
+        apply_tracked_action(&mut state, 0, GameAction::SpaceGiantsGainTechTile {
+            choice: TechTileChoice::Standard { tile: TechTile(2), advance_track: None, bonus_build_coord: None },
+        }, 10).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+        assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 0 });
+        assert!(state.undo_state.open_turn.is_some());
+        assert!(state.undo_state.recent_turns.is_empty());
+    }
 
     #[test]
     fn free_action_checkpoint_keeps_the_action_turn_open() {

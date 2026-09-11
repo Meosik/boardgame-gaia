@@ -4,6 +4,7 @@ use crate::{
     coordinator,
     error::{ServerError, ServerResult},
     messages::ServerMessage,
+    services::dev_game::auto_advance_dev_actions,
     state::AppState,
 };
 
@@ -72,18 +73,30 @@ impl TurnManagementService {
     /// `ActionPhase` (`RuleEngine::advance_to_next_round`).
     async fn start_next_round(state: &AppState, room_code: &str) -> ServerResult<()> {
         let outcome = coordinator::apply_server_transition(state, room_code, |room| {
-            if let Some(gs) = room.game_state.as_mut() {
-                if let Err(e) = RuleEngine::advance_to_next_round(gs) {
-                    log::warn!("advance_to_next_round failed for room {room_code}: {e}");
+            {
+                let gs = room
+                    .game_state
+                    .as_mut()
+                    .ok_or(gaia_engine::error::RuleError::WrongPhase)?;
+                RuleEngine::advance_to_next_round(gs)?;
+            }
+            if let Some(human_player) = room.dev_human_player {
+                let bot_events = auto_advance_dev_actions(room, human_player)?;
+                if !bot_events.is_empty() {
+                    room.game_state
+                        .as_mut()
+                        .ok_or(gaia_engine::error::RuleError::WrongPhase)?
+                        .event_log
+                        .extend(bot_events);
                 }
             }
+            Ok(())
         })
         .await
         .map_err(coordinator::command_error_to_server_error)?;
 
-        // Turn order itself doesn't change on a round advance, but the reset
-        // `passed` flags and new round number are visible in this Snapshot —
-        // there's no separate "turn changed" signal needed beyond it.
+        // The reset `passed` flags, pass-order-derived turn order, and new round number are all
+        // visible in this Snapshot; no separate turn-change signal is needed.
         coordinator::broadcast_snapshot(state, room_code, outcome.revision).await;
 
         Ok(())

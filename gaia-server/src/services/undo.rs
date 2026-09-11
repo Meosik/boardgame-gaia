@@ -25,12 +25,16 @@ impl UndoService {
         command_id: CommandId,
         expected_revision: Revision,
     ) -> CommandResult {
-        let target_revision = {
+        let (target_revision, player_id) = {
             let rooms = app.rooms.read().await;
             let room = rooms
                 .get_room(room_code)
                 .ok_or_else(|| CommandError::RoomNotFound(room_code.to_string()))?;
-            free_action_target(room.game_state.as_ref(), player_id)?
+            let player_id = crate::services::dev_game::acting_player(room, player_id);
+            (
+                free_action_target(room.game_state.as_ref(), player_id)?,
+                player_id,
+            )
         };
         let restored = load_snapshot(app, room_code, target_revision).await?;
 
@@ -69,7 +73,7 @@ impl UndoService {
         command_id: CommandId,
         expected_revision: Revision,
     ) -> CommandResult {
-        let (target_revision, required_approvals) = {
+        let (target_revision, required_approvals, requester) = {
             let rooms = app.rooms.read().await;
             let room = rooms
                 .get_room(room_code)
@@ -81,14 +85,24 @@ impl UndoService {
                 )
                 .into());
             }
+            let manual_control = crate::services::dev_game::is_manual_controller(room, requester);
+            let requester = if manual_control {
+                game_state
+                    .undo_state
+                    .recent_turns
+                    .last()
+                    .map_or(requester, |turn| turn.player)
+            } else {
+                requester
+            };
             let checkpoint = eligible_completed_turn(game_state, requester)?;
             let approvals = room
                 .players
                 .iter()
                 .map(|(player, _, _)| *player)
-                .filter(|player| *player != requester)
+                .filter(|player| *player != requester && !manual_control)
                 .collect::<Vec<_>>();
-            (checkpoint.start_revision, approvals)
+            (checkpoint.start_revision, approvals, requester)
         };
 
         let restored = if required_approvals.is_empty() {

@@ -67,6 +67,10 @@ pub struct RegenerateRequest {
 
 #[derive(Deserialize)]
 pub struct CreateDevGameRequest {
+    #[serde(default)]
+    pub full_setup: bool,
+    pub nickname: Option<String>,
+    pub setup_mode: Option<SetupMode>,
     pub faction: Option<FactionId>,
     pub seed: Option<String>,
 }
@@ -117,9 +121,9 @@ pub async fn create_room(
     ))
 }
 
-/// Local UI-development shortcut: create a one-seat game with three virtual opponents at
-/// starting-structure placement. It skips invitations, bidding, and faction selection; the human
-/// places their structures while virtual opponents follow the normal setup order automatically.
+/// Local UI-development shortcut: one authenticated controller manually plays all four seats.
+/// It skips invitations, bidding, and faction selection, then follows the normal placement,
+/// booster, action, and pending-decision order without automated opponents.
 /// Resource spending, invalid-action rejection, and snapshots use the normal live game paths.
 /// Release builds expose it only when the operator explicitly opts in with `GAIA_DEV_MODE=1`.
 pub async fn create_dev_game(
@@ -133,28 +137,58 @@ pub async fn create_dev_game(
         ));
     }
 
-    let seed = req.seed.unwrap_or_else(|| "gaia-ui-dev".to_string());
+    let seed = req.seed.unwrap_or_else(|| {
+        if req.full_setup {
+            uuid::Uuid::new_v4().to_string()
+        } else {
+            "gaia-ui-dev".to_string()
+        }
+    });
+    let nickname = req.nickname.as_deref().unwrap_or("DEV");
+    let setup_mode = if req.full_setup {
+        req.setup_mode.unwrap_or(SetupMode::Bidding)
+    } else {
+        SetupMode::Sequential
+    };
     let faction = req.faction.unwrap_or(FactionId::Terrans);
     let (code, player_id, setup) =
-        GameSetupService::create_room(&app, "DEV", Some(seed.clone()), SetupMode::Sequential)
-            .await?;
+        GameSetupService::create_room(&app, nickname, Some(seed.clone()), setup_mode).await?;
     let bot_player_ids = {
         let mut rooms = app.rooms.write().await;
         rooms.alloc_virtual_player_ids(3)
     };
-    let game_state =
-        build_dev_game_state(&code, &seed, player_id, &bot_player_ids, &setup, faction)?;
+    let mut game_state = if req.full_setup {
+        let mut players = vec![(player_id, nickname.to_string())];
+        players.extend(
+            bot_player_ids
+                .iter()
+                .enumerate()
+                .map(|(index, id)| (*id, format!("DEV {}", index + 2))),
+        );
+        MapEngine::init_game_state(&code, &seed, &players, &setup)
+    } else {
+        build_dev_game_state(&code, &seed, player_id, &bot_player_ids, &setup, faction)?
+    };
+
+    game_state.dev_controller = Some(player_id);
+    for player in &mut game_state.players {
+        player.nickname = player.nickname.replace("BOT ·", "DEV ·");
+    }
 
     let (players, host_player_id) = {
         let mut rooms = app.rooms.write().await;
         let room = rooms
             .get_room_mut(&code)
             .ok_or_else(|| ServerError::RoomNotFound(code.clone()))?;
-        room.state = crate::room::manager::RoomState::FactionSelection;
+        room.state = if req.full_setup {
+            crate::room::manager::RoomState::Lobby
+        } else {
+            crate::room::manager::RoomState::FactionSelection
+        };
         room.game_state = Some(game_state.clone());
         room.dev_human_player = Some(player_id);
         for (_, _, ready) in &mut room.players {
-            *ready = true;
+            *ready = !req.full_setup;
         }
         (lobby_players(room), room.host_player)
     };
@@ -261,7 +295,7 @@ pub async fn get_room(
 
     Ok(Json(serde_json::json!({
         "code":         room.code,
-        "player_count": room.player_count(),
+        "player_count": room.display_players().len(),
         "state":        format!("{:?}", room.state),
         "host_player_id": room.host_player,
         "players":      room.players.iter()
@@ -361,8 +395,18 @@ pub async fn health() -> StatusCode {
     StatusCode::OK
 }
 
+/// Public room browser — every room still open to `join_room` right now. Lobby-only
+/// rooms aren't durably persisted (see `AppState::ensure_room_loaded`), so this reads
+/// straight off the in-memory `RoomManager` rather than the DB.
+pub async fn list_rooms(
+    State(app): State<AppState>,
+) -> Json<Vec<crate::room::manager::RoomSummary>> {
+    let rooms = app.rooms.read().await;
+    Json(rooms.list_rooms())
+}
+
 fn lobby_players(room: &crate::room::manager::Room) -> Vec<LobbyPlayer> {
-    room.players
+    room.display_players()
         .iter()
         .map(|(player_id, nickname, ready)| LobbyPlayer {
             player_id: *player_id,

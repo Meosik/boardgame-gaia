@@ -7,7 +7,7 @@ use axum::{
 };
 use tokio::select;
 
-use gaia_engine::{error::RuleError, MapEngine};
+use gaia_engine::{error::RuleError, MapEngine, RuleEngine};
 use gaia_protocol::Revision;
 
 use crate::{
@@ -152,7 +152,7 @@ async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) 
                         let rooms = app.rooms.read().await;
                         let room = rooms.get_room(&room_code);
                         (
-                            room.map(|r| r.player_count()).unwrap_or(0),
+                            room.map(|r| r.display_players().len()).unwrap_or(0),
                             room.map(lobby_state_message),
                         )
                     };
@@ -180,7 +180,7 @@ async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) 
                     send_error(&mut socket, error.code(), &error.to_string()).await;
                     return;
                 }
-                Ok(ClientFrame::Command(_)) => {
+                Ok(ClientFrame::Command(_) | ClientFrame::QueryValidActions) => {
                     send_error(&mut socket, "PROTOCOL", "first message must be JoinRoom").await;
                     return;
                 }
@@ -262,6 +262,10 @@ async fn handle_client_message(
         ClientFrame::Command(envelope) => envelope,
         ClientFrame::JoinRoom { .. } => {
             send_error(socket, "PROTOCOL", "already joined").await;
+            return;
+        }
+        ClientFrame::QueryValidActions => {
+            handle_query_valid_actions(app, room_code, player_id, socket).await;
             return;
         }
     };
@@ -404,6 +408,46 @@ async fn handle_client_message(
     }
 }
 
+/// Answers `ClientFrame::QueryValidActions` directly off the live in-memory room — a pure read,
+/// so unlike every `ClientCommand` there's no candidate-clone/DB-commit/revision-advance dance,
+/// just `RuleEngine::get_valid_actions` against the room's current `game_state`.
+async fn handle_query_valid_actions(
+    app: &AppState,
+    room_code: &str,
+    player_id: u8,
+    socket: &mut WebSocket,
+) {
+    let rooms = app.rooms.read().await;
+    let Some(room) = rooms.get_room(room_code) else {
+        drop(rooms);
+        send_error(socket, "ROOM_NOT_FOUND", "room not found").await;
+        return;
+    };
+    let Some(game_state) = room.game_state.as_ref() else {
+        let revision = room.revision;
+        drop(rooms);
+        send_msg(
+            socket,
+            &ServerMessage::ValidActions {
+                actions: vec![],
+                revision,
+            }
+            .into(),
+        )
+        .await;
+        return;
+    };
+    let acting_player = crate::services::dev_game::acting_player(room, player_id);
+    let actions = RuleEngine::get_valid_actions(game_state, acting_player);
+    let revision = room.revision;
+    drop(rooms);
+    send_msg(
+        socket,
+        &ServerMessage::ValidActions { actions, revision }.into(),
+    )
+    .await;
+}
+
 async fn handle_player_ready(
     app: &AppState,
     room_code: &str,
@@ -420,17 +464,18 @@ async fn handle_player_ready(
             room.set_ready(player_id, ready)
                 .map_err(|_| RuleError::ActionNotAllowed("player not found".into()))?;
 
-            if room.all_ready() && room.player_count() == 4 {
+            let manual_control = crate::services::dev_game::is_manual_controller(room, player_id);
+            if room.all_ready() && (room.player_count() == 4 || manual_control) {
                 let setup = room
                     .setup
                     .as_ref()
                     .ok_or_else(|| RuleError::ActionNotAllowed("setup missing".into()))?;
                 let players: Vec<(u8, String)> = room
-                    .players
+                    .display_players()
                     .iter()
                     .map(|(id, nickname, _)| (*id, nickname.clone()))
                     .collect();
-                let game_state = match setup.setup_mode {
+                let mut game_state = match setup.setup_mode {
                     gaia_engine::SetupMode::Sequential => {
                         MapEngine::init_game_state(room_code, &room.seed, &players, setup)
                     }
@@ -438,6 +483,9 @@ async fn handle_player_ready(
                         room_code, &room.seed, &players, setup,
                     )?,
                 };
+                if manual_control {
+                    game_state.dev_controller = Some(player_id);
+                }
                 room.game_state = Some(game_state);
                 room.state = RoomState::FactionSelection;
             }
@@ -462,7 +510,7 @@ async fn handle_player_ready(
 fn lobby_state_message(room: &Room) -> ServerMessage {
     ServerMessage::LobbyState {
         players: room
-            .players
+            .display_players()
             .iter()
             .map(|(player_id, nickname, ready)| LobbyPlayer {
                 player_id: *player_id,

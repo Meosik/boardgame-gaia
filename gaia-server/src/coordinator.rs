@@ -219,10 +219,16 @@ pub struct TransitionOutcome {
 /// Requires `room.game_state` to already exist (`mutate` runs after cloning,
 /// so it may still consume/replace it, but the room must have one before the
 /// call — these transitions only happen mid-game).
+///
+/// `mutate` is fallible (`Result`, not `()`): an `Err` aborts before anything is committed or
+/// swapped into `room`, so a failed engine transition leaves the room exactly as it was — the
+/// caller observes the error instead of the previous behavior of logging it and silently
+/// committing whatever partial/unchanged `candidate` resulted (a stuck room could advance its
+/// revision and broadcast a snapshot even though the round never actually moved forward).
 pub async fn apply_server_transition(
     app: &AppState,
     room_code: &str,
-    mutate: impl FnOnce(&mut Room),
+    mutate: impl FnOnce(&mut Room) -> Result<(), RuleError>,
 ) -> Result<TransitionOutcome, CommandError> {
     app.ensure_room_loaded(room_code)
         .await
@@ -234,7 +240,7 @@ pub async fn apply_server_transition(
         .ok_or_else(|| CommandError::RoomNotFound(room_code.to_string()))?;
 
     let mut candidate = room.clone();
-    mutate(&mut candidate);
+    mutate(&mut candidate)?;
 
     let state = candidate.game_state.as_ref().ok_or_else(|| {
         ServerError::Internal("server transition requires an existing game state".into())
@@ -363,6 +369,9 @@ pub async fn broadcast_snapshot(app: &AppState, room_code: &str, revision: Revis
 /// WebSocket connection on every setup-stage transition, so this gap hit on
 /// every single transition, not just true reconnects.
 pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
+    if room.state == crate::room::manager::RoomState::Lobby {
+        return lobby_view(room);
+    }
     room.game_state
         .as_ref()
         .map(|gs| gs.serialize())
@@ -373,7 +382,7 @@ fn lobby_view(room: &Room) -> serde_json::Value {
     json!({
         "phase": "lobby",
         "state": room.state.as_db_str(),
-        "players": room.players.iter().map(|(id, nick, ready)| json!({
+        "players": room.display_players().iter().map(|(id, nick, ready)| json!({
             "player_id": id, "nickname": nick, "ready": ready,
         })).collect::<Vec<_>>(),
         "setup": room.setup,

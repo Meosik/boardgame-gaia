@@ -239,16 +239,26 @@ async fn a_full_four_player_game_reaches_game_ended_with_real_scores() {
             .collect(),
         "final_scores should cover exactly the 4 seated players"
     );
-    let winner = game_ended["winner"]
-        .as_u64()
-        .expect("game_ended should carry a numeric winner");
+    let winners: Vec<u64> = game_ended["winners"]
+        .as_array()
+        .expect("game_ended should carry a winners array")
+        .iter()
+        .map(|w| {
+            w.as_u64()
+                .expect("each winner should be a numeric player id")
+        })
+        .collect();
     assert!(
-        scored_players.contains(&winner),
-        "winner {winner} should be one of the seated players {scored_players:?}"
+        !winners.is_empty(),
+        "winners should list at least one player"
+    );
+    assert!(
+        winners.iter().all(|w| scored_players.contains(w)),
+        "winners {winners:?} should all be seated players {scored_players:?}"
     );
     println!(
-        "Full 4-player playthrough reached game_ended: final_scores={:?}, winner={}",
-        final_scores, winner
+        "Full 4-player playthrough reached game_ended: final_scores={:?}, winners={:?}",
+        final_scores, winners
     );
 }
 
