@@ -86,9 +86,10 @@ describe('SpaceshipExplorePopup', () => {
       />,
     );
 
+    expect(screen.getByRole('dialog')).toHaveClass('board-choice-popup--centered');
     fireEvent.click(screen.getByRole('button', { name: '함선 탐사' }));
-    expect(screen.getByText('탐사선')).toBeInTheDocument();
-    expect(screen.getByText('승점')).toBeInTheDocument();
+    expect(screen.getByLabelText('탐사선 1개')).toBeInTheDocument();
+    expect(screen.getByLabelText('승점 5점')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '함선 탐사 확정' }));
     expect(onConfirm).toHaveBeenCalledOnce();
   });
@@ -125,6 +126,6 @@ describe('SpaceshipExplorePopup', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: '함선 탐사' }));
-    expect(screen.getByText('2번 슬롯에 배치 · 파워 2 충전')).toBeInTheDocument();
+    expect(screen.getByLabelText('파워 2 충전')).toBeInTheDocument();
   });
 });

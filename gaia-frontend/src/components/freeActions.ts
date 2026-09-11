@@ -30,40 +30,40 @@ export const FREE_ACTIONS: FreeActionOption[] = [
     cost: { resource: 'bowl2', amount: 2 },
   },
   {
-    label: '크레딧 4 → 정보 큐브 1 (Hadsch Hallas)',
+    label: '크레딧 4 → 정보 큐브 1 (하드쉬 할라)',
     kind: 'CreditsToQic',
     cost: { resource: 'credits', amount: 4 },
     faction: 'HadschHallas',
     requiresPlanetaryInstitute: true,
   },
   {
-    label: '크레딧 3 → 광석 1 (Hadsch Hallas)',
+    label: '크레딧 3 → 광석 1 (하드쉬 할라)',
     kind: 'CreditsToOre',
     cost: { resource: 'credits', amount: 3 },
     faction: 'HadschHallas',
     requiresPlanetaryInstitute: true,
   },
   {
-    label: '크레딧 4 → 지식 1 (Hadsch Hallas)',
+    label: '크레딧 4 → 지식 1 (하드쉬 할라)',
     kind: 'CreditsToKnowledge',
     cost: { resource: 'credits', amount: 4 },
     faction: 'HadschHallas',
     requiresPlanetaryInstitute: true,
   },
   {
-    label: '가이아포머 1 → 정보 큐브 1 (Bal T’aks)',
+    label: '가이아포머 1 → 정보 큐브 1 (발 타크)',
     kind: 'GaiaformerToQic',
     cost: { resource: 'gaiaformer', amount: 1 },
     faction: 'BalTaks',
   },
   {
-    label: '파워 1(3단계) → 가이아 영역 + 지식 1 (Nevlas)',
+    label: '파워 1(3단계) → 가이아 영역 + 지식 1 (네블라)',
     kind: 'PowerToGaiaKnowledge',
     cost: { resource: 'bowl3', amount: 1 },
     faction: 'Nevlas',
   },
   {
-    label: '광석 1 → 파워 1(3단계) (Xenos)',
+    label: '광석 1 → 파워 1(3단계) (제노스)',
     kind: 'OreToPowerBowl3',
     cost: { resource: 'ore', amount: 1 },
     faction: 'Xenos',
@@ -112,13 +112,21 @@ export function availableFreeActionResource(
   return player.resources[resource];
 }
 
+export function spendablePower(player: PlayerState): number {
+  const multiplier = player.faction === 'Nevlas'
+    && player.structures.some(({ kind }) => kind === 'PlanetaryInstitute') ? 2 : 1;
+  return player.resources.power.bowl3 * multiplier
+    + (player.resources.power.brainstone === 'Area3' ? 3 : 0);
+}
+
 export function maxFreeActionCount(
   player: PlayerState | undefined,
   option: FreeActionOption,
 ): number {
   return Math.min(
     MAX_FREE_ACTION_COUNT,
-    Math.floor(availableFreeActionResource(player, option.cost.resource) / option.cost.amount),
+    Math.floor((player && option.cost.resource === 'bowl3' && option.kind !== 'PowerToGaiaKnowledge'
+      ? spendablePower(player) : availableFreeActionResource(player, option.cost.resource)) / option.cost.amount),
   );
 }
 

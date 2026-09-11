@@ -114,6 +114,12 @@ interface Props {
     ship: SpaceshipId,
     anchor: { x: number; y: number },
   ) => void;
+  /** Lets board-routed actions submit directly from the chosen hex instead of opening a second
+   * confirmation popup. Return true when the click was consumed. */
+  onSelectedActionHexClick?: (
+    hex: Hex,
+    anchor: { x: number; y: number },
+  ) => boolean;
   /** Lets a temporarily activated board action reuse the normal planet popup. */
   allowPlanetPopupDuringSelectedAction?: boolean;
   /** DEV sandbox target mode: clicking an owned structure opens the normal charge decision. */
@@ -149,6 +155,7 @@ export function GameBoard({
   onOwnedStructureClick,
   onPlanetClick,
   onSpaceshipClick,
+  onSelectedActionHexClick,
   allowPlanetPopupDuringSelectedAction = false,
   devPowerChargeTargeting = false,
   onPowerChargeStructureClick,
@@ -233,6 +240,7 @@ export function GameBoard({
       }
       return;
     }
+    if (onSelectedActionHexClick?.(hex, { x: event.clientX, y: event.clientY })) return;
     if (allowPlanetPopupDuringSelectedAction) {
       if (hex.planet && hex.structures.length === 0 && onPlanetClick) {
         onPlanetClick(hex, { x: event.clientX, y: event.clientY });

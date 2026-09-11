@@ -25,7 +25,12 @@ describe('GamePieceIcon', () => {
     );
 
     for (const [kind, viewBox] of Object.entries(EXPECTED_VIEW_BOX)) {
-      expect(screen.getByRole('img', { name: kind })).toHaveAttribute('viewBox', viewBox);
+      const icon = screen.getByRole('img', { name: kind });
+      expect(icon).toHaveAttribute('viewBox', viewBox);
+      const clip = icon.querySelector('clipPath')!;
+      expect(icon.querySelector('image')).toHaveAttribute('clip-path', `url(#${clip.id})`);
+      const rect = clip.querySelector('rect')!;
+      expect(['x', 'y', 'width', 'height'].map(key => rect.getAttribute(key)).join(' ')).toBe(viewBox);
     }
   });
 

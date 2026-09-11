@@ -110,7 +110,7 @@ describe('CreateRoomView control branches', () => {
     expect(createRoom).not.toHaveBeenCalled();
   });
 
-  it('creates with trimmed inputs, selected setup mode, regenerate, and back branches', async () => {
+  it('creates with a trimmed nickname and no seed input, selected setup mode, regenerate, and back branches', async () => {
     const createRoom = vi.fn().mockResolvedValue(undefined);
     const regenerateSetup = vi.fn().mockResolvedValue(undefined);
     const onRoomCreated = vi.fn();
@@ -121,15 +121,15 @@ describe('CreateRoomView control branches', () => {
     render(<CreateRoomView onRoomCreated={onRoomCreated} onBack={onBack} />);
 
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '  Host  ' } });
-    fireEvent.change(screen.getByLabelText('시드 (선택)'), { target: { value: '  seed-1  ' } });
+    expect(screen.queryByLabelText('시드 (선택)')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('radio', { name: /순차 선택/ }));
     fireEvent.click(screen.getByRole('button', { name: '재생성' }));
-    await waitFor(() => expect(regenerateSetup).toHaveBeenCalledWith('seed-1'));
+    await waitFor(() => expect(regenerateSetup).toHaveBeenCalledWith());
     fireEvent.click(screen.getByRole('button', { name: '방 만들기' }));
     await waitFor(() => expect(onRoomCreated).toHaveBeenCalledOnce());
     fireEvent.click(screen.getByRole('button', { name: '뒤로' }));
 
-    expect(createRoom).toHaveBeenCalledWith('Host', 'seed-1', 'sequential');
+    expect(createRoom).toHaveBeenCalledWith('Host', undefined, 'sequential');
     expect(onBack).toHaveBeenCalledOnce();
   });
 });
@@ -150,7 +150,9 @@ describe('JoinRoomView control branches', () => {
   });
 
   it('joins with uppercase room code, disables buttons while loading, then supports back', async () => {
-    const joinRoom = vi.fn(() => new Promise<void>((resolve) => setTimeout(resolve, 5)));
+    let resolveJoin!: () => void;
+    const pendingJoin = new Promise<void>((resolve) => { resolveJoin = resolve; });
+    const joinRoom = vi.fn(() => pendingJoin);
     const onRoomJoined = vi.fn();
     const onBack = vi.fn();
     installRoomActions({ joinRoom });
@@ -166,8 +168,12 @@ describe('JoinRoomView control branches', () => {
     expect(screen.getByRole('button', { name: '참가 중...' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '뒤로' })).toBeDisabled();
     expect(joinRoom).toHaveBeenCalledWith('AB12', 'Guest');
+    expect(onRoomJoined).not.toHaveBeenCalled();
 
-    await waitFor(() => expect(onRoomJoined).toHaveBeenCalledOnce());
+    await act(async () => { resolveJoin(); });
+    expect(onRoomJoined).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: '참가하기' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '뒤로' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: '뒤로' }));
     expect(onBack).toHaveBeenCalledOnce();
   });

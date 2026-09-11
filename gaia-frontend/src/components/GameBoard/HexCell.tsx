@@ -1,3 +1,5 @@
+import moweydsPowerRing from '../../assets/structures/special/moweyds-power-ring.png';
+import { useReplayHighlight } from '../../replay/highlight';
 import { hexCorners } from './hex-utils';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { PlanetHex } from './PlanetHex';
@@ -52,9 +54,15 @@ export function HexCell({
   isInspectable = false,
   onClick,
 }: Props) {
+  const replay = useReplayHighlight();
+  const lastMove = replay?.hexes.has(`${hex.coord.q},${hex.coord.r}`);
   const points = hexCorners(cx, cy, size);
   const planet = hex.planet;
   const hasMutedBackground = mutePrintedBackground && planet === null;
+  const satelliteCount = hex.satellites.length;
+  const satelliteGap = size * 0.04;
+  const satelliteSize = size * Math.min(0.475, (1.4 - 0.04 * (satelliteCount - 1)) / Math.max(1, satelliteCount));
+  const satelliteRowWidth = satelliteCount * satelliteSize + Math.max(0, satelliteCount - 1) * satelliteGap;
 
   // The grid line itself always shows, printed sector/interspace art or not
   // — only the FILL (the plain navy hex backdrop `HexCell` draws for
@@ -110,7 +118,7 @@ export function HexCell({
     : null;
   const gaiaformerOwner = planet?.planet_type === 'Transdim'
     && planet.owner !== null
-    && !planet.is_gaia_formed
+    && hex.structures.length === 0
     ? planet.owner
     : null;
   const gaiaformerSrc = gaiaformerOwner !== null
@@ -130,7 +138,7 @@ export function HexCell({
       ? 1.05
       : 1.12
     : 1;
-  const renderedStructureScale = structureScale * structureVisibilityScale;
+  const renderedStructureScale = structureScale * structureVisibilityScale * (replay ? 1.15 : 1);
   const structureCenterXOffset = structureAsset === 'research_lab'
     ? 0.179
     : structureAsset === 'planetary_institute'
@@ -189,13 +197,23 @@ export function HexCell({
           hexKey={`${hex.coord.q},${hex.coord.r}`}
         />
       )}
+      {hasPowerRing && structureColor && (
+        <image href={moweydsPowerRing}
+          x={cx - size * 0.78} y={cy - size * 0.86}
+          width={size * 1.56} height={size * 1.56}
+          preserveAspectRatio="xMidYMid meet"
+          aria-label="모웨이드 파워 링 · 건물 파워값 +2"
+          style={{ pointerEvents: 'none' }}
+        />
+      )}
       {gaiaformerSrc && (
         <image
+          className="game-board-gaiaformer"
           href={gaiaformerSrc}
           x={cx - size * 0.297}
           y={cy - size * 0.52}
-          width={size * 0.62}
-          height={size * 0.62}
+          width={size * (replay ? 0.72 : 0.62)}
+          height={size * (replay ? 0.72 : 0.62)}
           preserveAspectRatio="xMidYMid meet"
           style={{ pointerEvents: 'none' }}
           aria-label="가이아포머"
@@ -223,10 +241,10 @@ export function HexCell({
         <GamePieceIcon
           className={emphasizeStructure ? 'game-board-structure game-board-structure--emphasized' : 'game-board-structure'}
           kind="ivits-station"
-          x={cx - size * renderedStructureScale / 2}
-          y={cy - size * 0.58 - structureLift}
-          width={size * renderedStructureScale}
-          height={size * renderedStructureScale}
+          x={cx - size * 0.6}
+          y={cy - size * 0.6}
+          width={size * 1.2}
+          height={size * 1.2}
           decorative={false}
           label="이비츠 우주 정거장"
           style={{ pointerEvents: 'visiblePainted' }}
@@ -236,10 +254,10 @@ export function HexCell({
         <image
           className={emphasizeStructure ? 'game-board-structure game-board-structure--emphasized' : 'game-board-structure'}
           href={structureSrc}
-          x={cx + size * structureCenterXOffset - size * renderedStructureScale / 2}
-          y={cy - size * structureTopOffset + structureDownwardOffset - structureLift}
-          width={size * renderedStructureScale}
-          height={size * renderedStructureScale}
+          x={hasPowerRing ? cx - size * 0.37 : cx + size * structureCenterXOffset - size * renderedStructureScale / 2}
+          y={hasPowerRing ? cy - size * 0.37 : cy - size * structureTopOffset + structureDownwardOffset - structureLift}
+          width={size * (hasPowerRing ? 0.74 : renderedStructureScale)}
+          height={size * (hasPowerRing ? 0.74 : renderedStructureScale)}
           preserveAspectRatio="xMidYMid meet"
           style={{ pointerEvents: 'visiblePainted' }}
           aria-label="구조물"
@@ -250,7 +268,7 @@ export function HexCell({
         if (!asset) return null;
         const color = colorForPlayer(playerFactions[structure.owner]);
         const src = structureImageSrc(color, asset);
-        const tokenSize = size * 0.5;
+        const tokenSize = size * (replay ? 0.575 : 0.5);
         return (
           <image
             key={`${structure.owner}-${JSON.stringify(structure.kind)}-${index}`}
@@ -266,30 +284,27 @@ export function HexCell({
           />
         );
       })}
-      {hasPowerRing && structureColor && (
-        // Moweyds' Power Ring (rulebook Appendix I) has no dedicated art asset, so it reuses the
-        // same per-color "marker" token image as Satellites — placed opposite them (bottom-left
-        // vs. top-right) so the two badges never overlap.
+      {hex.satellites.map((owner, index) => (
         <image
-          href={structureImageSrc(structureColor, 'marker')}
-          x={cx - size * 0.52}
-          y={cy + size * 0.28}
-          width={size * 0.24}
-          height={size * 0.24}
-          preserveAspectRatio="xMidYMid meet"
-          style={{ pointerEvents: 'none' }}
-        />
-      )}
-      {hex.satellites.length > 0 && (
-        <image
-          href={structureImageSrc(colorForPlayer(playerFactions[hex.satellites[0]]), 'marker')}
-          x={cx - size * 0.233}
+          key={owner}
+          className="game-board-satellite"
+          role="img"
+          aria-label={`플레이어 ${owner + 1} 위성`}
+          href={structureImageSrc(colorForPlayer(playerFactions[owner]), 'marker')}
+          x={satelliteCount === 1 ? cx - size * 0.233 : cx - satelliteRowWidth / 2 + index * (satelliteSize + satelliteGap)}
           y={cy - size * 0.57}
-          width={size * 0.475}
-          height={size * 0.475}
+          width={satelliteSize}
+          height={satelliteSize}
           preserveAspectRatio="xMidYMid meet"
           style={{ pointerEvents: 'none' }}
         />
+      ))}
+      {lastMove && (
+        <g className="replay-hex-highlight" pointerEvents="none" aria-label={`직전 행동: ${replay?.label}`}>
+          <polygon points={hexCorners(cx, cy, size * 0.91)} fill="none" stroke="#111827" strokeWidth="6" />
+          <polygon points={hexCorners(cx, cy, size * 0.91)} fill="none" stroke="#fde047" strokeWidth="3" />
+
+        </g>
       )}
     </g>
   );

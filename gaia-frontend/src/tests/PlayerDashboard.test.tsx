@@ -54,9 +54,10 @@ describe('PowerCycle', () => {
     expect(screen.queryByText('GF')).not.toBeInTheDocument();
   });
 
-  it('renders GF label when gaia_forming > 0', () => {
+  it('shows Gaia-forming power in the Gaia area instead of a separate bowl', () => {
     render(<PowerCycle power={{ ...mockPower, gaia_forming: 2 }} />);
-    expect(screen.getByText('GF')).toBeInTheDocument();
+    expect(screen.queryByText('GF')).not.toBeInTheDocument();
+    expect(screen.getByText('G').parentElement).toHaveTextContent('G3');
   });
 
   it('renders the Taklons Brainstone in its current bowl', () => {
@@ -66,7 +67,7 @@ describe('PowerCycle', () => {
         faction="Taklons"
       />,
     );
-    expect(screen.getByTitle('Taklons Brainstone')).toBeInTheDocument();
+    expect(screen.getByTitle('타클론 브레인스톤')).toBeInTheDocument();
   });
 });
 
@@ -93,16 +94,18 @@ describe('PlayerDashboard', () => {
       space_giants_special_action_used_this_round: false,
       tech_tiles: [4],
       advanced_tech_tiles: [7],
+      artifacts: [2],
     };
 
     render(<PlayerDashboard player={player} />);
 
     expect(screen.queryByText('Me')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('승점 14점')).not.toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Taklons 종족 보드' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '타클론 종족 보드' })).toBeInTheDocument();
     expect(screen.getByAltText('일반 기술 타일 4')).toBeInTheDocument();
     expect(screen.getByAltText('고급 기술 타일 7')).toBeInTheDocument();
     expect(screen.getByAltText('연방 토큰 2')).toBeInTheDocument();
+    expect(screen.getByAltText('아티팩트 2')).toBeInTheDocument();
   });
 
   it('shows only Gaiaformers that are currently available to deploy', () => {

@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { shallow } from 'zustand/shallow';
 import { useRoomStore } from '../../store/roomStore';
 import type { GameSetup, SetupMode } from '../../types/game';
+import { factionDisplayName } from '../../displayNames';
 
 interface Props {
   onRoomCreated: () => void;
+  manualControl?: boolean;
   onBack: () => void;
 }
 
-export function CreateRoomView({ onRoomCreated, onBack }: Props) {
-  const [nickname, setNickname] = useState('');
-  const [seed, setSeed] = useState('');
+export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }: Props) {
+  const [nickname, setNickname] = useState(manualControl ? 'DEV' : '');
   const [setupMode, setSetupMode] = useState<SetupMode>('bidding');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,7 +31,11 @@ export function CreateRoomView({ onRoomCreated, onBack }: Props) {
     setLoading(true);
     setError('');
     try {
-      await actions.createRoom(nickname.trim(), seed.trim() || undefined, setupMode);
+      if (manualControl) {
+        await actions.createRoom(nickname.trim(), undefined, setupMode, true);
+      } else {
+        await actions.createRoom(nickname.trim(), undefined, setupMode);
+      }
       onRoomCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : '방 생성에 실패했습니다');
@@ -42,7 +47,7 @@ export function CreateRoomView({ onRoomCreated, onBack }: Props) {
   async function handleRegenerate() {
     setLoading(true);
     try {
-      await actions.regenerateSetup(seed.trim() || undefined);
+      await actions.regenerateSetup();
     } catch (e) {
       setError(e instanceof Error ? e.message : '재생성에 실패했습니다');
     } finally {
@@ -62,16 +67,6 @@ export function CreateRoomView({ onRoomCreated, onBack }: Props) {
           onChange={(e) => setNickname(e.target.value)}
           maxLength={16}
           placeholder="닉네임 입력"
-        />
-      </div>
-      <div className="form-group">
-        <label htmlFor="seed">시드 (선택)</label>
-        <input
-          id="seed"
-          type="text"
-          value={seed}
-          onChange={(e) => setSeed(e.target.value)}
-          placeholder="랜덤 시드 (비워두면 자동)"
         />
       </div>
       <fieldset className="setup-mode-picker">
@@ -148,7 +143,7 @@ function SetupPreview({ setup }: { setup: GameSetup }) {
         <span className="preview-value">
           {setup.factions.map((faction, i) => (
             <span key={i} className="faction-pair">
-              {faction}
+              {factionDisplayName(faction)}
             </span>
           ))}
         </span>

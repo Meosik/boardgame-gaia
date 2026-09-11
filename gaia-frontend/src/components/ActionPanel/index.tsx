@@ -1,3 +1,6 @@
+import { ADVANCED_TECH_TILE_LABELS } from '../advancedTechDescriptions';
+import { ARTIFACT_LABELS } from '../artifactDescriptions';
+import { ActionCrop } from '../ActionCrop';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { shallow } from 'zustand/shallow';
@@ -35,10 +38,22 @@ interface Props {
   myPlayerId: PlayerId;
   /** Shows only the details for an action already selected on the board. */
   focusedAction?: boolean;
-  /** Variants printed in one physical action space, such as Twilight's +3 range action. */
-  focusedActionOptions?: GameAction['type'][];
   /** Preselects an artifact clicked directly on the Twilight board. */
   initialArtifactId?: number | null;
+  /** Optional board-controlled Federation token selection. */
+  federationTokenChoice?: FederationTokenChoice | null;
+  onFederationTokenChoice?: (choice: FederationTokenChoice | null) => void;
+  hideFederationTokenChoices?: boolean;
+  /** Board-driven follow-up for Federation token kind 12 (gain a Standard Tech tile). */
+  federationBonusCoord?: { q: number; r: number } | null;
+  onFederationBonusCoord?: (coord: { q: number; r: number } | null) => void;
+  federationBonusTechTile?: number | null;
+  federationBonusResearchTrack?: ResearchTrack | null;
+  hideFederationTechPicker?: boolean;
+  /** Optional board-controlled Federation token effect selection for Twilight's replay action. */
+  replayFederationKind?: number | null;
+  onReplayFederationKind?: (kind: number | null) => void;
+  hideReplayFederationChoices?: boolean;
 }
 
 type ActionKind = GameAction['type'];
@@ -53,33 +68,33 @@ const ACTION_BUTTONS: { label: string; actionType: ActionKind; shortcut?: string
   { label: '부스터 +3 사거리 광산 건설', actionType: 'RoundBoosterRangeBuild' },
   { label: '부스터 +3 사거리 가이아 프로젝트', actionType: 'RoundBoosterRangeGaiaFormation' },
   { label: '부스터 +3 사거리 함선 탐사', actionType: 'RoundBoosterRangeExploreSpaceship' },
-  { label: '특수 능력', actionType: 'SpecialAction', shortcut: 'S' },
-  { label: 'Ambas 행성의회 ↔ 광산 교환', actionType: 'AmbasSwapPlanetaryInstitute' },
-  { label: 'Firaks 연구소 강등 + 무료 연구', actionType: 'FiraksDowngradeResearchLab' },
-  { label: 'Bescods 최저 연구 무료 상승', actionType: 'BescodsLowestResearchAdvance' },
-  { label: 'Ivits 우주 정거장 건설', actionType: 'IvitsPlaceSpaceStation' },
-  { label: 'Tinkeroids 팅커링 타일 사용', actionType: 'TinkeroidsUseTile' },
-  { label: 'Moweyds 파워 링 설치', actionType: 'MoweydsPlacePowerRing' },
+  { label: '스페이스자이언트 행성의회: 기술 타일 획득', actionType: 'SpecialAction', shortcut: 'S' },
+  { label: '앰바스 행성의회 ↔ 광산 교환', actionType: 'AmbasSwapPlanetaryInstitute' },
+  { label: '파이락 연구소 강등 + 무료 연구', actionType: 'FiraksDowngradeResearchLab' },
+  { label: '매드 안드로이드 최저 연구 무료 상승', actionType: 'BescodsLowestResearchAdvance' },
+  { label: '하이브 우주 정거장 건설', actionType: 'IvitsPlaceSpaceStation' },
+  { label: '팅커로이드 팅커링 타일 사용', actionType: 'TinkeroidsUseTile' },
+  { label: '모웨이드 파워 링 설치', actionType: 'MoweydsPlacePowerRing' },
   { label: '함선 탐사', actionType: 'ExploreSpaceship', shortcut: 'X' },
   { label: '아티팩트 조사', actionType: 'ExamineArtifact', shortcut: 'A' },
   { label: '함선 크레딧 액션 (테라포밍 1단계 무료)', actionType: 'SpaceshipCreditTerraform' },
-  { label: 'Twilight 무료 업그레이드 (교역소→연구소)', actionType: 'TwilightFreeResearchLab' },
-  { label: 'Twilight 연방 토큰 효과 재사용 (정보 큐브 3)', actionType: 'TwilightReplayFederationToken' },
-  { label: 'Twilight +3 사거리 광산 건설 (지식 1)', actionType: 'TwilightRangeBuild' },
-  { label: 'Twilight +3 사거리 가이아 프로젝트 (지식 1)', actionType: 'TwilightRangeGaiaFormation' },
-  { label: 'Twilight +3 사거리 함선 탐사 (지식 1)', actionType: 'TwilightRangeExploreSpaceship' },
-  { label: 'Rebellion 무료 업그레이드 (광산→교역소)', actionType: 'RebellionFreeTradingStation' },
-  { label: 'Rebellion 지식 액션 (지식 2 → 크레딧 2 + 정보 큐브 1)', actionType: 'RebellionCreditsAndQic' },
-  { label: 'Rebellion 표준 기술 타일 획득 (정보 큐브 3)', actionType: 'RebellionGainTechTile' },
-  { label: 'T F Mars 정보 큐브 액션 (정보 큐브 2 → 2 + 기술 타일당 1점)', actionType: 'TFMarsTechBonus' },
-  { label: 'T F Mars 즉시 가이아포밍 (파워 2)', actionType: 'TFMarsGaiaFormation' },
-  { label: 'Eclipse 정보 큐브 액션 (정보 큐브 2 → 2 + 행성 종류당 1점)', actionType: 'EclipsePlanetTypeBonus' },
-  { label: 'Eclipse 연구 부스트 (파워 3 + 지식 2)', actionType: 'EclipseResearchBoost' },
-  { label: 'Eclipse 소행성 광산 (크레딧 6)', actionType: 'EclipseAsteroidMine' },
-  { label: 'Gleens 특수 능력: 광산 건설 (+2 사거리)', actionType: 'GleensBuildMine' },
-  { label: 'Gleens 특수 능력: 가이아 프로젝트 (+2 사거리)', actionType: 'GleensGaiaFormation' },
-  { label: 'Gleens 특수 능력: 함선 탐사 (+2 사거리)', actionType: 'GleensExploreSpaceship' },
-  { label: 'Space Giants 특수 능력: 광산 건설 (테라포밍 2단계 무료)', actionType: 'SpaceGiantsBuildMine' },
+  { label: '트와일라잇 무료 업그레이드 (교역소→연구소)', actionType: 'TwilightFreeResearchLab' },
+  { label: '트와일라잇 연방 토큰 효과 재사용 (정보 큐브 3)', actionType: 'TwilightReplayFederationToken' },
+  { label: '트와일라잇 +3 사거리 광산 건설 (지식 1)', actionType: 'TwilightRangeBuild' },
+  { label: '트와일라잇 +3 사거리 가이아 프로젝트 (지식 1)', actionType: 'TwilightRangeGaiaFormation' },
+  { label: '트와일라잇 +3 사거리 함선 탐사 (지식 1)', actionType: 'TwilightRangeExploreSpaceship' },
+  { label: '리벨리온 무료 업그레이드 (광산→교역소)', actionType: 'RebellionFreeTradingStation' },
+  { label: '리벨리온 지식 액션 (지식 2 → 크레딧 2 + 정보 큐브 1)', actionType: 'RebellionCreditsAndQic' },
+  { label: '리벨리온 표준 기술 타일 획득 (정보 큐브 3)', actionType: 'RebellionGainTechTile' },
+  { label: 'T F 마스 정보 큐브 액션 (정보 큐브 2 → 2 + 기술 타일당 1점)', actionType: 'TFMarsTechBonus' },
+  { label: 'T F 마스 즉시 가이아포밍 (파워 2)', actionType: 'TFMarsGaiaFormation' },
+  { label: '이클립스 정보 큐브 액션 (정보 큐브 2 → 2 + 행성 종류당 1점)', actionType: 'EclipsePlanetTypeBonus' },
+  { label: '이클립스 연구 부스트 (파워 3 + 지식 2)', actionType: 'EclipseResearchBoost' },
+  { label: '이클립스 소행성 광산 (크레딧 6)', actionType: 'EclipseAsteroidMine' },
+  { label: '글린 특수 능력: 광산 건설 (+2 사거리)', actionType: 'GleensBuildMine' },
+  { label: '글린 특수 능력: 가이아 프로젝트 (+2 사거리)', actionType: 'GleensGaiaFormation' },
+  { label: '글린 특수 능력: 함선 탐사 (+2 사거리)', actionType: 'GleensExploreSpaceship' },
+  { label: '스페이스자이언트 특수 능력: 광산 건설 (테라포밍 2단계 무료)', actionType: 'SpaceGiantsBuildMine' },
 ];
 
 const PRIMARY_ACTION_TYPES = new Set<ActionKind>([
@@ -125,7 +140,7 @@ const TINKEROIDS_TILE_LABELS: Record<number, string> = {
 
 // Tech tiles (`GameAction::Upgrade`'s `tech_tile_choice` and `GameAction::TechTileSpecialAction`)
 // — ids match `rules::engine`'s `tech_tile_*`/`advanced_tech_tile_*` match tables. Standard ids
-// 2-10 are the base game's 9 tiles; 11-14 are the Lost Fleet expansion's Appendix V additions.
+// 2-10 are the base game's 9 tiles; 11-13 are the Lost Fleet spaceship tile additions.
 // Advanced ids are 1-22, minus 18 (no scan exists for it).
 const TRACK_ORDER: ResearchTrack[] = [
   'Terraforming',
@@ -143,37 +158,12 @@ const TECH_TILE_LABELS: Record<number, string> = {
   5: '수입: 지식 1 + 크레딧 1',
   6: '행성의회/아카데미 파워 가치 +1',
   7: '즉시: 7점',
-  8: '가이아 행성에 광산 건설 시 +8점',
+  8: '가이아 행성에 광산 건설 시 +3점',
   9: '즉시: 행성 종류당 지식 1',
   10: '특수 능력: 파워 4 충전',
-  11: '즉시: 광산 건설 (테라포밍 2단계 무료)',
+  11: '즉시: 광산 비용 및 테라포밍 2단계 무료',
   12: '기본 사거리 +1',
-  13: '즉시: 행성의회/아카데미당 6점 + 딥스페이스 섹터당 4점',
-  14: '패스 시: 소행성당 2점',
-};
-
-const ADVANCED_TECH_TILE_LABELS: Record<number, string> = {
-  1: '즉시: 교역소당 4점',
-  2: '즉시: 연방 토큰당 5점',
-  3: '교역소 업그레이드 시 +3점',
-  4: '광산 건설 시 +3점',
-  5: '즉시: 우주 섹터당 광석 1',
-  6: '즉시: 우주 섹터당 2점',
-  7: '패스 시: 연구소당 3점',
-  8: '연구 트랙 상승 시 +2점',
-  9: '즉시: 가이아 행성당 2점',
-  10: '즉시: 광산당 2점',
-  11: '패스 시: 연방 토큰당 3점',
-  12: '즉시: 딥스페이스 섹터당 4점',
-  13: '즉시: 대형 건물당 6점',
-  14: '패스 시: 소행성당 2점',
-  15: '패스 시: 딥스페이스 섹터당 2점',
-  16: '정보 큐브 액션 시 +4점',
-  17: '테라포밍 단계 사용 시 +2점',
-  19: '패스 시: 행성 종류당 1점',
-  20: '특수 능력: 지식 3 획득',
-  21: '특수 능력: 광석 3 획득',
-  22: '특수 능력: 정보 큐브 1 + 크레딧 5 획득',
+  13: '즉시: 광석 1 + 지식 3',
 };
 
 const TECH_TILE_SPECIAL_ACTION_IDS = new Set([10]);
@@ -212,10 +202,10 @@ const TERRANS_GAIA_CONVERSIONS: {
 // Lost Fleet expansion — the 4 spaceship boards (docs/GP_Exp_Rule_EN_V1_Web.pdf,
 // "Lost Fleet Spaceships").
 const SPACESHIPS: { id: SpaceshipId; label: string }[] = [
-  { id: 'Twilight', label: 'Twilight' },
-  { id: 'Rebellion', label: 'Rebellion' },
-  { id: 'TFMars', label: 'T F Mars' },
-  { id: 'Eclipse', label: 'Eclipse' },
+  { id: 'Twilight', label: '트와일라잇' },
+  { id: 'Rebellion', label: '리벨리온' },
+  { id: 'TFMars', label: 'T F 마스' },
+  { id: 'Eclipse', label: '이클립스' },
 ];
 
 // Federation token kinds (base rulebook p.2 components + Lost Fleet's 8 spaceship-tied tokens,
@@ -239,28 +229,14 @@ const FEDERATION_TOKEN_LABELS: Record<number, string> = {
   13: '[함선] 7점 + 파워 2 (Area III 신규)',
   14: '[함선] 자유 테라포밍 3단계 무료 광산 건설',
   15: '[함선] 무제한 사거리 무료 광산 건설',
-  16: '[Gleens] 광석 1 + 지식 1 + 크레딧 2',
+  16: '[글린] 광석 1 + 지식 1 + 크레딧 2',
 };
 
 // Lost Fleet Artifacts (expansion Appendix VII) — matches `artifact_effect` in
 // `gaia-engine/src/rules/engine.rs`. Id 10 needs `copy_federation_token_kind` (and, depending on
 // the copied token's own kind, the same `bonus_*` follow-up fields `TwilightReplayFederationToken`
 // uses).
-const ARTIFACT_LABELS: Record<number, string> = {
-  1: '심우주 구역당 2점',
-  2: '파워 2 (Area III)',
-  3: '광석 1 + 지식 1',
-  4: '가이아 프로젝트 레벨당 3점',
-  5: '과학 레벨당 3점',
-  6: '크레딧 3 + 광석 3',
-  7: '지식 3 + 정보 큐브 1',
-  8: '7점',
-  9: '크레딧 5 + 광석 2',
-  10: '보유한 연방 토큰 효과 복사',
-  11: '3점 + 식민화한 행성 종류당 1점',
-  12: '7점',
-  13: '레벨 3+ 연구 분야당 3점',
-};
+
 
 const TRACK_LABELS: Record<ResearchTrack, string> = {
   Terraforming: '테라포밍',
@@ -353,8 +329,18 @@ function availableSpaceshipFederationTokens(
 ): { ship: SpaceshipId; kind: number }[] {
   const player = gameState.players.find((p) => p.player_id === myPlayerId);
   if (!player) return [];
+  const exploredShipIndexes = new Set(player.explored_ships ?? []);
+  const shipIndex: Record<SpaceshipId, number> = {
+    Twilight: 0,
+    Rebellion: 1,
+    TFMars: 2,
+    Eclipse: 3,
+  };
   return gameState.spaceship_boards
-    .filter((b) => b.explorers.includes(myPlayerId) && b.federation_token !== null)
+    .filter((b) =>
+      (b.explorers.includes(myPlayerId) || exploredShipIndexes.has(shipIndex[b.id]))
+      && b.federation_token !== null,
+    )
     .map((b) => ({ ship: b.id, kind: b.federation_token as number }));
 }
 
@@ -362,8 +348,18 @@ export function ActionPanel({
   gameState,
   myPlayerId,
   focusedAction = false,
-  focusedActionOptions = [],
   initialArtifactId = null,
+  federationTokenChoice,
+  onFederationTokenChoice,
+  hideFederationTokenChoices = false,
+  federationBonusCoord: controlledFederationBonusCoord,
+  onFederationBonusCoord,
+  federationBonusTechTile: controlledFederationBonusTechTile,
+  federationBonusResearchTrack: controlledFederationBonusResearchTrack,
+  hideFederationTechPicker = false,
+  replayFederationKind: controlledReplayFederationKind,
+  onReplayFederationKind,
+  hideReplayFederationChoices = false,
 }: Props) {
   const { selectedAction, selectedPowerActionId, activePlanet, selectedHexes, actions } = useGameStore(
     (s) => ({
@@ -379,16 +375,37 @@ export function ActionPanel({
   const [upgradeTarget, setUpgradeTarget] = useState<StructureType | null>(null);
   const [passBoosterId, setPassBoosterId] = useState<number | null>(null);
   const [spaceshipId, setSpaceshipId] = useState<SpaceshipId | null>(null);
-  const [replayFederationKind, setReplayFederationKind] = useState<number | null>(null);
+  const [localReplayFederationKind, setLocalReplayFederationKind] = useState<number | null>(null);
+  const replayFederationKind = controlledReplayFederationKind === undefined
+    ? localReplayFederationKind
+    : controlledReplayFederationKind;
+  const setReplayFederationKind = onReplayFederationKind ?? setLocalReplayFederationKind;
   const [examineArtifactId, setExamineArtifactId] = useState<number | null>(initialArtifactId);
   const [selectedResearchTrack, setSelectedResearchTrack] = useState<ResearchTrack | null>(null);
-  const [federationToken, setFederationToken] = useState<FederationTokenChoice | null>(null);
+  const [localFederationToken, setLocalFederationToken] = useState<FederationTokenChoice | null>(null);
+  const federationToken = federationTokenChoice === undefined
+    ? localFederationToken
+    : federationTokenChoice;
+  const setFederationToken = onFederationTokenChoice ?? setLocalFederationToken;
   const [federationBonusCoord, setFederationBonusCoord] = useState<{ q: number; r: number } | null>(
     null,
   );
   const [federationBonusTechTile, setFederationBonusTechTile] = useState<number | null>(null);
+  const resolvedFederationBonusCoord = controlledFederationBonusCoord === undefined
+    ? federationBonusCoord
+    : controlledFederationBonusCoord;
+  const resolvedFederationBonusTechTile = controlledFederationBonusTechTile === undefined
+    ? federationBonusTechTile
+    : controlledFederationBonusTechTile;
+  const resolvedFederationBonusResearchTrack = controlledFederationBonusResearchTrack === undefined
+    ? selectedResearchTrack
+    : controlledFederationBonusResearchTrack;
+  const updateFederationBonusCoord = onFederationBonusCoord ?? setFederationBonusCoord;
   const [upgradeTechTile, setUpgradeTechTile] = useState<
-    { kind: 'Standard'; tile: number } | { kind: 'Advanced'; track: ResearchTrack } | null
+    | { kind: 'Standard'; tile: number }
+    | { kind: 'Advanced'; track: ResearchTrack }
+    | { kind: 'LostFleetAdvanced' }
+    | null
   >(null);
   const [upgradeAdvanceTrack, setUpgradeAdvanceTrack] = useState<ResearchTrack | null>(null);
   const [upgradeBonusCoord, setUpgradeBonusCoord] = useState<{ q: number; r: number } | null>(
@@ -399,15 +416,224 @@ export function ActionPanel({
     Partial<Record<FreeActionKind, number>>
   >({});
   const currentPlayer = gameState.players.find((player) => player.player_id === myPlayerId);
+  const ownedFederationKinds = Array.from(new Set([
+    ...(currentPlayer?.federation_tokens ?? []),
+    ...(currentPlayer?.gray_federation_tokens ?? []),
+  ]));
+  const greenFederationTokenCount = currentPlayer?.federation_tokens.length ?? 0;
+  const uncoveredStandardTechTiles = (currentPlayer?.tech_tiles ?? []).filter(
+    (tile) => !(currentPlayer?.covered_tech_tiles ?? []).includes(tile),
+  );
+  const hasSpaceGiantsPi =
+    currentPlayer?.faction === 'SpaceGiants' &&
+    currentPlayer.structures.some((structure) => structure.kind === 'PlanetaryInstitute');
   const exploredShipIndexes = new Set(currentPlayer?.explored_ships ?? []);
-  const shipIndex = { Twilight: 0, Rebellion: 1, TFMars: 2, Eclipse: 3 } as const;
+  const shipIndex: Record<SpaceshipId, number> = {
+    Twilight: 0,
+    Rebellion: 1,
+    TFMars: 2,
+    Eclipse: 3,
+  };
   const availableStandardTechTiles = Array.from(new Set([
     ...gameState.research_board.tech_tiles,
     ...gameState.spaceship_boards.flatMap((board) =>
       exploredShipIndexes.has(shipIndex[board.id]) ? (board.tech_tiles ?? []) : [],
     ),
   ]));
+  const hasUnownedStandardTechTile = availableStandardTechTiles.some(
+    (tile) => !(currentPlayer?.tech_tiles ?? []).includes(tile),
+  );
   const requiresBoosterChoice = gameState.round < 6 && currentPlayer?.booster != null;
+
+  function renderTechTilePicker(allowSkip: boolean) {
+    if (!currentPlayer) return null;
+    return (
+        <>
+          <h4 className="action-panel-subtitle">
+            기술 타일 선택 {allowSkip ? '(선택사항)' : '(필수)'}
+          </h4>
+          <div className="action-buttons">
+            {allowSkip && (
+              <button
+                className={clsx('btn action-btn', upgradeTechTile === null && 'action-btn--selected')}
+                onClick={() => setUpgradeTechTile(null)}
+              >
+                타일 선택 안 함
+              </button>
+            )}
+            {availableStandardTechTiles
+              .filter((tile) => !currentPlayer.tech_tiles?.includes(tile))
+              .map((tile) => (
+                <button
+                  key={`std-${tile}`}
+                  className={clsx(
+                    'btn action-btn',
+                    upgradeTechTile?.kind === 'Standard' &&
+                      upgradeTechTile.tile === tile &&
+                      'action-btn--selected',
+                  )}
+                  onClick={() => setUpgradeTechTile({ kind: 'Standard', tile })}
+                >
+                  {TECH_TILE_LABELS[tile] ?? `표준 타일 ${tile}`}
+                </button>
+              ))}
+            {TRACK_ORDER.filter((track, index) => {
+              const tileId = gameState.research_board.advanced_tech_tiles[index];
+              return greenFederationTokenCount > 0
+                && uncoveredStandardTechTiles.length > 0
+                && tileId !== null
+                && researchTrackLevel(currentPlayer.research_tracks, track) >= 4;
+            }).map((track) => {
+              const tileId = gameState.research_board.advanced_tech_tiles[TRACK_ORDER.indexOf(track)];
+              return (
+                <button
+                  key={`adv-${track}`}
+                  className={clsx(
+                    'btn action-btn',
+                    upgradeTechTile?.kind === 'Advanced' &&
+                      upgradeTechTile.track === track &&
+                      'action-btn--selected',
+                  )}
+                  onClick={() => setUpgradeTechTile({ kind: 'Advanced', track })}
+                >
+                  [{TRACK_LABELS[track]}]{' '}
+                  {tileId !== null ? (ADVANCED_TECH_TILE_LABELS[tileId] ?? `고급 타일 ${tileId}`) : ''}
+                </button>
+              );
+            })}
+            {gameState.research_board.lost_fleet_advanced_tech_tile != null &&
+              greenFederationTokenCount > 0 &&
+              uncoveredStandardTechTiles.length > 0 &&
+              (gameState.research_board.lost_fleet_advanced_tech_requirement === '25-vp'
+                ? currentPlayer.vp >= 25
+                : new Set(currentPlayer.explored_ships).size >= 3) && (
+                <button
+                  className={clsx(
+                    'btn action-btn',
+                    upgradeTechTile?.kind === 'LostFleetAdvanced' && 'action-btn--selected',
+                  )}
+                  onClick={() => setUpgradeTechTile({ kind: 'LostFleetAdvanced' })}
+                >
+                  종료 목표 보드 고급 타일{' '}
+                  {ADVANCED_TECH_TILE_LABELS[
+                    gameState.research_board.lost_fleet_advanced_tech_tile
+                  ] ?? `#${gameState.research_board.lost_fleet_advanced_tech_tile}`}
+                </button>
+              )}
+          </div>
+          {(upgradeTechTile?.kind === 'Advanced' ||
+            upgradeTechTile?.kind === 'LostFleetAdvanced') && currentPlayer && (
+            <>
+              <h4 className="action-panel-subtitle">
+                덮을 표준 타일 선택 (필수 — 고급 타일이 그 위에 놓입니다)
+              </h4>
+              <div className="action-buttons">
+                {(currentPlayer.tech_tiles ?? [])
+                  .filter((tile) => !(currentPlayer.covered_tech_tiles ?? []).includes(tile))
+                  .map((tile) => (
+                    <button
+                      key={`cover-${tile}`}
+                      className={clsx(
+                        'btn action-btn',
+                        upgradeCoveredTile === tile && 'action-btn--selected',
+                      )}
+                      onClick={() => setUpgradeCoveredTile(tile)}
+                    >
+                      {TECH_TILE_LABELS[tile] ?? `표준 타일 ${tile}`}
+                    </button>
+                  ))}
+              </div>
+            </>
+          )}
+          {upgradeTechTile && (
+            <>
+              <h4 className="action-panel-subtitle">연구 트랙 상승 (선택사항)</h4>
+              <div className="action-buttons">
+                <button
+                  className={clsx(
+                    'btn action-btn',
+                    upgradeAdvanceTrack === null && 'action-btn--selected',
+                  )}
+                  onClick={() => setUpgradeAdvanceTrack(null)}
+                >
+                  상승 안 함
+                </button>
+                {(Object.keys(TRACK_LABELS) as ResearchTrack[]).map((track) => {
+                  const selectable = canAdvanceFromTechTile(
+                    track,
+                    upgradeTechTile.kind === 'Advanced'
+                      || upgradeTechTile.kind === 'LostFleetAdvanced',
+                  );
+                  return (
+                    <button
+                      key={track}
+                      className={clsx(
+                        'btn action-btn',
+                        upgradeAdvanceTrack === track && 'action-btn--selected',
+                      )}
+                      disabled={!selectable}
+                      onClick={() => setUpgradeAdvanceTrack(track)}
+                    >
+                      {TRACK_LABELS[track]}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          {upgradeTechTile?.kind === 'Standard' && upgradeTechTile.tile === 11 && (
+            <div className="federation-bonus-coord">
+              <label>
+                무료 광산 좌표 q
+                <input
+                  type="number"
+                  aria-label="무료 광산 좌표 q"
+                  value={upgradeBonusCoord?.q ?? ''}
+                  onChange={(e) =>
+                    setUpgradeBonusCoord({
+                      q: Number(e.target.value),
+                      r: upgradeBonusCoord?.r ?? 0,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                r
+                <input
+                  type="number"
+                  aria-label="무료 광산 좌표 r"
+                  value={upgradeBonusCoord?.r ?? ''}
+                  onChange={(e) =>
+                    setUpgradeBonusCoord({
+                      q: upgradeBonusCoord?.q ?? 0,
+                      r: Number(e.target.value),
+                    })
+                  }
+                />
+              </label>
+            </div>
+          )}
+        </>
+    );
+  }
+
+  function canAdvanceFromTechTile(track: ResearchTrack, advancedTile: boolean) {
+    if (!currentPlayer) return false;
+    const level = researchTrackLevel(currentPlayer.research_tracks, track);
+    if (level >= 5) return false;
+    if (
+      currentPlayer.faction === 'BalTaks'
+      && track === 'Navigation'
+      && !currentPlayer.structures.some(({ kind }) => kind === 'PlanetaryInstitute')
+    ) return false;
+    if (level < 4) return true;
+    const requiredGreenTokens = advancedTile ? 2 : 1;
+    return greenFederationTokenCount >= requiredGreenTokens
+      && !gameState.players.some(
+        (player) => player.player_id !== myPlayerId
+          && researchTrackLevel(player.research_tracks, track) >= 5,
+      );
+  }
 
   useEffect(() => {
     setUpgradeTarget(null);
@@ -415,7 +641,7 @@ export function ActionPanel({
     setReplayFederationKind(null);
     setExamineArtifactId(selectedAction === 'ExamineArtifact' ? initialArtifactId : null);
     setSelectedResearchTrack(null);
-    setFederationToken(null);
+    setLocalFederationToken(null);
     setFederationBonusCoord(null);
     setFederationBonusTechTile(null);
     setUpgradeTechTile(null);
@@ -424,15 +650,21 @@ export function ActionPanel({
     setUpgradeCoveredTile(null);
   }, [initialArtifactId, selectedAction]);
 
+  useEffect(() => {
+    setFederationBonusTechTile(null);
+    setSelectedResearchTrack(null);
+  }, [replayFederationKind]);
+
   const federationSelectionKey = selectedHexes
     .map(({ q, r }) => hexKey(q, r))
     .sort()
     .join('|');
   useEffect(() => {
     if (selectedAction !== 'FormFederation') return;
-    setFederationToken(null);
+    setLocalFederationToken(null);
     setFederationBonusCoord(null);
     setFederationBonusTechTile(null);
+    setSelectedResearchTrack(null);
   }, [federationSelectionKey, selectedAction]);
 
   const phase = gameState.phase;
@@ -641,29 +873,19 @@ export function ActionPanel({
       <div className="action-panel">
         <h3 className="action-panel-title">이타르 행성의회 — 기술 타일 획득</h3>
         <p className="action-hint">
-          가이아 구역 파워 {gaiaPower}개 중 4개를 버리고 표준 기술 타일을 획득할 수 있습니다.
+          가이아 구역 파워 {gaiaPower}개 중 4개를 버리고 일반 또는 고급 기술 타일을 획득할 수 있습니다.
           감당할 수 있는 동안 반복 가능합니다.
         </p>
-        <TechTileAndTrackPicker
-          gameState={gameState}
-          selectedTile={federationBonusTechTile}
-          selectedTrack={selectedResearchTrack}
-          onSelectTile={setFederationBonusTechTile}
-          onSelectTrack={setSelectedResearchTrack}
-        />
+        {renderTechTilePicker(false)}
         <button
           className="btn btn-secondary confirm-btn"
-          disabled={
-            gaiaPower < 4 || federationBonusTechTile === null || selectedResearchTrack === null
-          }
+          disabled={gaiaPower < 4 || !upgradeTechTile
+            || (upgradeTechTile.kind !== 'Standard' && upgradeCoveredTile === null)
+            || (upgradeTechTile.kind === 'Standard' && upgradeTechTile.tile === 11 && !upgradeBonusCoord)
+            || (upgradeAdvanceTrack !== null && !canAdvanceFromTechTile(upgradeAdvanceTrack, upgradeTechTile.kind !== 'Standard'))}
           onClick={() => {
-            if (federationBonusTechTile !== null && selectedResearchTrack !== null) {
-              actions.sendAction({
-                type: 'ItarsGaiaTechTile',
-                tile: federationBonusTechTile,
-                track: selectedResearchTrack,
-              });
-            }
+            const choice = selectedTechTileChoice();
+            if (choice) actions.sendAction({ type: 'ItarsGaiaTechChoice', choice });
           }}
         >
           파워 4로 기술 타일 획득
@@ -706,6 +928,31 @@ export function ActionPanel({
     actions.sendAction({ type: 'FreeAction', kind, count });
   }
 
+  function selectedTechTileChoice(): TechTileChoice | undefined {
+    if (!upgradeTechTile) return undefined;
+    if (upgradeTechTile.kind === 'Standard') {
+      return {
+        kind: 'Standard',
+        tile: upgradeTechTile.tile,
+        advance_track: upgradeAdvanceTrack,
+        bonus_build_coord: upgradeTechTile.tile === 11 ? upgradeBonusCoord : null,
+      };
+    }
+    if (upgradeTechTile.kind === 'Advanced') {
+      return {
+        kind: 'Advanced',
+        track: upgradeTechTile.track,
+        covered_tile: upgradeCoveredTile ?? 0,
+        advance_track: upgradeAdvanceTrack,
+      };
+    }
+    return {
+      kind: 'LostFleetAdvanced',
+      covered_tile: upgradeCoveredTile ?? 0,
+      advance_track: upgradeAdvanceTrack,
+    };
+  }
+
   function handleConfirm() {
     if (!selectedAction) return;
     switch (selectedAction) {
@@ -737,26 +984,11 @@ export function ActionPanel({
         break;
       case 'Upgrade':
         if (activePlanet && upgradeTarget) {
-          const techTileChoice: TechTileChoice | undefined = upgradeTechTile
-            ? upgradeTechTile.kind === 'Standard'
-              ? {
-                  kind: 'Standard',
-                  tile: upgradeTechTile.tile,
-                  advance_track: upgradeAdvanceTrack,
-                  bonus_build_coord: upgradeTechTile.tile === 11 ? upgradeBonusCoord : null,
-                }
-              : {
-                  kind: 'Advanced',
-                  track: upgradeTechTile.track,
-                  covered_tile: upgradeCoveredTile ?? 0,
-                  advance_track: upgradeAdvanceTrack,
-                }
-            : undefined;
           actions.sendAction({
             type: 'Upgrade',
             coord: activePlanet,
             to: upgradeTarget,
-            tech_tile_choice: techTileChoice,
+            tech_tile_choice: selectedTechTileChoice(),
           });
         }
         break;
@@ -770,8 +1002,9 @@ export function ActionPanel({
             hexes: federationSelection.planetHexes,
             satellite_hexes: federationSelection.satelliteHexes,
             token: federationToken,
-            bonus_build_coord: federationBonusCoord,
-            bonus_tech_tile: federationBonusTechTile,
+            bonus_build_coord: resolvedFederationBonusCoord,
+            bonus_tech_tile: resolvedFederationBonusTechTile,
+            bonus_research_track: resolvedFederationBonusResearchTrack,
           });
         }
         break;
@@ -783,7 +1016,12 @@ export function ActionPanel({
         }
         break;
       case 'SpecialAction':
-        actions.sendAction({ type: 'SpecialAction', id: 1 });
+        if (currentPlayer?.faction === 'SpaceGiants') {
+          const choice = selectedTechTileChoice();
+          if (choice) actions.sendAction({ type: 'SpaceGiantsGainTechTile', choice });
+        } else {
+          actions.sendAction({ type: 'SpecialAction', id: 1 });
+        }
         break;
       case 'AmbasSwapPlanetaryInstitute':
         if (activePlanet) {
@@ -833,7 +1071,10 @@ export function ActionPanel({
             artifact: examineArtifactId,
             copy_federation_token_kind: examineArtifactId === 10 ? replayFederationKind : null,
             bonus_build_coord:
-              examineArtifactId === 10 && (replayFederationKind === 14 || replayFederationKind === 15)
+              examineArtifactId === 10 &&
+              (replayFederationKind === 14 ||
+                replayFederationKind === 15 ||
+                (replayFederationKind === 12 && federationBonusTechTile === 11))
                 ? activePlanet
                 : null,
             bonus_tech_tile:
@@ -861,7 +1102,11 @@ export function ActionPanel({
             type: 'TwilightReplayFederationToken',
             token_kind: replayFederationKind,
             bonus_build_coord:
-              replayFederationKind === 14 || replayFederationKind === 15 ? activePlanet : null,
+              replayFederationKind === 14 ||
+              replayFederationKind === 15 ||
+              (replayFederationKind === 12 && federationBonusTechTile === 11)
+                ? activePlanet
+                : null,
             bonus_tech_tile: replayFederationKind === 12 ? federationBonusTechTile : null,
             bonus_research_track:
               replayFederationKind === 12 ? selectedResearchTrack : null,
@@ -895,6 +1140,7 @@ export function ActionPanel({
             type: 'RebellionGainTechTile',
             tile: federationBonusTechTile,
             track: selectedResearchTrack,
+            bonus_build_coord: federationBonusTechTile === 11 ? activePlanet : null,
           });
         }
         break;
@@ -964,19 +1210,26 @@ export function ActionPanel({
     selectedAction === 'TwilightRangeBuild' ||
     selectedAction === 'TwilightRangeGaiaFormation' ||
     (selectedAction === 'TwilightReplayFederationToken' &&
-      (replayFederationKind === 14 || replayFederationKind === 15)) ||
+      (replayFederationKind === 14 ||
+        replayFederationKind === 15 ||
+        (replayFederationKind === 12 && federationBonusTechTile === 11))) ||
     selectedAction === 'RebellionFreeTradingStation' ||
     selectedAction === 'TFMarsGaiaFormation' ||
     selectedAction === 'EclipseAsteroidMine' ||
     selectedAction === 'GleensBuildMine' ||
     selectedAction === 'GleensGaiaFormation' ||
     selectedAction === 'SpaceGiantsBuildMine' ||
-    (examiningArtifact10 && (replayFederationKind === 14 || replayFederationKind === 15)) ||
+    (examiningArtifact10 &&
+      (replayFederationKind === 14 ||
+        replayFederationKind === 15 ||
+        (replayFederationKind === 12 && federationBonusTechTile === 11))) ||
     selectedPowerActionNeedsCoord;
 
   const replayNeedsBuildCoord =
     (selectedAction === 'TwilightReplayFederationToken' || examiningArtifact10) &&
-    (replayFederationKind === 14 || replayFederationKind === 15);
+    (replayFederationKind === 14 ||
+      replayFederationKind === 15 ||
+      (replayFederationKind === 12 && federationBonusTechTile === 11));
   const replayNeedsTechTile =
     (selectedAction === 'TwilightReplayFederationToken' || examiningArtifact10) &&
     replayFederationKind === 12;
@@ -986,13 +1239,23 @@ export function ActionPanel({
     (!replayNeedsTechTile || (federationBonusTechTile !== null && !!selectedResearchTrack));
 
   const federationKind = resolveFederationTokenKind(gameState, federationToken);
-  const federationNeedsBuildCoord = federationKind === 14 || federationKind === 15;
+  const federationNeedsBuildCoord =
+    federationKind === 14 ||
+    federationKind === 15 ||
+    (federationKind === 12 && resolvedFederationBonusTechTile === 11);
   const federationNeedsTechTile = federationKind === 12;
   const federationReady =
     federationSelection.valid &&
     federationKind !== null &&
-    (!federationNeedsBuildCoord || !!federationBonusCoord) &&
-    (!federationNeedsTechTile || federationBonusTechTile !== null);
+    (!federationNeedsBuildCoord || !!resolvedFederationBonusCoord) &&
+    (!federationNeedsTechTile ||
+      resolvedFederationBonusTechTile !== null ||
+      !hasUnownedStandardTechTile);
+
+  const advancedTechSelected = upgradeTechTile?.kind === 'Advanced'
+    || upgradeTechTile?.kind === 'LostFleetAdvanced';
+  const upgradeAdvanceTrackValid = upgradeAdvanceTrack === null
+    || canAdvanceFromTechTile(upgradeAdvanceTrack, advancedTechSelected);
 
   const canConfirm =
     (selectedAction === 'Build' && !!activePlanet) ||
@@ -1004,12 +1267,22 @@ export function ActionPanel({
     (selectedAction === 'Upgrade' &&
       !!activePlanet &&
       !!upgradeTarget &&
+      (!(upgradeTarget === 'PlanetaryInstitute' && currentPlayer?.faction === 'SpaceGiants') || upgradeTechTile !== null) &&
       (upgradeTechTile?.kind !== 'Standard' ||
         upgradeTechTile.tile !== 11 ||
         !!upgradeBonusCoord) &&
-      (upgradeTechTile?.kind !== 'Advanced' || upgradeCoveredTile !== null)) ||
+      (upgradeTechTile?.kind === 'Standard' ||
+        upgradeTechTile === null ||
+        upgradeCoveredTile !== null) &&
+      upgradeAdvanceTrackValid) ||
     (selectedAction === 'FormFederation' && federationReady) ||
-    selectedAction === 'SpecialAction' ||
+    (selectedAction === 'SpecialAction' &&
+      upgradeTechTile !== null &&
+      (upgradeTechTile.kind !== 'Standard' ||
+        upgradeTechTile.tile !== 11 ||
+        !!upgradeBonusCoord) &&
+      (upgradeTechTile.kind === 'Standard' || upgradeCoveredTile !== null) &&
+      upgradeAdvanceTrackValid) ||
     (selectedAction === 'AmbasSwapPlanetaryInstitute' && !!activePlanet) ||
     (selectedAction === 'FiraksDowngradeResearchLab' &&
       !!activePlanet &&
@@ -1036,7 +1309,8 @@ export function ActionPanel({
     (selectedAction === 'RebellionFreeTradingStation' && !!activePlanet) ||
     (selectedAction === 'RebellionGainTechTile' &&
       federationBonusTechTile !== null &&
-      !!selectedResearchTrack) ||
+      !!selectedResearchTrack &&
+      (federationBonusTechTile !== 11 || !!activePlanet)) ||
     (selectedAction === 'TFMarsGaiaFormation' && !!activePlanet) ||
     (selectedAction === 'EclipseAsteroidMine' && !!activePlanet) ||
     (selectedAction === 'GleensBuildMine' && !!activePlanet) ||
@@ -1047,6 +1321,9 @@ export function ActionPanel({
 
   const availableActionButtons = ACTION_BUTTONS.filter(
     ({ actionType }) =>
+      (actionType !== 'TinkeroidsUseTile' || (selectedTinkeringTile !== null
+        && !currentPlayer?.faction_special_action_used_this_round
+        && !currentPlayer?.tinkeroids_tiles_used?.includes(selectedTinkeringTile))) &&
       (actionType !== 'SpecialAction' || currentPlayer?.faction === 'SpaceGiants') &&
       (REQUIRED_FACTION_BY_ACTION[actionType] === undefined ||
         currentPlayer?.faction === REQUIRED_FACTION_BY_ACTION[actionType]) &&
@@ -1105,7 +1382,8 @@ export function ActionPanel({
     );
     const lacksSpaceshipAccess =
       requiredSpaceshipBoard !== undefined &&
-      !requiredSpaceshipBoard.explorers.includes(myPlayerId);
+      !requiredSpaceshipBoard.explorers.includes(myPlayerId) &&
+      !exploredShipIndexes.has(shipIndex[requiredSpaceshipBoard.id]);
     const usedThisRound =
       (spaceshipSlot !== undefined && gameState.used_spaceship_actions.includes(spaceshipSlot)) ||
       (GLEENS_SPECIAL_ACTION_TYPES.includes(actionType) &&
@@ -1118,8 +1396,15 @@ export function ActionPanel({
         !!currentPlayer?.round_booster_special_action_used_this_round);
     const needsTinkeringTile =
       actionType === 'TinkeroidsUseTile' && selectedTinkeringTile === null;
+    const spaceGiantsPiUnavailable =
+      actionType === 'SpecialAction' &&
+      (!hasSpaceGiantsPi || !!currentPlayer?.pi_ability_used);
     const unavailableReason = usedThisRound
       ? '이번 라운드 사용됨'
+      : spaceGiantsPiUnavailable
+        ? currentPlayer?.pi_ability_used
+          ? '이번 게임 사용됨'
+          : '행성의회 필요'
       : needsTinkeringTile
         ? '이번 라운드 타일 선택 필요'
       : lacksSpaceshipAccess
@@ -1138,6 +1423,11 @@ export function ActionPanel({
         title={unavailableReason ?? undefined}
         onClick={() => handleActionSelect(actionType)}
       >
+        {REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType] !== undefined && (() => {
+          const boosterId = REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType]!;
+          const src = roundBoosterImageSrc(boosterId);
+          return src ? <ActionCrop id={boosterId === 5 ? 'booster-5' : 'booster-8'} src={src} used={usedThisRound} /> : null;
+        })()}
         <span className="action-label">
           {unavailableReason ? `${label} (${unavailableReason})` : renderLabelWithRangeIcon(label)}
         </span>
@@ -1158,32 +1448,11 @@ export function ActionPanel({
           <span>빛나는 버튼은 현재 선택할 수 있습니다.</span>
         </div>
       )}
-      {focusedAction && focusedActionOptions.length > 1 && (
-        <div className="action-buttons" aria-label="함선 행동 방식 선택">
-          {focusedActionOptions.map((actionType) => {
-            const label = ACTION_BUTTONS.find((action) => action.actionType === actionType)?.label
-              ?? actionType;
-            return (
-              <button
-                key={actionType}
-                type="button"
-                className={clsx(
-                  'btn action-btn',
-                  selectedAction === actionType && 'action-btn--selected',
-                )}
-                onClick={() => actions.selectAction(actionType)}
-              >
-                {renderLabelWithRangeIcon(label)}
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {selectedAction ? (
+      {selectedAction && !focusedAction ? (
         <button className="btn btn-ghost action-change-btn" onClick={() => actions.selectAction(null)}>
-          {focusedAction ? `${focusedActionTitle ?? '행동'} 취소` : '다른 행동 선택'}
+          다른 행동 선택
         </button>
-      ) : (
+      ) : !selectedAction ? (
         <>
           <h4 className="action-panel-subtitle">기본 행동</h4>
           <div className="action-buttons">{primaryActionButtons.map(renderActionButton)}</div>
@@ -1194,7 +1463,7 @@ export function ActionPanel({
             </details>
           )}
         </>
-      )}
+      ) : null}
 
       {!focusedAction && !selectedAction && currentPlayer &&
         ((currentPlayer.tech_tiles ?? []).some((t) => TECH_TILE_SPECIAL_ACTION_IDS.has(t)) ||
@@ -1312,7 +1581,7 @@ export function ActionPanel({
         </div>
       )}
 
-      {selectedAction === 'TinkeroidsUseTile' && currentPlayer && (
+      {selectedAction === 'TinkeroidsUseTile' && currentPlayer && !currentPlayer.faction_special_action_used_this_round && !currentPlayer.tinkeroids_tiles_used?.includes(selectedTinkeringTile ?? -1) && (
         <>
           <div className="action-buttons">
             {selectedTinkeringTile !== null && (
@@ -1374,141 +1643,13 @@ export function ActionPanel({
         </div>
       )}
 
-      {selectedAction === 'Upgrade'
-        && upgradeTarget
-        && (upgradeTarget === 'ResearchLab' || typeof upgradeTarget === 'object')
-        && currentPlayer && (
-        <>
-          <h4 className="action-panel-subtitle">기술 타일 선택 (선택사항)</h4>
-          <div className="action-buttons">
-            <button
-              className={clsx('btn action-btn', upgradeTechTile === null && 'action-btn--selected')}
-              onClick={() => setUpgradeTechTile(null)}
-            >
-              타일 선택 안 함
-            </button>
-            {availableStandardTechTiles
-              .filter((tile) => !currentPlayer.tech_tiles?.includes(tile))
-              .map((tile) => (
-                <button
-                  key={`std-${tile}`}
-                  className={clsx(
-                    'btn action-btn',
-                    upgradeTechTile?.kind === 'Standard' &&
-                      upgradeTechTile.tile === tile &&
-                      'action-btn--selected',
-                  )}
-                  onClick={() => setUpgradeTechTile({ kind: 'Standard', tile })}
-                >
-                  {TECH_TILE_LABELS[tile] ?? `표준 타일 ${tile}`}
-                </button>
-              ))}
-            {TRACK_ORDER.filter((track, index) => {
-              const tileId = gameState.research_board.advanced_tech_tiles[index];
-              return tileId !== null && researchTrackLevel(currentPlayer.research_tracks, track) >= 4;
-            }).map((track) => {
-              const tileId = gameState.research_board.advanced_tech_tiles[TRACK_ORDER.indexOf(track)];
-              return (
-                <button
-                  key={`adv-${track}`}
-                  className={clsx(
-                    'btn action-btn',
-                    upgradeTechTile?.kind === 'Advanced' &&
-                      upgradeTechTile.track === track &&
-                      'action-btn--selected',
-                  )}
-                  onClick={() => setUpgradeTechTile({ kind: 'Advanced', track })}
-                >
-                  [{TRACK_LABELS[track]}]{' '}
-                  {tileId !== null ? (ADVANCED_TECH_TILE_LABELS[tileId] ?? `고급 타일 ${tileId}`) : ''}
-                </button>
-              );
-            })}
-          </div>
-          {upgradeTechTile?.kind === 'Advanced' && currentPlayer && (
-            <>
-              <h4 className="action-panel-subtitle">
-                덮을 표준 타일 선택 (필수 — 고급 타일이 그 위에 놓입니다)
-              </h4>
-              <div className="action-buttons">
-                {(currentPlayer.tech_tiles ?? [])
-                  .filter((tile) => !(currentPlayer.covered_tech_tiles ?? []).includes(tile))
-                  .map((tile) => (
-                    <button
-                      key={`cover-${tile}`}
-                      className={clsx(
-                        'btn action-btn',
-                        upgradeCoveredTile === tile && 'action-btn--selected',
-                      )}
-                      onClick={() => setUpgradeCoveredTile(tile)}
-                    >
-                      {TECH_TILE_LABELS[tile] ?? `표준 타일 ${tile}`}
-                    </button>
-                  ))}
-              </div>
-            </>
-          )}
-          {upgradeTechTile && (
-            <>
-              <h4 className="action-panel-subtitle">연구 트랙 상승 (선택사항)</h4>
-              <div className="action-buttons">
-                <button
-                  className={clsx(
-                    'btn action-btn',
-                    upgradeAdvanceTrack === null && 'action-btn--selected',
-                  )}
-                  onClick={() => setUpgradeAdvanceTrack(null)}
-                >
-                  상승 안 함
-                </button>
-                {(Object.keys(TRACK_LABELS) as ResearchTrack[]).map((track) => (
-                  <button
-                    key={track}
-                    className={clsx(
-                      'btn action-btn',
-                      upgradeAdvanceTrack === track && 'action-btn--selected',
-                    )}
-                    onClick={() => setUpgradeAdvanceTrack(track)}
-                  >
-                    {TRACK_LABELS[track]}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {upgradeTechTile?.kind === 'Standard' && upgradeTechTile.tile === 11 && (
-            <div className="federation-bonus-coord">
-              <label>
-                무료 광산 좌표 q
-                <input
-                  type="number"
-                  aria-label="무료 광산 좌표 q"
-                  value={upgradeBonusCoord?.q ?? ''}
-                  onChange={(e) =>
-                    setUpgradeBonusCoord({
-                      q: Number(e.target.value),
-                      r: upgradeBonusCoord?.r ?? 0,
-                    })
-                  }
-                />
-              </label>
-              <label>
-                r
-                <input
-                  type="number"
-                  aria-label="무료 광산 좌표 r"
-                  value={upgradeBonusCoord?.r ?? ''}
-                  onChange={(e) =>
-                    setUpgradeBonusCoord({
-                      q: upgradeBonusCoord?.q ?? 0,
-                      r: Number(e.target.value),
-                    })
-                  }
-                />
-              </label>
-            </div>
-          )}
-        </>
+      {currentPlayer &&
+        ((selectedAction === 'Upgrade' &&
+          upgradeTarget &&
+          (upgradeTarget === 'ResearchLab' || typeof upgradeTarget === 'object'
+            || (upgradeTarget === 'PlanetaryInstitute' && currentPlayer.faction === 'SpaceGiants'))) ||
+          selectedAction === 'SpecialAction') && (
+        renderTechTilePicker(selectedAction === 'Upgrade' && !(upgradeTarget === 'PlanetaryInstitute' && currentPlayer.faction === 'SpaceGiants'))
       )}
 
       {selectedAction === 'PowerAction' && (
@@ -1547,7 +1688,8 @@ export function ActionPanel({
         <div className="action-buttons">
           {SPACESHIPS.map(({ id, label }) => {
             const board = gameState.spaceship_boards.find((b) => b.id === id);
-            const alreadyExplored = board?.explorers.includes(myPlayerId) ?? false;
+            const alreadyExplored = (board?.explorers.includes(myPlayerId) ?? false)
+              || exploredShipIndexes.has(shipIndex[id]);
             const full = board ? board.explorers.every((e) => e !== null) : false;
             return (
               <button
@@ -1594,28 +1736,35 @@ export function ActionPanel({
 
       {(selectedAction === 'TwilightReplayFederationToken' || examiningArtifact10) && (
         <>
-          <p className="action-hint">이미 보유한 연방 토큰 하나의 즉시 효과를 다시 받습니다.</p>
-          <div className="action-buttons">
-            {Array.from(new Set(currentPlayer?.federation_tokens ?? [])).map((kind) => (
-              <button
-                key={kind}
-                className={clsx(
-                  'btn action-btn',
-                  replayFederationKind === kind && 'action-btn--selected',
-                )}
-                onClick={() => {
-                  setReplayFederationKind(kind);
-                  setFederationBonusTechTile(null);
-                  setSelectedResearchTrack(null);
-                }}
-              >
-                {FEDERATION_TOKEN_LABELS[kind] ?? `토큰 ${kind}`}
-              </button>
-            ))}
-          </div>
+          <p className="action-hint">
+            {hideReplayFederationChoices
+              ? '위의 ‘내 연방’ 영역에서 복사할 토큰 이미지를 누르세요.'
+              : '이미 보유한 연방 토큰 하나의 즉시 효과를 다시 받습니다.'}
+          </p>
+          {!hideReplayFederationChoices && (
+            <div className="action-buttons">
+              {ownedFederationKinds.map((kind) => (
+                <button
+                  key={kind}
+                  className={clsx(
+                    'btn action-btn',
+                    replayFederationKind === kind && 'action-btn--selected',
+                  )}
+                  onClick={() => {
+                    setReplayFederationKind(kind);
+                    setFederationBonusTechTile(null);
+                    setSelectedResearchTrack(null);
+                  }}
+                >
+                  {FEDERATION_TOKEN_LABELS[kind] ?? `토큰 ${kind}`}
+                </button>
+              ))}
+            </div>
+          )}
           {replayFederationKind === 12 && (
             <TechTileAndTrackPicker
               gameState={gameState}
+              tiles={availableStandardTechTiles}
               selectedTile={federationBonusTechTile}
               selectedTrack={selectedResearchTrack}
               onSelectTile={setFederationBonusTechTile}
@@ -1628,6 +1777,7 @@ export function ActionPanel({
       {selectedAction === 'RebellionGainTechTile' && (
         <TechTileAndTrackPicker
           gameState={gameState}
+          tiles={availableStandardTechTiles}
           selectedTile={federationBonusTechTile}
           selectedTrack={selectedResearchTrack}
           onSelectTile={setFederationBonusTechTile}
@@ -1640,11 +1790,11 @@ export function ActionPanel({
           <p className="action-hint">
             연방을 이룰 헥스를 보드에서 여러 개 선택하세요 ({selectedHexes.length}개 선택됨). 서로
             인접하지 않은 행성을 연결하려면 그 사이 빈 우주 헥스도 선택하세요. 빈 우주는 위성으로
-            자동 분류됩니다 (위성 1개당 파워 1 소모, 다른 연방에 재사용 불가).
+            자동 분류됩니다 (위성 1개당 {currentPlayer?.faction === 'Ivits' ? '정보 큐브 1개' : '파워 토큰 1개'} 소모, 다른 연방에 재사용 불가).
           </p>
           {currentPlayer?.faction === 'Ivits' && (currentPlayer.federated_hexes?.length ?? 0) > 0 && (
             <p className="action-hint">
-              Ivits는 하나의 연방만 계속 확장합니다: 새로 선택한 헥스는 기존 연방과 연결되어야
+              하이브는 하나의 연방만 계속 확장합니다: 새로 선택한 헥스는 기존 연방과 연결되어야
               하며, 누적 파워가 7 × (보유 연방 토큰 수 + 1) 이상이어야 합니다. 이번 확장에 쓰는
               위성은 파워 대신 정보 큐브 1개씩 소모합니다.
             </p>
@@ -1676,7 +1826,7 @@ export function ActionPanel({
             {' · '}위성 {federationSelection.satelliteHexes.length}개
             {' · '}{federationSelection.reason}
           </p>
-          {federationSelection.valid && (
+          {federationSelection.valid && !hideFederationTokenChoices && (
             <>
               <h4 className="action-panel-subtitle">획득할 연방 토큰</h4>
               <div className="action-buttons">
@@ -1695,6 +1845,7 @@ export function ActionPanel({
                       setFederationToken({ source: 'Supply', kind });
                       setFederationBonusCoord(null);
                       setFederationBonusTechTile(null);
+                      setSelectedResearchTrack(null);
                     }}
                   >
                     {FEDERATION_TOKEN_LABELS[kind] ?? `토큰 ${kind}`}
@@ -1713,6 +1864,7 @@ export function ActionPanel({
                       setFederationToken({ source: 'Spaceship', ship });
                       setFederationBonusCoord(null);
                       setFederationBonusTechTile(null);
+                      setSelectedResearchTrack(null);
                     }}
                   >
                     {ship}: {FEDERATION_TOKEN_LABELS[kind] ?? `토큰 ${kind}`}
@@ -1720,6 +1872,9 @@ export function ActionPanel({
                 ))}
               </div>
             </>
+          )}
+          {federationSelection.valid && hideFederationTokenChoices && !federationToken && (
+            <p className="action-hint">이동한 연방 토큰 보급에서 받을 토큰 이미지를 누르세요.</p>
           )}
 
           {federationNeedsBuildCoord && (
@@ -1729,11 +1884,11 @@ export function ActionPanel({
                 <input
                   type="number"
                   aria-label="보너스 광산 좌표 q"
-                  value={federationBonusCoord?.q ?? ''}
+                  value={resolvedFederationBonusCoord?.q ?? ''}
                   onChange={(e) =>
-                    setFederationBonusCoord({
+                    updateFederationBonusCoord({
                       q: Number(e.target.value),
-                      r: federationBonusCoord?.r ?? 0,
+                      r: resolvedFederationBonusCoord?.r ?? 0,
                     })
                   }
                 />
@@ -1743,10 +1898,10 @@ export function ActionPanel({
                 <input
                   type="number"
                   aria-label="보너스 광산 좌표 r"
-                  value={federationBonusCoord?.r ?? ''}
+                  value={resolvedFederationBonusCoord?.r ?? ''}
                   onChange={(e) =>
-                    setFederationBonusCoord({
-                      q: federationBonusCoord?.q ?? 0,
+                    updateFederationBonusCoord({
+                      q: resolvedFederationBonusCoord?.q ?? 0,
                       r: Number(e.target.value),
                     })
                   }
@@ -1755,21 +1910,15 @@ export function ActionPanel({
             </div>
           )}
 
-          {federationNeedsTechTile && (
-            <div className="action-buttons">
-              {gameState.research_board.tech_tiles.map((tileId) => (
-                <button
-                  key={tileId}
-                  className={clsx(
-                    'btn action-btn',
-                    federationBonusTechTile === tileId && 'action-btn--selected',
-                  )}
-                  onClick={() => setFederationBonusTechTile(tileId)}
-                >
-                  기술 타일 #{tileId}
-                </button>
-              ))}
-            </div>
+          {federationNeedsTechTile && !hideFederationTechPicker && (
+            <TechTileAndTrackPicker
+              gameState={gameState}
+              tiles={availableStandardTechTiles}
+              selectedTile={resolvedFederationBonusTechTile}
+              selectedTrack={resolvedFederationBonusResearchTrack}
+              onSelectTile={setFederationBonusTechTile}
+              onSelectTrack={setSelectedResearchTrack}
+            />
           )}
         </>
       )}
@@ -1882,12 +2031,14 @@ export function ActionPanel({
 
 function TechTileAndTrackPicker({
   gameState,
+  tiles,
   selectedTile,
   selectedTrack,
   onSelectTile,
   onSelectTrack,
 }: {
   gameState: GameState;
+  tiles?: number[];
   selectedTile: number | null;
   selectedTrack: ResearchTrack | null;
   onSelectTile: (tile: number) => void;
@@ -1897,7 +2048,7 @@ function TechTileAndTrackPicker({
     <>
       <h4 className="action-panel-subtitle">표준 기술 타일</h4>
       <div className="action-buttons">
-        {gameState.research_board.tech_tiles.map((tileId) => (
+        {(tiles ?? gameState.research_board.tech_tiles).map((tileId) => (
           <button
             key={tileId}
             className={clsx('btn action-btn', selectedTile === tileId && 'action-btn--selected')}

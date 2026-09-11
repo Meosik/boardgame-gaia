@@ -14,15 +14,17 @@ interface ResourceTokenProps {
   resource: DisplayResource;
   value: number;
   compact?: boolean;
+  rewardTarget?: boolean;
 }
 
-export function ResourceToken({ resource, value, compact = false }: ResourceTokenProps) {
+export function ResourceToken({ resource, value, compact = false, rewardTarget = false }: ResourceTokenProps) {
   const { icon, label } = RESOURCE_DISPLAY[resource];
   return (
     <span
       className={`interaction-resource-token interaction-resource-token--${resource}${
         compact ? ' interaction-resource-token--compact' : ''
       }`}
+      data-reward-kind={rewardTarget ? resource : undefined}
       aria-label={`${label} ${value}`}
       title={`${label} ${value}`}
     >
@@ -48,15 +50,27 @@ export function ResourceTokens({ values, compact = false, label }: ResourceToken
   );
 }
 
-export function VictoryPointToken({ value }: { value: number }) {
+export function VictoryPointToken({ value, rewardTarget = false }: { value: number; rewardTarget?: boolean }) {
   return (
     <span
       className="victory-point-token"
+      data-reward-kind={rewardTarget ? 'vp' : undefined}
       aria-label={`승점 ${value}점`}
       title={`승점 ${value}점`}
     >
       <GamePieceIcon kind="vp" />
       <strong>{value}</strong>
+    </span>
+  );
+}
+
+
+export function GaiaPowerTransfer({ value }: { value: number }) {
+  return (
+    <span className="gaia-power-transfer" aria-label={`파워 ${value}개 → 가이아 구역`} title={`파워 ${value}개를 가이아 구역으로 이동`}>
+      <ResourceToken resource="power" value={value} />
+      <span aria-hidden="true">→</span>
+      <span className="gaia-power-transfer-destination" aria-hidden="true">G</span>
     </span>
   );
 }

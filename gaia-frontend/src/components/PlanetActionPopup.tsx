@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { ResourceTokens, type DisplayResource } from './ResourceTokens';
+import { GaiaPowerTransfer, ResourceTokens, type DisplayResource } from './ResourceTokens';
 import { TerraformingToken } from './TerraformingToken';
-import { structureImageSrc } from '../assets/structureImages';
+import { FACTION_STRUCTURE_COLOR, structureImageSrc } from '../assets/structureImages';
 import type {
   BoardState,
   FactionId,
@@ -13,7 +13,7 @@ import type {
 } from '../types/game';
 
 const STANDARD_PLANET_RING: PlanetType[] = [
-  'Terra', 'Swamp', 'Desert', 'Oxide', 'Titanium', 'Volcanic', 'Ice',
+  'Terra', 'Oxide', 'Volcanic', 'Desert', 'Swamp', 'Titanium', 'Ice',
 ];
 
 const RESOURCE_LABEL: Record<DisplayResource, string> = {
@@ -45,16 +45,28 @@ const HOME_PLANET_BY_FACTION: Record<FactionId, PlanetType> = {
   SpaceGiants: 'ProtoPlanet',
 };
 
+export interface BuildActionPreview {
+  action: GameAction;
+  rangeBonus?: number;
+  freeTerraformingSteps?: number;
+  extraCredits?: number;
+  extraKnowledge?: number;
+  extraQic?: number;
+  unlimitedRange?: boolean;
+  waiveMineCost?: boolean;
+}
+
 interface Props {
   anchor: { x: number; y: number };
   hex: Hex;
   player: PlayerState;
   players: PlayerState[];
   board: BoardState;
+  buildAction?: BuildActionPreview;
   powerAction?: { id: 2 | 6; freeTerraformingSteps: number };
   suppressTerraformOreConfirmation?: boolean;
   onSuppressTerraformOreConfirmation?: () => void;
-  onConfirm: (action: Extract<GameAction, { type: 'Build' | 'GaiaFormation' | 'PowerAction' }>) => void;
+  onConfirm: (action: GameAction) => void;
   onClose: () => void;
 }
 
@@ -76,6 +88,9 @@ export function terraformingStepsFor(
   if (player.faction === 'Darkanians') return 1;
   if (player.faction === 'SpaceGiants') return 2;
   if (player.faction === 'Tinkeroids' || player.faction === 'Moweyds') {
+    if (player.expensive_terraforming_planet_types?.length) {
+      return player.expensive_terraforming_planet_types.includes(target) ? 3 : 1;
+    }
     const expensive = players
       .filter(({ player_id }) => player_id !== player.player_id)
       .some(({ faction }) => faction !== null && HOME_PLANET_BY_FACTION[faction] === target);
@@ -108,6 +123,7 @@ export function informationCubesNeededForRange(
   board: BoardState,
   player: PlayerState,
   target: HexCoord,
+  rangeBonus = 0,
 ): number | null {
   const starts = player.structures.map(({ hex: coord }) => coord);
   if (board.lost_planet) {
@@ -141,7 +157,7 @@ export function informationCubesNeededForRange(
   ] + Number(Boolean(
     player.tech_tiles?.includes(12) && !player.covered_tech_tiles?.includes(12),
   ));
-  return Math.max(0, Math.ceil((distance - basicRange) / 2));
+  return Math.max(0, Math.ceil((distance - basicRange - rangeBonus) / 2));
 }
 
 export function rangeRequirementNotice(
@@ -184,6 +200,7 @@ export function PlanetActionPopup({
   players,
   board,
   powerAction,
+  buildAction,
   suppressTerraformOreConfirmation = false,
   onSuppressTerraformOreConfirmation,
   onConfirm,
@@ -203,14 +220,22 @@ export function PlanetActionPopup({
   const left = Math.max(12, Math.min(anchor.x + 14, window.innerWidth - width - 12));
   const top = Math.max(56, Math.min(anchor.y - 32, window.innerHeight - 280));
   const resources = actionType === 'GaiaFormation' ? {} : buildResources(target, player.faction);
+  if (buildAction?.waiveMineCost && actionType === 'Build' && target !== 'Asteroid') {
+    resources.ore = Math.max(0, (resources.ore ?? 0) - 1);
+    resources.credits = 0;
+  }
+  if (planet.is_gaia_formed && planet.planet_type === 'Transdim' && planet.owner === player.player_id) delete resources.qic;
+  if (buildAction?.extraCredits) resources.credits = (resources.credits ?? 0) + buildAction.extraCredits;
+  if (buildAction?.extraKnowledge) resources.knowledge = (resources.knowledge ?? 0) + buildAction.extraKnowledge;
+  if (buildAction?.extraQic) resources.qic = (resources.qic ?? 0) + buildAction.extraQic;
   const steps = terraformingStepsFor(target, player, players);
   const terraformingStepsUsed = actionType === 'Build' && steps !== null ? steps : 0;
   const remainingTerraformingSteps = Math.max(
     0,
-    terraformingStepsUsed - (powerAction?.freeTerraformingSteps ?? 0),
+    terraformingStepsUsed - (buildAction?.freeTerraformingSteps ?? powerAction?.freeTerraformingSteps ?? 0),
   );
   const consumesPowerAction = powerAction !== undefined && terraformingStepsUsed > 0;
-  const rangeQic = informationCubesNeededForRange(board, player, hex.coord);
+  const rangeQic = buildAction?.unlimitedRange ? 0 : informationCubesNeededForRange(board, player, hex.coord, buildAction?.rangeBonus ?? 0);
   const displayedResources = { ...resources };
   if ((rangeQic ?? 0) > 0) displayedResources.qic = (displayedResources.qic ?? 0) + (rangeQic ?? 0);
   const terraformingOreNeeded = target === 'Gaia' || target === 'Asteroid'
@@ -219,6 +244,7 @@ export function PlanetActionPopup({
   const buildOreNeeded = (resources.ore ?? 0) + terraformingOreNeeded;
   const hasMinePiece = player.structures.filter(({ kind }) => kind === 'Mine').length < 8;
   const hasDisplayedResources = player.resources.ore >= buildOreNeeded
+    && player.resources.knowledge >= (resources.knowledge ?? 0)
     && player.resources.credits >= (resources.credits ?? 0)
     && player.resources.qic >= (displayedResources.qic ?? 0);
   const gaiaPowerCost = [Number.POSITIVE_INFINITY, 6, 6, 4, 3, 3][
@@ -233,14 +259,15 @@ export function PlanetActionPopup({
     && rangeQic !== null
     && player.resources.qic >= rangeQic
     && activePower >= gaiaPowerCost;
-  const canConfirmBuild = hasMinePiece
+  const canConfirmBuild = (!buildAction || (target !== 'Transdim' && hex.structures.length === 0 && (planet.owner === null || (planet.owner === player.player_id && planet.is_gaia_formed))))
+    && hasMinePiece
     && rangeQic !== null
     && hasDisplayedResources
     && (target !== 'Asteroid' || availableGaiaformers(player) > 0);
   const canConfirm = actionType === 'GaiaFormation' ? canConfirmGaiaFormation : canConfirmBuild;
-  const confirmedAction = consumesPowerAction
+  const confirmedAction = buildAction?.action ?? (consumesPowerAction
     ? { type: 'PowerAction' as const, id: powerAction.id, coord: hex.coord }
-    : { type: actionType, coord: hex.coord } as Extract<GameAction, { type: 'Build' | 'GaiaFormation' }>;
+    : { type: actionType, coord: hex.coord } as Extract<GameAction, { type: 'Build' | 'GaiaFormation' }>);
 
   function submitAction() {
     if (terraformingOreNeeded > 0 && !suppressTerraformOreConfirmation) {
@@ -255,6 +282,7 @@ export function PlanetActionPopup({
     onConfirm(confirmedAction);
   }
 
+  const structureColor = player.faction ? FACTION_STRUCTURE_COLOR[player.faction] : 'gray';
   const costSummary = (
     <div className="planet-action-cost-summary">
       {Object.keys(displayedResources).length > 0 && (
@@ -267,6 +295,9 @@ export function PlanetActionPopup({
         />
       )}
       {remainingTerraformingSteps > 0 && <TerraformingToken steps={remainingTerraformingSteps} />}
+      {actionType === 'GaiaFormation' && Number.isFinite(gaiaPowerCost) && (
+        <GaiaPowerTransfer value={gaiaPowerCost} />
+      )}
       {consumesPowerAction && (
         <span className="planet-action-power-terraforming">
           무료 테라포밍 {Math.min(terraformingStepsUsed, powerAction.freeTerraformingSteps)}
@@ -274,7 +305,7 @@ export function PlanetActionPopup({
       )}
       {(actionType === 'GaiaFormation' || target === 'Asteroid') && (
         <span className="planet-action-gaiaformer-cost">
-          <img src={structureImageSrc('blue', 'gaiaformer')} alt="" />
+          <img src={structureImageSrc(structureColor, 'gaiaformer')} alt="" />
           <strong>1</strong>
         </span>
       )}
@@ -324,7 +355,7 @@ export function PlanetActionPopup({
             onClick={() => setConfirming(true)}
           >
             <span className="planet-rulebook-action__primary">
-              <img src={structureImageSrc('blue', actionIcon)} alt="" aria-hidden="true" />
+              <img src={structureImageSrc(structureColor, actionIcon)} alt="" aria-hidden="true" />
               <strong>{actionLabel}</strong>
             </span>
             {costSummary}
@@ -338,14 +369,18 @@ export function PlanetActionPopup({
             <div className="interaction-costs interaction-costs--tokens">
               {target === 'Asteroid' ? (
                 <span className="planet-special-cost">
-                  <img src={structureImageSrc('blue', 'gaiaformer')} alt="" />
+                  <img src={structureImageSrc(structureColor, 'gaiaformer')} alt="" />
                   <strong>1개 영구 소모</strong>
+                  <ResourceTokens label="광산 건설비" values={displayedResources} />
                 </span>
               ) : actionType === 'GaiaFormation' ? (
                 <span className="planet-special-cost">
-                  <img src={structureImageSrc('blue', 'gaiaformer')} alt="" />
+                  <img src={structureImageSrc(structureColor, 'gaiaformer')} alt="" />
                   <strong>가이아포머 1개</strong>
-                  <small>필요 파워는 가이아 연구 단계 적용</small>
+                  <small>
+                    <GaiaPowerTransfer value={gaiaPowerCost} />
+                    현재 이동 가능 {activePower}개
+                  </small>
                 </span>
               ) : (
                 <>

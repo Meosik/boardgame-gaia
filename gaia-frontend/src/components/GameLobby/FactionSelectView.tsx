@@ -1,12 +1,12 @@
+import { SetupBoardLayout } from './SetupBoardLayout';
+import { controlledPlayer } from '../../devControl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { shallow } from 'zustand/shallow';
 import { useRoomStore } from '../../store/roomStore';
 import { useGameStore } from '../../store/gameStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { GameBoard } from '../GameBoard';
-import { PlayerDashboard } from '../PlayerDashboard';
 import { ResearchBoard } from '../PlayerDashboard/ResearchBoard';
-import { OpponentPanels } from '../OpponentPanels';
 import { SpaceshipBoards } from '../SpaceshipBoards';
 import { LostFleetTechRequirementBoard } from '../LostFleetTechRequirementBoard';
 import { FactionBadge } from './FactionBadge';
@@ -29,6 +29,7 @@ import type {
   StructureType,
 } from '../../types/game';
 import { isGameState } from '../../types/game';
+import { factionDisplayName } from '../../displayNames';
 
 interface Props {
   onGameStart: () => void;
@@ -136,7 +137,8 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
     sessionToken,
     nickname,
     gameSetup,
-    playerId,
+    previewBoard,
+    playerId: sessionPlayerId,
     lobbyPlayers,
     revision,
     setRevision,
@@ -146,6 +148,7 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
       sessionToken: state.sessionToken,
       nickname: state.nickname,
       gameSetup: state.gameSetup,
+      previewBoard: state.previewBoard,
       playerId: state.playerId,
       lobbyPlayers: state.lobbyPlayers,
       revision: state.revision,
@@ -157,6 +160,7 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
   const setGameState = useGameStore((state) => state.actions.setGameState);
   const { isConnected, send, sendCommand, messages } = useWebSocket(roomCode);
   const [setupGameState, setSetupGameState] = useState<GameState | null>(initialGameState);
+  const playerId = controlledPlayer(setupGameState, sessionPlayerId);
   const [bidAmount, setBidAmount] = useState(1);
   const [selectedFaction, setSelectedFaction] = useState<FactionId | null>(null);
   const [selectedTurnPosition, setSelectedTurnPosition] = useState<number | null>(null);
@@ -339,39 +343,8 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
     const actor = biddingActor(bidding.stage, bidding.active_player);
     const isMyTurn = playerId !== null && actor === playerId;
     const myVp = setupGameState?.players.find((player) => player.player_id === playerId)?.vp ?? 10;
-    // The auction is decided by looking at the fully-set-up board (sector
-    // layout, spaceship tiles, home planets, round/final scoring tiles) —
-    // not just the faction list — so the whole board renders as the actual
-    // page underneath, exactly like the normal in-game view, with the
-    // bidding controls as a popup on top rather than replacing the board.
     return (
-      <div className="app app--game bidding-preview">
-        {setupGameState ? (
-          <>
-            <div className="game-main">
-              <PlayerDashboard
-                player={setupGameState.players.find((p) => p.player_id === playerId) ?? setupGameState.players[0]}
-              />
-              <GameBoard
-                board={setupGameState.board}
-                players={setupGameState.players}
-                emphasizeStructures={emphasizeStructures}
-              />
-            </div>
-            <div className="game-sidebar">
-              <OpponentPanels
-                players={setupGameState.players.filter((p) => p.player_id !== playerId)}
-              />
-            </div>
-          </>
-        ) : (
-          <div className="app--loading">
-            <div className="spinner" />
-            <p>보드를 불러오는 중...</p>
-          </div>
-        )}
-        <div className="bidding-modal-overlay">
-          <div className="bidding-modal">
+      <SetupBoardLayout previewBoard={previewBoard} gameSetup={gameSetup}>
             <BiddingSetup
               bidding={bidding}
               actor={actor}
@@ -402,9 +375,7 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
                 });
               }}
             />
-          </div>
-        </div>
-      </div>
+      </SetupBoardLayout>
     );
   }
 
@@ -518,7 +489,7 @@ function StartingStructureSetup({
     <div className="app app--game setup-game-preview starting-structure-layout">
       <nav className="game-topbar" aria-label="초기 설정 상태">
         <span className="game-top-control setup-phase-indicator">
-          테란 초기 설정 · {factionPlacementNumber}번째 {structure} · 전체 {placement.placement_index + 1}단계
+          {factionDisplayName(activeFaction)} 초기 설정 · {factionPlacementNumber}번째 {structure} · 전체 {placement.placement_index + 1}단계
         </span>
       </nav>
       <aside className="game-reference-rail" aria-label="게임 참조 보드">
@@ -646,7 +617,7 @@ function StartingBoosterSetup({
   return (
     <div className="app app--game setup-game-preview">
       <nav className="game-topbar" aria-label="초기 설정 상태">
-        <span className="game-top-control setup-phase-indicator">테란 초기 설정 · 부스터 선택</span>
+        <span className="game-top-control setup-phase-indicator">{factionDisplayName(game.players.find((player) => player.player_id === selection.active_player)?.faction)} 초기 설정 · 부스터 선택</span>
       </nav>
       <aside className="game-reference-rail" aria-label="게임 참조 보드">
         <section className="game-reference-card">
@@ -686,7 +657,7 @@ function StartingBoosterSetup({
                     <span className="faction-selection-position">{index + 1}</span>
                     <div className="starting-booster-player-identity">
                       <strong>{playerLabel(id)}</strong>
-                      {player?.faction && <small>{player.faction}</small>}
+                      {player?.faction && <small>{factionDisplayName(player.faction)}</small>}
                       {player && (
                         <small className="starting-booster-player-bid">
                           비딩 -{player.setup_bid_vp}점
@@ -701,7 +672,7 @@ function StartingBoosterSetup({
                           {roundBoosterImageSrc(selected) && (
                             <img
                               src={roundBoosterImageSrc(selected) ?? undefined}
-                              alt={`${playerLabel(id)} · ${player?.faction ?? '종족 미정'} · 부스터 #${selected}`}
+                              alt={`${playerLabel(id)} · ${factionDisplayName(player?.faction)} · 부스터 #${selected}`}
                             />
                           )}
                           <strong>부스터 #{selected}</strong>
@@ -810,43 +781,6 @@ function BiddingSetup({
     <div className="faction-selection-view bidding-view">
       <SetupHeader kicker="시계방향 승점 경매" title="종족 비딩" isConnected={isConnected} />
 
-      <TerraformingSelectionBoard colorOrder={terraformingColorOrder} />
-
-      <section className="faction-selection-order" aria-label="비딩 참가 순서">
-        {bidding.clockwise_order.map((id, index) => {
-          const assignment = assignmentFor(id);
-          const isActive = actor === id;
-          const hasPassed = bidding.passed_players.includes(id);
-          return (
-            <div
-              key={id}
-              className={`faction-selection-player ${isActive ? 'active' : ''} ${assignment ? 'complete' : ''} ${hasPassed ? 'passed' : ''}`}
-            >
-              <span className="faction-selection-position">{index + 1}</span>
-              <strong>{playerLabel(id)}</strong>
-              <span>
-                {assignment ? (
-                  <span className="bidding-assignment">
-                    <FactionBadge
-                      faction={assignment.faction}
-                      size={28}
-                      imageSrc={explorationBoardImageSrc(assignment.faction) ?? undefined}
-                    />
-                    <small>순서 {assignment.turn_position} · 승점 -{assignment.bid_vp}점</small>
-                  </span>
-                ) : hasPassed ? (
-                  '패스'
-                ) : isActive ? (
-                  winnerChoice ? '선택 중' : '입찰 중'
-                ) : (
-                  '대기'
-                )}
-              </span>
-            </div>
-          );
-        })}
-      </section>
-
       {bidding.stage === 'Auction' ? (
         <section className="faction-selection-panel bidding-panel">
           <div className="bidding-summary" aria-label="현재 입찰 상태">
@@ -937,6 +871,43 @@ function BiddingSetup({
           {errorMessage && <p className="error-msg">{errorMessage}</p>}
         </section>
       ) : null}
+
+      <TerraformingSelectionBoard colorOrder={terraformingColorOrder} />
+
+      <section className="faction-selection-order" aria-label="비딩 참가 순서">
+        {bidding.clockwise_order.map((id, index) => {
+          const assignment = assignmentFor(id);
+          const isActive = actor === id;
+          const hasPassed = bidding.passed_players.includes(id);
+          return (
+            <div
+              key={id}
+              className={`faction-selection-player ${isActive ? 'active' : ''} ${assignment ? 'complete' : ''} ${hasPassed ? 'passed' : ''}`}
+            >
+              <span className="faction-selection-position">{index + 1}</span>
+              <strong>{playerLabel(id)}</strong>
+              <span>
+                {assignment ? (
+                  <span className="bidding-assignment">
+                    <FactionBadge
+                      faction={assignment.faction}
+                      size={28}
+                      imageSrc={explorationBoardImageSrc(assignment.faction) ?? undefined}
+                    />
+                    <small>순서 {assignment.turn_position} · 승점 -{assignment.bid_vp}점</small>
+                  </span>
+                ) : hasPassed ? (
+                  '패스'
+                ) : isActive ? (
+                  winnerChoice ? '선택 중' : '입찰 중'
+                ) : (
+                  '대기'
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </section>
     </div>
   );
 }
@@ -981,7 +952,7 @@ function FactionChoice({
       className={`faction-selection-choice ${selected ? 'selected' : ''}`}
       disabled={disabled}
       onClick={onClick}
-      aria-label={`${faction} 선택`}
+      aria-label={`${factionDisplayName(faction)} 선택`}
       aria-pressed={selected}
     >
       <FactionBadge

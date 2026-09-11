@@ -62,13 +62,22 @@ describe('OpponentPanels', () => {
     expect(screen.getByText('나')).toBeInTheDocument();
     expect(screen.getByLabelText('비딩 감점 7점')).toHaveTextContent('-7점');
     expect(screen.getAllByLabelText('승점 10점')).toHaveLength(2);
-    expect(screen.queryByText('비딩 0점')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('비딩 감점 0점')).toHaveTextContent('-0점');
     expect(screen.queryByRole('img', { name: 'Xenos 종족 보드' })).not.toBeInTheDocument();
     expect(container.querySelectorAll('.opponent-panel')[0]).toHaveStyle('--player-color: #facc15');
     expect(container.querySelectorAll('.opponent-panel')[1]).toHaveStyle('--player-color: #ef4444');
 
     screen.getByRole('button', { name: 'P2 개인 보드 보기' }).click();
     expect(onPlayerSelect).toHaveBeenCalledWith(players[1]);
+  });
+
+  it('uses Firaks gray even for the controlled player and shows a zero bid', () => {
+    render(<OpponentPanels players={[mockPlayer({ faction: 'Firaks' })]} myPlayerId={1} />);
+    expect(screen.getByRole('button', { name: 'P1 개인 보드 보기' })).toHaveStyle('--player-color: #94a3b8');
+    expect(screen.getByLabelText('비딩 감점 0점')).toHaveTextContent('-0점');
+    expect(screen.getByText('파이락')).toBeInTheDocument();
+    const heading = screen.getByText('파이락').parentElement!;
+    expect([...heading.children].map((child) => child.textContent)).toEqual(['1', 'P1', '파이락', '나', '-0점', '10']);
   });
 
   it('renders nothing when there are no opponents', () => {

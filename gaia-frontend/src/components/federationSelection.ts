@@ -241,8 +241,12 @@ export function validateFederationSelection(
   ));
   const isIvitsGrowth = player.faction === 'Ivits' && (player.federated_hexes?.length ?? 0) > 0;
   const minimumPower = isIvitsGrowth
-    ? FEDERATION_MIN_POWER * (player.federation_tokens.length + 1)
-    : player.faction === 'Xenos' ? 6 : FEDERATION_MIN_POWER;
+    ? FEDERATION_MIN_POWER * (Math.max(0,
+      player.federation_tokens.length + (player.gray_federation_tokens?.length ?? 0)
+        - Number(player.research_tracks.terraforming === 5),
+    ) + 1)
+    : player.faction === 'Xenos' && player.structures.some(({ kind }) => kind === 'PlanetaryInstitute')
+      ? 6 : FEDERATION_MIN_POWER;
   const power = selectedFederationPower(gameState, player, planetHexes, isIvitsGrowth);
   const status = (valid: boolean, reason: string): FederationSelectionStatus => ({
     valid,
@@ -267,11 +271,11 @@ export function validateFederationSelection(
   if (alreadyPlaced + satelliteHexes.length > SATELLITE_SUPPLY) {
     return status(false, '남은 위성이 부족합니다.');
   }
-  const satelliteResource = isIvitsGrowth
+  const satelliteResource = player.faction === 'Ivits'
     ? player.resources.qic
     : player.resources.power.bowl1 + player.resources.power.bowl2 + player.resources.power.bowl3;
   if (satelliteHexes.length > satelliteResource) {
-    return status(false, isIvitsGrowth ? '정보 큐브가 부족합니다.' : '위성에 사용할 파워가 부족합니다.');
+    return status(false, player.faction === 'Ivits' ? '정보 큐브가 부족합니다.' : '위성에 사용할 파워가 부족합니다.');
   }
   if (!isIvitsGrowth) {
     const existingKeys = new Set((player.federated_hexes ?? []).map(({ q, r }) => hexKey(q, r)));
@@ -325,7 +329,7 @@ export function selectableFederationHexes(
   )).length;
   const alreadyPlaced = Object.values(gameState.board.hexes)
     .filter((hex) => hex.satellites.includes(playerId)).length;
-  const satelliteResource = isIvitsGrowth
+  const satelliteResource = player.faction === 'Ivits'
     ? player.resources.qic
     : player.resources.power.bowl1 + player.resources.power.bowl2 + player.resources.power.bowl3;
   const canAddSatellite = selectedSatelliteCount < satelliteResource
@@ -337,14 +341,13 @@ export function selectableFederationHexes(
       if (selectedKeys.has(key)) return true;
       if (existingKeys.has(key)) return false;
       const ownsHex = ownsColonizedHex(hex, playerId);
-      if (ownsHex) {
-        return isIvitsGrowth
-          || !neighboringKeys(hex.coord).some((neighbor) => existingKeys.has(neighbor));
-      }
+      // Adjacency-exclusivity (rulebook p.14: a new federation's planets/satellites cannot touch
+      // an existing one) is deliberately NOT filtered out here anymore — clicking such a hex now
+      // adds it to `selectedHexes` and lets `validateFederationSelection`'s own adjacency check
+      // reject it with an explanatory reason, rather than silently omitting it from the clickable
+      // set with no feedback at all.
+      if (ownsHex) return true;
       if (!canAddSatellite || !isLegalSatelliteHex(gameState, hex)) return false;
-      if (!isIvitsGrowth && neighboringKeys(hex.coord).some((neighbor) => existingKeys.has(neighbor))) {
-        return false;
-      }
       const routeAnchors = selectedKeys.size > 0 ? selectedKeys : isIvitsGrowth ? existingKeys : new Set<string>();
       return neighboringKeys(hex.coord).some((neighbor) => routeAnchors.has(neighbor));
     })

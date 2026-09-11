@@ -1,3 +1,5 @@
+import { useReplayHighlight } from '../../replay/highlight';
+import { ADVANCED_TECH_TILE_LABELS } from '../advancedTechDescriptions';
 import { researchBoardImageSrc } from '../../assets/researchBoardImage';
 import { FACTION_VISUAL } from '../GameLobby/FactionBadge';
 import { SatelliteToken } from './SatelliteToken';
@@ -5,6 +7,7 @@ import { advancedTechTileImageSrc, standardTechTileImageSrc } from '../../assets
 import { economyResearchTileImageSrc } from '../../assets/economyResearchTileImages';
 import { federationTokenImageSrc } from '../../assets/federationTokenImages';
 import lostPlanetImageSrc from '../../assets/boards/normalized/lost_planet.webp';
+import { factionDisplayName, LOST_FLEET_DISPLAY_NAME } from '../../displayNames';
 import qicOverlayImageSrc from '../../assets/boards/normalized/lost_fleet_qic_board_overlay.webp';
 import { POWER_ACTION_SPACES } from '../boardActionSpaces';
 import { GamePieceIcon } from '../GamePieceIcon';
@@ -20,6 +23,7 @@ interface Props {
   board?: ResearchBoardState;
   usedPowerActions?: number[];
   isMyTurn?: boolean;
+  mainActionLocked?: boolean;
   selectedPowerActionId?: number | null;
   onPowerAction?: (id: number) => void;
   techSelectionMode?: 'tile' | 'track' | null;
@@ -116,6 +120,7 @@ export function ResearchBoard({
   board,
   usedPowerActions = [],
   isMyTurn = false,
+  mainActionLocked = false,
   selectedPowerActionId = null,
   onPowerAction,
   techSelectionMode = null,
@@ -127,6 +132,7 @@ export function ResearchBoard({
   onResearchTrack,
   onPaidResearchTrack,
 }: Props) {
+  const replay = useReplayHighlight();
   const active = players.filter((p) => p.faction);
   const lostPlanetAvailable = !active.some((player) => player.research_tracks.navigation >= 5);
 
@@ -144,7 +150,7 @@ export function ResearchBoard({
         <img
           className="research-board-qic-overlay"
           src={qicOverlayImageSrc}
-          alt="Lost Fleet 식민화 오버레이 — 기존 정보 큐브 액션 3개 폐쇄"
+          alt={`${LOST_FLEET_DISPLAY_NAME} 식민화 오버레이 — 기존 정보 큐브 액션 3개 폐쇄`}
         />
         {board?.terraforming_level_5_token != null && federationTokenImageSrc(board.terraforming_level_5_token) && (
           <img
@@ -177,6 +183,7 @@ export function ResearchBoard({
             <span key={`standard-tech-${index}-${tileId}`}>
               <img
                 className="research-board-standard-tech"
+                data-replay-highlight={replay?.standardTech.has(tileId) || undefined}
                 style={style}
                 src={src}
                 alt={`표준 기술 타일 ${tileId}`}
@@ -213,9 +220,11 @@ export function ResearchBoard({
             <span key={`advanced-tech-${index}-${tileId}`}>
               <img
                 className="research-board-advanced-tech"
+                data-replay-highlight={replay?.advancedTech.has(tileId) || undefined}
                 style={style}
                 src={src}
                 alt={`고급 기술 타일 ${tileId}`}
+                title={ADVANCED_TECH_TILE_LABELS[tileId]}
               />
               {techSelectionMode === 'tile' && (
                 <button
@@ -225,7 +234,7 @@ export function ResearchBoard({
                   disabled={!selectable}
                   onClick={() => onAdvancedTechTile?.(tileId, track)}
                   aria-label={`고급 기술 타일 ${tileId} 선택`}
-                  title={selectable ? `고급 기술 타일 ${tileId} 선택` : '연구 4레벨과 사용 가능한 연방 토큰이 필요합니다'}
+                  title={`${ADVANCED_TECH_TILE_LABELS[tileId] ?? ''}${selectable ? ' · 선택' : ' · 연구 4레벨과 사용 가능한 연방 토큰이 필요합니다'}`}
                 />
               )}
             </span>
@@ -242,7 +251,7 @@ export function ResearchBoard({
             );
             const slot = sameLevelPlayers.indexOf(player);
             const fanOffset = (slot - (sameLevelPlayers.length - 1) / 2) * 2.2;
-            const tooltip = `${player.nickname} · ${player.faction} · ${TRACK_LABELS[track]} ${level}레벨`;
+            const tooltip = `${player.nickname} · ${factionDisplayName(player.faction)} · ${TRACK_LABELS[track]} ${level}레벨`;
             const researchTrackSelectable = selectableResearchTracks === undefined
               || selectableResearchTracks.includes(track);
             const chooseTrack = techSelectionMode === 'track'
@@ -253,6 +262,7 @@ export function ResearchBoard({
             return (
               <span
                 key={`${key}-${player.player_id}`}
+                data-replay-highlight={replay?.player === player.player_id && replay.research.has(key) || undefined}
                 className={`research-board-token${chooseTrack ? ' research-board-token--clickable' : ''}`}
                 style={{ top: `${yPct}%`, left: `${xPct + fanOffset}%` }}
                 aria-label={tooltip}
@@ -296,19 +306,23 @@ export function ResearchBoard({
         })}
         {onPowerAction && POWER_ACTION_SPACES.map(({ id, label, x, y }) => {
           const used = usedPowerActions.includes(id);
-          const available = isMyTurn && !used;
+          const selected = selectedPowerActionId === id;
+          const available = isMyTurn && !used && (!mainActionLocked || selected);
           const reason = used
             ? '이번 라운드에 다른 플레이어가 사용함'
+            : mainActionLocked && !selected
+              ? '다른 행동 선택 중'
             : isMyTurn
-              ? '사용 가능'
+              ? selected ? '선택 취소' : '사용 가능'
               : '내 행동 턴이 아님';
           return (
             <button
               key={`power-action-space-${id}`}
+              data-replay-highlight={replay?.powerAction === id || undefined}
               type="button"
               className={`board-action-hotspot research-board-action-space board-action-hotspot--${
                 used ? 'used' : available ? 'available' : 'locked'
-              }${selectedPowerActionId === id ? ' board-action-hotspot--selected' : ''}`}
+              }${selected ? ' board-action-hotspot--selected' : ''}`}
               style={{ left: `${x}%`, top: `${y}%` }}
               disabled={!available}
               onClick={() => onPowerAction(id)}

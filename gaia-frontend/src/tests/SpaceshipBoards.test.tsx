@@ -1,7 +1,10 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { SpaceshipBoards } from '../components/SpaceshipBoards';
 import type { PlayerState, SpaceshipBoard } from '../types/game';
+import { ReplayHighlightContext, replayHighlight } from '../replay/highlight';
+import { parseReplay } from '../replay/records';
+import replayFixture from './fixtures/replay.json';
 
 function mockPlayer(overrides: Partial<PlayerState> = {}): PlayerState {
   return {
@@ -47,6 +50,24 @@ function mockShip(overrides: Partial<SpaceshipBoard> = {}): SpaceshipBoard {
 }
 
 describe('SpaceshipBoards', () => {
+  it.each(['ExploreSpaceship', 'RoundBoosterRangeExploreSpaceship', 'TwilightRangeExploreSpaceship', 'GleensExploreSpaceship'])(
+    'highlights only the acting shuttle for %s and clears on the next action', (type) => {
+      const frame = { ...parseReplay(replayFixture).frames[0], player: 0, action: { type, ship: 'Twilight' } };
+      const ships = [mockShip({ explorers: [1, 0, null, null] }), mockShip({ id: 'Eclipse', explorers: [0, null, null, null] })];
+      const board = <SpaceshipBoards spaceshipBoards={ships} players={[mockPlayer(), mockPlayer({ player_id: 1 })]} />;
+      const { container, rerender } = render(<ReplayHighlightContext.Provider value={replayHighlight(frame)}>{board}</ReplayHighlightContext.Provider>);
+      const marked = container.querySelectorAll('[data-replay-highlight="true"]');
+      expect(marked).toHaveLength(1);
+      expect(marked[0]).toHaveClass('spaceship-board-explorer');
+      expect(marked[0]).toHaveAttribute('aria-label', '탐사 셔틀 2 슬롯 탐사 완료');
+      expect(marked[0].closest('figure')).toHaveAttribute('aria-label', '트와일라잇 함선 보드');
+      expect(container.querySelector('figure[data-replay-highlight]')).toBeNull();
+      rerender(<ReplayHighlightContext.Provider value={replayHighlight({ ...frame, action: { type: 'FreeAction' } })}>{board}</ReplayHighlightContext.Provider>);
+      expect(container.querySelector('[data-replay-highlight="true"]')).toBeNull();
+      rerender(board);
+      expect(container.querySelector('[data-replay-highlight="true"]')).toBeNull();
+    },
+  );
   it('renders all four ship boards', () => {
     const ships = [
       mockShip({ id: 'Twilight' }),
@@ -56,8 +77,8 @@ describe('SpaceshipBoards', () => {
     ];
     render(<SpaceshipBoards spaceshipBoards={ships} players={[mockPlayer()]} />);
 
-    expect(screen.getByRole('img', { name: 'Twilight 함선 보드' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Eclipse 함선 보드' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '트와일라잇 함선 보드' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '이클립스 함선 보드' })).toBeInTheDocument();
     expect(screen.queryAllByLabelText(/탐사 완료/)).toHaveLength(0);
   });
 
@@ -137,13 +158,56 @@ describe('SpaceshipBoards', () => {
     render(<SpaceshipBoards spaceshipBoards={ships} players={[]} />);
 
     expect(screen.getAllByAltText(/^아티팩트 /)).toHaveLength(4);
-    expect(screen.getByAltText('T F Mars 표준 기술 타일 11')).toBeInTheDocument();
-    expect(screen.getByAltText('Twilight 연방 토큰 8')).toBeInTheDocument();
-    expect(screen.getByAltText('T F Mars 연방 토큰 9')).toBeInTheDocument();
-    expect(screen.getByAltText('Twilight 연방 토큰 8')).toHaveAttribute(
+    expect(screen.getByAltText('T F 마스 표준 기술 타일 11')).toBeInTheDocument();
+    expect(screen.getByAltText('트와일라잇 연방 토큰 8')).toBeInTheDocument();
+    expect(screen.getByAltText('T F 마스 연방 토큰 9')).toBeInTheDocument();
+    expect(screen.getByAltText('트와일라잇 연방 토큰 8')).toHaveAttribute(
       'src',
       expect.stringContaining('federation_tokens_lost_fleet/normalized/fed_08.png'),
     );
+  });
+
+  it('enables an explored ship tech tile from the canonical player exploration state', () => {
+    const onTechTileSelect = vi.fn();
+    const ships = [
+      mockShip({ id: 'TFMars', explorers: [null, null, null, null], tech_tiles: [11] }),
+    ];
+    const players = [mockPlayer({ explored_ships: [2] })];
+
+    render(
+      <SpaceshipBoards
+        spaceshipBoards={ships}
+        players={players}
+        myPlayerId={0}
+        isMyTurn
+        selectableTechTiles={[11]}
+        onTechTileSelect={onTechTileSelect}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'T F 마스 표준 기술 타일 11 선택' }));
+
+    expect(onTechTileSelect).toHaveBeenCalledWith(11);
+  });
+
+  it('labels Rebellion actions locked by another selection without claiming it is not my turn', () => {
+    const ships = [mockShip({ id: 'Rebellion', explorers: [0, null, null, null] })];
+    render(
+      <SpaceshipBoards
+        spaceshipBoards={ships}
+        players={[mockPlayer({ explored_ships: [1] })]}
+        myPlayerId={0}
+        isMyTurn
+        mainActionLocked
+        selectedAction="RebellionGainTechTile"
+        onActionSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByRole('button', { name: /리벨리온.*다른 행동 선택 중/ }))
+      .toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /리벨리온.*내 행동 턴이 아님/ }))
+      .not.toBeInTheDocument();
   });
 
   it("positions each spaceship's tech-tile slot at its own measured socket", () => {
@@ -160,11 +224,11 @@ describe('SpaceshipBoards', () => {
     // Each board prints its own cockpit-screen panel at a different size/position rather than
     // sharing one physical tile ratio — all three re-measured directly off their scans (see
     // `TECH_TILE_SLOT`'s comment).
-    expect(screen.getByAltText('Eclipse 표준 기술 타일 11').parentElement)
+    expect(screen.getByAltText('이클립스 표준 기술 타일 11').parentElement)
       .toHaveStyle({ width: '16.53%', aspectRatio: '359 / 300' });
-    expect(screen.getByAltText('T F Mars 표준 기술 타일 11').parentElement)
+    expect(screen.getByAltText('T F 마스 표준 기술 타일 11').parentElement)
       .toHaveStyle({ width: '16.55%', aspectRatio: '359.5 / 285' });
-    expect(screen.getByAltText('Rebellion 표준 기술 타일 11').parentElement)
+    expect(screen.getByAltText('리벨리온 표준 기술 타일 11').parentElement)
       .toHaveStyle({ width: '17.03%', aspectRatio: '363.5 / 316' });
     expect(slots.every((slot) => slot?.style.height === '')).toBe(true);
   });

@@ -1,3 +1,6 @@
+import { useReplayHighlight } from '../../replay/highlight';
+import { ADVANCED_TECH_TILE_LABELS } from '../advancedTechDescriptions';
+import { ARTIFACT_LABELS } from '../artifactDescriptions';
 import { GamePieceIcon } from '../GamePieceIcon';
 import { artifactImageSrc } from '../../assets/artifactImages';
 import {
@@ -9,6 +12,7 @@ import { advancedTechTileImageSrc, standardTechTileImageSrc } from '../../assets
 import type { ReactNode } from 'react';
 
 interface Props {
+  faction?: string;
   qic: number;
   techTiles: number[];
   advancedTechTiles: number[];
@@ -20,6 +24,7 @@ interface Props {
 }
 
 export function FactionBoardSideRack({
+  faction,
   qic,
   techTiles,
   advancedTechTiles,
@@ -29,6 +34,8 @@ export function FactionBoardSideRack({
   booster,
   artifacts,
 }: Props) {
+  const replay = useReplayHighlight();
+  const actor = !!faction && replay?.faction === faction;
   const boosterSrc = booster === null ? undefined : roundBoosterImageSrc(booster);
   const uncoveredTechTiles = techTiles.filter((id) => !coveredTechTiles.includes(id));
   const visibleTechTileCount = uncoveredTechTiles.length + advancedTechTiles.length;
@@ -55,7 +62,7 @@ export function FactionBoardSideRack({
         <div className={`faction-board-side-rack-tiles${visibleTechTileCount > 2 ? ' faction-board-side-rack-tiles--dense' : ''}`}>
           {uncoveredTechTiles.map((id, index) => {
             const src = standardTechTileImageSrc(id);
-            return src ? <img key={`std-${index}`} src={src} alt={`일반 기술 타일 ${id}`} /> : null;
+            return src ? <img key={`std-${index}`} data-replay-highlight={actor && replay?.standardTech.has(id) || undefined} src={src} alt={`일반 기술 타일 ${id}`} /> : null;
           })}
           {advancedTechTiles.map((id, index) => {
             const advancedSrc = advancedTechTileImageSrc(id);
@@ -63,7 +70,7 @@ export function FactionBoardSideRack({
             const coveredSrc = coveredId === undefined ? undefined : standardTechTileImageSrc(coveredId);
             if (!advancedSrc) return null;
             if (!coveredSrc) {
-              return <img key={`adv-${index}`} src={advancedSrc} alt={`고급 기술 타일 ${id}`} />;
+              return <img key={`adv-${index}`} data-replay-highlight={actor && replay?.advancedTech.has(id) || undefined} src={advancedSrc} alt={`고급 기술 타일 ${id}`} title={ADVANCED_TECH_TILE_LABELS[id]} />;
             }
             return (
               <span
@@ -78,8 +85,9 @@ export function FactionBoardSideRack({
                 />
                 <img
                   className="faction-board-side-rack-tech-advanced"
+                  data-replay-highlight={actor && replay?.advancedTech.has(id) || undefined}
                   src={advancedSrc}
-                  alt={`고급 기술 타일 ${id}`}
+                  alt={`고급 기술 타일 ${id}`} title={ADVANCED_TECH_TILE_LABELS[id]}
                 />
               </span>
             );
@@ -110,7 +118,7 @@ export function FactionBoardSideRack({
       </RackSection>
 
       <RackSection label="부스터" className="faction-board-side-rack-booster">
-        {boosterSrc ? <img src={boosterSrc} alt={`라운드 부스터 ${booster}`} /> : <EmptyRackSlot />}
+        {boosterSrc ? <img data-replay-highlight={actor && replay?.booster === booster || undefined} src={boosterSrc} alt={`라운드 부스터 ${booster}`} /> : <EmptyRackSlot />}
       </RackSection>
 
       <RackSection label="아티팩트" className="faction-board-side-rack-artifact">
@@ -118,7 +126,7 @@ export function FactionBoardSideRack({
           {artifacts.map((id, index) => {
             const src = artifactImageSrc(id);
             return src ? (
-              <span key={index} className="faction-board-side-rack-artifact-slot">
+              <span key={index} className="faction-board-side-rack-artifact-slot" title={ARTIFACT_LABELS[id]}>
                 <img src={src} alt={`아티팩트 ${id}`} />
               </span>
             ) : null;

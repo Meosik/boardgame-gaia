@@ -1,4 +1,5 @@
 import type { FactionId } from '../../types/game';
+import { factionDisplayName } from '../../displayNames';
 
 export const FACTION_VISUAL: Record<FactionId, { color: string; initials: string }> = {
   Terrans:      { color: '#4a7c59', initials: 'TE' },
@@ -43,13 +44,14 @@ export function FactionBadge({
   imageSrc,
 }: Props) {
   const vis = FACTION_VISUAL[faction];
+  const displayName = factionDisplayName(faction);
   const r = size / 2;
 
   const circle = imageSrc ? (
     <span
       className="faction-badge-portrait"
       role="img"
-      aria-label={faction}
+      aria-label={displayName}
       style={{ width: size, height: size, backgroundImage: `url(${imageSrc})` }}
     />
   ) : (
@@ -85,7 +87,7 @@ export function FactionBadge({
     return (
       <span className="faction-badge" style={cssVar}>
         {circle}
-        {showLabel && <span className="faction-badge-label">{faction}</span>}
+        {showLabel && <span className="faction-badge-label">{displayName}</span>}
       </span>
     );
   }
@@ -95,10 +97,10 @@ export function FactionBadge({
       className="faction-badge faction-badge--btn"
       style={cssVar}
       onClick={(e) => { e.stopPropagation(); onSelect(faction); }}
-      title={faction}
+      title={displayName}
     >
       {circle}
-      {showLabel && <span className="faction-badge-label">{faction}</span>}
+      {showLabel && <span className="faction-badge-label">{displayName}</span>}
     </button>
   );
 }

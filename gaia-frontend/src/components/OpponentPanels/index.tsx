@@ -1,3 +1,4 @@
+import { factionDisplayName } from '../../displayNames';
 import { clsx } from 'clsx';
 import { ResourceToken, VictoryPointToken, type DisplayResource } from '../ResourceTokens';
 import { GamePieceIcon } from '../GamePieceIcon';
@@ -181,6 +182,7 @@ export function OpponentPanels({
               player.passed && 'player-panel--passed',
             )}
             style={{ '--player-color': factionColor } as React.CSSProperties}
+            data-reward-player={player.player_id}
             aria-label={`${player.nickname} 개인 보드 보기`}
             onClick={() => onPlayerSelect?.(player)}
           >
@@ -189,13 +191,14 @@ export function OpponentPanels({
                 {index + 1}
               </span>
               <span className="player-name">{player.nickname}</span>
+              {player.faction && <span className="opponent-faction-name">{factionDisplayName(player.faction)}</span>}
               {player.player_id === myPlayerId && <span className="opponent-me-label">나</span>}
-              {player.setup_bid_vp > 0 && (
-                <span className="opponent-bid" aria-label={`비딩 감점 ${player.setup_bid_vp}점`}>
+              {player.faction !== null && (
+                <span className="opponent-bid" title={`종족 비딩 ${player.setup_bid_vp}점 · 최종 점수에서 차감`} aria-label={`비딩 감점 ${player.setup_bid_vp}점`}>
                   -{player.setup_bid_vp}점
                 </span>
               )}
-              <VictoryPointToken value={player.vp} />
+              <VictoryPointToken value={player.vp} rewardTarget />
             </span>
             <span className="opponent-resources" aria-label="보유 자원">
               <PlayerResource resource="credits" value={player.resources.credits} income={income?.credits ?? 0} />
@@ -208,7 +211,12 @@ export function OpponentPanels({
               <PlayerResource resource="qic" value={player.resources.qic} income={income?.qic ?? 0} />
             </span>
             <span className="opponent-power-row" aria-label="파워 영역">
-              <PowerBowl label="G" value={power.gaia_bowl} tone="gaia" brainstone={power.brainstone === 'Gaia'} />
+              <PowerBowl
+                label="G"
+                value={power.gaia_bowl + power.gaia_forming}
+                tone="gaia"
+                brainstone={power.brainstone === 'Gaia'}
+              />
               <PowerBowl label="I" value={power.bowl1} tone="one" brainstone={power.brainstone === 'Area1'} />
               <PowerBowl label="II" value={power.bowl2} tone="two" brainstone={power.brainstone === 'Area2'} />
               <PowerBowl label="III" value={power.bowl3} tone="three" brainstone={power.brainstone === 'Area3'} />
@@ -246,7 +254,7 @@ function PlayerResource({
 
   return (
     <span className="opponent-resource-item">
-      <ResourceToken resource={resource} value={value} />
+      <ResourceToken resource={resource} value={value} rewardTarget />
       <small aria-label={`이번 수입 ${labels[resource]} ${income}`}>+{income}</small>
     </span>
   );

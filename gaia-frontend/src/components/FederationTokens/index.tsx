@@ -4,7 +4,11 @@ import {
 } from '../../assets/federationTokenImages';
 import { FACTION_VISUAL } from '../GameLobby/FactionBadge';
 import { SatelliteToken } from '../PlayerDashboard/SatelliteToken';
-import type { PlayerState } from '../../types/game';
+import type {
+  FederationTokenChoice,
+  PlayerState,
+  SpaceshipId,
+} from '../../types/game';
 
 interface Props {
   /** The remaining base-game supply — `gameState.research_board.federation_tokens` (18 tokens
@@ -12,6 +16,11 @@ interface Props {
    * same kind, shown here as one stack with a count). */
   availableTokens: number[];
   players: PlayerState[];
+  selectionMode?: boolean;
+  selectedToken?: FederationTokenChoice | null;
+  spaceshipTokens?: { ship: SpaceshipId; kind: number }[];
+  onSelectToken?: (token: FederationTokenChoice) => void;
+  showHoldings?: boolean;
 }
 
 /**
@@ -20,7 +29,15 @@ interface Props {
  * still spendable, gray = the actual flipped face used for an Advanced Tech tile or level-5 research). Mirrors
  * `RoundBoosters`' real-tile treatment for the same "no UI, just an id" gap.
  */
-export function FederationTokens({ availableTokens, players }: Props) {
+export function FederationTokens({
+  availableTokens,
+  players,
+  selectionMode = false,
+  selectedToken = null,
+  spaceshipTokens = [],
+  onSelectToken,
+  showHoldings = true,
+}: Props) {
   const supplyCounts = new Map<number, number>();
   for (const id of availableTokens) {
     if (id === 7) continue;
@@ -34,10 +51,13 @@ export function FederationTokens({ availableTokens, players }: Props) {
     ),
   );
 
-  if (supplyKinds.length === 0 && holders.length === 0) return null;
+  if (supplyKinds.length === 0 && holders.length === 0 && spaceshipTokens.length === 0) return null;
 
   return (
-    <section className="federation-tokens" aria-label="연방 토큰">
+    <section
+      className={`federation-tokens${selectionMode ? ' federation-tokens--selecting' : ''}`}
+      aria-label="연방 토큰"
+    >
       <div className="federation-tokens-supply" aria-label="남은 연방 토큰 보급">
         {supplyKinds.map((id) => {
           const src = federationTokenImageSrc(id);
@@ -46,16 +66,57 @@ export function FederationTokens({ availableTokens, players }: Props) {
           return (
             <figure
               key={`supply-${id}`}
-              className="federation-token-tile"
+              className={`federation-token-tile${
+                selectedToken?.source === 'Supply' && selectedToken.kind === id
+                  ? ' federation-token-tile--selected'
+                  : ''
+              }`}
               aria-label={`연방 토큰 ${id} 보급 ${count}개`}
             >
-              <img src={src} alt={`연방 토큰 ${id}`} />
+              {selectionMode && onSelectToken ? (
+                <button
+                  type="button"
+                  className="federation-token-select-button"
+                  aria-label={`연방 토큰 ${id} 선택`}
+                  aria-pressed={selectedToken?.source === 'Supply' && selectedToken.kind === id}
+                  onClick={() => onSelectToken({ source: 'Supply', kind: id })}
+                >
+                  <img src={src} alt={`연방 토큰 ${id}`} />
+                </button>
+              ) : (
+                <img src={src} alt={`연방 토큰 ${id}`} />
+              )}
               <span className="federation-token-count">×{count}</span>
             </figure>
           );
         })}
       </div>
-      {holders.length > 0 && (
+      {selectionMode && spaceshipTokens.length > 0 && onSelectToken && (
+        <aside className="federation-expansion-tab" aria-label="획득 가능한 확장 연방 토큰">
+          <span className="federation-expansion-tab-label">확장 연방</span>
+          <div className="federation-expansion-token-list">
+            {spaceshipTokens.map(({ ship, kind }) => {
+              const src = federationTokenImageSrc(kind);
+              if (!src) return null;
+              const selected = selectedToken?.source === 'Spaceship' && selectedToken.ship === ship;
+              return (
+                <button
+                  key={ship}
+                  type="button"
+                  className={`federation-expansion-token${selected ? ' is-selected' : ''}`}
+                  aria-label={`${ship} 확장 연방 토큰 ${kind} 선택`}
+                  aria-pressed={selected}
+                  onClick={() => onSelectToken({ source: 'Spaceship', ship })}
+                >
+                  <img src={src} alt={`확장 연방 토큰 ${kind}`} />
+                  <span>{ship}</span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+      )}
+      {showHoldings && holders.length > 0 && (
         <div className="federation-tokens-holdings" aria-label="플레이어별 보유 연방 토큰">
           {holders.map((player) => (
             <div key={player.player_id} className="federation-token-holder">

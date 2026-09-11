@@ -105,6 +105,8 @@ export interface PlayerState {
   structures: Structure[];
   /** Artifact 8/12 virtual mines: scoring/objective mines without a board coordinate or piece. */
   artifact_mines?: PlanetType[];
+  /** Lost Fleet Artifact ids this player has examined. */
+  artifacts?: number[];
   research_tracks: ResearchTracks;
   vp: number;
   /** Setup auction cost, deducted only when final scoring is calculated. */
@@ -130,6 +132,8 @@ export interface PlayerState {
    * round each, reset when the round transitions. Meaningless for other factions. */
   gleens_special_action_used_this_round: boolean;
   space_giants_special_action_used_this_round: boolean;
+  /** Space Giants PI technology-tile gain is once per game. */
+  pi_ability_used?: boolean;
   /** Special action printed on the currently owned round booster; reset during Clean-up. */
   round_booster_special_action_used_this_round?: boolean;
   /** Base-faction board special action (Ambas, Firaks, Bescods); reset during Clean-up. */
@@ -147,7 +151,7 @@ export interface PlayerState {
   expensive_terraforming_planet_types?: PlanetType[];
   /** Moweyds only: hexes where a Power Ring has been placed (at most 6). */
   moweyds_power_ring_hexes?: HexCoord[];
-  /** Standard Tech tile ids owned (2-10 base game, 11-14 Lost Fleet Appendix V). */
+  /** Standard Tech tile ids owned (2-10 base game, 11-13 Lost Fleet spaceship tiles). */
   tech_tiles?: number[];
   /** Advanced Tech tile ids owned (1-22). */
   advanced_tech_tiles?: number[];
@@ -321,7 +325,13 @@ export type GamePhase =
   | { TinkeroidsTileSelectionPending: { player: PlayerId; round: number } }
   | { RoundScoring: { round: number } }
   | 'FinalScoring'
-  | 'Ended';
+  | {
+      /** Terminal phase — round 6 finished and `RuleEngine::finalize_game` ran. Carried directly
+       * in the snapshotted `GameState` (not just a one-time `game_ended` ws message) so a client
+       * that only loads a later snapshot (reconnect/refresh/restart recovery) still sees the same
+       * result. `winners` lists every player tied for the top score — ties share the win. */
+      Ended: { final_scores: [PlayerId, number][]; winners: PlayerId[] };
+    };
 
 // ── Faction selection ─────────────────────────────────────────────────────────
 
@@ -365,6 +375,7 @@ export interface BiddingState {
 // ── Game State ────────────────────────────────────────────────────────────────
 
 export interface GameState {
+  dev_controller?: PlayerId | null;
   players: PlayerState[];
   board: BoardState;
   research_board: ResearchBoard;
@@ -532,6 +543,14 @@ export type TechTileChoice =
       track: ResearchTrack;
       covered_tile: number;
       advance_track?: ResearchTrack | null;
+    }
+  | {
+      /** Lost Fleet's single extra Advanced Tech tile (Scoring Board Extension) — its first
+       * condition is 3 distinct explored spaceships or 25 VP (`LostFleetAdvancedTechRequirement`
+       * server-side), not a research-track level, so there's no `track` field here. */
+      kind: 'LostFleetAdvanced';
+      covered_tile: number;
+      advance_track?: ResearchTrack | null;
     };
 
 /** Mirrors `gaia_engine::rules::actions::TechTileRef` (`#[serde(tag = "pool", rename_all =
@@ -559,6 +578,7 @@ export type GameAction =
       token: FederationTokenChoice;
       bonus_build_coord?: HexCoord | null;
       bonus_tech_tile?: number | null;
+      bonus_research_track?: ResearchTrack | null;
     }
   | { type: 'PowerAction'; id: number; coord: HexCoord | null }
   | { type: 'SpecialAction'; id: number }
@@ -580,7 +600,13 @@ export type GameAction =
   | { type: 'TaklonsChargePower'; gain_before: boolean }
   | { type: 'ChooseIncomeOrder'; charge_first: boolean }
   | { type: 'TerransGaiaConversion'; kind: FreeActionKind; count: number }
-  | { type: 'ItarsGaiaTechTile'; tile: number; track: ResearchTrack }
+  | { type: 'ItarsGaiaTechChoice'; choice: TechTileChoice }
+  | {
+      type: 'ItarsGaiaTechTile';
+      tile: number;
+      track: ResearchTrack;
+      bonus_build_coord?: HexCoord | null;
+    }
   | { type: 'FinishGaiaDecision' }
   | { type: 'AcademyQicAction' }
   | { type: 'FreeAction'; kind: FreeActionKind; count: number }
@@ -594,7 +620,11 @@ export type GameAction =
       bonus_research_track?: ResearchTrack | null;
     }
   | { type: 'SpaceshipCreditTerraform'; coord: HexCoord }
-  | { type: 'TwilightFreeResearchLab'; coord: HexCoord }
+  | {
+      type: 'TwilightFreeResearchLab';
+      coord: HexCoord;
+      tech_tile_choice?: TechTileChoice | null;
+    }
   | {
       type: 'TwilightReplayFederationToken';
       token_kind: number;
@@ -607,7 +637,13 @@ export type GameAction =
   | { type: 'TwilightRangeExploreSpaceship'; ship: SpaceshipId }
   | { type: 'RebellionFreeTradingStation'; coord: HexCoord }
   | { type: 'RebellionCreditsAndQic' }
-  | { type: 'RebellionGainTechTile'; tile: number; track: ResearchTrack }
+  | {
+      type: 'RebellionGainTechTile';
+      tile: number;
+      track: ResearchTrack;
+      bonus_build_coord?: HexCoord | null;
+    }
+  | { type: 'SpaceGiantsGainTechTile'; choice: TechTileChoice }
   | { type: 'TFMarsTechBonus' }
   | { type: 'TFMarsGaiaFormation'; coord: HexCoord }
   | { type: 'EclipsePlanetTypeBonus' }
@@ -740,7 +776,7 @@ export type LobbyMessage =
   | { type: 'player_joined'; player_id: PlayerId; nickname: string; player_count: number }
   | ({ type: 'lobby_state' } & LobbyState)
   | { type: 'round_ended'; round: number; scores: [PlayerId, number][] }
-  | { type: 'game_ended'; final_scores: [PlayerId, number][]; winner: PlayerId }
+  | { type: 'game_ended'; final_scores: [PlayerId, number][]; winners: PlayerId[] }
   | { type: 'room_paused'; paused: boolean; missing_seats: PlayerId[] }
   | { type: 'error'; code: string; message: string };
 
@@ -755,6 +791,14 @@ export interface RoomInfo {
   game_setup: GameSetup | null;
   players: LobbyPlayer[];
   host_player_id: PlayerId;
+}
+
+// One entry from `GET /api/rooms` — only rooms still in `lobby` are ever listed,
+// since `join_room` rejects anything else (`gaia-server/src/room/manager.rs`).
+export interface RoomSummary {
+  code: string;
+  host_nickname: string;
+  player_count: number;
 }
 
 export interface CreateRoomResponse {

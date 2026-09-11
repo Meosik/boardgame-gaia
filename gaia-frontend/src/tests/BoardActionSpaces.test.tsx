@@ -54,6 +54,26 @@ describe('physical board action spaces', () => {
     expect(onPowerAction).toHaveBeenNthCalledWith(2, 4);
   });
 
+  it('locks other power actions while a targeted power action is being resolved', () => {
+    const onPowerAction = vi.fn();
+    render(
+      <ResearchBoard
+        players={[]}
+        isMyTurn
+        mainActionLocked
+        selectedPowerActionId={2}
+        onPowerAction={onPowerAction}
+      />,
+    );
+
+    const selectedAction = screen.getByRole('button', { name: /파워 5 → 광산 건설.*선택 취소/ });
+    expect(selectedAction).toBeEnabled();
+    expect(screen.getByRole('button', { name: /파워 4 → 광석 2.*다른 행동 선택 중/ })).toBeDisabled();
+
+    fireEvent.click(selectedAction);
+    expect(onPowerAction).toHaveBeenCalledWith(2);
+  });
+
   it('allows ship actions only to an entrant and locks a slot used by anyone', () => {
     const onActionSelect = vi.fn();
     const { rerender } = render(
@@ -81,7 +101,8 @@ describe('physical board action spaces', () => {
 
     const creditAction = screen.getByRole('button', { name: /크레딧 행동.*사용 가능/ });
     expect(creditAction).toBeEnabled();
-    expect(screen.getByRole('button', { name: /기술 타일 수만큼.*사용함/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /기본 2점 \+ 일반 기술 타일당 1점.*사용함/ }))
+      .toBeDisabled();
 
     fireEvent.click(creditAction);
     expect(onActionSelect).toHaveBeenCalledWith(

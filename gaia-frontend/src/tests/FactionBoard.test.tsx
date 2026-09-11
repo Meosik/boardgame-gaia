@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { FactionBoard } from '../components/PlayerDashboard/FactionBoard';
 import { factionBoardImageSrc } from '../assets/factionBoardImages';
+import { remainingFactionBoardStructureSlots } from '../components/PlayerDashboard/factionBoardStructureSlots';
 import type { Structure } from '../types/game';
 
 const resources = {
@@ -28,7 +29,7 @@ describe('FactionBoard', () => {
   it('renders the faction-specific board image and every unbuilt supply piece', () => {
     render(<FactionBoard faction="Terrans" structures={[]} />);
 
-    expect(screen.getByRole('img', { name: 'Terrans 종족 보드' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '테란 종족 보드' })).toBeInTheDocument();
     expect(screen.getAllByLabelText(/보유/)).toHaveLength(18);
     expect(screen.getAllByLabelText(/광산 보유/)).toHaveLength(8);
     expect(screen.getAllByLabelText(/교역소 보유/)).toHaveLength(4);
@@ -63,6 +64,40 @@ describe('FactionBoard', () => {
 
     expect(screen.queryByLabelText('과학 아카데미 보유')).not.toBeInTheDocument();
     expect(screen.getByLabelText('정보 큐브 아카데미 보유')).toBeInTheDocument();
+  });
+
+  it('maps Bescods academies to the left and institute to the right without moving other supply rows', () => {
+    render(<FactionBoard faction="Bescods" structures={[]} />);
+    expect(screen.getAllByLabelText(/보유/)).toHaveLength(18);
+    expect(parseFloat(screen.getByLabelText('과학 아카데미 보유').style.left))
+      .toBeCloseTo(325 / 2323 * 100);
+    expect(parseFloat(screen.getByLabelText('정보 큐브 아카데미 보유').style.left))
+      .toBeCloseTo(587 / 2323 * 100);
+    expect(parseFloat(screen.getByLabelText('행성 의회 보유').style.left))
+      .toBeCloseTo(1175 / 2323 * 100);
+    const ordinary = remainingFactionBoardStructureSlots([], 'Terrans');
+    const bescods = remainingFactionBoardStructureSlots([], 'Bescods');
+    expect(bescods.slice(0, 15)).toEqual(ordinary.slice(0, 15));
+    expect(ordinary.find(slot => slot.id === 'planetary-institute')?.xPct)
+      .toBeCloseTo(430 / 2323 * 100);
+  });
+
+  it.each(['Science', 'Qic'] as const)('removes the built Bescods %s academy and institute from their new slots', (academyType) => {
+    const { rerender } = render(<FactionBoard faction="Bescods" structures={[
+      structure({ Academy: academyType }), structure('PlanetaryInstitute'),
+      structure('TradingStation'), structure('ResearchLab'),
+    ]} />);
+    const removed = academyType === 'Science' ? '과학 아카데미 보유' : '정보 큐브 아카데미 보유';
+    const remaining = academyType === 'Science' ? '정보 큐브 아카데미 보유' : '과학 아카데미 보유';
+    expect(screen.queryByLabelText(removed)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(remaining)).toBeInTheDocument();
+    expect(screen.queryByLabelText('행성 의회 보유')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('교역소 보유 1')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('연구소 보유 1')).not.toBeInTheDocument();
+    // Returning buildings to supply restores their faction-specific positions.
+    rerender(<FactionBoard faction="Bescods" structures={[]} />);
+    expect(screen.getAllByLabelText(/보유/)).toHaveLength(18);
+    expect(screen.getByLabelText(removed)).toBeInTheDocument();
   });
 
   it('places the current power tokens in their printed bowls', () => {
@@ -107,10 +142,10 @@ describe('FactionBoard', () => {
       />,
     );
 
-    expect(screen.getByLabelText('테라포밍 3단계 색상: Terra, Ice, Titanium')).toBeInTheDocument();
-    expect(screen.getByAltText('Terra 색상 위성')).toBeInTheDocument();
-    expect(screen.getByAltText('Ice 색상 위성')).toBeInTheDocument();
-    expect(screen.getByAltText('Titanium 색상 위성')).toBeInTheDocument();
+    expect(screen.getByLabelText('테라포밍 3단계 색상: 대지, 얼음, 티타늄')).toBeInTheDocument();
+    expect(screen.getByAltText('대지 색상 위성')).toBeInTheDocument();
+    expect(screen.getByAltText('얼음 색상 위성')).toBeInTheDocument();
+    expect(screen.getByAltText('티타늄 색상 위성')).toBeInTheDocument();
     expect(screen.getByAltText('현재 팅커링 타일 2')).toBeInTheDocument();
   });
 

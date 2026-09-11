@@ -3,6 +3,7 @@ import type {
   DevGameResponse,
   JoinRoomResponse,
   RoomInfo,
+  RoomSummary,
   GameSetup,
   PreviewBoard,
   SetupMode,
@@ -30,6 +31,22 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  devTool(code: string, sessionToken: string, revision: number, tool: 'refill' | 'delete'): Promise<unknown> {
+    return request(`${BASE}/rooms/${code}/dev-${tool}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        session_token: sessionToken,
+        command_id: crypto.randomUUID(),
+        expected_revision: revision,
+      }),
+    });
+  },
+  createDevRoom(nickname: string, seed?: string, setupMode: SetupMode = 'bidding'): Promise<CreateRoomResponse> {
+    return request(`${BASE}/dev-games`, {
+      method: 'POST',
+      body: JSON.stringify({ nickname, seed, setup_mode: setupMode, full_setup: true }),
+    });
+  },
   createDevGame(faction = 'Terrans', seed = 'gaia-ui-dev'): Promise<DevGameResponse> {
     return request(`${BASE}/dev-games`, {
       method: 'POST',
@@ -61,6 +78,10 @@ export const api = {
 
   getRoom(code: string): Promise<RoomInfo> {
     return request(`${BASE}/rooms/${code}`);
+  },
+
+  listRooms(): Promise<RoomSummary[]> {
+    return request(`${BASE}/rooms`);
   },
 
   regenerateSetup(

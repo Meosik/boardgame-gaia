@@ -1,4 +1,4 @@
-import type { AcademyType, Structure } from '../../types/game';
+import type { AcademyType, FactionId, Structure } from '../../types/game';
 
 export type FactionBoardSupplyAsset =
   | 'mine'
@@ -107,6 +107,22 @@ const ACADEMY_SLOTS: FactionBoardStructureSlot[] = [
   },
 ];
 
+// Bescods print their academies above trading stations and their institute
+// above research labs. Coordinates use the normalized board, not the source scan.
+const BESCODS_PLANETARY_INSTITUTE_SLOT: FactionBoardStructureSlot = {
+  ...PLANETARY_INSTITUTE_SLOT,
+  xPct: xPct(1175),
+  yPct: yPct(785),
+};
+
+const BESCODS_ACADEMY_SLOTS: FactionBoardStructureSlot[] = ACADEMY_SLOTS.map(
+  (slot, index) => ({
+    ...slot,
+    xPct: xPct(index === 0 ? 325 : 587),
+    yPct: yPct(785),
+  }),
+);
+
 function countBuilt(structures: Structure[], kind: string): number {
   return structures.filter((structure) => structure.kind === kind).length;
 }
@@ -120,7 +136,11 @@ function hasAcademy(structures: Structure[], academyType: AcademyType): boolean 
 
 export function remainingFactionBoardStructureSlots(
   structures: Structure[],
+  faction: FactionId,
 ): FactionBoardStructureSlot[] {
+  const instituteSlot = faction === 'Bescods'
+    ? BESCODS_PLANETARY_INSTITUTE_SLOT : PLANETARY_INSTITUTE_SLOT;
+  const academySlots = faction === 'Bescods' ? BESCODS_ACADEMY_SLOTS : ACADEMY_SLOTS;
   const remainingMines = MINE_SLOTS.slice(Math.min(countBuilt(structures, 'Mine'), MINE_SLOTS.length));
   const remainingTradingStations = TRADING_STATION_SLOTS.slice(
     Math.min(countBuilt(structures, 'TradingStation'), TRADING_STATION_SLOTS.length),
@@ -129,9 +149,9 @@ export function remainingFactionBoardStructureSlots(
     Math.min(countBuilt(structures, 'ResearchLab'), RESEARCH_LAB_SLOTS.length),
   );
   const remainingPlanetaryInstitute = countBuilt(structures, 'PlanetaryInstitute') === 0
-    ? [PLANETARY_INSTITUTE_SLOT]
+    ? [instituteSlot]
     : [];
-  const remainingAcademies = ACADEMY_SLOTS.filter(
+  const remainingAcademies = academySlots.filter(
     (slot) => slot.academyType && !hasAcademy(structures, slot.academyType),
   );
 

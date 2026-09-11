@@ -1,3 +1,4 @@
+import { useReplayHighlight } from '../../replay/highlight';
 import { roundBoosterImageSrc } from '../../assets/roundBoosterImages';
 import { FACTION_VISUAL } from '../GameLobby/FactionBadge';
 import { SatelliteToken } from '../PlayerDashboard/SatelliteToken';
@@ -7,6 +8,8 @@ interface Props {
   /** The currently *available* (untaken) booster pool — `gameState.boosters`. */
   availableBoosters: number[];
   players: PlayerState[];
+  selectionMode?: boolean;
+  onSelectBooster?: (boosterId: number) => void;
 }
 
 /**
@@ -16,7 +19,13 @@ interface Props {
  * these two is exactly the full in-play set) rendered as its actual tile image, with a
  * faction-colored marker on whichever tile a player currently holds.
  */
-export function RoundBoosters({ availableBoosters, players }: Props) {
+export function RoundBoosters({
+  availableBoosters,
+  players,
+  selectionMode = false,
+  onSelectBooster,
+}: Props) {
+  const replay = useReplayHighlight();
   const ownerByBooster = new Map<number, PlayerState>();
   for (const player of players) {
     if (player.booster != null) ownerByBooster.set(player.booster, player);
@@ -31,9 +40,25 @@ export function RoundBoosters({ availableBoosters, players }: Props) {
         const src = roundBoosterImageSrc(id);
         if (!src) return null;
         const owner = ownerByBooster.get(id);
+        const selectable = selectionMode && !owner && availableBoosters.includes(id) && !!onSelectBooster;
         return (
-          <figure key={id} className="round-booster-tile">
-            <img src={src} alt={`라운드 부스터 ${id}`} />
+          <figure
+            key={id}
+            data-replay-highlight={replay?.booster === id || undefined}
+            className={`round-booster-tile${selectable ? ' round-booster-tile--selectable' : ''}`}
+          >
+            {selectable ? (
+              <button
+                type="button"
+                className="round-booster-select-button"
+                aria-label={`라운드 부스터 ${id} 선택하고 패스`}
+                onClick={() => onSelectBooster?.(id)}
+              >
+                <img src={src} alt={`라운드 부스터 ${id}`} />
+              </button>
+            ) : (
+              <img src={src} alt={`라운드 부스터 ${id}`} />
+            )}
             <span
               className="round-booster-owner"
               aria-label={owner?.faction ? `${owner.nickname} 보유 중` : undefined}

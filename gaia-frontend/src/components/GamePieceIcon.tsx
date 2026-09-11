@@ -1,4 +1,4 @@
-import type { CSSProperties, SVGProps } from 'react';
+import { useId, type CSSProperties, type SVGProps } from 'react';
 import iconSheet from '../assets/icons/game-piece-icons.png';
 
 export type GamePieceIconKind =
@@ -51,6 +51,7 @@ export function GamePieceIcon({
   ...svgProps
 }: Props) {
   const crop = ICON_CROPS[kind];
+  const clipId = useId();
   const accessibilityProps = decorative
     ? { 'aria-hidden': true as const }
     : { role: 'img' as const, 'aria-label': label ?? kind };
@@ -65,7 +66,13 @@ export function GamePieceIcon({
       style={{ aspectRatio: `${crop.width} / ${crop.height}`, ...style } as CSSProperties}
     >
       {title && <title>{title}</title>}
-      <image href={iconSheet} x="0" y="0" width={ICON_SHEET_WIDTH} height={ICON_SHEET_HEIGHT} />
+      <defs>
+        <clipPath id={clipId}>
+          <rect x={crop.x} y={crop.y} width={crop.width} height={crop.height} />
+        </clipPath>
+      </defs>
+      <image href={iconSheet} x="0" y="0" width={ICON_SHEET_WIDTH} height={ICON_SHEET_HEIGHT}
+        clipPath={`url(#${clipId})`} />
     </svg>
   );
 }

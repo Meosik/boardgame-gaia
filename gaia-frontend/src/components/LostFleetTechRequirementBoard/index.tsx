@@ -1,8 +1,10 @@
+import { ADVANCED_TECH_TILE_LABELS } from '../advancedTechDescriptions';
 import {
   lostFleetTechRequirementBoardImageSrc,
   type LostFleetTechRequirementSide,
 } from '../../assets/lostFleetTechRequirementBoardImages';
 import { advancedTechTileImageSrc } from '../../assets/techTileImages';
+import { LOST_FLEET_DISPLAY_NAME } from '../../displayNames';
 
 interface Props {
   side?: LostFleetTechRequirementSide;
@@ -19,7 +21,7 @@ export function LostFleetTechRequirementBoard({
   const tileSrc = tileId === null ? undefined : advancedTechTileImageSrc(tileId);
 
   return (
-    <figure className="lost-fleet-tech-requirement" aria-label="Lost Fleet 고급 기술 조건 보드">
+    <figure className="lost-fleet-tech-requirement" aria-label={`${LOST_FLEET_DISPLAY_NAME} 고급 기술 조건 보드`}>
       <img
         className="lost-fleet-tech-requirement-board"
         src={lostFleetTechRequirementBoardImageSrc(side)}
@@ -29,7 +31,8 @@ export function LostFleetTechRequirementBoard({
         <img
           className="lost-fleet-tech-requirement-tile"
           src={tileSrc}
-          alt={`Lost Fleet 조건 고급 기술 타일 ${tileId}`}
+          alt={`${LOST_FLEET_DISPLAY_NAME} 조건 고급 기술 타일 ${tileId}`}
+          title={tileId === null ? undefined : ADVANCED_TECH_TILE_LABELS[tileId]}
         />
       )}
     </figure>

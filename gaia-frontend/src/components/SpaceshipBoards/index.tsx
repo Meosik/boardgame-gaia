@@ -1,3 +1,5 @@
+import { useReplayHighlight } from '../../replay/highlight';
+import { ARTIFACT_LABELS } from '../artifactDescriptions';
 import { spaceshipBoardImageSrc } from '../../assets/spaceshipBoardImages';
 import { explorationShuttleImageSrc } from '../../assets/explorationShuttleImages';
 import { artifactImageSrc } from '../../assets/artifactImages';
@@ -6,12 +8,15 @@ import { standardTechTileImageSrc } from '../../assets/techTileImages';
 import { SPACESHIP_ACTION_SPACES } from '../boardActionSpaces';
 import { GamePieceIcon } from '../GamePieceIcon';
 import type { GameAction, PlayerId, PlayerState, SpaceshipBoard, SpaceshipId } from '../../types/game';
+import { LOST_FLEET_DISPLAY_NAME, SPACESHIP_DISPLAY_NAMES } from '../../displayNames';
 
 interface Props {
   spaceshipBoards: SpaceshipBoard[];
-  players: Pick<PlayerState, 'player_id' | 'faction'>[];
+  players: (Pick<PlayerState, 'player_id' | 'faction'>
+    & Partial<Pick<PlayerState, 'explored_ships'>>)[];
   myPlayerId?: PlayerId;
   isMyTurn?: boolean;
+  mainActionLocked?: boolean;
   usedActionIds?: number[];
   selectedAction?: GameAction['type'] | null;
   selectableTechTiles?: number[];
@@ -24,11 +29,18 @@ interface Props {
 }
 
 const SHIPS: { id: SpaceshipId; label: string }[] = [
-  { id: 'Twilight', label: 'Twilight' },
-  { id: 'Rebellion', label: 'Rebellion' },
-  { id: 'TFMars', label: 'T F Mars' },
-  { id: 'Eclipse', label: 'Eclipse' },
+  { id: 'Twilight', label: SPACESHIP_DISPLAY_NAMES.Twilight },
+  { id: 'Rebellion', label: SPACESHIP_DISPLAY_NAMES.Rebellion },
+  { id: 'TFMars', label: SPACESHIP_DISPLAY_NAMES.TFMars },
+  { id: 'Eclipse', label: SPACESHIP_DISPLAY_NAMES.Eclipse },
 ];
+
+const SHIP_INDEX: Record<SpaceshipId, number> = {
+  Twilight: 0,
+  Rebellion: 1,
+  TFMars: 2,
+  Eclipse: 3,
+};
 
 // Twilight keeps its fourth shuttle fixed and adds about 5 source pixels to
 // every adjacent gap upward from that anchor.
@@ -124,6 +136,7 @@ export function SpaceshipBoards({
   players,
   myPlayerId,
   isMyTurn = false,
+  mainActionLocked = false,
   usedActionIds = [],
   selectedAction = null,
   selectableTechTiles = [],
@@ -131,14 +144,20 @@ export function SpaceshipBoards({
   onArtifactSelect,
   onTechTileSelect,
 }: Props) {
+  const replay = useReplayHighlight();
   const factionByPlayer = new Map(players.map((p) => [p.player_id, p.faction]));
+  const myExploredShips = new Set(
+    players.find((player) => player.player_id === myPlayerId)?.explored_ships ?? [],
+  );
 
   return (
-    <section className="spaceship-boards" aria-label="Lost Fleet 함선">
+    <section className="spaceship-boards" aria-label={`${LOST_FLEET_DISPLAY_NAME} 함선`}>
       {SHIPS.map(({ id, label }) => {
         const board = spaceshipBoards.find((b) => b.id === id);
         const imageSrc = spaceshipBoardImageSrc(id);
         if (!board || !imageSrc) return null;
+        const exploredByMe = myPlayerId !== undefined
+          && (board.explorers.includes(myPlayerId) || myExploredShips.has(SHIP_INDEX[id]));
 
         return (
           <figure key={id} className="spaceship-board" aria-label={`${label} 함선 보드`}>
@@ -149,7 +168,7 @@ export function SpaceshipBoards({
                 const renderedSrc = standardTechTileImageSrc(tileId);
                 const slot = TECH_TILE_SLOT[id];
                 if (!renderedSrc || !slot) return null;
-                const explored = myPlayerId !== undefined && board.explorers.includes(myPlayerId);
+                const explored = exploredByMe;
                 const selectable = onTechTileSelect !== undefined
                   && isMyTurn
                   && explored
@@ -164,6 +183,7 @@ export function SpaceshipBoards({
                     <button
                       type="button"
                       className="spaceship-board-tech-tile spaceship-board-tech-tile--button"
+                      data-replay-highlight={replay?.standardTech.has(tileId) || undefined}
                       style={slot}
                       disabled={!selectable}
                       onClick={() => onTechTileSelect(tileId)}
@@ -182,6 +202,7 @@ export function SpaceshipBoards({
                 return (
                   <span
                     className="spaceship-board-tech-tile"
+                    data-replay-highlight={replay?.standardTech.has(tileId) || undefined}
                     style={slot}
                   >
                     <img
@@ -202,9 +223,7 @@ export function SpaceshipBoards({
                   transform: `translate(-50%, -50%) scale(${ARTIFACT_VISUAL_SCALE[artifactId] ?? 1})`,
                 };
                 if (onArtifactSelect) {
-                  const available = isMyTurn
-                    && myPlayerId !== undefined
-                    && board.explorers.includes(myPlayerId);
+                  const available = isMyTurn && !mainActionLocked && exploredByMe;
                   return (
                     <button
                       key={`artifact-${artifactId}-${index}`}
@@ -213,7 +232,8 @@ export function SpaceshipBoards({
                       style={style}
                       disabled={!available}
                       onClick={() => onArtifactSelect(artifactId)}
-                      aria-label={`아티팩트 ${artifactId} 조사${available ? '' : ' (Twilight 함선 진입 필요)'}`}
+                      title={ARTIFACT_LABELS[artifactId]}
+                      aria-label={`아티팩트 ${artifactId} 조사${available ? '' : ' (트와일라잇 함선 진입 필요)'}`}
                     >
                       <img
                         className="spaceship-board-artifact-source"
@@ -269,6 +289,9 @@ export function SpaceshipBoards({
                   <span
                     key={i}
                     className="spaceship-board-explorer"
+                    data-replay-highlight={replay?.ship === id
+                      && replay.player === playerId
+                      && replay.actionType.endsWith('ExploreSpaceship') || undefined}
                     style={{ left: `${x}%`, top: `${y}%` }}
                     aria-label={`탐사 셔틀 ${i + 1} 슬롯 탐사 완료`}
                   >
@@ -282,20 +305,25 @@ export function SpaceshipBoards({
                 );
               })}
               {onActionSelect && myPlayerId !== undefined && SPACESHIP_ACTION_SPACES[id].map((space) => {
-                const entered = board.explorers.includes(myPlayerId);
+                const entered = exploredByMe;
                 const used = usedActionIds.includes(space.id);
-                const available = isMyTurn && entered && !used;
                 const selected = selectedAction !== null && space.actionTypes.includes(selectedAction);
+                const available = isMyTurn && entered && !used && (!mainActionLocked || selected);
                 const reason = used
                   ? '이번 라운드에 다른 플레이어가 사용함'
                   : !entered
                     ? '이 함선에 탐사 셔틀을 배치해야 함'
-                    : isMyTurn
-                      ? '사용 가능'
-                      : '내 행동 턴이 아님';
+                    : !isMyTurn
+                      ? '내 행동 턴이 아님'
+                      : mainActionLocked && !selected
+                        ? '다른 행동 선택 중'
+                        : selected
+                          ? '선택됨'
+                          : '사용 가능';
                 return (
                   <button
                     key={`${id}-action-space-${space.id}`}
+                    data-replay-highlight={!!replay && space.actionTypes.some(type => type === replay.actionType) || undefined}
                     type="button"
                     className={`board-action-hotspot spaceship-board-action-space board-action-hotspot--${
                       used ? 'used' : available ? 'available' : 'locked'

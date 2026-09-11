@@ -173,10 +173,10 @@ describe('GameBoard rendering', () => {
     expect(polygon?.getAttribute('stroke')).toBe('#314B5A');
   });
 
-  it('places a faction-colored Gaiaformer on a Transdim planet during formation', () => {
+  it.each([false, true])('keeps a Gaiaformer on an uncolonized Transdim planet (formed=%s)', (formed) => {
     const hex: Hex = {
       coord: { q: 0, r: 0 },
-      planet: { planet_type: 'Transdim', is_gaia_formed: false, owner: 0 },
+      planet: { planet_type: 'Transdim', is_gaia_formed: formed, owner: 0 },
       space_tile_kind: null,
       structures: [],
       satellites: [],
@@ -203,6 +203,8 @@ describe('GameBoard rendering', () => {
     );
 
     expect(container.querySelector('image[aria-label="가이아포머"]')).toBeTruthy();
+    expect(container.querySelector('image[aria-label="가이아포머"]'))
+      .toHaveClass('game-board-gaiaformer');
     expect(container.querySelector('image[aria-label="가이아포머"]')?.getAttribute('href'))
       .toContain('blue_gaiaformer');
   });

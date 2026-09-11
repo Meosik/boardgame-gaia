@@ -1,3 +1,5 @@
+export { default as roundScoringTileBackImageSrc } from './round_scoring_tiles/normalized/707b3cfa-3620-457a-aec7-15dcf7f729e5.png';
+
 const normalized = import.meta.glob('./round_scoring_tiles/normalized/*.webp', {
   eager: true,
   import: 'default',

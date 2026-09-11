@@ -7,6 +7,31 @@ import {
 import type { BoardState, PlayerState } from '../types/game';
 
 describe('StructureActionPopup', () => {
+  it('centers upgrade choices even when opened at the lower right', () => {
+    render(<StructureActionPopup anchor={{ x: 900, y: 700 }} coord={{ q: 0, r: 0 }}
+      mode={{ kind: 'structure', structure: 'Mine', faction: 'Terrans' }} onClose={vi.fn()} />);
+    expect(screen.getByRole('dialog')).toHaveClass('board-choice-popup--centered');
+    expect(screen.getByRole('dialog')).toHaveStyle({ left: '50%' });
+  });
+
+  it('puts board-selection instructions beside the research board', () => {
+    const board = document.createElement('article');
+    board.id = 'game-research';
+    document.body.append(board);
+    vi.spyOn(board, 'getBoundingClientRect').mockReturnValue({ left: 10, right: 400 } as DOMRect);
+    render(<StructureActionPopup anchor={{ x: 900, y: 700 }} coord={{ q: 0, r: 0 }}
+      mode={{ kind: 'choose-tech' }} onClose={vi.fn()} />);
+    expect(screen.getByRole('dialog')).toHaveStyle({ left: '538px' });
+    board.remove();
+  });
+
+  it('keeps bonus-mine placement instructions at their original anchor', () => {
+    render(<StructureActionPopup anchor={{ x: 100, y: 100 }} coord={{ q: 0, r: 0 }}
+      mode={{ kind: 'choose-bonus-mine' }} onClose={vi.fn()} />);
+    expect(screen.getByRole('dialog')).not.toHaveClass('board-choice-popup--centered');
+    expect(screen.getByRole('dialog')).toHaveStyle({ left: '114px', top: '68px' });
+  });
+
   it('offers only Trading Station from a Mine and does not show Tech selection', () => {
     const onUpgrade = vi.fn();
     render(

@@ -35,8 +35,13 @@ export function PlayerDashboard({ player }: Props) {
                 federationTokens={player.federation_tokens}
                 grayFederationTokens={player.gray_federation_tokens}
                 booster={player.booster}
+                artifacts={player.artifacts}
                 expensiveTerraformingPlanetTypes={player.expensive_terraforming_planet_types}
-                selectedTinkeringTile={player.tinkeroids_selected_tile}
+                selectedTinkeringTile={
+                  player.faction_special_action_used_this_round
+                    || player.tinkeroids_tiles_used?.includes(player.tinkeroids_selected_tile ?? -1)
+                    ? null : player.tinkeroids_selected_tile
+                }
               />
               <ExplorationBoard
                 faction={player.faction}

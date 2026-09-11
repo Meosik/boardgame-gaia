@@ -103,11 +103,11 @@ describe('ResearchBoard', () => {
     expect(screen.getByRole('img', { name: '연구판' })).toBeInTheDocument();
     // 6 tracks x 2 players = 12 tokens
     expect(screen.getAllByLabelText(/레벨/)).toHaveLength(12);
-    expect(screen.getByLabelText('P1 · Xenos · 테라포밍 3레벨')).toHaveAttribute(
+    expect(screen.getByLabelText('P1 · 제노스 · 테라포밍 3레벨')).toHaveAttribute(
       'title',
-      'P1 · Xenos · 테라포밍 3레벨',
+      'P1 · 제노스 · 테라포밍 3레벨',
     );
-    expect(screen.getByLabelText('P1 · Xenos · 과학 5레벨')).toBeInTheDocument();
+    expect(screen.getByLabelText('P1 · 제노스 · 과학 5레벨')).toBeInTheDocument();
   });
 
   it('skips players who have not picked a faction yet', () => {
@@ -128,8 +128,8 @@ describe('ResearchBoard', () => {
     ];
     render(<ResearchBoard players={players} />);
 
-    expect(screen.getByLabelText('P0 · Terrans · 테라포밍 5레벨')).toBeInTheDocument();
-    expect(screen.getByLabelText('P0 · Terrans · 항법 0레벨')).toBeInTheDocument();
+    expect(screen.getByLabelText('P0 · 테란 · 테라포밍 5레벨')).toBeInTheDocument();
+    expect(screen.getByLabelText('P0 · 테란 · 항법 0레벨')).toBeInTheDocument();
   });
 
   it('uses the physical tile artwork as the Tech tile picker', () => {

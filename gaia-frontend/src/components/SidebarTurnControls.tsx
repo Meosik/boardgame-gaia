@@ -45,6 +45,7 @@ interface SidebarTurnControlsProps {
   devPowerChargeTargeting?: boolean;
   onDevPowerChargeToggle?: () => void;
   undoState?: UndoState;
+  immediateTurnUndo?: boolean;
   players?: PlayerState[];
   onUndoFreeAction?: () => void;
   onRequestTurnUndo?: () => void;
@@ -61,6 +62,7 @@ export function SidebarTurnControls({
   devPowerChargeTargeting = false,
   onDevPowerChargeToggle,
   undoState,
+  immediateTurnUndo = false,
   players = [],
   onUndoFreeAction,
   onRequestTurnUndo,
@@ -75,7 +77,7 @@ export function SidebarTurnControls({
       && (undoState.open_turn.free_action_revisions.length ?? 0) > 0
     ));
   const canRequestTurnUndo = pendingUndo === null
-    && undoState?.recent_turns.some((turn) => turn.player === player.player_id) === true;
+    && undoState?.recent_turns.some((turn) => immediateTurnUndo || turn.player === player.player_id) === true;
   const requesterName = pendingUndo === null
     ? null
     : players.find((candidate) => candidate.player_id === pendingUndo.requester)?.nickname
@@ -186,10 +188,7 @@ export function SidebarTurnControls({
             disabled={controlsDisabled || rangePreviewQic >= player.resources.qic}
             onClick={onRangePreviewAdd}
           >
-            <span className="sidebar-power-result" aria-hidden>
-              <GamePieceIcon kind="qic" />
-              <b>1</b>
-            </span>
+            <ResourceToken resource="qic" value={1} compact />
             <span className="sidebar-action-arrow" aria-hidden>→</span>
             <span className="sidebar-range-result" aria-hidden>
               <img src={rangeIcon} alt="" />
@@ -256,11 +255,11 @@ export function SidebarTurnControls({
               type="button"
               disabled={!canRequestTurnUndo}
               title={canRequestTurnUndo
-                ? '다른 플레이어 전원이 승인하면 해당 차례 시작 전으로 돌아갑니다.'
+                ? (immediateTurnUndo ? '동의 없이 직전 차례 시작 전으로 돌아갑니다.' : '다른 플레이어 전원이 승인하면 해당 차례 시작 전으로 돌아갑니다.')
                 : '승인을 요청할 수 있는 직전 차례가 없습니다.'}
               onClick={onRequestTurnUndo}
             >
-              직전 차례 되돌리기 요청
+              {immediateTurnUndo ? '직전 차례 되돌리기' : '직전 차례 되돌리기 요청'}
             </button>
           </div>
         )}

@@ -14,6 +14,7 @@ import {
   type StructureAssetName,
 } from '../../assets/structureImages';
 import type { FactionId, GameAction, PlanetType, SpaceshipBoard } from '../../types/game';
+import { factionDisplayName } from '../../displayNames';
 
 const PREVIEW_PLAYERS: { player_id: number; faction: FactionId }[] = [
   { player_id: 0, faction: 'Terrans' },
@@ -217,17 +218,17 @@ const ACTION_LABELS: Partial<Record<GameAction['type'], string>> = {
   Upgrade: '구조물 업그레이드',
   FormFederation: '연방 형성',
   SpaceshipCreditTerraform: '함선 크레딧 테라포밍',
-  TwilightFreeResearchLab: 'Twilight 무료 연구소 업그레이드',
-  TwilightReplayFederationToken: 'Twilight 연방 토큰 효과 재사용',
-  TwilightRangeBuild: 'Twilight +3 거리 광산 건설',
-  RebellionGainTechTile: 'Rebellion 표준 기술 타일 획득',
-  RebellionFreeTradingStation: 'Rebellion 무료 교역소 업그레이드',
-  RebellionCreditsAndQic: 'Rebellion 크레딧·정보 큐브 획득',
-  TFMarsTechBonus: 'T F Mars 기술 점수',
-  TFMarsGaiaFormation: 'T F Mars 즉시 가이아포밍',
-  EclipsePlanetTypeBonus: 'Eclipse 행성 종류 점수',
-  EclipseResearchBoost: 'Eclipse 연구 부스트',
-  EclipseAsteroidMine: 'Eclipse 소행성 광산 건설',
+  TwilightFreeResearchLab: '트와일라잇 무료 연구소 업그레이드',
+  TwilightReplayFederationToken: '트와일라잇 연방 토큰 효과 재사용',
+  TwilightRangeBuild: '트와일라잇 +3 거리 광산 건설',
+  RebellionGainTechTile: '리벨리온 표준 기술 타일 획득',
+  RebellionFreeTradingStation: '리벨리온 무료 교역소 업그레이드',
+  RebellionCreditsAndQic: '리벨리온 크레딧·정보 큐브 획득',
+  TFMarsTechBonus: 'T F 마스 기술 점수',
+  TFMarsGaiaFormation: 'T F 마스 즉시 가이아포밍',
+  EclipsePlanetTypeBonus: '이클립스 행성 종류 점수',
+  EclipseResearchBoost: '이클립스 연구 부스트',
+  EclipseAsteroidMine: '이클립스 소행성 광산 건설',
 };
 
 function actionNeedsPlanet(action: GameAction['type'] | null): boolean {
@@ -966,10 +967,10 @@ export function ShuttlePreview() {
               <span
                 className="faction-pool-portrait"
                 role="img"
-                aria-label={`${faction} 캐릭터`}
+                aria-label={`${factionDisplayName(faction)} 캐릭터`}
                 style={{ backgroundImage: `url(${factionBoardImageSrc(faction)})` }}
               />
-              <span>{faction}</span>
+              <span>{factionDisplayName(faction)}</span>
             </span>
           ))}
         </div>

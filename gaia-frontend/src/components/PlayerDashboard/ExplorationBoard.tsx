@@ -1,6 +1,7 @@
 import { explorationBoardImageSrc } from '../../assets/explorationBoardImages';
 import { explorationShuttleImageSrc } from '../../assets/explorationShuttleImages';
 import type { FactionId } from '../../types/game';
+import { factionDisplayName } from '../../displayNames';
 
 const EXPLORATION_SHUTTLE_COUNT = 3;
 
@@ -24,10 +25,10 @@ export function ExplorationBoard({ faction, shuttlesAvailable }: Props) {
   return (
     <figure
       className="exploration-board"
-      aria-label={`${faction} 탐사 보드, 사용 가능한 셔틀 ${available}개`}
+      aria-label={`${factionDisplayName(faction)} 탐사 보드, 사용 가능한 셔틀 ${available}개`}
     >
       <div className="exploration-board-image-wrap">
-        <img className="exploration-board-image" src={imageSrc} alt={`${faction} 탐사 보드`} />
+        <img className="exploration-board-image" src={imageSrc} alt={`${factionDisplayName(faction)} 탐사 보드`} />
         {[0, 1, 2].map((slot) => (
           slot < available ? (
             <span

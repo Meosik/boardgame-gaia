@@ -194,6 +194,18 @@ beforeEach(() => {
 });
 
 describe('CreateRoomView bidding mode', () => {
+
+  it('starts manual DEV at the existing randomizer setup instead of auto-selecting factions', async () => {
+    const createRoom = vi.fn().mockResolvedValue(undefined);
+    const originalActions = useRoomStore.getState().actions;
+    useRoomStore.setState({ actions: { ...originalActions, createRoom } });
+    render(<CreateRoomView manualControl onRoomCreated={vi.fn()} onBack={vi.fn()} />);
+    expect(screen.getByLabelText('닉네임')).toHaveValue('DEV');
+    expect(screen.queryByLabelText('시드 (선택)')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '방 만들기' }));
+    await waitFor(() => expect(createRoom).toHaveBeenCalledWith('DEV', undefined, 'bidding', true));
+  });
+
   it('creates a bidding room by default and allows sequential opt-out', async () => {
     const createRoom = vi.fn().mockResolvedValue(undefined);
     const actions = useRoomStore.getState().actions;
@@ -222,6 +234,37 @@ describe('CreateRoomView bidding mode', () => {
 });
 
 describe('FactionSelectView bidding interactions', () => {
+  it('shows bidding controls before the color board and participant list', () => {
+    useRoomStore.setState({ gameSetup: { ...biddingSetup, terraforming_color_order: ['Terra', 'Desert', 'Swamp', 'Oxide', 'Volcanic', 'Titanium', 'Ice'] } });
+    render(<FactionSelectView onGameStart={vi.fn()} />);
+    const panel = document.querySelector('.bidding-panel');
+    const colors = document.querySelector('.terraforming-selection-board');
+    const order = screen.getByRole('region', { name: '비딩 참가 순서' });
+    expect(panel).not.toBeNull();
+    expect(colors).not.toBeNull();
+    expect(panel!.compareDocumentPosition(colors!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(panel!.compareDocumentPosition(order)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('keeps the waiting-room backdrop, rail and reference menus while bidding', () => {
+    const game = setupGameState(biddingState());
+    useRoomStore.setState({ previewBoard: {
+      seed: 'same-preview', board: game.board, research_board: game.research_board,
+      round_tiles: [], final_scoring_tiles: [], spaceship_boards: [],
+    } });
+    const { container } = render(<FactionSelectView onGameStart={vi.fn()} />);
+    expect(container.querySelector('.waiting-room-backdrop')).toBeInTheDocument();
+    expect(container.querySelector('.waiting-room-board-rail')).toBeInTheDocument();
+    expect(container.querySelector('.waiting-room-panel .bidding-view')).toBeInTheDocument();
+    expect(container.querySelector('.bidding-modal-overlay')).not.toBeInTheDocument();
+    expect(container.querySelector('.game-sidebar')).not.toBeInTheDocument();
+    for (const name of ['라운드·게임 종료 목표', '라운드 부스터', '개인 보드']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('button', { name: '라운드·게임 종료 목표' }));
+    expect(container.querySelector('.board-overlay-panel')).toBeInTheDocument();
+  });
+
   it('lets the active host bid or pass using revisioned setup commands', () => {
     render(<FactionSelectView onGameStart={vi.fn()} />);
 
@@ -251,11 +294,8 @@ describe('FactionSelectView bidding interactions', () => {
     expect(screen.getByRole('button', { name: '승점 101점 입찰' })).toBeDisabled();
   });
 
-  it('renders the fully set-up board behind the bidding controls as a popup, not in place of it', async () => {
-    // The auction is decided by looking at the actual board (sector layout,
-    // home planets, round/final scoring tiles), not just the faction list —
-    // so it must render underneath as soon as the real GameState arrives,
-    // with the bidding panel as an overlay on top rather than replacing it.
+  it('renders bidding inside the unchanged waiting-room layout after a snapshot', async () => {
+    // Bidding must not replace the waiting layout with the in-game canvas or a modal.
     socket.messages = [{
       type: 'snapshot',
       protocol_version: 1,
@@ -267,8 +307,8 @@ describe('FactionSelectView bidding interactions', () => {
     render(<FactionSelectView onGameStart={vi.fn()} />);
 
     await screen.findByRole('button', { name: '승점 1점 입찰' });
-    expect(document.querySelector('.bidding-modal-overlay')).not.toBeNull();
-    expect(document.querySelector('.game-main')).not.toBeNull();
+    expect(document.querySelector('.bidding-modal-overlay')).toBeNull();
+    expect(document.querySelector('.waiting-room-backdrop')).not.toBeNull();
     expect(screen.queryByText('보드를 불러오는 중...')).not.toBeInTheDocument();
   });
 
@@ -290,7 +330,7 @@ describe('FactionSelectView bidding interactions', () => {
 
     render(<FactionSelectView onGameStart={vi.fn()} />);
     await screen.findByText('승점 4점으로 낙찰되었습니다. 종족과 최종 순서를 선택하세요.');
-    fireEvent.click(screen.getByRole('button', { name: 'Terrans 선택' }));
+    fireEvent.click(screen.getByRole('button', { name: '테란 선택' }));
     fireEvent.click(screen.getByRole('button', { name: '2번' }));
     fireEvent.click(screen.getByRole('button', { name: '종족과 순서 확정' }));
 
@@ -357,9 +397,9 @@ describe('FactionSelectView bidding interactions', () => {
     const boosterSidebar = container.querySelector('.setup-booster-sidebar');
     expect(boosterSidebar).toBeInTheDocument();
     expect(boosterSidebar).toHaveStyle({ overflowY: 'auto' });
-    expect(screen.getByRole('img', { name: 'Host · Terrans · 부스터 #10' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'P3 · Xenos · 부스터 #8' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'P9 · Taklons · 부스터 #4' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Host · 테란 · 부스터 #10' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'P3 · 제노스 · 부스터 #8' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'P9 · 타클론 · 부스터 #4' })).toBeInTheDocument();
     expect(screen.getByText('비딩 -4점')).toBeInTheDocument();
     const confirm = screen.getByRole('button', { name: '부스터 선택 확정' });
     expect(confirm).toBeDisabled();

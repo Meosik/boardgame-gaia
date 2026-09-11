@@ -1,7 +1,9 @@
+import { ResourceToken, VictoryPointToken } from './ResourceTokens';
 import { useState } from 'react';
 import { explorationShuttleImageSrc } from '../assets/explorationShuttleImages';
 import { informationCubesNeededForRange } from './PlanetActionPopup';
 import type { BoardState, PlayerState, SpaceshipBoard, SpaceshipId } from '../types/game';
+import { SPACESHIP_DISPLAY_NAMES } from '../displayNames';
 
 interface Props {
   anchor: { x: number; y: number };
@@ -14,12 +16,7 @@ interface Props {
   onClose: () => void;
 }
 
-const SHIP_LABEL: Record<SpaceshipId, string> = {
-  Twilight: 'Twilight',
-  Rebellion: 'Rebellion',
-  TFMars: 'T F Mars',
-  Eclipse: 'Eclipse',
-};
+const SHIP_LABEL = SPACESHIP_DISPLAY_NAMES;
 
 export interface SpaceshipExploreStatus {
   available: boolean;
@@ -65,7 +62,6 @@ export function spaceshipExploreStatus(
 }
 
 export function SpaceshipExplorePopup({
-  anchor,
   ship,
   spaceshipBoard,
   board,
@@ -77,15 +73,13 @@ export function SpaceshipExplorePopup({
   const [confirming, setConfirming] = useState(false);
   const status = spaceshipExploreStatus(board, spaceshipBoard, player, selectedRangeQic);
   const width = 252;
-  const left = Math.max(12, Math.min(anchor.x + 14, window.innerWidth - width - 12));
-  const top = Math.max(56, Math.min(anchor.y - 32, window.innerHeight - 280));
 
   return (
     <>
       <button type="button" className="board-context-popup-scrim" aria-label="함선 탐사 취소" onClick={onClose} />
       <aside
-        className="structure-action-popup spaceship-explore-popup"
-        style={{ left, top, width }}
+        className="structure-action-popup spaceship-explore-popup board-choice-popup--centered"
+        style={{ width }}
         role="dialog"
         aria-label={`${SHIP_LABEL[ship]} 함선 탐사`}
       >
@@ -103,8 +97,8 @@ export function SpaceshipExplorePopup({
                 <strong>함선 탐사</strong>
               </span>
               <span className="spaceship-explore-summary">
-                <b>승점 5점</b>
-                {(status.rangeQic ?? 0) > 0 && <b>정보 큐브 {status.rangeQic}개</b>}
+                <VictoryPointToken value={5} />
+                {(status.rangeQic ?? 0) > 0 && <ResourceToken resource="qic" value={status.rangeQic!} />}
               </span>
             </button>
             <p className={`spaceship-explore-status${status.available ? ' is-valid' : ''}`} role="status">
@@ -123,13 +117,13 @@ export function SpaceshipExplorePopup({
               <div><small>{SHIP_LABEL[ship]}</small><h3>함선 탐사</h3></div>
             </div>
             <div className="spaceship-explore-costs" aria-label="함선 탐사 비용">
-              <span>탐사선 <strong>1개</strong></span>
-              <span>승점 <strong>5점</strong></span>
-              {(status.rangeQic ?? 0) > 0 && <span>정보 큐브 <strong>{status.rangeQic}개</strong></span>}
+              <span className="spaceship-shuttle-cost" aria-label="탐사선 1개" title="탐사선 1개"><img src={explorationShuttleImageSrc(player.faction)} alt="" /><strong>1</strong></span>
+              <VictoryPointToken value={5} />
+              {(status.rangeQic ?? 0) > 0 && <ResourceToken resource="qic" value={status.rangeQic!} />}
             </div>
             <p className="spaceship-explore-slot">
               {status.slot}번 슬롯에 배치
-              {status.powerCharge > 0 ? ` · 파워 ${status.powerCharge} 충전` : ''}
+              {status.powerCharge > 0 && <span aria-label={`파워 ${status.powerCharge} 충전`} title={`파워 ${status.powerCharge} 충전`}>↑<ResourceToken resource="power" value={status.powerCharge} /></span>}
             </p>
             <div className="terraform-ore-confirmation__actions">
               <button type="button" onClick={() => setConfirming(false)}>돌아가기</button>

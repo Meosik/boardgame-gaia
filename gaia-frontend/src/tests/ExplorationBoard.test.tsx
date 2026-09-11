@@ -7,7 +7,7 @@ describe('ExplorationBoard', () => {
   it('uses the faction-specific exploration board image and shows all starting shuttles', () => {
     render(<ExplorationBoard faction="Ambas" shuttlesAvailable={3} />);
 
-    expect(screen.getByRole('img', { name: 'Ambas 탐사 보드' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '앰바스 탐사 보드' })).toBeInTheDocument();
     expect(screen.getAllByLabelText(/대기 중인 탐사 셔틀/)).toHaveLength(3);
     expect(screen.getByText('셔틀 3/3')).toBeInTheDocument();
   });

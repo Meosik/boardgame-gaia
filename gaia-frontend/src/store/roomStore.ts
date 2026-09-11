@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { api } from '../api/rest';
+import { rememberRoom, type RecentRoom } from './recentRoom';
 import type { GameSetup, LobbyPlayer, PlayerId, PreviewBoard, SetupMode } from '../types/game';
 
 export type RoomState = 'lobby' | 'faction_selection' | 'in_game' | 'ended';
 
 interface RoomStore {
   roomCode: string | null;
+  manualControl: boolean;
   playerId: PlayerId | null;
   sessionToken: string | null;
   playerCount: number;
@@ -27,7 +29,8 @@ interface RoomStore {
   lastError: { code: string; message: string } | null;
 
   actions: {
-    createRoom: (nickname: string, seed?: string, setupMode?: SetupMode) => Promise<void>;
+    resumeRoom: (room: RecentRoom) => void;
+    createRoom: (nickname: string, seed?: string, setupMode?: SetupMode, manualControl?: boolean) => Promise<void>;
     joinRoom: (code: string, nickname: string, sessionToken?: string) => Promise<void>;
     regenerateSetup: (seed?: string) => Promise<void>;
     fetchPreviewBoard: () => Promise<void>;
@@ -40,6 +43,7 @@ interface RoomStore {
 
 const initialState = {
   roomCode: null,
+  manualControl: false,
   playerId: null,
   sessionToken: null,
   playerCount: 0,
@@ -61,9 +65,15 @@ export const useRoomStore = create<RoomStore>()(
       ...initialState,
 
       actions: {
-        async createRoom(nickname, seed, setupMode = 'sequential') {
-          const res = await api.createRoom(nickname, seed, setupMode);
+        resumeRoom(room) {
+          set({ ...initialState, ...room });
+        },
+        async createRoom(nickname, seed, setupMode = 'sequential', manualControl = false) {
+          const res = manualControl
+            ? await api.createDevRoom(nickname, seed, setupMode)
+            : await api.createRoom(nickname, seed, setupMode);
           set({
+            manualControl,
             roomCode: res.room_code ?? res.code,
             playerId: res.player_id,
             sessionToken: res.session_token,
@@ -74,11 +84,16 @@ export const useRoomStore = create<RoomStore>()(
             hostPlayerId: res.host_player_id,
             roomState: 'lobby',
           });
+          const saved = get();
+          if (saved.roomCode && saved.playerId !== null && saved.sessionToken) {
+            rememberRoom({ roomCode: saved.roomCode, playerId: saved.playerId, sessionToken: saved.sessionToken, nickname: saved.nickname, manualControl: saved.manualControl });
+          }
         },
 
         async joinRoom(code, nickname, sessionToken) {
           const res = await api.joinRoom(code, nickname, sessionToken);
           set({
+            manualControl: false,
             roomCode: res.room_code ?? code,
             playerId: res.player_id,
             sessionToken: res.session_token,
@@ -89,6 +104,10 @@ export const useRoomStore = create<RoomStore>()(
             hostPlayerId: res.host_player_id,
             roomState: 'lobby',
           });
+          const saved = get();
+          if (saved.roomCode && saved.playerId !== null && saved.sessionToken) {
+            rememberRoom({ roomCode: saved.roomCode, playerId: saved.playerId, sessionToken: saved.sessionToken, nickname: saved.nickname, manualControl: saved.manualControl });
+          }
         },
 
         async regenerateSetup(seed) {
@@ -152,6 +171,7 @@ export const useRoomStore = create<RoomStore>()(
       // arrives.
       partialize: (state) => ({
         roomCode: state.roomCode,
+        manualControl: state.manualControl,
         playerId: state.playerId,
         sessionToken: state.sessionToken,
         nickname: state.nickname,

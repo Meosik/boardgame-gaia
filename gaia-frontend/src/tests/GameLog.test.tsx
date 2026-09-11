@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { GameLog } from '../components/GameLog';
 import type { PlayerState } from '../types/game';
 
@@ -38,12 +38,106 @@ describe('GameLog', () => {
       />,
     );
 
-    expect(screen.getByText(/Gaia: \(1,-1\)에 광산 건설/)).toBeInTheDocument();
-    expect(screen.getByText(/Gaia: 항법 연구 2단계/)).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: /Gaia: \(1,-1\)에 광산 건설/ })).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: /Gaia: 항법 연구 2단계/ })).toBeInTheDocument();
+    expect(screen.queryByText(/라운드 타일 #4로 승점 3점/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Gaia: 항법 연구 2단계/ }));
     expect(screen.getByText(/라운드 타일 #4로 승점 3점/)).toBeInTheDocument();
-    expect(screen.getByText(/Gaia: 초기 부스터 #9 선택/)).toBeInTheDocument();
-    expect(screen.getByText(/Gaia: 패스 \(부스터 #7 반납\)/)).toBeInTheDocument();
-    expect(screen.getByText('1라운드 종료')).toBeInTheDocument();
-    expect(screen.getByText(/게임 종료 — 최종 점수 100 \/ 90 \/ 80 \/ 70/)).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: /Gaia: 초기 부스터 #9 선택/ })).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: /Gaia: 패스 \(부스터 #7 반납\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: '1라운드 종료' })).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: /게임 종료 — 최종 점수 100 \/ 90 \/ 80 \/ 70/ })).toBeInTheDocument();
   });
+  it('shows protoplanet, QIC, federation copy, and tech VP reasons', () => {
+    const players = [{ player_id: 0, nickname: 'Gaia' }] as PlayerState[];
+    render(<GameLog players={players} events={[
+      { VpAwarded: { player: 0, amount: 6, reason: 'ProtoPlanetColony' } },
+      { VpAwarded: { player: 0, amount: 2, reason: 'QicAction' } },
+      { VpAwarded: { player: 0, amount: 7, reason: { FederationToken: { token_kind: 3 } } } },
+      { VpAwarded: { player: 0, amount: 4, reason: { TechTile: { tile_id: 16 } } } },
+    ]} />);
+    for (const label of ['원시 행성 식민지로 승점 6점', 'QIC 행동으로 승점 2점', '연방 토큰 #3 효과로 승점 7점', '기술 타일 #16로 승점 4점']) {
+      expect(screen.getByRole('listitem', { name: new RegExp(label) })).toBeInTheDocument();
+    }
+  });
+
+});
+
+
+describe('collapsible action groups', () => {
+  const players = [{ player_id: 0, nickname: 'Gaia' }, { player_id: 1, nickname: 'Other' }] as PlayerState[];
+  it('folds each legacy Gaiaformer conversion separately and toggles its resource detail', () => {
+    render(<GameLog players={players} events={Array.from({ length: 3 }, () => [
+      { FreeActionTaken: { player: 0, kind: 'GaiaformerToQic', count: 1 } },
+      { ResourceChanged: { player: 0, delta: { qic: 1 } } },
+    ]).flat()} />);
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    const buttons = screen.getAllByRole('button');
+    expect(buttons[0]).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText(/자원 변화/)).not.toBeInTheDocument();
+    fireEvent.click(buttons[0]);
+    expect(screen.getAllByText(/자원 변화 정보 큐브 \+1/)).toHaveLength(1);
+    fireEvent.click(buttons[0]);
+    expect(screen.queryByText(/자원 변화/)).not.toBeInTheDocument();
+  });
+  it('groups legacy research cost and VP but does not swallow another player or orphan reward', () => {
+    render(<GameLog players={players} events={[
+      { ResourceChanged: { player: 0, delta: { knowledge: -4 } } },
+      { ResearchAdvanced: { player: 0, track: 'Navigation', level: 2 } },
+      { VpAwarded: { player: 0, amount: 2, reason: 'QicAction' } },
+      { ResourceChanged: { player: 1, delta: { qic: 1 } } },
+    ]} />);
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getByRole('listitem', { name: /Other: 자원 변화/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /항법 연구/ }));
+    expect(screen.getByText(/지식 -4/)).toBeInTheDocument();
+    expect(screen.getByText(/승점 2점/)).toBeInTheDocument();
+  });
+  it('uses durable boundaries for same-player actions and resource-only power actions', () => {
+    render(<GameLog players={players} events={[
+      { ResourceChanged: { player: 0, delta: { knowledge: -4 } } },
+      { ResearchAdvanced: { player: 0, track: 'Navigation', level: 1 } },
+      { ResourceChanged: { player: 0, delta: { qic: 1 } } },
+      { ActionLog: { player: 0, action: 'ResearchAdvance', event_count: 3 } },
+      { ResourceChanged: { player: 0, delta: { ore: 2 } } },
+      { ActionLog: { player: 0, action: 'PowerAction', event_count: 1 } },
+    ]} />);
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Gaia: 파워 행동' }));
+    expect(screen.getByText(/광석 \+2/)).toBeInTheDocument();
+    expect(screen.queryByText(/정보 큐브 \+1/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /항법 연구/ }));
+    expect(screen.getByText(/정보 큐브 \+1/)).toBeInTheDocument();
+  });
+  it('retains 30 complete actions rather than 30 individual effects after reload', () => {
+    const events = Array.from({ length: 31 }, (_, i) => [
+      { FreeActionTaken: { player: 0, kind: 'OreToCredit', count: i + 1 } },
+      { ResourceChanged: { player: 0, delta: { credits: i + 1 } } },
+      { ActionLog: { player: 0, action: 'FreeAction', event_count: 2 } },
+    ]).flat();
+    render(<GameLog players={players} events={JSON.parse(JSON.stringify(events))} />);
+    expect(screen.getAllByRole('listitem')).toHaveLength(30);
+    expect(screen.getAllByRole('button')[0]).toHaveTextContent('×31');
+  });
+});
+
+it('replay log retains old entries and seeks to source event indices', () => {
+  const onSelect = vi.fn();
+  const events = Array.from({ length: 35 }, (_, index) => ({ RoundStarted: { round: index + 1 } }));
+  render(<GameLog players={[]} events={events} onEventSelect={onSelect} activeEventRange={[0, 1]} />);
+  expect(screen.getAllByRole('listitem')).toHaveLength(35);
+  fireEvent.click(screen.getByRole('button', { name: '1라운드 시작 시점으로 이동' }));
+  expect(onSelect).toHaveBeenCalledWith(0);
+});
+
+it('labels replay state changes as net observations and exposes selected action details', () => {
+  const players = [{ player_id: 0, nickname: 'Gaia' }] as PlayerState[];
+  render(<GameLog players={players} onEventSelect={vi.fn()} events={[{
+    ReplayDecision: { player: 0, step: 1, round: 1, action: { type: 'ResearchAdvance', track: 'Economy' },
+      net_changes: [{ player: 0, delta: { vp: 3, knowledge: -4 } }] },
+  }]} />);
+  fireEvent.click(screen.getByRole('button', { name: '#1 · 1R Gaia: 연구 진전 · 경제' }));
+  expect(screen.getByRole('listitem')).toHaveTextContent('Gaia 순변화: 승점 +3, 지식 -4');
+  expect(screen.getByText(/자동 수입·라운드 전환·최종 정산/)).toBeInTheDocument();
+  expect(screen.getByText(/선택 데이터:/)).toHaveTextContent('Economy');
 });

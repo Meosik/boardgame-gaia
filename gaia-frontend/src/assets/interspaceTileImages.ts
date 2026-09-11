@@ -1,7 +1,7 @@
 import interspaceBlank from './interspace_tiles/normalized/01.webp';
-import interspaceTFMars from './interspace_tiles/normalized/02.webp';
-import interspaceRebellion from './interspace_tiles/normalized/03.webp';
-import interspaceEclipse from './interspace_tiles/normalized/04.webp';
+import interspaceEclipse from './interspace_tiles/normalized/02.webp';
+import interspaceTFMars from './interspace_tiles/normalized/03.webp';
+import interspaceRebellion from './interspace_tiles/normalized/04.webp';
 import interspaceTwilight from './interspace_tiles/normalized/05.webp';
 import interspaceAsteroid from './interspace_tiles/normalized/06.webp';
 import interspaceProtoPlanet from './interspace_tiles/normalized/07.webp';
@@ -23,15 +23,21 @@ import type { SpaceshipId } from '../types/game';
  * - `interspace_05.jpg` (purple hull, nautilus-shell emblem) = Twilight —
  *   confirmed against a reference screenshot showing that exact nautilus
  *   emblem next to a "TWILIGHT" label.
- * - `interspace_02.jpg` (tan hull, ringed-planet emblem) = T.F. Mars,
- *   `interspace_03.jpg` (white hull, leaf emblem) = Rebellion,
- *   `interspace_04.jpg` (gold hull, crescent emblem) = Eclipse —
- *   these three are NOT independently confirmed (no reference showed their
- *   emblems), only inferred from the process of elimination plus loose
- *   symbolism (crescent ~ "Eclipse"). Wrong here just means the wrong one of
- *   the 4 hull designs shows through the map on that ship's own interspace
- *   hex — cosmetic, not a game-data bug — but worth fixing for real if
- *   there's a way to check against the physical tiles.
+ * - The remaining three were originally assigned by guesswork (process of
+ *   elimination plus loose symbolism) and landed one slot off from the real
+ *   mapping — a player reported that exploring the ship pictured on a map
+ *   hex actually paid into a *different* spaceship's board, in a full
+ *   3-cycle (tile showing "Rebellion" → really Eclipse; tile showing
+ *   "Eclipse" → really T.F. Mars; tile showing "T.F. Mars" → really
+ *   Rebellion) — cosmetic-looking but not harmless, since it made players
+ *   pay the 5 VP exploration cost expecting the wrong ship's rewards/tech
+ *   tile. Re-confirmed directly against each ship's own labelled board scan
+ *   (`spaceshipBoardImageSrc`) by matching hull color and emblem:
+ *   `interspace_02.jpg` (gold hull, ringed-planet emblem) = Eclipse
+ *   (matches `ECLIPSE`'s board exactly), `interspace_03.jpg` (white hull,
+ *   leaf emblem) = T.F. Mars (matches `TF MARS`'s board), `interspace_04.jpg`
+ *   (tan hull, angular mask emblem) = Rebellion (matches `REBELLION`'s
+ *   board).
  */
 const SPACESHIP_INTERSPACE_IMAGES: Record<SpaceshipId, string> = {
   Twilight: interspaceTwilight,

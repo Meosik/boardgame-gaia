@@ -50,7 +50,12 @@ const result: FinalResult = {
     [2, 30],
     [3, 51],
   ],
-  winner: 1,
+  winners: [1],
+};
+
+const tiedResult: FinalResult = {
+  finalScores: result.finalScores,
+  winners: [1, 3],
 };
 
 describe('GameOverScreen', () => {
@@ -73,6 +78,17 @@ describe('GameOverScreen', () => {
     expect(screen.getByText('Bob').closest('li')).toHaveClass('game-over-row--winner');
     expect(screen.getByText('승점 58점')).toBeInTheDocument();
     expect(screen.getByText('승점 42점')).toBeInTheDocument();
+  });
+
+  it('marks every tied winner and shows the co-winner title', () => {
+    render(
+      <GameOverScreen result={tiedResult} players={players} myPlayerId={0} onReturnToLobby={() => {}} />
+    );
+
+    expect(screen.getByText('Bob').closest('li')).toHaveClass('game-over-row--winner');
+    expect(screen.getByText('Dave').closest('li')).toHaveClass('game-over-row--winner');
+    expect(screen.getByText('Alice').closest('li')).not.toHaveClass('game-over-row--winner');
+    expect(screen.getByText('공동 우승')).toBeInTheDocument();
   });
 
   it('invokes the return-to-lobby callback', () => {

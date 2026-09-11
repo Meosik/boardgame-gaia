@@ -1,3 +1,4 @@
+import { FREE_ACTIONS, maxFreeActionCount } from '../components/freeActions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ActionPanel } from '../components/ActionPanel';
@@ -213,14 +214,14 @@ describe('ActionPanel — turn gating', () => {
   it('hides unsupported faction special actions', () => {
     render(<ActionPanel gameState={mockGameState()} myPlayerId={0} />);
 
-    expect(screen.queryByText('특수 능력')).not.toBeInTheDocument();
+    expect(screen.queryByText(/스페이스자이언트 특수 능력: 광산 건설/)).not.toBeInTheDocument();
   });
 
   it('shows an implemented faction special action', () => {
     const state = mockGameState({ players: [mockPlayer({ faction: 'SpaceGiants' })] });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    expect(screen.getByText('특수 능력')).toBeInTheDocument();
+    expect(screen.getByText(/스페이스자이언트 특수 능력: 광산 건설/)).toBeInTheDocument();
   });
 });
 
@@ -263,7 +264,7 @@ describe('ActionPanel — base faction actions', () => {
     });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Ambas 행성의회 ↔ 광산 교환'));
+    fireEvent.click(screen.getByText('앰바스 행성의회 ↔ 광산 교환'));
     act(() => useGameStore.setState({ activePlanet: { q: 1, r: 0 } }));
     fireEvent.click(screen.getByText('확인'));
 
@@ -271,7 +272,7 @@ describe('ActionPanel — base faction actions', () => {
       type: 'AmbasSwapPlanetaryInstitute',
       mine_coord: { q: 1, r: 0 },
     });
-    expect(screen.queryByText('Firaks 연구소 강등 + 무료 연구')).not.toBeInTheDocument();
+    expect(screen.queryByText('파이락 연구소 강등 + 무료 연구')).not.toBeInTheDocument();
   });
 
   it('sends the Firaks downgrade target and chosen free research track', () => {
@@ -290,7 +291,7 @@ describe('ActionPanel — base faction actions', () => {
     });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Firaks 연구소 강등 + 무료 연구'));
+    fireEvent.click(screen.getByText('파이락 연구소 강등 + 무료 연구'));
     fireEvent.click(screen.getByText('과학'));
     act(() => useGameStore.setState({ activePlanet: { q: 1, r: 0 } }));
     fireEvent.click(screen.getByText('확인'));
@@ -322,7 +323,7 @@ describe('ActionPanel — base faction actions', () => {
     });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Bescods 최저 연구 무료 상승'));
+    fireEvent.click(screen.getByText('매드 안드로이드 최저 연구 무료 상승'));
     expect(screen.getByText('테라포밍')).toBeDisabled();
     fireEvent.click(screen.getByText('항법'));
 
@@ -341,7 +342,7 @@ describe('ActionPanel — base faction actions', () => {
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
     expect(
-      screen.getByText(/Bescods 최저 연구 무료 상승.*사용됨/).closest('button'),
+      screen.getByText(/매드 안드로이드 최저 연구 무료 상승.*사용됨/).closest('button'),
     ).toBeDisabled();
   });
 });
@@ -405,7 +406,7 @@ describe('ActionPanel — free actions', () => {
     });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Tinkeroids 팅커링 타일 사용'));
+    fireEvent.click(screen.getByText('팅커로이드 팅커링 타일 사용'));
     const selectedTile = screen.getByRole('img', { name: '팅커링 타일 2' });
     expect(screen.queryByRole('img', { name: '팅커링 타일 1' })).not.toBeInTheDocument();
     fireEvent.click(selectedTile.closest('button')!);
@@ -429,11 +430,11 @@ describe('ActionPanel — free actions', () => {
     const state = mockGameState({ players: [xenos] });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    expect(screen.getByText('광석 1 → 파워 1(3단계) (Xenos)')).toBeInTheDocument();
-    expect(screen.queryByText(/Hadsch Hallas/)).not.toBeInTheDocument();
+    expect(screen.getByText('광석 1 → 파워 1(3단계) (제노스)')).toBeInTheDocument();
+    expect(screen.queryByText(/하드쉬 할라/)).not.toBeInTheDocument();
   });
 
-  it('reveals Hadsch Hallas credit conversions only after building the PI', () => {
+  it('reveals 하드쉬 할라 credit conversions only after building the PI', () => {
     const state = mockGameState({
       players: [
         mockPlayer({
@@ -444,7 +445,7 @@ describe('ActionPanel — free actions', () => {
     });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    expect(screen.getByText('크레딧 3 → 광석 1 (Hadsch Hallas)')).toBeInTheDocument();
+    expect(screen.getByText('크레딧 3 → 광석 1 (하드쉬 할라)')).toBeInTheDocument();
   });
 
   it('disables conversions the player cannot afford', () => {
@@ -557,7 +558,7 @@ describe('ActionPanel — Gaia round-booster special actions', () => {
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
     fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('부스터 +3 사거리 함선 탐사'))));
-    fireEvent.click(screen.getByText('Eclipse'));
+    fireEvent.click(screen.getByText('이클립스'));
     fireEvent.click(screen.getByText('확인'));
 
     expect(sendAction).toHaveBeenCalledWith({
@@ -761,15 +762,36 @@ describe('ActionPanel — GaiaDecisionPending', () => {
     });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('기술 타일 #2'));
+    fireEvent.click(screen.getByText('수입: 광석 1 + 파워 충전 1'));
     fireEvent.click(screen.getByText('과학'));
     fireEvent.click(screen.getByText('파워 4로 기술 타일 획득'));
 
     expect(sendAction).toHaveBeenCalledWith({
-      type: 'ItarsGaiaTechTile',
-      tile: 2,
-      track: 'Science',
+      type: 'ItarsGaiaTechChoice',
+      choice: { kind: 'Standard', tile: 2, advance_track: 'Science', bonus_build_coord: null },
     });
+  });
+
+  it('lets Itars cover a standard tile for advanced technology and choose another research track', () => {
+    const sendAction = vi.fn();
+    useGameStore.setState((s) => ({ actions: { ...s.actions, sendAction } }));
+    const player = mockPlayer({ faction: 'Itars', tech_tiles: [3], federation_tokens: [1] });
+    player.research_tracks.terraforming = 4;
+    const state = mockGameState({
+      players: [player],
+      research_board: { ...mockGameState().research_board, advanced_tech_tiles: [20, null, null, null, null, null] },
+      phase: { GaiaDecisionPending: { queue: [{ player: 0, kind: 'ItarsTechTile', remaining_power: 8 }], round: 1 } },
+    });
+    render(<ActionPanel gameState={state} myPlayerId={0} />);
+    fireEvent.click(screen.getByText(/\[테라포밍\].*지식 3 획득/));
+    expect(screen.getByText('파워 4로 기술 타일 획득')).toBeDisabled();
+    fireEvent.click(screen.getByText('수입: 크레딧 4'));
+    expect(screen.getByText('테라포밍')).toBeDisabled();
+    fireEvent.click(screen.getByText('과학'));
+    fireEvent.click(screen.getByText('파워 4로 기술 타일 획득'));
+    expect(sendAction).toHaveBeenCalledWith({ type: 'ItarsGaiaTechChoice', choice: {
+      kind: 'Advanced', track: 'Terraforming', covered_tile: 3, advance_track: 'Science',
+    } });
   });
 
   it('shows a waiting message to players outside the Gaia decision queue', () => {
@@ -788,44 +810,13 @@ describe('ActionPanel — GaiaDecisionPending', () => {
 });
 
 describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact', () => {
-  it('allows choosing every mode printed in Twilight’s shared +3 range slot', () => {
-    useGameStore.setState({ selectedAction: 'TwilightRangeBuild' });
-    const state = mockGameState({
-      spaceship_boards: [
-        {
-          id: 'Twilight',
-          explorers: [0, null, null, null],
-          artifact_pool: [],
-          federation_token: null,
-        },
-      ],
-    });
-    render(
-      <ActionPanel
-        gameState={state}
-        myPlayerId={0}
-        focusedAction
-        focusedActionOptions={[
-          'TwilightRangeBuild',
-          'TwilightRangeGaiaFormation',
-          'TwilightRangeExploreSpaceship',
-        ]}
-      />,
-    );
-
-    fireEvent.click(screen.getByText(
-      byTextAcrossNodes(rangeActionLabel('Twilight +3 사거리 함선 탐사 (지식 1)')),
-    ));
-    expect(useGameStore.getState().selectedAction).toBe('TwilightRangeExploreSpaceship');
-  });
-
   it('disables spaceship action spaces already covered this round', () => {
     const state = mockGameState({ used_spaceship_actions: [1, 5] });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
     expect(screen.getByText(/함선 크레딧 액션.*이번 라운드 사용됨/).closest('button')).toBeDisabled();
-    expect(screen.getByText(/T F Mars 정보 큐브 액션.*이번 라운드 사용됨/).closest('button')).toBeDisabled();
-    expect(screen.getByText('Twilight 무료 업그레이드 (교역소→연구소)').closest('button')).toBeEnabled();
+    expect(screen.getByText(/T F 마스 정보 큐브 액션.*이번 라운드 사용됨/).closest('button')).toBeDisabled();
+    expect(screen.getByText('트와일라잇 무료 업그레이드 (교역소→연구소)').closest('button')).toBeEnabled();
   });
 
   it('requires selecting a spaceship before confirming Explore', () => {
@@ -837,7 +828,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     fireEvent.click(screen.getByText('함선 탐사'));
     expect(screen.queryByText('확인')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Twilight'));
+    fireEvent.click(screen.getByText('트와일라잇'));
     fireEvent.click(screen.getByText('확인'));
 
     expect(sendAction).toHaveBeenCalledWith({ type: 'ExploreSpaceship', ship: 'Twilight' });
@@ -857,7 +848,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
     fireEvent.click(screen.getByText('함선 탐사'));
-    expect(screen.getByText(/Twilight.*탐사 완료/)).toBeDisabled();
+    expect(screen.getByText(/트와일라잇.*탐사 완료/)).toBeDisabled();
   });
 
   it('sends ExamineArtifact once an artifact is chosen and confirmed', () => {
@@ -876,7 +867,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
     fireEvent.click(screen.getByText('아티팩트 조사'));
-    fireEvent.click(screen.getByText('7점'));
+    fireEvent.click(screen.getByText('즉시: 7점 + 원시행성 광산 보유로 간주 (맵 배치 없음)'));
     fireEvent.click(screen.getByText('확인'));
 
     expect(sendAction).toHaveBeenCalledWith({
@@ -951,7 +942,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const state = mockGameState();
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Twilight 무료 업그레이드 (교역소→연구소)'));
+    fireEvent.click(screen.getByText('트와일라잇 무료 업그레이드 (교역소→연구소)'));
     expect(screen.getByText('보드에서 대상 헥스를 선택하세요')).toBeInTheDocument();
 
     act(() => {
@@ -971,7 +962,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const state = mockGameState();
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Rebellion 무료 업그레이드 (광산→교역소)'));
+    fireEvent.click(screen.getByText('리벨리온 무료 업그레이드 (광산→교역소)'));
     expect(screen.getByText('보드에서 대상 헥스를 선택하세요')).toBeInTheDocument();
 
     act(() => {
@@ -991,7 +982,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const state = mockGameState();
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Rebellion 지식 액션 (지식 2 → 크레딧 2 + 정보 큐브 1)'));
+    fireEvent.click(screen.getByText('리벨리온 지식 액션 (지식 2 → 크레딧 2 + 정보 큐브 1)'));
     fireEvent.click(screen.getByText('확인'));
 
     expect(sendAction).toHaveBeenCalledWith({ type: 'RebellionCreditsAndQic' });
@@ -1001,9 +992,9 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const state = mockGameState({ used_spaceship_actions: [11] });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    expect(screen.getByText(/Twilight \+3 사거리 광산 건설.*사용됨/).closest('button')).toBeDisabled();
-    expect(screen.getByText(/Twilight \+3 사거리 가이아 프로젝트.*사용됨/).closest('button')).toBeDisabled();
-    expect(screen.getByText(/Twilight \+3 사거리 함선 탐사.*사용됨/).closest('button')).toBeDisabled();
+    expect(screen.getByText(/트와일라잇 \+3 사거리 광산 건설.*사용됨/).closest('button')).toBeDisabled();
+    expect(screen.getByText(/트와일라잇 \+3 사거리 가이아 프로젝트.*사용됨/).closest('button')).toBeDisabled();
+    expect(screen.getByText(/트와일라잇 \+3 사거리 함선 탐사.*사용됨/).closest('button')).toBeDisabled();
   });
 
   it('sends Twilight federation-token replay for an owned token', () => {
@@ -1014,8 +1005,40 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Twilight 연방 토큰 효과 재사용 (정보 큐브 3)'));
+    fireEvent.click(screen.getByText('트와일라잇 연방 토큰 효과 재사용 (정보 큐브 3)'));
     fireEvent.click(screen.getByText('7점 + 크레딧 6'));
+    fireEvent.click(screen.getByText('확인'));
+
+    expect(sendAction).toHaveBeenCalledWith({
+      type: 'TwilightReplayFederationToken',
+      token_kind: 5,
+      bonus_build_coord: null,
+      bonus_tech_tile: null,
+      bonus_research_track: null,
+    });
+  });
+
+  it('accepts a Federation token selected from the external image shelf', () => {
+    const sendAction = vi.fn();
+    useGameStore.setState((state) => ({
+      selectedAction: 'TwilightReplayFederationToken',
+      actions: { ...state.actions, sendAction },
+    }));
+    const state = mockGameState({
+      players: [mockPlayer({ gray_federation_tokens: [5] })],
+    });
+    render(
+      <ActionPanel
+        gameState={state}
+        myPlayerId={0}
+        focusedAction
+        replayFederationKind={5}
+        hideReplayFederationChoices
+      />,
+    );
+
+    expect(screen.getByText(/‘내 연방’ 영역에서 복사할 토큰 이미지를 누르세요/)).toBeInTheDocument();
+    expect(screen.queryByText('7점 + 크레딧 6')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('확인'));
 
     expect(sendAction).toHaveBeenCalledWith({
@@ -1032,7 +1055,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     useGameStore.setState((state) => ({ actions: { ...state.actions, sendAction } }));
     render(<ActionPanel gameState={mockGameState()} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('Twilight +3 사거리 가이아 프로젝트 (지식 1)'))));
+    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('트와일라잇 +3 사거리 가이아 프로젝트 (지식 1)'))));
     expect(screen.getByText('보드에서 대상 헥스를 선택하세요')).toBeInTheDocument();
 
     act(() => {
@@ -1051,8 +1074,8 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     useGameStore.setState((s) => ({ actions: { ...s.actions, sendAction } }));
     render(<ActionPanel gameState={mockGameState()} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('Twilight +3 사거리 함선 탐사 (지식 1)'))));
-    fireEvent.click(screen.getByText('Rebellion'));
+    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('트와일라잇 +3 사거리 함선 탐사 (지식 1)'))));
+    fireEvent.click(screen.getByText('리벨리온'));
     fireEvent.click(screen.getByText('확인'));
 
     expect(sendAction).toHaveBeenCalledWith({
@@ -1067,7 +1090,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const gleensState = mockGameState({ players: [mockPlayer({ faction: 'Gleens' })] });
     const { rerender } = render(<ActionPanel gameState={gleensState} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('Gleens 특수 능력: 광산 건설 (+2 사거리)'))));
+    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('글린 특수 능력: 광산 건설 (+2 사거리)'))));
     act(() => {
       useGameStore.setState({ activePlanet: { q: 7, r: -7 } });
     });
@@ -1075,7 +1098,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     expect(sendAction).toHaveBeenCalledWith({ type: 'GleensBuildMine', coord: { q: 7, r: -7 } });
 
     fireEvent.click(screen.getByText('다른 행동 선택'));
-    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('Gleens 특수 능력: 가이아 프로젝트 (+2 사거리)'))));
+    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('글린 특수 능력: 가이아 프로젝트 (+2 사거리)'))));
     act(() => {
       useGameStore.setState({ activePlanet: { q: 8, r: -8 } });
     });
@@ -1083,8 +1106,8 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     expect(sendAction).toHaveBeenCalledWith({ type: 'GleensGaiaFormation', coord: { q: 8, r: -8 } });
 
     fireEvent.click(screen.getByText('다른 행동 선택'));
-    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('Gleens 특수 능력: 함선 탐사 (+2 사거리)'))));
-    fireEvent.click(screen.getByText('T F Mars'));
+    fireEvent.click(screen.getByText(byTextAcrossNodes(rangeActionLabel('글린 특수 능력: 함선 탐사 (+2 사거리)'))));
+    fireEvent.click(screen.getByText('T F 마스'));
     fireEvent.click(screen.getByText('확인'));
     expect(sendAction).toHaveBeenCalledWith({ type: 'GleensExploreSpaceship', ship: 'TFMars' });
 
@@ -1099,14 +1122,14 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
         myPlayerId={0}
       />,
     );
-    expect(screen.getByText(/Gleens 특수 능력: 광산 건설.*사용됨/).closest('button')).toBeDisabled();
-    expect(screen.getByText(/Gleens 특수 능력: 가이아 프로젝트.*사용됨/).closest('button')).toBeDisabled();
-    expect(screen.getByText(/Gleens 특수 능력: 함선 탐사.*사용됨/).closest('button')).toBeDisabled();
+    expect(screen.getByText(/글린 특수 능력: 광산 건설.*사용됨/).closest('button')).toBeDisabled();
+    expect(screen.getByText(/글린 특수 능력: 가이아 프로젝트.*사용됨/).closest('button')).toBeDisabled();
+    expect(screen.getByText(/글린 특수 능력: 함선 탐사.*사용됨/).closest('button')).toBeDisabled();
 
     rerender(<ActionPanel gameState={mockGameState()} myPlayerId={0} />);
-    expect(screen.queryByText(byTextAcrossNodes(rangeActionLabel('Gleens 특수 능력: 광산 건설 (+2 사거리)')))).not.toBeInTheDocument();
-    expect(screen.queryByText(byTextAcrossNodes(rangeActionLabel('Gleens 특수 능력: 가이아 프로젝트 (+2 사거리)')))).not.toBeInTheDocument();
-    expect(screen.queryByText(byTextAcrossNodes(rangeActionLabel('Gleens 특수 능력: 함선 탐사 (+2 사거리)')))).not.toBeInTheDocument();
+    expect(screen.queryByText(byTextAcrossNodes(rangeActionLabel('글린 특수 능력: 광산 건설 (+2 사거리)')))).not.toBeInTheDocument();
+    expect(screen.queryByText(byTextAcrossNodes(rangeActionLabel('글린 특수 능력: 가이아 프로젝트 (+2 사거리)')))).not.toBeInTheDocument();
+    expect(screen.queryByText(byTextAcrossNodes(rangeActionLabel('글린 특수 능력: 함선 탐사 (+2 사거리)')))).not.toBeInTheDocument();
 
     rerender(
       <ActionPanel
@@ -1114,7 +1137,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
         myPlayerId={0}
       />,
     );
-    fireEvent.click(screen.getByText('Space Giants 특수 능력: 광산 건설 (테라포밍 2단계 무료)'));
+    fireEvent.click(screen.getByText('스페이스자이언트 특수 능력: 광산 건설 (테라포밍 2단계 무료)'));
     act(() => {
       useGameStore.setState({ activePlanet: { q: 9, r: -9 } });
     });
@@ -1135,11 +1158,11 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
         myPlayerId={0}
       />,
     );
-    expect(screen.getByText(/Space Giants 특수 능력: 광산 건설.*사용됨/).closest('button')).toBeDisabled();
+    expect(screen.getByText(/스페이스자이언트 특수 능력: 광산 건설.*사용됨/).closest('button')).toBeDisabled();
 
     rerender(<ActionPanel gameState={mockGameState()} myPlayerId={0} />);
     expect(
-      screen.queryByText('Space Giants 특수 능력: 광산 건설 (테라포밍 2단계 무료)'),
+      screen.queryByText('스페이스자이언트 특수 능력: 광산 건설 (테라포밍 2단계 무료)'),
     ).not.toBeInTheDocument();
   });
 
@@ -1152,7 +1175,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Rebellion 표준 기술 타일 획득 (정보 큐브 3)'));
+    fireEvent.click(screen.getByText('리벨리온 표준 기술 타일 획득 (정보 큐브 3)'));
     fireEvent.click(screen.getByText('기술 타일 #2'));
     fireEvent.click(screen.getByText('과학'));
     fireEvent.click(screen.getByText('확인'));
@@ -1161,6 +1184,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
       type: 'RebellionGainTechTile',
       tile: 2,
       track: 'Science',
+      bonus_build_coord: null,
     });
   });
 
@@ -1170,7 +1194,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const state = mockGameState();
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('T F Mars 정보 큐브 액션 (정보 큐브 2 → 2 + 기술 타일당 1점)'));
+    fireEvent.click(screen.getByText('T F 마스 정보 큐브 액션 (정보 큐브 2 → 2 + 기술 타일당 1점)'));
     fireEvent.click(screen.getByText('확인'));
 
     expect(sendAction).toHaveBeenCalledWith({ type: 'TFMarsTechBonus' });
@@ -1182,7 +1206,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const state = mockGameState();
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('T F Mars 즉시 가이아포밍 (파워 2)'));
+    fireEvent.click(screen.getByText('T F 마스 즉시 가이아포밍 (파워 2)'));
     expect(screen.getByText('보드에서 대상 헥스를 선택하세요')).toBeInTheDocument();
 
     act(() => {
@@ -1202,7 +1226,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const state = mockGameState();
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Eclipse 정보 큐브 액션 (정보 큐브 2 → 2 + 행성 종류당 1점)'));
+    fireEvent.click(screen.getByText('이클립스 정보 큐브 액션 (정보 큐브 2 → 2 + 행성 종류당 1점)'));
     fireEvent.click(screen.getByText('확인'));
 
     expect(sendAction).toHaveBeenCalledWith({ type: 'EclipsePlanetTypeBonus' });
@@ -1214,7 +1238,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const state = mockGameState();
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Eclipse 연구 부스트 (파워 3 + 지식 2)'));
+    fireEvent.click(screen.getByText('이클립스 연구 부스트 (파워 3 + 지식 2)'));
     fireEvent.click(screen.getByText('과학'));
 
     expect(sendAction).toHaveBeenCalledWith({
@@ -1229,7 +1253,7 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
     const state = mockGameState();
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('Eclipse 소행성 광산 (크레딧 6)'));
+    fireEvent.click(screen.getByText('이클립스 소행성 광산 (크레딧 6)'));
     expect(screen.getByText('보드에서 대상 헥스를 선택하세요')).toBeInTheDocument();
 
     act(() => {
@@ -1245,6 +1269,62 @@ describe('ActionPanel — Lost Fleet: Explore a Spaceship / Examine an Artifact'
 });
 
 describe('ActionPanel — FormFederation token choice', () => {
+  it.each(['Ivits', 'Terrans'] as const)('shows first-federation satellite currency for %s', faction => {
+    useGameStore.setState({ selectedAction: 'FormFederation', selectedHexes: [] });
+    const state = mockGameState({ players: [mockPlayer({ faction, federated_hexes: [] })] });
+    render(<ActionPanel gameState={state} myPlayerId={0} focusedAction />);
+    expect(screen.getByText(/자동 분류됩니다/)).toHaveTextContent(
+      faction === 'Ivits' ? '위성 1개당 정보 큐브 1개 소모' : '위성 1개당 파워 토큰 1개 소모',
+    );
+  });
+
+  it('reuses the board tech flow for a spaceship Federation Tech reward', () => {
+    const sendAction = vi.fn();
+    useGameStore.setState((s) => ({
+      selectedAction: 'FormFederation',
+      selectedHexes: VALID_FEDERATION_HEXES,
+      actions: { ...s.actions, sendAction },
+    }));
+    const state = mockGameState({
+      board: validFederationBoard(),
+      spaceship_boards: [
+        {
+          id: 'TFMars',
+          explorers: [0, null, null, null],
+          artifact_pool: [],
+          tech_tiles: [],
+          federation_token: 12,
+        },
+      ],
+    });
+
+    render(
+      <ActionPanel
+        gameState={state}
+        myPlayerId={0}
+        focusedAction
+        federationTokenChoice={{ source: 'Spaceship', ship: 'TFMars' }}
+        federationBonusTechTile={2}
+        federationBonusResearchTrack="Terraforming"
+        hideFederationTokenChoices
+        hideFederationTechPicker
+      />,
+    );
+
+    expect(screen.queryByText('기술 타일 #2')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('확인'));
+
+    expect(sendAction).toHaveBeenCalledWith({
+      type: 'FormFederation',
+      hexes: VALID_FEDERATION_HEXES,
+      satellite_hexes: [],
+      token: { source: 'Spaceship', ship: 'TFMars' },
+      bonus_build_coord: null,
+      bonus_tech_tile: 2,
+      bonus_research_track: 'Terraforming',
+    });
+  });
+
   it('keeps the focused popup limited to federation controls and classifies empty space as a satellite', () => {
     const sendAction = vi.fn();
     useGameStore.setState((s) => ({
@@ -1261,7 +1341,7 @@ describe('ActionPanel — FormFederation token choice', () => {
     });
     render(<ActionPanel gameState={state} myPlayerId={0} focusedAction />);
 
-    expect(screen.getByText('연방 구축 취소')).toBeInTheDocument();
+    expect(screen.queryByText('연방 구축 취소')).not.toBeInTheDocument();
     expect(screen.queryByText('무료 행동 · 주 행동 전/중 사용 가능')).not.toBeInTheDocument();
     expect(screen.getByText('(0, 0) 내 건물')).toBeInTheDocument();
     expect(screen.getByText('(1, 0) 위성')).toBeInTheDocument();
@@ -1276,11 +1356,9 @@ describe('ActionPanel — FormFederation token choice', () => {
       token: { source: 'Supply', kind: 2 },
       bonus_build_coord: null,
       bonus_tech_tile: null,
+      bonus_research_track: null,
     });
 
-    fireEvent.click(screen.getByText('연방 구축 취소'));
-    expect(useGameStore.getState().selectedAction).toBeNull();
-    expect(useGameStore.getState().selectedHexes).toEqual([]);
   });
 
   it('sends a Supply token choice once hexes and a token kind are picked', () => {
@@ -1309,6 +1387,7 @@ describe('ActionPanel — FormFederation token choice', () => {
       token: { source: 'Supply', kind: 2 },
       bonus_build_coord: null,
       bonus_tech_tile: null,
+      bonus_research_track: null,
     });
   });
 
@@ -1342,6 +1421,7 @@ describe('ActionPanel — FormFederation token choice', () => {
       token: { source: 'Spaceship', ship: 'Twilight' },
       bonus_build_coord: null,
       bonus_tech_tile: null,
+      bonus_research_track: null,
     });
   });
 
@@ -1379,6 +1459,7 @@ describe('ActionPanel — FormFederation token choice', () => {
       token: { source: 'Spaceship', ship: 'Twilight' },
       bonus_build_coord: { q: 3, r: -2 },
       bonus_tech_tile: null,
+      bonus_research_track: null,
     });
   });
 
@@ -1400,5 +1481,18 @@ describe('ActionPanel — FormFederation token choice', () => {
     expect(screen.getByText(/연방 파워가 4 부족합니다/)).toBeInTheDocument();
     expect(screen.queryByText('8점 + 정보 큐브 1')).not.toBeInTheDocument();
     expect(screen.queryByText('확인')).not.toBeInTheDocument();
+  });
+});
+
+describe('Nevlas power affordability', () => {
+  it('doubles spending value only with PI, never the Gaia transfer count', () => {
+    const player = mockPlayer({ faction: 'Nevlas' });
+    player.resources.power.bowl3 = 2;
+    const qic = FREE_ACTIONS.find(({ kind }) => kind === 'PowerToQic')!;
+    const gaia = FREE_ACTIONS.find(({ kind }) => kind === 'PowerToGaiaKnowledge')!;
+    expect(maxFreeActionCount(player, qic)).toBe(0);
+    player.structures.push({ hex: { q: 0, r: 0 }, kind: 'PlanetaryInstitute' });
+    expect(maxFreeActionCount(player, qic)).toBe(1);
+    expect(maxFreeActionCount(player, gaia)).toBe(2);
   });
 });

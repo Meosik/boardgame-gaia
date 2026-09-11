@@ -1,3 +1,4 @@
+import { controlledPlayer } from '../devControl';
 import { create } from 'zustand';
 import type { GameAction, GameState, HexCoord, PlayerId } from '../types/game';
 import { GaiaWebSocket } from '../api/websocket';
@@ -7,15 +8,20 @@ import { hexKey } from '../components/GameBoard/hex-utils';
 type ActionType = GameAction['type'] | null;
 
 /** Set once the server broadcasts `game_ended` (round 6 completes) — the game is over and the
- * board becomes read-only; `GameOverScreen` renders instead of the normal action flow. */
+ * board becomes read-only; `GameOverScreen` renders instead of the normal action flow. Also
+ * derivable straight from `gameState.phase`'s `Ended` variant (see `App.tsx`), so a client that
+ * only loads a later snapshot still reconstructs the same result without having seen this
+ * broadcast. `winners` lists every player tied for the top score — ties share the win. */
 export interface FinalResult {
   finalScores: [PlayerId, number][];
-  winner: PlayerId;
+  winners: PlayerId[];
 }
 
 interface GameStore {
+  readOnly: boolean;
   gameState: GameState | null;
   myPlayerId: PlayerId | null;
+  sessionPlayerId: PlayerId | null;
   activePlanet: HexCoord | null;
   /** Accumulated hex picks for multi-hex actions (currently only
    * FormFederation) — `activePlanet` covers every single-hex action. */
@@ -23,17 +29,23 @@ interface GameStore {
   selectedAction: ActionType;
   /** Exact shared power-action slot selected from the research board. */
   selectedPowerActionId: number | null;
+  /** Command currently expected to finish the selected main-action flow. Selection is only
+   * cleared after this command is accepted; a rejection leaves the action and target intact. */
+  pendingActionCommandId: string | null;
   wsClient: GaiaWebSocket | null;
   finalResult: FinalResult | null;
 
   actions: {
+    setReadOnly: (value: boolean) => void;
     setGameState: (state: GameState) => void;
     setMyPlayerId: (id: PlayerId) => void;
     selectPlanet: (coord: HexCoord | null) => void;
     toggleHex: (coord: HexCoord) => void;
     selectAction: (action: ActionType) => void;
     selectPowerAction: (id: number | null) => void;
-    sendAction: (action: GameAction) => void;
+    sendAction: (action: GameAction) => string | null;
+    acceptActionCommand: (commandId: string) => boolean;
+    rejectActionCommand: (commandId: string | null) => boolean;
     triggerDevPowerCharge: (coord: HexCoord) => void;
     undoFreeAction: () => void;
     requestTurnUndo: () => void;
@@ -45,12 +57,15 @@ interface GameStore {
 }
 
 const initialState = {
+  readOnly: false,
   gameState: null,
   myPlayerId: null,
+  sessionPlayerId: null,
   activePlanet: null,
   selectedHexes: [] as HexCoord[],
   selectedAction: null as ActionType,
   selectedPowerActionId: null as number | null,
+  pendingActionCommandId: null as string | null,
   wsClient: null,
   finalResult: null as FinalResult | null,
 };
@@ -59,12 +74,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
   ...initialState,
 
   actions: {
+    setReadOnly(value) {
+      if (value) get().wsClient?.disconnect();
+      set({ readOnly: value, ...(value ? { wsClient: null, selectedAction: null,
+        selectedPowerActionId: null, activePlanet: null, selectedHexes: [], pendingActionCommandId: null } : {}) });
+    },
+
     setGameState(state) {
-      set({ gameState: state });
+      const myPlayerId = controlledPlayer(state, get().sessionPlayerId ?? get().myPlayerId);
+      const changedSeat = myPlayerId !== get().myPlayerId;
+      set({ gameState: state, myPlayerId, ...(changedSeat ? {
+        selectedAction: null, selectedPowerActionId: null, activePlanet: null, selectedHexes: [],
+      } : {}) });
     },
 
     setMyPlayerId(id) {
-      set({ myPlayerId: id });
+      set({ sessionPlayerId: id, myPlayerId: controlledPlayer(get().gameState, id) });
     },
 
     selectPlanet(coord) {
@@ -83,6 +108,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     selectAction(action) {
+      if (get().readOnly) return;
       set({
         selectedAction: action,
         selectedPowerActionId: action === 'PowerAction' ? get().selectedPowerActionId : null,
@@ -92,6 +118,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     selectPowerAction(id) {
+      if (get().readOnly) return;
       set({
         selectedAction: id === null ? null : 'PowerAction',
         selectedPowerActionId: id,
@@ -101,30 +128,51 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     sendAction(action) {
+      if (get().readOnly) return null;
       const { wsClient } = get();
       const revision = useRoomStore.getState().revision;
-      wsClient?.sendCommand({ type: 'place_game_action', action }, revision);
+      if (!wsClient) return null;
+      const commandId = wsClient.sendCommand({ type: 'place_game_action', action }, revision);
+      // Free actions are deliberately allowed in the middle of a selected main action and must
+      // never become the command that clears that selection when their acknowledgement arrives.
+      if (action.type !== 'FreeAction') set({ pendingActionCommandId: commandId });
+      return commandId;
+    },
+
+    acceptActionCommand(commandId) {
+      if (get().pendingActionCommandId !== commandId) return false;
       set({
+        pendingActionCommandId: null,
         selectedAction: null,
         selectedPowerActionId: null,
         activePlanet: null,
         selectedHexes: [],
       });
+      return true;
+    },
+
+    rejectActionCommand(commandId) {
+      if (commandId === null || get().pendingActionCommandId !== commandId) return false;
+      set({ pendingActionCommandId: null });
+      return true;
     },
 
     triggerDevPowerCharge(coord) {
+      if (get().readOnly) return;
       const { wsClient } = get();
       const revision = useRoomStore.getState().revision;
       wsClient?.sendCommand({ type: 'trigger_dev_power_charge', coord }, revision);
       set({
         selectedAction: null,
         selectedPowerActionId: null,
+        pendingActionCommandId: null,
         activePlanet: null,
         selectedHexes: [],
       });
     },
 
     undoFreeAction() {
+      if (get().readOnly) return;
       const { wsClient } = get();
       wsClient?.sendCommand(
         { type: 'undo_free_action' },
@@ -133,6 +181,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     requestTurnUndo() {
+      if (get().readOnly) return;
       const { wsClient } = get();
       wsClient?.sendCommand(
         { type: 'request_turn_undo' },
@@ -141,6 +190,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     respondTurnUndo(approve) {
+      if (get().readOnly) return;
       const { wsClient } = get();
       wsClient?.sendCommand(
         { type: 'respond_turn_undo', approve },
@@ -149,6 +199,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     setWsClient(client) {
+      if (get().readOnly && client) { client.disconnect(); return; }
       set({ wsClient: client });
     },
 

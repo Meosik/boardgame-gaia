@@ -7,6 +7,7 @@ import {
   structureImageSrc,
 } from '../../assets/structureImages';
 import type { FactionId, PlanetType, PowerCycle, Resources, Structure } from '../../types/game';
+import { factionDisplayName, planetTypeDisplayName } from '../../displayNames';
 import { GamePieceIcon, type GamePieceIconKind } from '../GamePieceIcon';
 import { ResourcePanel } from './ResourcePanel';
 import { SatelliteToken } from './SatelliteToken';
@@ -128,7 +129,7 @@ export function FactionBoard({
 }: Props) {
   const imageSrc = factionBoardImageSrc(faction);
   const color = FACTION_STRUCTURE_COLOR[faction];
-  const remainingSlots = remainingFactionBoardStructureSlots(structures);
+  const remainingSlots = remainingFactionBoardStructureSlots(structures, faction);
   const brainstoneBowlKey = power?.brainstone === 'Area1'
     ? 'bowl1'
     : power?.brainstone === 'Area2'
@@ -138,11 +139,17 @@ export function FactionBoard({
         : power?.brainstone === 'Gaia'
           ? 'gaia_bowl'
           : null;
+  const powerBowlCount = (key: (typeof POWER_BOWLS)[number]['key']) => {
+    if (!power) return 0;
+    return key === 'gaia_bowl'
+      ? power.gaia_bowl + power.gaia_forming
+      : power[key];
+  };
 
   if (!imageSrc) return null;
 
   return (
-    <figure className="faction-board" aria-label={`${faction} 종족 보드`}>
+    <figure className="faction-board" aria-label={`${factionDisplayName(faction)} 종족 보드`}>
       {resources && (
         <div className="faction-board-resource-header">
           {(expensiveTerraformingPlanetTypes.length > 0 || selectedTinkeringTile !== null) && (
@@ -150,7 +157,7 @@ export function FactionBoard({
               {expensiveTerraformingPlanetTypes.length > 0 && (
                 <span
                   className="faction-board-expensive-colors"
-                  aria-label={`테라포밍 3단계 색상: ${expensiveTerraformingPlanetTypes.join(', ')}`}
+                  aria-label={`테라포밍 3단계 색상: ${expensiveTerraformingPlanetTypes.map(planetTypeDisplayName).join(', ')}`}
                 >
                   <strong>3단계</strong>
                   {expensiveTerraformingPlanetTypes.map((planetType) => {
@@ -159,7 +166,7 @@ export function FactionBoard({
                       <img
                         key={planetType}
                         src={structureImageSrc(markerColor, 'marker')}
-                        alt={`${planetType} 색상 위성`}
+                        alt={`${planetTypeDisplayName(planetType)} 색상 위성`}
                       />
                     ) : null;
                   })}
@@ -179,7 +186,7 @@ export function FactionBoard({
       )}
       <div className="faction-board-main">
         <div className="faction-board-image-wrap">
-        <img className="faction-board-image" src={imageSrc} alt={`${faction} 종족 보드`} />
+        <img className="faction-board-image" src={imageSrc} alt={`${factionDisplayName(faction)} 종족 보드`} />
         {remainingSlots.map((slot) => (
           <img
             key={slot.id}
@@ -208,25 +215,30 @@ export function FactionBoard({
             ))}
           </>
         )}
-        {power && POWER_BOWLS.flatMap((bowl) =>
-          Array.from({ length: power[bowl.key] }, (_, index) => (
+        {power && POWER_BOWLS.flatMap((bowl) => {
+          const count = powerBowlCount(bowl.key);
+          return Array.from({ length: count }, (_, index) => (
             <SatelliteToken
               key={`${bowl.key}-${index}`}
               className="faction-board-power-token"
               color={STRUCTURE_COLOR_HEX[color]}
               faction={faction}
-              style={powerTokenPosition(index, power[bowl.key], bowl)}
+              style={powerTokenPosition(index, count, bowl)}
               label={`파워 영역 ${bowl.label} 토큰 ${index + 1}`}
             />
-          )),
-        )}
+          ));
+        })}
         {power && brainstoneBowlKey && (() => {
           const bowl = POWER_BOWLS.find((candidate) => candidate.key === brainstoneBowlKey)!;
           return (
             <GamePieceIcon
               className="faction-board-power-token faction-board-brainstone"
               kind="brainstone"
-              style={powerTokenPosition(power[bowl.key], power[bowl.key] + 1, bowl)}
+              style={powerTokenPosition(
+                powerBowlCount(bowl.key),
+                powerBowlCount(bowl.key) + 1,
+                bowl,
+              )}
               decorative={false}
               label={`브레인스톤 ${bowl.label} 영역`}
             />
@@ -249,6 +261,7 @@ export function FactionBoard({
         </div>
         {resources && (
           <FactionBoardSideRack
+            faction={faction}
             qic={resources.qic}
             techTiles={techTiles}
             advancedTechTiles={advancedTechTiles}

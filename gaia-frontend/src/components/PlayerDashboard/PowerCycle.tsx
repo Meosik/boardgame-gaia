@@ -31,21 +31,12 @@ export function PowerCycle({ power, faction }: Props) {
         <BowlDisplay
           key={key}
           label={label}
-          count={power[key]}
+          count={key === 'gaia_bowl' ? power.gaia_bowl + power.gaia_forming : power[key]}
           faction={faction ?? null}
           color={FALLBACK_COLORS[label]}
           hasBrainstone={brainstoneBowl === label}
         />
       ))}
-      {power.gaia_forming > 0 && (
-        <BowlDisplay
-          label="GF"
-          count={power.gaia_forming}
-          faction={faction ?? null}
-          color={FALLBACK_COLORS['GF']}
-          hasBrainstone={false}
-        />
-      )}
     </div>
   );
 }
@@ -81,7 +72,7 @@ function BowlDisplay({
               className="brainstone-token"
               decorative={false}
               label="브레인스톤"
-              title="Taklons Brainstone"
+              title="타클론 브레인스톤"
             />
           )}
           {count === 0 && !hasBrainstone && <span className="bowl-empty">—</span>}

@@ -1,3 +1,4 @@
+import { roundScoringTileBackImageSrc } from '../assets/roundScoringTileImages';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ScoringBoard } from '../components/ScoringBoard';
@@ -19,7 +20,7 @@ const finalScoringTiles: FinalScoringTile[] = [
 
 describe('ScoringBoard', () => {
   it('renders the shared board image plus all 6 round tiles and both final-scoring tiles', () => {
-    const { container } = render(
+    render(
       <ScoringBoard roundTiles={roundTiles} finalScoringTiles={finalScoringTiles} currentRound={0} />,
     );
 
@@ -27,9 +28,6 @@ describe('ScoringBoard', () => {
     for (let round = 1; round <= 6; round += 1) {
       expect(screen.getByLabelText(`라운드 ${round} 점수 타일`)).toBeInTheDocument();
     }
-    expect(
-      container.querySelectorAll('.scoring-board-round-fallback .scoring-board-warped-piece'),
-    ).toHaveLength(18);
     expect(screen.getByAltText('게임 종료 점수 타일 1')).toBeInTheDocument();
     expect(screen.getByAltText('게임 종료 점수 타일 2')).toBeInTheDocument();
   });
@@ -39,7 +37,11 @@ describe('ScoringBoard', () => {
       <ScoringBoard roundTiles={roundTiles} finalScoringTiles={finalScoringTiles} currentRound={4} />,
     );
 
-    expect(screen.getByLabelText('라운드 1 점수 타일 (완료됨)')).toBeInTheDocument();
+    const completed = screen.getByLabelText('라운드 1 점수 타일 (완료됨)');
+    expect(completed).toHaveClass('scoring-board-tile--flipped');
+    expect(completed.querySelector('.scoring-board-tile-back'))
+      .toHaveAttribute('src', roundScoringTileBackImageSrc);
+    expect(screen.getByLabelText('라운드 4 점수 타일')).not.toHaveClass('scoring-board-tile--flipped');
     expect(screen.getByLabelText('라운드 2 점수 타일 (완료됨)')).toBeInTheDocument();
     expect(screen.getByLabelText('라운드 3 점수 타일 (완료됨)')).toBeInTheDocument();
     expect(screen.getByLabelText('라운드 4 점수 타일')).toBeInTheDocument();

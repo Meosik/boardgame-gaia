@@ -224,6 +224,16 @@ describe('SidebarTurnControls', () => {
     expect(screen.getByRole('button', { name: '파워 1 → 크레딧 1' })).toBeDisabled();
   });
 
+  it('allows immediate DEV undo after the controlled seat changes', () => {
+    const onUndo = vi.fn();
+    render(<SidebarTurnControls player={player(4, { player_id: 1 })} isMyTurn onFreeAction={vi.fn()}
+      immediateTurnUndo undoState={undoState} onRequestTurnUndo={onUndo} />);
+    const button = screen.getByRole('button', { name: '직전 차례 되돌리기' });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(onUndo).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: '승인' })).not.toBeInTheDocument();
+  });
 });
 
 describe('TopPassControl', () => {
@@ -279,4 +289,6 @@ describe('TopPassControl', () => {
     fireEvent.click(screen.getByRole('button', { name: '패스' }));
     expect(onPass).toHaveBeenCalledWith(null);
   });
+
+
 });

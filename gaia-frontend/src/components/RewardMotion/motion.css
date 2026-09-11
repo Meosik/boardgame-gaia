@@ -1,0 +1,11 @@
+.reward-motion-layer { position: fixed; inset: 0; z-index: 1000; pointer-events: none; overflow: hidden; }
+.reward-motion-flight { position: absolute; filter: drop-shadow(0 2px 5px #0009); animation: reward-motion-travel 1000ms ease-in-out both; }
+.reward-motion-flight .interaction-resource-token,
+.reward-motion-flight .victory-point-token { width: 48px; }
+@keyframes reward-motion-travel {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.8); }
+  18% { opacity: 1; transform: translate(-50%, -70%) scale(1.05); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--reward-dx)), calc(-50% + var(--reward-dy))) scale(.7); }
+}
+@media (prefers-reduced-motion: reduce) { .reward-motion-flight { display: none; animation: none; } }

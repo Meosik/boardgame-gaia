@@ -33,7 +33,7 @@ const PLANET_VISUAL: Record<PlanetType, { color: string; ring?: boolean }> = {
   Titanium:    { color: '#546e7a' },
   Volcanic:    { color: '#e64a19' },
   Transdim:    { color: '#7b1fa2', ring: true },
-  Gaia:        { color: '#0097a7', ring: true },
+  Gaia:        { color: '#0097a7' },
   LostPlanet:  { color: '#4e342e' },
   Asteroid:    { color: '#78909c' },
   ProtoPlanet: { color: '#81c784' },
@@ -48,7 +48,11 @@ interface Props {
 }
 
 export function PlanetHex({ planetType, cx, cy, size, hexKey = '' }: Props) {
-  const r = size * 0.3;
+  // Gaia overlays replace printed sector planets, rather than decorating their centers.
+  const r = size * (planetType === 'Gaia' ? 0.68 : 0.3);
+  // gaia.png is 528px wide, but the planet occupies only x/y 38..490.
+  // Scale past that transparent margin so the visible planet fills the overlay.
+  const imageRadius = planetType === 'Gaia' ? r * 528 / 452 : r;
   const vis = PLANET_VISUAL[planetType];
   const img = PLANET_IMAGE[planetType];
 
@@ -64,10 +68,10 @@ export function PlanetHex({ planetType, cx, cy, size, hexKey = '' }: Props) {
         <circle cx={cx} cy={cy} r={r} fill="#000" />
         <image
           href={img}
-          x={cx - r}
-          y={cy - r}
-          width={r * 2}
-          height={r * 2}
+          x={cx - imageRadius}
+          y={cy - imageRadius}
+          width={imageRadius * 2}
+          height={imageRadius * 2}
           clipPath={`url(#${clipId})`}
           preserveAspectRatio="xMidYMid slice"
         />

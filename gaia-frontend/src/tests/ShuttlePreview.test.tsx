@@ -55,7 +55,7 @@ describe('ShuttlePreview interaction prototype', () => {
     render(<ShuttlePreview />);
 
     fireEvent.click(screen.getByRole('button', {
-      name: /T F Mars — 크레딧 행동: 테라포밍 1단계 무료 광산.*사용 가능/,
+      name: /T F 마스 — 크레딧 행동: 테라포밍 1단계 무료 광산.*사용 가능/,
     }));
 
     expect(screen.getByText('행성 선택')).toBeInTheDocument();

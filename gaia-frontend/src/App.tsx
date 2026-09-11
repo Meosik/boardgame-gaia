@@ -1,10 +1,15 @@
+import { RewardMotion } from './components/RewardMotion';
+import { resourceMotionBatch, type RewardBatch } from './components/RewardMotion/rewards';
+import { DevTestControls } from './components/DevTestControls';
+import { ActionCancelButton } from './components/ActionCancelButton';
+import { shipActionPrerequisiteNotice } from './components/shipActionPreflight';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { shallow } from 'zustand/shallow';
 import { CalibrationView } from './components/CalibrationView';
 import { ShuttlePreview } from './components/ShuttlePreview';
 import { GameLobby } from './components/GameLobby';
-import { FactionSelectView } from './components/GameLobby/FactionSelectView';
+import { TerraformingSelectionBoard } from './components/GameLobby/TerraformingSelectionBoard';
 import { GameBoard } from './components/GameBoard';
 import { ActionPanel } from './components/ActionPanel';
 import { PlayerDashboard } from './components/PlayerDashboard';
@@ -17,7 +22,6 @@ import {
   type StructurePopupMode,
 } from './components/StructureActionPopup';
 import { ScoringBoard } from './components/ScoringBoard';
-import { BoardOverlay } from './components/BoardOverlay';
 import { PersonalBoardDrawer } from './components/PersonalBoardDrawer';
 import { RoundBoosters } from './components/RoundBoosters';
 import { FederationTokens } from './components/FederationTokens';
@@ -28,19 +32,21 @@ import {
   informationCubesNeededForRange,
   PlanetActionPopup,
   rangeRequirementNotice,
+  type BuildActionPreview,
 } from './components/PlanetActionPopup';
-import { selectableFederationHexes } from './components/federationSelection';
+import { selectableFederationHexes, validateFederationSelection } from './components/federationSelection';
 import { GameLog } from './components/GameLog';
 import { SidebarTurnControls } from './components/SidebarTurnControls';
 import { TopPassControl } from './components/TopPassControl';
+import { PlayerActionShelf } from './components/PlayerActionShelf';
 import { GameOverScreen } from './components/GameOverScreen';
-import { isSpaceshipBoardAction } from './components/boardActionSpaces';
-import { useGameStore } from './store/gameStore';
+import { FACTION_STRUCTURE_COLOR, STRUCTURE_COLOR_HEX } from './assets/structureImages';
+import { useGameStore, type FinalResult } from './store/gameStore';
 import { useRoomStore } from './store/roomStore';
 import { GaiaWebSocket } from './api/websocket';
-import { api } from './api/rest';
-import type { GameAction, Hex, HexCoord, ResearchTrack, ServerMessage, SpaceshipId, StructureType, TechTileChoice } from './types/game';
+import type { FederationTokenChoice, GameAction, Hex, HexCoord, ResearchTrack, ServerMessage, SpaceshipId, StructureType, TechTileChoice } from './types/game';
 import { activeActionPlayerId, isGameState, pendingDecisionPlayerId } from './types/game';
+import { factionDisplayName } from './displayNames';
 
 type AppView = 'lobby' | 'game';
 
@@ -54,6 +60,7 @@ interface BoardPlanetPopupState {
   hex: Hex;
   anchor: { x: number; y: number };
   powerActionId?: 2 | 6;
+  buildAction?: BuildActionPreview;
 }
 
 interface BoardSpaceshipPopupState {
@@ -61,44 +68,64 @@ interface BoardSpaceshipPopupState {
   anchor: { x: number; y: number };
 }
 
-type TechUpgradeFlow =
+type TechFlowCompletion =
+  | { kind: 'Upgrade' }
+  | { kind: 'TwilightFreeResearchLab' }
+  | { kind: 'RebellionGainTechTile' }
+  | { kind: 'TwilightReplayFederationToken'; tokenKind: number }
+  | { kind: 'FederationBonus' };
+
+type TechUpgradeFlow = {
+  coord: HexCoord;
+  to: StructureType;
+  anchor: { x: number; y: number };
+  completion: TechFlowCompletion;
+} & (
   | {
       stage: 'tile';
-      coord: HexCoord;
-      to: StructureType;
-      anchor: { x: number; y: number };
     }
   | {
       stage: 'track';
-      coord: HexCoord;
-      to: StructureType;
-      anchor: { x: number; y: number };
       tile: number;
     }
   | {
       stage: 'bonus-mine';
-      coord: HexCoord;
-      to: StructureType;
-      anchor: { x: number; y: number };
       tile: number;
       advanceTrack: ResearchTrack | null;
     }
   | {
       stage: 'cover';
-      coord: HexCoord;
-      to: StructureType;
-      anchor: { x: number; y: number };
       tile: number;
       track: ResearchTrack;
     }
   | {
       stage: 'advanced-track';
-      coord: HexCoord;
-      to: StructureType;
-      anchor: { x: number; y: number };
       track: ResearchTrack;
       coveredTile: number;
-    };
+    }
+);
+
+const IMMEDIATE_SPACESHIP_ACTIONS = new Set<GameAction['type']>([
+  'RebellionCreditsAndQic',
+  'TFMarsTechBonus',
+  'EclipsePlanetTypeBonus',
+]);
+
+const MAP_TARGET_SPACESHIP_ACTIONS = new Set<GameAction['type']>([
+  'GleensBuildMine',
+  'SpaceGiantsBuildMine',
+  'RoundBoosterImmediateGaiaFormation',
+  'RoundBoosterRangeBuild',
+  'TinkeroidsUseTile',
+  'SpaceshipCreditTerraform',
+  'TwilightFreeResearchLab',
+  'TwilightRangeBuild',
+  'TwilightRangeGaiaFormation',
+  'TwilightRangeExploreSpaceship',
+  'RebellionFreeTradingStation',
+  'TFMarsGaiaFormation',
+  'EclipseAsteroidMine',
+]);
 
 function DraggableActionPopup({
   className,
@@ -145,7 +172,7 @@ function DraggableActionPopup({
   return (
     <section
       className={className}
-      style={position ? { left: position.left, top: position.top, right: 'auto', bottom: 'auto' } : undefined}
+      style={position ? { left: position.left, top: position.top, right: 'auto', bottom: 'auto', transform: 'none' } : undefined}
       role="dialog"
       aria-modal="false"
       aria-label={label}
@@ -163,26 +190,54 @@ function DraggableActionPopup({
   );
 }
 
-export function App() {
-  const [view, setView] = useState<AppView>('lobby');
-  const [devGameLaunchError, setDevGameLaunchError] = useState<string | null>(null);
-  const [devGameReady, setDevGameReady] = useState(false);
-  const [activeBoardOverlay, setActiveBoardOverlay] = useState<'scoring' | 'boosters' | null>(null);
+function scrollToGameBoard(id: string) {
+  window.requestAnimationFrame(() => {
+    document.getElementById(id)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function federationTokenKind(
+  gameState: NonNullable<ReturnType<typeof useGameStore.getState>['gameState']>,
+  choice: FederationTokenChoice,
+): number | null {
+  if (choice.source === 'Supply') return choice.kind;
+  return gameState.spaceship_boards.find(({ id }) => id === choice.ship)?.federation_token ?? null;
+}
+
+export interface AppReplayControls {
+  events: import('./types/game').GameEvent[];
+  eventStart: number;
+  eventEnd: number;
+  onEventSelect: (index: number) => void;
+}
+
+export function App({ replay }: { replay?: AppReplayControls } = {}) {
+  const [view, setView] = useState<AppView>(replay ? 'game' : 'lobby');
   const [personalBoardPlayerId, setPersonalBoardPlayerId] = useState<number | null>(null);
   const [structurePopup, setStructurePopup] = useState<BoardStructurePopupState | null>(null);
   const [planetPopup, setPlanetPopup] = useState<BoardPlanetPopupState | null>(null);
   const [spaceshipPopup, setSpaceshipPopup] = useState<BoardSpaceshipPopupState | null>(null);
   const [techUpgradeFlow, setTechUpgradeFlow] = useState<TechUpgradeFlow | null>(null);
+  const actionAnchorRef = useRef<Element | null>(null);
+  const [rewardBatch, setRewardBatch] = useState<RewardBatch | null>(null);
+  const rewardSequence = useRef(0);
+  const rewardClick = useRef<{ x: number; y: number; time: number } | null>(null);
   const [sidebarTab, setSidebarTab] = useState<'info' | 'log'>('info');
   const [rangePreviewQic, setRangePreviewQic] = useState(0);
   const [gameNotice, setGameNotice] = useState<string | null>(null);
   const [suppressTerraformOreConfirmation, setSuppressTerraformOreConfirmation] = useState(false);
   const [devPowerChargeTargeting, setDevPowerChargeTargeting] = useState(false);
   const [boardArtifactId, setBoardArtifactId] = useState<number | null>(null);
-  const [shipActionOptions, setShipActionOptions] = useState<GameAction['type'][]>([]);
-  const devGameLaunchStarted = useRef(false);
+  const [twilightRangeMode, setTwilightRangeMode] = useState(false);
+  const [passBoosterSelection, setPassBoosterSelection] = useState(false);
+  const [federationTokenChoice, setFederationTokenChoice] = useState<FederationTokenChoice | null>(null);
+  const [replayFederationKind, setReplayFederationKind] = useState<number | null>(null);
+  const [federationBonusCoord, setFederationBonusCoord] = useState<HexCoord | null>(null);
+  const [federationBonusTechTile, setFederationBonusTechTile] = useState<number | null>(null);
+  const [federationBonusResearchTrack, setFederationBonusResearchTrack] = useState<ResearchTrack | null>(null);
   const searchParams = new URLSearchParams(window.location.search);
-  const devGameRequested = searchParams.get('devGame') === '1';
+  const savedManualControl = useRoomStore((s) => s.manualControl);
+  const devGameRequested = !replay && (searchParams.get('devGame') === '1' || savedManualControl);
 
   const {
     roomCode,
@@ -227,56 +282,51 @@ export function App() {
   );
 
   useEffect(() => {
-    if (!devGameRequested || devGameLaunchStarted.current) return;
-    devGameLaunchStarted.current = true;
+    if (selectedAction !== 'TwilightReplayFederationToken' && selectedAction !== 'ExamineArtifact') {
+      setReplayFederationKind(null);
+    }
+  }, [selectedAction]);
 
-    void api
-      .createDevGame()
-      .then((response) => {
-        roomActions.setRoomInfo({
-          roomCode: response.room_code,
-          playerId: response.player_id,
-          sessionToken: response.session_token,
-          playerCount: response.players.length,
-          roomState: 'faction_selection',
-          gameSetup: response.game_setup,
-          nickname: 'DEV',
-          lobbyPlayers: response.players,
-          hostPlayerId: response.host_player_id,
-          revision: 0,
-          paused: false,
-          missingSeats: [],
-          lastError: null,
-        });
-        gameActions.setMyPlayerId(response.player_id);
-        gameActions.setGameState(response.game_state);
-        setDevGameReady(true);
-      })
-      .catch((error: unknown) => {
-        setDevGameLaunchError(error instanceof Error ? error.message : String(error));
-      });
-  }, [devGameRequested, gameActions, roomActions]);
 
   useEffect(() => {
-    if (view !== 'game' || !roomCode || !sessionToken) return;
+    if (replay || view !== 'game' || !roomCode || !sessionToken) return;
 
     const client = new GaiaWebSocket(roomCode);
     gameActions.setWsClient(client);
 
+    let hasBaseline = false;
+    const stopRewardConnection = client.onStateChange(() => { hasBaseline = false; setRewardBatch(null); });
     client.on((msg: ServerMessage) => {
       switch (msg.type) {
         case 'snapshot':
           roomActions.setRevision(msg.revision);
           if (isGameState(msg.state)) {
+            const before = useGameStore.getState();
+            const controlled = before.myPlayerId;
+            const received = hasBaseline && controlled !== null
+              ? resourceMotionBatch(before.gameState, msg.state, controlled) : null;
+            if (received) {
+              const click = rewardClick.current;
+              setRewardBatch({ ...received, id: ++rewardSequence.current,
+                origin: click && performance.now() - click.time < 2500 ? { x: click.x, y: click.y } : undefined });
+            } else if (!hasBaseline || JSON.stringify((msg.state.event_log ?? []).slice(0, before.gameState?.event_log?.length ?? 0)) !== JSON.stringify(before.gameState?.event_log ?? [])) {
+              setRewardBatch(null);
+            }
+            hasBaseline = true;
             gameActions.setGameState(msg.state);
           }
           break;
         case 'command_accepted':
           roomActions.setRevision(msg.revision);
           roomActions.setError(null);
+          if (gameActions.acceptActionCommand(msg.command_id)) {
+            closeBoardContext();
+            setBoardArtifactId(null);
+          }
           break;
         case 'command_rejected':
           roomActions.setRevision(msg.revision);
+          gameActions.rejectActionCommand(msg.command_id);
           roomActions.setError({
             code: msg.rejection.code,
             message: msg.rejection.message_key,
@@ -289,7 +339,7 @@ export function App() {
         case 'game_ended':
           gameActions.setFinalResult({
             finalScores: msg.final_scores,
-            winner: msg.winner,
+            winners: msg.winners,
           });
           break;
         default:
@@ -308,16 +358,48 @@ export function App() {
     });
 
     return () => {
+      stopRewardConnection();
       client.disconnect();
       gameActions.setWsClient(null);
     };
-  }, [view, roomCode, sessionToken]);
+  }, [view, roomCode, sessionToken, !!replay]);
 
   useEffect(() => {
-    if (playerId !== null) {
+    if (!replay && playerId !== null) {
       gameActions.setMyPlayerId(playerId);
     }
   }, [playerId]);
+
+  useEffect(() => {
+    if (gameState?.dev_controller == null) return;
+    closeBoardContext();
+    setPersonalBoardPlayerId(null);
+    setPassBoosterSelection(false);
+    setReplayFederationKind(null);
+    setFederationTokenChoice(null);
+    setRangePreviewQic(0);
+  }, [myPlayerId]);
+
+  useEffect(() => {
+    if (!gameState || myPlayerId === null) return;
+    const player = gameState.players.find(({ player_id }) => player_id === myPlayerId);
+    if (player?.passed || gameState.round >= 6 || player?.booster == null) {
+      setPassBoosterSelection(false);
+    }
+  }, [gameState, myPlayerId]);
+
+  useEffect(() => {
+    if (!gameState || myPlayerId === null || selectedAction !== 'FormFederation') {
+      setFederationTokenChoice(null);
+      return;
+    }
+    const selection = validateFederationSelection(gameState, myPlayerId, selectedHexes);
+    if (!selection.valid) {
+      setFederationTokenChoice(null);
+      return;
+    }
+    scrollToGameBoard('game-federation-tokens');
+  }, [gameState, myPlayerId, selectedAction, selectedHexes]);
 
   const handleGameStart = useCallback(() => {
     setView('game');
@@ -326,34 +408,11 @@ export function App() {
   // Debug-only coordinate picker for measuring image-relative slot
   // positions (see `CalibrationView`) — never linked to from in-game UI,
   // reached only by appending this query param by hand.
-  if (searchParams.get('shuttlePreview') === '1') {
+  if (!replay && searchParams.get('shuttlePreview') === '1') {
     return <ShuttlePreview />;
   }
-  if (searchParams.get('calibrate') === '1') {
+  if (!replay && searchParams.get('calibrate') === '1') {
     return <CalibrationView />;
-  }
-
-  if (devGameRequested && view === 'lobby' && !devGameReady) {
-    return (
-      <div className="app app--loading">
-        {devGameLaunchError ? (
-          <p>개발 게임 생성 실패: {devGameLaunchError}</p>
-        ) : (
-          <>
-            <div className="spinner" />
-            <p>실제 엔진 샌드박스를 여는 중...</p>
-          </>
-        )}
-      </div>
-    );
-  }
-
-  if (devGameRequested && view === 'lobby') {
-    return (
-      <div className="app app--lobby">
-        <FactionSelectView onGameStart={handleGameStart} emphasizeStructures />
-      </div>
-    );
   }
 
   function handleReturnToLobby() {
@@ -362,10 +421,22 @@ export function App() {
     setView('lobby');
   }
 
-  if (view === 'game' && finalResult && gameState) {
+  // Prefer the authoritative snapshot's own `Ended` phase over the one-time `game_ended`
+  // broadcast in `finalResult` — a client that only ever loads a later snapshot (reconnect,
+  // refresh, restart recovery) never sees that broadcast at all, but `gameState.phase` still
+  // carries the same result since `RuleEngine::finalize_game` writes it into the engine state.
+  const endedPhase =
+    gameState && typeof gameState.phase === 'object' && 'Ended' in gameState.phase
+      ? gameState.phase.Ended
+      : null;
+  const effectiveFinalResult: FinalResult | null = endedPhase
+    ? { finalScores: endedPhase.final_scores, winners: endedPhase.winners }
+    : finalResult;
+
+  if (!replay && view === 'game' && effectiveFinalResult && gameState) {
     return (
       <GameOverScreen
-        result={finalResult}
+        result={effectiveFinalResult}
         players={gameState.players}
         myPlayerId={myPlayerId ?? 0}
         onReturnToLobby={handleReturnToLobby}
@@ -376,7 +447,7 @@ export function App() {
   if (view === 'lobby') {
     return (
       <div className="app app--lobby">
-        <GameLobby onGameStart={handleGameStart} />
+        <GameLobby onGameStart={handleGameStart} manualControl={devGameRequested} />
       </div>
     );
   }
@@ -398,13 +469,18 @@ export function App() {
       .filter((player): player is NonNullable<typeof player> => player !== undefined),
     ...gameState.players.filter((player) => !gameState.turn_order.includes(player.player_id)),
   ];
+  const factionBoardPlayers = [...gameState.players].sort((left, right) => {
+    if (left.player_id === myId) return -1;
+    if (right.player_id === myId) return 1;
+    return left.player_id - right.player_id;
+  });
   const personalBoardPlayer =
     personalBoardPlayerId === null
       ? null
       : (gameState.players.find((player) => player.player_id === personalBoardPlayerId) ?? null);
   const activePlayerId = activeActionPlayerId(gameState);
   const undoPending = gameState.undo_state?.pending_request ?? null;
-  const isMyActionTurn = activePlayerId === myId && undoPending === null;
+  const isMyActionTurn = !replay && activePlayerId === myId && undoPending === null;
   const hasServerFreeActions = gameState.undo_state?.open_turn?.player === myId
     && (gameState.undo_state.open_turn.free_action_revisions.length ?? 0) > 0;
   const usedPowerActions = gameState.used_power_actions;
@@ -412,7 +488,7 @@ export function App() {
     typeof gameState.phase === 'object' && 'LostPlanetPlacementPending' in gameState.phase
       ? gameState.phase.LostPlanetPlacementPending
       : null;
-  const isMyLostPlanetPlacement = lostPlanetPending?.player === myId;
+  const isMyLostPlanetPlacement = !replay && lostPlanetPending?.player === myId;
   const spaceshipHexes = new Set(Object.values(gameState.board.spaceship_tiles).map(({ q, r }) => `${q},${r}`));
   const lostPlanetTargets = isMyLostPlanetPlacement
     ? Object.values(gameState.board.hexes)
@@ -426,9 +502,20 @@ export function App() {
         .map((hex) => hex.coord)
     : [];
   const pendingDecisionPlayer = pendingDecisionPlayerId(gameState.phase);
+  const mainActionLocked =
+    !!replay ||
+    selectedAction !== null ||
+    structurePopup !== null ||
+    planetPopup !== null ||
+    spaceshipPopup !== null ||
+    techUpgradeFlow !== null;
 
   function handleResearchBoardAction(id: number) {
     if (!isMyActionTurn || usedPowerActions.includes(id)) return;
+    if (
+      mainActionLocked
+      && (selectedAction !== 'PowerAction' || selectedPowerActionId !== id)
+    ) return;
     if (id === 2 || id === 6) {
       if (selectedAction === 'PowerAction' && selectedPowerActionId === id) {
         gameActions.selectPowerAction(null);
@@ -447,11 +534,12 @@ export function App() {
     setPlanetPopup(null);
     setSpaceshipPopup(null);
     setTechUpgradeFlow(null);
+    setTwilightRangeMode(false);
   }
 
   function handleOwnedStructureClick(hex: Hex, anchor: { x: number; y: number }) {
     const structure = hex.structures.find(({ owner }) => owner === myId);
-    if (!structure || !isMyActionTurn) return;
+    if (!structure || !isMyActionTurn || mainActionLocked) return;
     gameActions.selectAction(null);
     setPlanetPopup(null);
     setSpaceshipPopup(null);
@@ -464,7 +552,8 @@ export function App() {
       && (selectedPowerActionId === 2 || selectedPowerActionId === 6)
       ? selectedPowerActionId
       : undefined;
-    if ((!devGameRequested && powerActionId === undefined)
+    if ((mainActionLocked && powerActionId === undefined)
+      || (!devGameRequested && powerActionId === undefined)
       || !hex.planet
       || hex.structures.length > 0
       || !isMyActionTurn) return;
@@ -476,7 +565,6 @@ export function App() {
     );
     if (rangeNotice) {
       setGameNotice(rangeNotice);
-      closeBoardContext();
       return;
     }
     setGameNotice(null);
@@ -488,7 +576,7 @@ export function App() {
   }
 
   function handleSpaceshipClick(ship: SpaceshipId, anchor: { x: number; y: number }) {
-    if (!isMyActionTurn) return;
+    if (!isMyActionTurn || mainActionLocked) return;
     gameActions.selectAction(null);
     setGameNotice(null);
     setStructurePopup(null);
@@ -498,22 +586,227 @@ export function App() {
   }
 
   function handleArtifactClick(artifactId: number) {
-    if (!isMyActionTurn) return;
+    if (!isMyActionTurn || mainActionLocked) return;
     closeBoardContext();
-    setShipActionOptions([]);
+    setGameNotice(null);
+    if (artifactId === 10 && me.federation_tokens.length + (me.gray_federation_tokens?.length ?? 0) === 0) {
+      cancelCurrentAction();
+      setGameNotice('복사할 연방 토큰이 없습니다. 행동은 선택되지 않았습니다.');
+      return;
+    }
     setBoardArtifactId(artifactId);
     gameActions.selectAction('ExamineArtifact');
+    if (artifactId === 10) {
+      scrollToGameBoard('game-player-actions');
+      return;
+    }
+    gameActions.sendAction({
+      type: 'ExamineArtifact', artifact: artifactId, copy_federation_token_kind: null,
+      bonus_build_coord: null, bonus_tech_tile: null, bonus_research_track: null,
+    });
+  }
+
+  function replayAction(action: Extract<GameAction, { type: 'TwilightReplayFederationToken' }>): GameAction {
+    return selectedAction === 'ExamineArtifact' && boardArtifactId === 10
+      ? { type: 'ExamineArtifact', artifact: 10, copy_federation_token_kind: action.token_kind,
+          bonus_build_coord: action.bonus_build_coord, bonus_tech_tile: action.bonus_tech_tile,
+          bonus_research_track: action.bonus_research_track }
+      : action;
   }
 
   function handleShipActionSelect(
     actionType: GameAction['type'],
     actionTypes: GameAction['type'][],
   ) {
-    if (!isMyActionTurn) return;
+    const reselectingCurrentSpace = selectedAction !== null && actionTypes.includes(selectedAction);
+    if (!isMyActionTurn || (mainActionLocked && !reselectingCurrentSpace)) return;
     closeBoardContext();
     setBoardArtifactId(null);
-    setShipActionOptions(actionTypes);
+    setReplayFederationKind(null);
+    if (actionTypes.length > 1) {
+      setTwilightRangeMode(true);
+      routeShipAction(actionType, true);
+      return;
+    }
+    routeShipAction(actionType);
+  }
+
+  function routeShipAction(actionType: GameAction['type'], preserveTwilightRange = false) {
+    if (!preserveTwilightRange) setTwilightRangeMode(false);
+    const prerequisiteNotice = shipActionPrerequisiteNotice(actionType, me, gameState!.board);
+    if (prerequisiteNotice) {
+      cancelCurrentAction();
+      setGameNotice(`${prerequisiteNotice} 행동은 선택되지 않았습니다.`);
+      return;
+    }
+
+    setGameNotice(null);
     gameActions.selectAction(actionType);
+
+    if (IMMEDIATE_SPACESHIP_ACTIONS.has(actionType)) {
+      if (actionType === 'RebellionCreditsAndQic') {
+        gameActions.sendAction({ type: 'RebellionCreditsAndQic' });
+      } else if (actionType === 'TFMarsTechBonus') {
+        gameActions.sendAction({ type: 'TFMarsTechBonus' });
+      } else if (actionType === 'EclipsePlanetTypeBonus') {
+        gameActions.sendAction({ type: 'EclipsePlanetTypeBonus' });
+      }
+      return;
+    }
+
+    if (actionType === 'EclipseResearchBoost') {
+      scrollToGameBoard('game-research');
+      return;
+    }
+
+    if (actionType === 'RebellionGainTechTile') {
+      setTechUpgradeFlow({
+        stage: 'tile',
+        coord: { q: 0, r: 0 },
+        to: 'ResearchLab',
+        anchor: { x: 12, y: 88 },
+        completion: { kind: 'RebellionGainTechTile' },
+      });
+      scrollToGameBoard('game-research');
+      return;
+    }
+
+    if (actionType === 'TwilightReplayFederationToken') {
+      scrollToGameBoard('game-player-actions');
+      return;
+    }
+
+    if (MAP_TARGET_SPACESHIP_ACTIONS.has(actionType)) {
+      scrollToGameBoard('game-map');
+    }
+  }
+
+  function previewBuild(hex: Hex, anchor: { x: number; y: number }, preview: BuildActionPreview) {
+    if (!hex.planet || hex.planet.planet_type === 'Transdim' && !hex.planet.is_gaia_formed) {
+      setGameNotice('광산을 건설할 행성을 선택하세요. 행동 선택은 유지됩니다.');
+      return;
+    }
+    setPlanetPopup({ hex, anchor, buildAction: preview });
+  }
+
+  function handleSelectedShipActionHex(
+    hex: Hex,
+    anchor: { x: number; y: number },
+  ): boolean {
+    const replayBuild = (selectedAction === 'TwilightReplayFederationToken' || (selectedAction === 'ExamineArtifact' && boardArtifactId === 10))
+      && (replayFederationKind === 14 || replayFederationKind === 15);
+    if (!selectedAction || (!MAP_TARGET_SPACESHIP_ACTIONS.has(selectedAction) && !replayBuild)) {
+      return false;
+    }
+    setGameNotice(null);
+
+    if (replayBuild && replayFederationKind !== null) {
+      previewBuild(hex, anchor, {
+        action: replayAction({
+          type: 'TwilightReplayFederationToken', token_kind: replayFederationKind,
+          bonus_build_coord: hex.coord, bonus_tech_tile: null, bonus_research_track: null,
+        }),
+        waiveMineCost: true,
+        unlimitedRange: replayFederationKind === 15,
+        freeTerraformingSteps: replayFederationKind === 14 ? 3 : 0,
+        extraQic: selectedAction === 'TwilightReplayFederationToken' ? 3 : 0,
+      });
+      return true;
+    }
+
+    if (twilightRangeMode || selectedAction === 'RoundBoosterRangeBuild' || selectedAction === 'GleensBuildMine') {
+      const gleensRange = selectedAction === 'GleensBuildMine';
+      const targetShip = Object.entries(gameState!.board.spaceship_tiles).find(([, coord]) =>
+        coord?.q === hex.coord.q && coord.r === hex.coord.r,
+      )?.[0] as SpaceshipId | undefined;
+      if (targetShip) {
+        gameActions.sendAction({ type: gleensRange ? 'GleensExploreSpaceship' : twilightRangeMode ? 'TwilightRangeExploreSpaceship' : 'RoundBoosterRangeExploreSpaceship', ship: targetShip });
+      } else if (hex.planet?.planet_type === 'Transdim') {
+        gameActions.sendAction({ type: gleensRange ? 'GleensGaiaFormation' : twilightRangeMode ? 'TwilightRangeGaiaFormation' : 'RoundBoosterRangeGaiaFormation', coord: hex.coord });
+      } else if (hex.planet) {
+        previewBuild(hex, anchor, {
+          action: { type: gleensRange ? 'GleensBuildMine' : twilightRangeMode ? 'TwilightRangeBuild' : 'RoundBoosterRangeBuild', coord: hex.coord },
+          rangeBonus: gleensRange ? 2 : 3, extraKnowledge: twilightRangeMode ? 1 : 0,
+        });
+      } else {
+        setGameNotice('행성이나 탐사할 함선 칸을 선택하세요. 행동 선택은 유지됩니다.');
+      }
+      return true;
+    }
+
+    switch (selectedAction) {
+      case 'SpaceGiantsBuildMine':
+        previewBuild(hex, anchor, { action: { type: 'SpaceGiantsBuildMine', coord: hex.coord }, freeTerraformingSteps: 2 });
+        return true;
+      case 'RoundBoosterImmediateGaiaFormation':
+        gameActions.sendAction({ type: 'RoundBoosterImmediateGaiaFormation', coord: hex.coord });
+        return true;
+      case 'TinkeroidsUseTile':
+        if (me.tinkeroids_selected_tile != null) {
+          previewBuild(hex, anchor, {
+            action: { type: 'TinkeroidsUseTile', tile: me.tinkeroids_selected_tile, coord: hex.coord },
+            freeTerraformingSteps: me.tinkeroids_selected_tile === 1 ? 1 : 3,
+          });
+        }
+        return true;
+      case 'TwilightFreeResearchLab': {
+        const tradingStation = hex.structures.some(
+          ({ owner, kind }) => owner === myId && kind === 'TradingStation',
+        );
+        if (!tradingStation) {
+          setGameNotice('내 교역소를 선택하세요. 행동 선택은 유지됩니다.');
+          return true;
+        }
+        if (selectableStandardTiles.length === 0 && selectableAdvancedTracks.length === 0) {
+          gameActions.sendAction({
+            type: 'TwilightFreeResearchLab',
+            coord: hex.coord,
+            tech_tile_choice: null,
+          });
+          return true;
+        }
+        setTechUpgradeFlow({
+          stage: 'tile',
+          coord: hex.coord,
+          to: 'ResearchLab',
+          anchor,
+          completion: { kind: 'TwilightFreeResearchLab' },
+        });
+        scrollToGameBoard('game-research');
+        return true;
+      }
+      case 'SpaceshipCreditTerraform':
+        previewBuild(hex, anchor, { action: { type: 'SpaceshipCreditTerraform', coord: hex.coord }, freeTerraformingSteps: 1, extraCredits: 3 });
+        return true;
+      case 'TwilightRangeBuild':
+        previewBuild(hex, anchor, { action: { type: 'TwilightRangeBuild', coord: hex.coord }, rangeBonus: 3, extraKnowledge: 1 });
+        return true;
+      case 'TwilightRangeGaiaFormation':
+        gameActions.sendAction({ type: 'TwilightRangeGaiaFormation', coord: hex.coord });
+        return true;
+      case 'TwilightRangeExploreSpaceship': {
+        const targetShip = Object.entries(gameState!.board.spaceship_tiles).find(([, coord]) =>
+          coord?.q === hex.coord.q && coord.r === hex.coord.r,
+        )?.[0] as SpaceshipId | undefined;
+        if (!targetShip) {
+          setGameNotice('탐사할 함선 칸을 선택하세요. 행동 선택은 유지됩니다.');
+          return true;
+        }
+        gameActions.sendAction({ type: 'TwilightRangeExploreSpaceship', ship: targetShip });
+        return true;
+      }
+      case 'RebellionFreeTradingStation':
+        gameActions.sendAction({ type: 'RebellionFreeTradingStation', coord: hex.coord });
+        return true;
+      case 'TFMarsGaiaFormation':
+        gameActions.sendAction({ type: 'TFMarsGaiaFormation', coord: hex.coord });
+        return true;
+      case 'EclipseAsteroidMine':
+        previewBuild(hex, anchor, { action: { type: 'EclipseAsteroidMine', coord: hex.coord }, extraCredits: 6 });
+        return true;
+      default:
+        return false;
+    }
   }
 
   function handleUpgradeChoice(to: StructureType) {
@@ -521,7 +814,8 @@ export function App() {
     if (!canPayForUpgrade(me, gameState.board, structurePopup.coord, structurePopup.structure, to)) {
       return;
     }
-    const grantsTechTile = to === 'ResearchLab' || typeof to === 'object';
+    const grantsTechTile = to === 'ResearchLab' || typeof to === 'object'
+      || (to === 'PlanetaryInstitute' && me?.faction === 'SpaceGiants' && !me.pi_ability_used);
     if (grantsTechTile) {
       if (selectableStandardTiles.length === 0 && selectableAdvancedTracks.length === 0) {
         gameActions.sendAction({
@@ -530,7 +824,6 @@ export function App() {
           to,
           tech_tile_choice: null,
         });
-        closeBoardContext();
         return;
       }
       setTechUpgradeFlow({
@@ -538,8 +831,10 @@ export function App() {
         coord: structurePopup.coord,
         to,
         anchor: structurePopup.anchor,
+        completion: { kind: 'Upgrade' },
       });
       setStructurePopup(null);
+      scrollToGameBoard('game-research');
       return;
     }
     gameActions.sendAction({
@@ -548,36 +843,73 @@ export function App() {
       to,
       tech_tile_choice: null,
     });
-    closeBoardContext();
   }
 
   function startFederationFromStructure() {
     if (!structurePopup) return;
     const coord = structurePopup.coord;
     closeBoardContext();
+    setFederationTokenChoice(null);
+    setFederationBonusCoord(null);
+    setFederationBonusTechTile(null);
+    setFederationBonusResearchTrack(null);
     gameActions.selectAction('FormFederation');
     gameActions.toggleHex(coord);
   }
 
   function sendTechUpgrade(choice: TechTileChoice) {
     if (!techUpgradeFlow) return;
-    gameActions.sendAction({
-      type: 'Upgrade',
-      coord: techUpgradeFlow.coord,
-      to: techUpgradeFlow.to,
-      tech_tile_choice: choice,
-    });
-    closeBoardContext();
+    switch (techUpgradeFlow.completion.kind) {
+      case 'TwilightFreeResearchLab':
+        gameActions.sendAction({
+          type: 'TwilightFreeResearchLab',
+          coord: techUpgradeFlow.coord,
+          tech_tile_choice: choice,
+        });
+        return;
+      case 'RebellionGainTechTile':
+        if (choice.kind !== 'Standard') return;
+        gameActions.sendAction({
+          type: 'RebellionGainTechTile',
+          tile: choice.tile,
+          track: choice.advance_track ?? RESEARCH_TRACK_ORDER[0],
+          bonus_build_coord: choice.bonus_build_coord,
+        });
+        return;
+      case 'TwilightReplayFederationToken':
+        if (choice.kind !== 'Standard') return;
+        gameActions.sendAction(replayAction({
+          type: 'TwilightReplayFederationToken',
+          token_kind: techUpgradeFlow.completion.tokenKind,
+          bonus_build_coord: choice.bonus_build_coord,
+          bonus_tech_tile: choice.tile,
+          bonus_research_track: choice.advance_track,
+        }));
+        return;
+      case 'FederationBonus':
+        if (choice.kind !== 'Standard') return;
+        setFederationBonusTechTile(choice.tile);
+        setFederationBonusResearchTrack(choice.advance_track ?? null);
+        setFederationBonusCoord(choice.bonus_build_coord ?? null);
+        setTechUpgradeFlow(null);
+        scrollToGameBoard('game-federation-tokens');
+        return;
+      case 'Upgrade':
+        gameActions.sendAction({
+          type: 'Upgrade',
+          coord: techUpgradeFlow.coord,
+          to: techUpgradeFlow.to,
+          tech_tile_choice: choice,
+        });
+    }
   }
 
   function finishStandardTechChoice(tile: number, advanceTrack: ResearchTrack | null) {
     if (!techUpgradeFlow) return;
     if (tile === 11) {
       setTechUpgradeFlow({
+        ...techUpgradeFlow,
         stage: 'bonus-mine',
-        coord: techUpgradeFlow.coord,
-        to: techUpgradeFlow.to,
-        anchor: techUpgradeFlow.anchor,
         tile,
         advanceTrack,
       });
@@ -606,7 +938,12 @@ export function App() {
   }
 
   function handleTechResearchTrack(track: ResearchTrack) {
-    if (techUpgradeFlow?.stage === 'track') {
+    if (selectedAction === 'BescodsLowestResearchAdvance') {
+      if (!isMyActionTurn || !selectableBescodsResearchTracks.includes(track)) return;
+      gameActions.sendAction({ type: 'BescodsLowestResearchAdvance', track });
+    } else if (selectedAction === 'EclipseResearchBoost') {
+      gameActions.sendAction({ type: 'EclipseResearchBoost', track });
+    } else if (techUpgradeFlow?.stage === 'track') {
       finishStandardTechChoice(techUpgradeFlow.tile, track);
     } else if (techUpgradeFlow?.stage === 'advanced-track') {
       sendTechUpgrade({
@@ -620,7 +957,6 @@ export function App() {
 
   function handlePaidResearchTrack(track: ResearchTrack) {
     if (!isMyActionTurn || me.resources.knowledge < 4) return;
-    closeBoardContext();
     gameActions.sendAction({ type: 'ResearchAdvance', track });
   }
 
@@ -631,7 +967,7 @@ export function App() {
 
   function handleCoveredTechTile(tile: number) {
     if (techUpgradeFlow?.stage !== 'cover') return;
-    if (selectableTechResearchTracks.length === 0) {
+    if (selectableAdvancedTechResearchTracks.length === 0) {
       sendTechUpgrade({
         kind: 'Advanced',
         track: techUpgradeFlow.track,
@@ -666,12 +1002,71 @@ export function App() {
     });
   }
 
+  function handleReplayFederationKind(kind: number) {
+    setReplayFederationKind(kind);
+    if (kind === 12) {
+      if (selectableStandardTiles.length === 0) {
+        gameActions.sendAction(replayAction({
+          type: 'TwilightReplayFederationToken',
+          token_kind: kind,
+          bonus_build_coord: null,
+          bonus_tech_tile: null,
+          bonus_research_track: null,
+        }));
+        return;
+      }
+      setTechUpgradeFlow({
+        stage: 'tile',
+        coord: { q: 0, r: 0 },
+        to: 'ResearchLab',
+        anchor: { x: 12, y: 88 },
+        completion: { kind: 'TwilightReplayFederationToken', tokenKind: kind },
+      });
+      scrollToGameBoard('game-research');
+      return;
+    }
+    if (kind === 14 || kind === 15) {
+      scrollToGameBoard('game-map');
+      return;
+    }
+    gameActions.sendAction(replayAction({
+      type: 'TwilightReplayFederationToken',
+      token_kind: kind,
+      bonus_build_coord: null,
+      bonus_tech_tile: null,
+      bonus_research_track: null,
+    }));
+  }
+
+  function cancelCurrentAction() {
+    gameActions.selectAction(null);
+    closeBoardContext();
+    setRangePreviewQic(0);
+    setPassBoosterSelection(false);
+    setBoardArtifactId(null);
+    setReplayFederationKind(null);
+    setFederationTokenChoice(null);
+    setFederationBonusCoord(null);
+    setFederationBonusTechTile(null);
+    setFederationBonusResearchTrack(null);
+    setGameNotice(null);
+  }
+
   const ownedUncoveredTechTiles = (me.tech_tiles ?? []).filter((tile) => !(me.covered_tech_tiles ?? []).includes(tile));
   const selectableResearchBoardTechTiles = (gameState.research_board.tech_tile_slots ?? []).filter(
     (tile): tile is number => tile !== null && !(me.tech_tiles ?? []).includes(tile),
   );
+  const exploredShipIndexes = new Set(me.explored_ships ?? []);
+  const spaceshipIndex: Record<SpaceshipId, number> = {
+    Twilight: 0,
+    Rebellion: 1,
+    TFMars: 2,
+    Eclipse: 3,
+  };
   const selectableSpaceshipTechTiles = gameState.spaceship_boards
-    .filter((board) => board.explorers.includes(myId))
+    .filter((board) =>
+      board.explorers.includes(myId) || exploredShipIndexes.has(spaceshipIndex[board.id]),
+    )
     .flatMap((board) => board.tech_tiles ?? [])
     .filter((tile) => !(me.tech_tiles ?? []).includes(tile));
   const selectableStandardTiles = [
@@ -685,21 +1080,69 @@ export function App() {
           && gameState.research_board.advanced_tech_tiles[index] !== null,
         )
       : [];
-  const selectableTechResearchTracks = RESEARCH_TRACK_ORDER.filter((track) => {
+  const selectableResearchTracksForTech = (advancedTile: boolean) => RESEARCH_TRACK_ORDER.filter((track) => {
     const level = researchLevel(me, track);
     if (level >= 5) return false;
     if (me.faction === 'BalTaks'
       && track === 'Navigation'
       && !me.structures.some(({ kind }) => kind === 'PlanetaryInstitute')) return false;
     if (level < 4) return true;
-    return greenFederationTokenCount > 0
+    const requiredGreenTokens = advancedTile ? 2 : 1;
+    return greenFederationTokenCount >= requiredGreenTokens
       && !gameState.players.some((player) => player.player_id !== myId && researchLevel(player, track) >= 5);
   });
+  const selectableStandardTechResearchTracks = selectableResearchTracksForTech(false);
+  const selectableAdvancedTechResearchTracks = selectableResearchTracksForTech(true);
+  const lowestBescodsLevel = Math.min(...RESEARCH_TRACK_ORDER.map((track) => researchLevel(me, track)));
+  const selectableBescodsResearchTracks = selectableStandardTechResearchTracks.filter(
+    (track) => researchLevel(me, track) === lowestBescodsLevel,
+  );
+  const selectableTechResearchTracks = techUpgradeFlow?.stage === 'advanced-track'
+    ? selectableAdvancedTechResearchTracks
+    : selectableStandardTechResearchTracks;
   const bonusMineTargets =
     techUpgradeFlow?.stage === 'bonus-mine' ? Object.values(gameState.board.hexes).map((hex) => hex.coord) : [];
   const federationSelectableHexes = selectedAction === 'FormFederation'
     ? selectableFederationHexes(gameState, myId, selectedHexes)
     : [];
+  const federationSelection = selectedAction === 'FormFederation'
+    ? validateFederationSelection(gameState, myId, selectedHexes)
+    : null;
+
+  function handleFederationTokenChoice(choice: FederationTokenChoice) {
+    setFederationTokenChoice(choice);
+    setFederationBonusCoord(null);
+    setFederationBonusTechTile(null);
+    setFederationBonusResearchTrack(null);
+
+    if (federationTokenKind(gameState!, choice) !== 12) {
+      if (techUpgradeFlow?.completion.kind === 'FederationBonus') setTechUpgradeFlow(null);
+      return;
+    }
+
+    if (selectableStandardTiles.length === 0) {
+      setTechUpgradeFlow(null);
+      scrollToGameBoard('game-federation-tokens');
+      return;
+    }
+
+    const anchorCoord = selectedHexes[0] ?? { q: 0, r: 0 };
+    setTechUpgradeFlow({
+      stage: 'tile',
+      coord: anchorCoord,
+      to: 'ResearchLab',
+      anchor: { x: 12, y: 88 },
+      completion: { kind: 'FederationBonus' },
+    });
+    scrollToGameBoard('game-research');
+  }
+
+  const availableSpaceshipFederationTokens = gameState.spaceship_boards
+    .filter((board) =>
+      (board.explorers.includes(myId) || exploredShipIndexes.has(spaceshipIndex[board.id]))
+      && board.federation_token !== null,
+    )
+    .map((board) => ({ ship: board.id, kind: board.federation_token as number }));
   const selectedTerraformingPowerAction = selectedAction === 'PowerAction'
     && (selectedPowerActionId === 2 || selectedPowerActionId === 6);
   const popupState = structurePopup ?? techUpgradeFlow;
@@ -721,8 +1164,18 @@ export function App() {
   }
 
   return (
-    <div className="app app--game">
-      {(lastError || gameNotice) && (
+    <div className="app app--game app--game-table" onClickCapture={(event) => {
+      const target = event.target;
+      if (!replay && target instanceof Element && target.closest('button, [role="button"]')) {
+        const bounds = target.closest('button, [role="button"]')!.getBoundingClientRect();
+        rewardClick.current = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2, time: performance.now() };
+      }
+      if (target instanceof Element && target.closest('.game-table-scroll, .structure-action-popup')) {
+        actionAnchorRef.current = target.closest('button, [role="button"]') ?? target;
+      }
+    }}>
+      {!replay && <RewardMotion batch={rewardBatch} />}
+      {!replay && (lastError || gameNotice) && (
         <div
           className="error-banner"
           role="status"
@@ -734,117 +1187,264 @@ export function App() {
           {lastError ? `${lastError.message} (${lastError.code})` : gameNotice}
         </div>
       )}
-      <nav className="game-topbar" aria-label="게임 정보">
-        {devGameRequested && (
-          <button className="game-top-control" onClick={() => window.location.reload()}>
-            DEV · 새 게임
-          </button>
-        )}
-        <button
-          className="game-top-control"
-          onClick={() => setActiveBoardOverlay((current) => (current === 'scoring' ? null : 'scoring'))}
-        >
-          라운드·게임 종료 목표
-        </button>
-        <button
-          className="game-top-control"
-          onClick={() => setActiveBoardOverlay((current) => (current === 'boosters' ? null : 'boosters'))}
-        >
-          라운드 부스터
-        </button>
-        <button className="game-top-control" onClick={() => setPersonalBoardPlayerId(myId)}>
-          개인 보드
-        </button>
-        <TopPassControl
-          player={me}
-          round={gameState.round}
-          availableBoosters={gameState.boosters}
-          isMyTurn={isMyActionTurn}
-          onPass={(boosterId) => gameActions.sendAction({ type: 'Pass', booster_id: boosterId })}
-        />
+      <nav className="game-section-nav game-table-top-nav" aria-label="보드 바로가기">
+        <a href="#game-overview">목표·부스터</a>
+        <a href="#game-map">우주</a>
+        <a href="#game-research">연구·함선</a>
+        <a href="#game-factions">종족</a>
+        <div className="game-table-top-actions">
+          {!replay && savedManualControl && <DevTestControls refillDisabled={mainActionLocked || !isMyActionTurn} />}
+          <TopPassControl
+            player={me}
+            round={gameState.round}
+            availableBoosters={gameState.boosters}
+            isMyTurn={isMyActionTurn && !mainActionLocked}
+            onChooseBooster={() => {
+              setPassBoosterSelection(true);
+              scrollToGameBoard('game-round-boosters');
+            }}
+            onPass={(boosterId) => {
+              setPassBoosterSelection(false);
+              gameActions.sendAction({ type: 'Pass', booster_id: boosterId });
+            }}
+          />
+        </div>
       </nav>
-      <aside className="game-reference-rail" aria-label="공용 트랙과 함선 보드">
-        <section className="game-reference-card">
-          <h2>연구 트랙</h2>
-          <ResearchBoard
-            players={gameState.players}
-            board={gameState.research_board}
-            usedPowerActions={gameState.used_power_actions}
-            isMyTurn={isMyActionTurn}
-            selectedPowerActionId={selectedPowerActionId}
-            onPowerAction={handleResearchBoardAction}
-            techSelectionMode={
-              techUpgradeFlow?.stage === 'tile' ? 'tile' : techUpgradeFlow?.stage === 'track' ? 'track' : null
-            }
-            selectableStandardTiles={selectableStandardTiles}
-            selectableAdvancedTracks={selectableAdvancedTracks}
-            selectableResearchTracks={selectableTechResearchTracks}
-            onStandardTechTile={handleStandardTechTile}
-            onAdvancedTechTile={handleAdvancedTechTile}
-            onResearchTrack={handleTechResearchTrack}
-            onPaidResearchTrack={
-              techUpgradeFlow === null && isMyActionTurn ? handlePaidResearchTrack : undefined
-            }
-          />
+      <main className="game-table-scroll">
+        <section className="game-table-section game-table-overview" id="game-overview">
+          <article className="game-table-card game-table-scoring-card">
+            <h2>라운드·게임 종료 목표</h2>
+            <ScoringBoard
+              roundTiles={gameState.round_tiles}
+              finalScoringTiles={gameState.final_scoring_tiles}
+              currentRound={gameState.round}
+            />
+          </article>
+          <article
+            className={`game-table-card game-table-boosters-card${
+              passBoosterSelection ? ' game-table-card--awaiting-selection' : ''
+            }`}
+            id="game-round-boosters"
+          >
+            <h2>라운드 부스터</h2>
+            <RoundBoosters
+              availableBoosters={gameState.boosters}
+              players={gameState.players}
+              selectionMode={passBoosterSelection}
+              onSelectBooster={(boosterId) => {
+                setPassBoosterSelection(false);
+                gameActions.sendAction({ type: 'Pass', booster_id: boosterId });
+              }}
+            />
+          </article>
+          <article
+            className={`game-table-card game-table-federation-card${
+              federationSelection?.valid ? ' game-table-card--awaiting-selection' : ''
+            }`}
+            id="game-federation-tokens"
+          >
+            <h2>연방 토큰</h2>
+            <FederationTokens
+              availableTokens={gameState.research_board.federation_tokens}
+              players={gameState.players}
+              selectionMode={federationSelection?.valid ?? false}
+              selectedToken={federationTokenChoice}
+              spaceshipTokens={availableSpaceshipFederationTokens}
+              onSelectToken={handleFederationTokenChoice}
+              showHoldings={false}
+            />
+          </article>
+          <article className="game-table-card game-table-terraforming-card">
+            <h2>테라포밍 색상</h2>
+            <TerraformingSelectionBoard
+              colorOrder={gameState.terraforming_color_order ?? []}
+              allocations={gameState.players.flatMap((player) =>
+                (player.faction === 'Moweyds' || player.faction === 'Tinkeroids') && player.expensive_terraforming_planet_types?.length
+                  ? [{ faction: player.faction, colors: player.expensive_terraforming_planet_types }]
+                  : []
+              )}
+            />
+          </article>
         </section>
-        <section className="game-ship-list" aria-label="함선 보드 영역">
-          <h2>함선 보드</h2>
-          <SpaceshipBoards
-            spaceshipBoards={gameState.spaceship_boards}
+
+        <section className="game-table-section game-table-map" id="game-map" aria-label="우주 섹터 보드">
+          <header className="game-table-section-heading">
+            <h2>우주 섹터 보드</h2>
+          </header>
+          <GameBoard
+            board={gameState.board}
             players={gameState.players}
-            myPlayerId={myId}
-            isMyTurn={isMyActionTurn}
-            usedActionIds={gameState.used_spaceship_actions}
-            selectedAction={selectedAction}
-            selectableTechTiles={techUpgradeFlow?.stage === 'tile' ? selectableStandardTiles : []}
-            onActionSelect={handleShipActionSelect}
-            onArtifactSelect={handleArtifactClick}
-            onTechTileSelect={
-              techUpgradeFlow?.stage === 'tile'
-                ? (tile) => handleStandardTechTile(tile, -1)
+            validTargets={isMyLostPlanetPlacement ? lostPlanetTargets : bonusMineTargets}
+            federationSelectableHexes={federationSelectableHexes}
+            selectedCoord={isMyLostPlanetPlacement ? activePlanet : null}
+            onHexClick={
+              isMyLostPlanetPlacement
+                ? gameActions.selectPlanet
+                : techUpgradeFlow?.stage === 'bonus-mine'
+                  ? handleBonusMineTarget
+                  : undefined
+            }
+            interactivePlayerId={isMyActionTurn ? myId : undefined}
+            onOwnedStructureClick={
+              isMyActionTurn && !mainActionLocked ? handleOwnedStructureClick : undefined
+            }
+            onPlanetClick={
+              isMyActionTurn && (devGameRequested || selectedTerraformingPowerAction)
+                ? handlePlanetClick
                 : undefined
             }
+            onSpaceshipClick={
+              isMyActionTurn && !mainActionLocked ? handleSpaceshipClick : undefined
+            }
+            onSelectedActionHexClick={handleSelectedShipActionHex}
+            allowPlanetPopupDuringSelectedAction={selectedTerraformingPowerAction}
+            devPowerChargeTargeting={devPowerChargeTargeting}
+            onPowerChargeStructureClick={(hex) => {
+              gameActions.triggerDevPowerCharge(hex.coord);
+              setDevPowerChargeTargeting(false);
+              closeBoardContext();
+            }}
+            onContextDismiss={closeBoardContext}
+            emphasizeStructures={devGameRequested}
+            rangePlayerId={devGameRequested || twilightRangeMode || selectedAction === 'RoundBoosterRangeBuild' || selectedAction === 'GleensBuildMine' ? myId : undefined}
+            rangePreviewBonus={rangePreviewQic * 2 + (selectedAction === 'GleensBuildMine' ? 2 : twilightRangeMode || selectedAction === 'RoundBoosterRangeBuild' ? 3 : 0)}
           />
         </section>
-      </aside>
-      <main className="game-board-stage">
-        <GameBoard
-          board={gameState.board}
-          players={gameState.players}
-          validTargets={isMyLostPlanetPlacement ? lostPlanetTargets : bonusMineTargets}
-          federationSelectableHexes={federationSelectableHexes}
-          selectedCoord={isMyLostPlanetPlacement ? activePlanet : null}
-          onHexClick={
-            isMyLostPlanetPlacement
-              ? gameActions.selectPlanet
-              : techUpgradeFlow?.stage === 'bonus-mine'
-                ? handleBonusMineTarget
-                : undefined
-          }
-          interactivePlayerId={isMyActionTurn ? myId : undefined}
-          onOwnedStructureClick={isMyActionTurn ? handleOwnedStructureClick : undefined}
-          onPlanetClick={
-            isMyActionTurn && (devGameRequested || selectedTerraformingPowerAction)
-              ? handlePlanetClick
-              : undefined
-          }
-          onSpaceshipClick={isMyActionTurn ? handleSpaceshipClick : undefined}
-          allowPlanetPopupDuringSelectedAction={selectedTerraformingPowerAction}
-          devPowerChargeTargeting={devPowerChargeTargeting}
-          onPowerChargeStructureClick={(hex) => {
-            gameActions.triggerDevPowerCharge(hex.coord);
-            setDevPowerChargeTargeting(false);
-            closeBoardContext();
-          }}
-          onContextDismiss={closeBoardContext}
-          emphasizeStructures={devGameRequested}
-          rangePlayerId={devGameRequested ? myId : undefined}
-          rangePreviewBonus={rangePreviewQic * 2}
-        />
-        <LostFleetTechRequirementBoard
-          side={gameState.research_board.lost_fleet_advanced_tech_requirement}
-          tileId={gameState.research_board.lost_fleet_advanced_tech_tile}
-        />
+
+        <section className="game-table-section game-table-research-row" id="game-research-section">
+          <article className="game-table-card game-table-tech-requirement-card">
+            <h2>고급 기술 조건</h2>
+            <div className="game-table-tech-requirement">
+              <LostFleetTechRequirementBoard
+                side={gameState.research_board.lost_fleet_advanced_tech_requirement}
+                tileId={gameState.research_board.lost_fleet_advanced_tech_tile}
+              />
+            </div>
+          </article>
+          <article className={`game-table-card game-table-research-card${selectedAction === 'BescodsLowestResearchAdvance' ? ' is-bescods-research' : ''}`} id="game-research">
+            <h2>연구 트랙</h2>
+            <ResearchBoard
+              players={gameState.players}
+              board={gameState.research_board}
+              usedPowerActions={gameState.used_power_actions}
+              isMyTurn={isMyActionTurn}
+              mainActionLocked={mainActionLocked}
+              selectedPowerActionId={selectedPowerActionId}
+              onPowerAction={handleResearchBoardAction}
+              techSelectionMode={
+                techUpgradeFlow?.stage === 'tile'
+                  ? 'tile'
+                  : techUpgradeFlow?.stage === 'track' || selectedAction === 'EclipseResearchBoost' || selectedAction === 'BescodsLowestResearchAdvance'
+                    ? 'track'
+                    : null
+              }
+              selectableStandardTiles={selectableStandardTiles}
+              selectableAdvancedTracks={selectableAdvancedTracks}
+              selectableResearchTracks={selectedAction === 'BescodsLowestResearchAdvance' ? selectableBescodsResearchTracks : selectableTechResearchTracks}
+              onStandardTechTile={handleStandardTechTile}
+              onAdvancedTechTile={handleAdvancedTechTile}
+              onResearchTrack={handleTechResearchTrack}
+              onPaidResearchTrack={
+                !mainActionLocked && isMyActionTurn ? handlePaidResearchTrack : undefined
+              }
+            />
+          </article>
+          <PlayerActionShelf
+            id="game-player-actions"
+            player={me}
+            isMyTurn={isMyActionTurn}
+            mainActionLocked={mainActionLocked}
+            federationSelectionMode={selectedAction === 'TwilightReplayFederationToken' || (selectedAction === 'ExamineArtifact' && boardArtifactId === 10)}
+            selectedFederationKind={replayFederationKind}
+            onSelectFederationKind={handleReplayFederationKind}
+            onSelectBoosterAction={(booster) => {
+              if (!isMyActionTurn || mainActionLocked) return;
+              closeBoardContext();
+              setGameNotice(null);
+              gameActions.selectAction(booster === 5 ? 'RoundBoosterImmediateGaiaFormation' : 'RoundBoosterRangeBuild');
+              scrollToGameBoard('game-map');
+            }}
+            onSelectExplorationAction={(action) => {
+              if (!isMyActionTurn || mainActionLocked) return;
+              closeBoardContext();
+              setGameNotice(null);
+              gameActions.selectAction(action);
+              scrollToGameBoard('game-map');
+            }}
+            onSelectFactionAction={(action) => {
+              if (!isMyActionTurn || mainActionLocked) return;
+              closeBoardContext();
+              setGameNotice(null);
+              gameActions.selectAction(action);
+              scrollToGameBoard('game-map');
+            }}
+            onSelectBescodsResearch={() => {
+              if (!isMyActionTurn || mainActionLocked) return;
+              closeBoardContext();
+              setGameNotice(null);
+              gameActions.selectAction('BescodsLowestResearchAdvance');
+              scrollToGameBoard('game-research');
+            }}
+            onSelectTinkeringTile={() => {
+              if (!isMyActionTurn || mainActionLocked) return;
+              closeBoardContext();
+              gameActions.selectAction('TinkeroidsUseTile');
+              scrollToGameBoard('game-map');
+            }}
+            onAction={gameActions.sendAction}
+          />
+          <article className="game-table-card game-table-ships-card">
+            <h2>함선 보드</h2>
+            <SpaceshipBoards
+              spaceshipBoards={gameState.spaceship_boards}
+              players={gameState.players}
+              myPlayerId={myId}
+              isMyTurn={isMyActionTurn}
+              mainActionLocked={mainActionLocked}
+              usedActionIds={gameState.used_spaceship_actions}
+              selectedAction={selectedAction}
+              selectableTechTiles={techUpgradeFlow?.stage === 'tile' ? selectableStandardTiles : []}
+              onActionSelect={handleShipActionSelect}
+              onArtifactSelect={handleArtifactClick}
+              onTechTileSelect={
+                techUpgradeFlow?.stage === 'tile'
+                  ? (tile) => handleStandardTechTile(tile, -1)
+                  : undefined
+              }
+            />
+          </article>
+        </section>
+
+        <section className="game-table-section" id="game-factions">
+          <header className="game-table-section-heading">
+            <h2>종족 보드</h2>
+          </header>
+          <div className="game-table-player-grid">
+            {factionBoardPlayers.map((player) => (
+              <article
+                key={player.player_id}
+                data-replay-player={replay ? player.player_id : undefined}
+                className={`game-table-player-card${player.player_id === myId ? ' game-table-player-card--me' : ''}`}
+              >
+                <header>
+                  <strong
+                    className="game-table-player-name"
+                    style={{
+                      color: player.faction
+                        ? STRUCTURE_COLOR_HEX[FACTION_STRUCTURE_COLOR[player.faction]]
+                        : '#cbd5e1',
+                    }}
+                  >
+                    {player.nickname}
+                  </strong>
+                  <span>{factionDisplayName(player.faction)}</span>
+                  <b>{player.vp}점</b>
+                </header>
+                <PlayerDashboard player={player} />
+              </article>
+            ))}
+          </div>
+        </section>
       </main>
       <aside className="game-sidebar">
         <div className="game-sidebar-tabs" role="tablist" aria-label="오른쪽 패널">
@@ -896,13 +1496,14 @@ export function App() {
                 setGameNotice(null);
                 setRangePreviewQic((current) => Math.min(current + 1, me.resources.qic));
               }}
-              showDevPowerChargeTest={devGameRequested}
+              showDevPowerChargeTest={!replay && devGameRequested}
               devPowerChargeTargeting={devPowerChargeTargeting}
               onDevPowerChargeToggle={() => {
                 closeBoardContext();
                 setDevPowerChargeTargeting((active) => !active);
               }}
               undoState={gameState.undo_state}
+              immediateTurnUndo={gameState.dev_controller != null && gameState.dev_controller === playerId}
               players={gameState.players}
               onUndoFreeAction={() => {
                 setRangePreviewQic(0);
@@ -920,10 +1521,14 @@ export function App() {
             role="tabpanel"
             aria-labelledby="game-sidebar-log-tab"
           >
-            <GameLog events={gameState.event_log ?? []} players={gameState.players} />
+            <GameLog events={replay?.events ?? gameState.event_log ?? []} players={gameState.players}
+              onEventSelect={replay?.onEventSelect} activeEventRange={replay ? [replay.eventStart, replay.eventEnd] : undefined} />
           </div>
         )}
       </aside>
+      {!replay && mainActionLocked && (
+        <ActionCancelButton anchor={selectedAction === 'BescodsLowestResearchAdvance' ? document.getElementById('game-research') : actionAnchorRef.current} onCancel={cancelCurrentAction} />
+      )}
       {popupState && popupMode && (
         <StructureActionPopup
           anchor={popupState.anchor}
@@ -940,6 +1545,8 @@ export function App() {
       )}
       {planetPopup && (
         <PlanetActionPopup
+          key={`${planetPopup.hex.coord.q},${planetPopup.hex.coord.r}:${planetPopup.buildAction?.action.type ?? "Build"}`}
+          buildAction={planetPopup.buildAction}
           anchor={planetPopup.anchor}
           hex={planetPopup.hex}
           player={me}
@@ -954,11 +1561,10 @@ export function App() {
           onConfirm={(action) => {
             gameActions.sendAction(action);
             setRangePreviewQic(0);
-            closeBoardContext();
           }}
           onClose={() => {
-            setRangePreviewQic(0);
-            closeBoardContext();
+            if (planetPopup.buildAction) cancelCurrentAction();
+            else { setRangePreviewQic(0); closeBoardContext(); }
           }}
         />
       )}
@@ -976,7 +1582,6 @@ export function App() {
             onConfirm={() => {
               gameActions.sendAction({ type: 'ExploreSpaceship', ship: spaceshipPopup.ship });
               setRangePreviewQic(0);
-              closeBoardContext();
             }}
             onClose={() => {
               setRangePreviewQic(0);
@@ -985,41 +1590,30 @@ export function App() {
           />
         );
       })()}
-      {undoPending === null && pendingDecisionPlayer === myId && (
+      {!replay && undoPending === null && pendingDecisionPlayer === myId && (
         <section className="pending-decision-popup" role="dialog" aria-modal="false" aria-label="필수 게임 결정">
           <ActionPanel gameState={gameState} myPlayerId={myId} />
         </section>
       )}
       {selectedAction === 'FormFederation' && (
         <DraggableActionPopup className="federation-action-popup" label="연방 구축">
-          <ActionPanel gameState={gameState} myPlayerId={myId} focusedAction />
-        </DraggableActionPopup>
-      )}
-      {(isSpaceshipBoardAction(selectedAction) || selectedAction === 'ExamineArtifact') && (
-        <DraggableActionPopup className="ship-action-popup" label="함선 행동">
           <ActionPanel
             gameState={gameState}
             myPlayerId={myId}
             focusedAction
-            focusedActionOptions={shipActionOptions}
-            initialArtifactId={boardArtifactId}
+            federationTokenChoice={federationTokenChoice}
+            onFederationTokenChoice={(choice) => {
+              if (choice) handleFederationTokenChoice(choice);
+              else setFederationTokenChoice(null);
+            }}
+            hideFederationTokenChoices
+            federationBonusCoord={federationBonusCoord}
+            onFederationBonusCoord={setFederationBonusCoord}
+            federationBonusTechTile={federationBonusTechTile}
+            federationBonusResearchTrack={federationBonusResearchTrack}
+            hideFederationTechPicker
           />
         </DraggableActionPopup>
-      )}
-      {activeBoardOverlay === 'scoring' && (
-        <BoardOverlay title="라운드·게임 종료 목표" onClose={() => setActiveBoardOverlay(null)}>
-          <ScoringBoard
-            roundTiles={gameState.round_tiles}
-            finalScoringTiles={gameState.final_scoring_tiles}
-            currentRound={gameState.round}
-          />
-        </BoardOverlay>
-      )}
-      {activeBoardOverlay === 'boosters' && (
-        <BoardOverlay title="라운드 부스터 · 연방 토큰" onClose={() => setActiveBoardOverlay(null)}>
-          <RoundBoosters availableBoosters={gameState.boosters} players={gameState.players} />
-          <FederationTokens availableTokens={gameState.research_board.federation_tokens} players={gameState.players} />
-        </BoardOverlay>
       )}
       {personalBoardPlayer && (
         <PersonalBoardDrawer

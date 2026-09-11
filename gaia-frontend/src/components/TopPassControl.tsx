@@ -8,6 +8,7 @@ interface TopPassControlProps {
   availableBoosters: number[];
   isMyTurn: boolean;
   onPass: (boosterId: number | null) => void;
+  onChooseBooster?: () => void;
 }
 
 export function TopPassControl({
@@ -16,6 +17,7 @@ export function TopPassControl({
   availableBoosters,
   isMyTurn,
   onPass,
+  onChooseBooster,
 }: TopPassControlProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedBoosterId, setSelectedBoosterId] = useState<number | null>(null);
@@ -37,6 +39,10 @@ export function TopPassControl({
   const handlePassClick = () => {
     if (!requiresBoosterChoice) {
       onPass(null);
+      return;
+    }
+    if (onChooseBooster) {
+      onChooseBooster();
       return;
     }
     setSelectedBoosterId(availableBoosters[0] ?? null);

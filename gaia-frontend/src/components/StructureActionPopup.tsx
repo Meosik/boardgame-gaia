@@ -130,14 +130,23 @@ export function StructureActionPopup({
   const width = 252;
   const left = Math.max(12, Math.min(anchor.x + 14, window.innerWidth - width - 12));
   const top = Math.max(56, Math.min(anchor.y - 32, window.innerHeight - 260));
+  const centered = mode.kind !== 'choose-bonus-mine';
+  const researchBounds = mode.kind === 'choose-tech' || mode.kind === 'choose-track'
+    ? document.getElementById('game-research')?.getBoundingClientRect()
+    : null;
+  const sideLeft = researchBounds && researchBounds.right + width + 24 <= window.innerWidth
+    ? researchBounds.right + 12 + width / 2
+    : researchBounds && researchBounds.left >= width + 24
+      ? researchBounds.left - 12 - width / 2
+      : null;
   const options = mode.kind === 'structure'
     ? upgradeOptionsFor(mode.structure, mode.faction)
     : [];
 
   return (
     <div
-      className="structure-action-popup"
-      style={{ left, top, width }}
+      className={`structure-action-popup${centered ? ' board-choice-popup--centered' : ''}`}
+      style={centered ? { left: sideLeft ?? '50%', width } : { left, top, width }}
       role="dialog"
       aria-label={`구조물 행동 ${coord.q},${coord.r}`}
     >
