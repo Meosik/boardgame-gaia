@@ -1,0 +1,29 @@
+[workspace]
+# Empty table = "I'm my own workspace root," opting out of the parent `../Cargo.toml` workspace
+# (which Cargo would otherwise auto-discover by walking up directories).
+
+[package]
+name = "gaia-rl"
+version = "0.1.0"
+edition = "2021"
+
+# Separate workspace keeps Python-specific features and dependencies out of the game server.
+[lib]
+name = "gaia_rl"
+# "cdylib" is what Python actually loads (a shared library); "rlib" keeps it usable as an
+# ordinary Rust dependency later (e.g. from a future in-process test) without rebuilding.
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+python = ["dep:pyo3", "pyo3/extension-module"]
+
+[dependencies]
+gaia-engine = { path = "../gaia-engine" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+pyo3 = { version = "0.23", optional = true }
+
+[build-dependencies]
+sha2 = "0.10"
