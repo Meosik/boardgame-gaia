@@ -5503,18 +5503,6 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .room-card-seats { color: var(--color-muted); font-weight: 700; }
 .room-card-join { grid-area: join; }
 
-/* Joining by code is the fallback path now, so it reads as one compact row
-   instead of owning a column of its own. */
-.lobby-code-join {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-.lobby-code-join label { color: var(--color-muted); font-size: 0.78rem; }
-.lobby-code-join input { width: 8.5rem; }
-
 /* The tutorial and the AI replay are destinations, not toolbar buttons — full-width
    entries so they are actually findable, and they carry the panel to the bottom. */
 .lobby-entries {

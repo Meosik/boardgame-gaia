@@ -14,11 +14,10 @@ interface Props {
 const SETUP_MODE_LABELS = { bidding: '승점 비딩', sequential: '순차 선택' } as const;
 
 /** The lobby's front page: the open rooms as a card grid, with the tutorial and the AI replay as
- * full-width entries underneath rather than small buttons in the corner. Joining by code stays as
- * a compact fallback — the room list covers the normal case, but a room that has already started
- * is not listed and someone may have been handed nothing but a code. */
+ * full-width entries underneath. Every waiting room is listed, so picking one from the list is the
+ * only way in — typing a code would just be a slower way to reach the same rooms, and reconnecting
+ * to a game already in progress is what the 이어하기 shortcut is for. */
 export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onResumeRoom }: Props) {
-  const [code, setCode] = useState('');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [lockedRoom, setLockedRoom] = useState<RoomSummary | null>(null);
@@ -37,10 +36,6 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onRe
   }, []);
 
   async function handleJoin(joinCode: string, roomPassword?: string) {
-    if (!joinCode.trim()) {
-      setError('룸 코드를 입력해주세요');
-      return;
-    }
     if (!nickname.trim()) {
       setError('닉네임을 입력해주세요');
       return;
@@ -48,7 +43,7 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onRe
     setLoading(true);
     setError('');
     try {
-      await joinRoom(joinCode.trim().toUpperCase(), nickname.trim(), undefined, roomPassword?.trim() || undefined);
+      await joinRoom(joinCode, nickname.trim(), undefined, roomPassword?.trim() || undefined);
       onRoomJoined();
     } catch (e) {
       setError(e instanceof Error ? e.message : '참가에 실패했습니다');
@@ -60,7 +55,6 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onRe
   /** A locked room asks for its password first; an open one joins straight away. */
   function selectRoom(room: RoomSummary) {
     setError('');
-    setCode(room.code);
     if (room.has_password) {
       setPassword('');
       setLockedRoom(room);
@@ -106,7 +100,7 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onRe
         ) : rooms === null ? (
           <p className="preview-loading">방 목록을 불러오는 중...</p>
         ) : rooms.length === 0 ? (
-          <p className="room-list-empty">지금 대기 중인 방이 없습니다. 방을 만들거나 룸 코드로 참가해보세요.</p>
+          <p className="room-list-empty">지금 대기 중인 방이 없습니다. 위의 방 만들기로 첫 방을 열어보세요.</p>
         ) : (
           <ul className="room-grid">
             {rooms.map((room) => (
@@ -159,26 +153,6 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onRe
       </div>
 
       {error && <p className="error-msg">{error}</p>}
-
-      <div className="lobby-code-join">
-        <label htmlFor="room-code">룸 코드로 참가</label>
-        <input
-          id="room-code"
-          type="text"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          maxLength={8}
-          placeholder="XXXXXX"
-          className="mono"
-        />
-        <button
-          className="btn btn-small btn-secondary"
-          onClick={() => void handleJoin(code, lockedRoom?.code === code ? password : undefined)}
-          disabled={loading}
-        >
-          {loading ? '참가 중...' : '참가하기'}
-        </button>
-      </div>
 
       <div className="lobby-entries">
         <a className="lobby-entry" href="?tutorial=1">

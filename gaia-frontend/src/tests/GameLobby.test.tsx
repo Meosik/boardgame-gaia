@@ -64,7 +64,7 @@ describe('LobbyHomeView', () => {
   it('shows a message when no rooms are open', async () => {
     render(<LobbyHomeView onRoomJoined={vi.fn()} onCreateRoom={vi.fn()} />);
     await waitFor(() => {
-      expect(screen.getByText('지금 대기 중인 방이 없습니다. 방을 만들거나 룸 코드로 참가해보세요.')).toBeInTheDocument();
+      expect(screen.getByText('지금 대기 중인 방이 없습니다. 위의 방 만들기로 첫 방을 열어보세요.')).toBeInTheDocument();
     });
   });
 
@@ -123,23 +123,15 @@ describe('LobbyHomeView', () => {
     expect(screen.getByLabelText('우리끼리 · 비밀번호')).toBeInTheDocument();
   });
 
-  it('still joins by room code, and asks for the missing field first', async () => {
+  it('asks for a nickname before joining a room from the list', async () => {
+    api.listRooms.mockResolvedValue([room()]);
     render(<LobbyHomeView onRoomJoined={vi.fn()} onCreateRoom={vi.fn()} />);
-    await waitFor(() => expect(api.listRooms).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByText('참가하기'));
-    await waitFor(() => expect(screen.getByText('룸 코드를 입력해주세요')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('철수님의 방')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('참가'));
 
-    const codeInput = screen.getByLabelText('룸 코드로 참가') as HTMLInputElement;
-    fireEvent.change(codeInput, { target: { value: 'abcd12' } });
-    expect(codeInput.value).toBe('ABCD12');
-
-    fireEvent.click(screen.getByText('참가하기'));
     await waitFor(() => expect(screen.getByText('닉네임을 입력해주세요')).toBeInTheDocument());
-
-    fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '영희' } });
-    fireEvent.click(screen.getByText('참가하기'));
-    await waitFor(() => expect(api.joinRoom).toHaveBeenCalledWith('ABCD12', '영희', undefined, undefined));
+    expect(api.joinRoom).not.toHaveBeenCalled();
   });
 
   it('offers the most recent room as a resume shortcut', () => {

@@ -19,8 +19,20 @@ vi.mock('../hooks/useWebSocket', () => ({
   useWebSocket: () => socket,
 }));
 
-// The lobby fetches the open-room list on mount; these branches exercise the controls, not the list.
-vi.mock('../api/rest', () => ({ api: { listRooms: vi.fn().mockResolvedValue([]) } }));
+// The lobby fetches the open-room list on mount, and picking a room from it is the only way in.
+// One room is enough for these branches, which exercise the join controls rather than the list.
+vi.mock('../api/rest', () => ({
+  api: {
+    listRooms: vi.fn().mockResolvedValue([{
+      code: 'ABC123',
+      name: '철수님의 방',
+      host_nickname: '철수',
+      player_count: 1,
+      has_password: false,
+      setup_mode: 'bidding',
+    }]),
+  },
+}));
 
 vi.mock('../components/ScoringBoard', () => ({
   ScoringBoard: () => <div>Mock scoring board content</div>,
@@ -141,21 +153,18 @@ describe('CreateRoomView control branches', () => {
 });
 
 describe('LobbyHomeView control branches', () => {
-  it('rejects empty code and empty nickname before joining', async () => {
+  it('rejects an empty nickname before joining', async () => {
     const joinRoom = vi.fn();
     installRoomActions({ joinRoom });
 
     render(<LobbyHomeView onRoomJoined={vi.fn()} onCreateRoom={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: '참가하기' }));
-    expect(await screen.findByText('룸 코드를 입력해주세요')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: '참가' }));
 
-    fireEvent.change(screen.getByLabelText('룸 코드로 참가'), { target: { value: 'ab12' } });
-    fireEvent.click(screen.getByRole('button', { name: '참가하기' }));
     expect(await screen.findByText('닉네임을 입력해주세요')).toBeInTheDocument();
     expect(joinRoom).not.toHaveBeenCalled();
   });
 
-  it('joins with an uppercased room code and locks the button while the join is in flight', async () => {
+  it('trims the nickname and locks the join button while the join is in flight', async () => {
     let resolveJoin!: () => void;
     const pendingJoin = new Promise<void>((resolve) => { resolveJoin = resolve; });
     const joinRoom = vi.fn(() => pendingJoin);
@@ -163,20 +172,18 @@ describe('LobbyHomeView control branches', () => {
     installRoomActions({ joinRoom });
 
     render(<LobbyHomeView onRoomJoined={onRoomJoined} onCreateRoom={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText('룸 코드로 참가'), { target: { value: 'ab12' } });
+    const join = await screen.findByRole('button', { name: '참가' });
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '  Guest  ' } });
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '참가하기' }));
-    });
+    await act(async () => { fireEvent.click(join); });
 
-    expect(screen.getByRole('button', { name: '참가 중...' })).toBeDisabled();
-    expect(joinRoom).toHaveBeenCalledWith('AB12', 'Guest', undefined, undefined);
+    expect(join).toBeDisabled();
+    expect(joinRoom).toHaveBeenCalledWith('ABC123', 'Guest', undefined, undefined);
     expect(onRoomJoined).not.toHaveBeenCalled();
 
     await act(async () => { resolveJoin(); });
     expect(onRoomJoined).toHaveBeenCalledOnce();
-    expect(screen.getByRole('button', { name: '참가하기' })).toBeEnabled();
+    expect(join).toBeEnabled();
   });
 });
 
