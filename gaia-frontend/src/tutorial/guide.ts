@@ -1,5 +1,7 @@
 import { FREE_ACTIONS } from '../components/freeActions';
 import { POWER_ACTION_SPACES } from '../components/boardActionSpaces';
+import { FACTION_DISPLAY_NAMES } from '../displayNames';
+import type { FactionId } from '../types/game';
 
 /**
  * Beginner reference content. Every number here is the one the engine actually enforces — costs
@@ -8,7 +10,7 @@ import { POWER_ACTION_SPACES } from '../components/boardActionSpaces';
  * the tables the game itself renders, rather than restated, so those two can never drift.
  */
 
-export type GuideCategory = 'flow' | 'main' | 'free' | 'expansion';
+export type GuideCategory = 'flow' | 'main' | 'free' | 'expansion' | 'faction';
 
 export interface GuideEntry {
   id: string;
@@ -28,6 +30,7 @@ export const GUIDE_CATEGORIES: { id: GuideCategory; label: string; blurb: string
   { id: 'main', label: '주요 행동', blurb: '내 차례에 하나 고르는 행동들' },
   { id: 'free', label: '자유 행동 · 자원', blurb: '차례를 쓰지 않는 자원 교환과 파워 순환' },
   { id: 'expansion', label: '확장 (잃어버린 함대)', blurb: '함선, 아티팩트, 새 행성' },
+  { id: 'faction', label: '종족 능력', blurb: '18개 종족이 서로 무엇이 다른지' },
 ];
 
 const FLOW: GuideEntry[] = [
@@ -288,7 +291,153 @@ const EXPANSION: GuideEntry[] = [
   },
 ];
 
-export const GUIDE_ENTRIES: GuideEntry[] = [...FLOW, ...MAIN, ...FREE, ...EXPANSION];
+/**
+ * Faction abilities, transcribed from the engine rather than the rulebook prose: starting
+ * planet/resources and income deviations come from `gaia-engine/data/factions.toml`, and the
+ * abilities themselves from `src/faction/impls/*.rs` plus the faction branches in
+ * `src/rules/engine.rs`. Names and faction-only free actions are read from the shared tables,
+ * so a rename or a cost change moves this text with it.
+ */
+const factionFreeActions = (faction: FactionId): string[] =>
+  FREE_ACTIONS.filter((option) => option.faction === faction).map((option) => option.label);
+
+function faction(id: FactionId, summary: string, detail: string[], tip?: string): GuideEntry {
+  return { id: `faction-${id}`, category: 'faction', title: FACTION_DISPLAY_NAMES[id], summary, detail, tip };
+}
+
+const FACTIONS: GuideEntry[] = [
+  faction('Terrans', '가이아 단계에 파워가 1단계가 아니라 2단계로 돌아옵니다.', [
+    '고향 행성: 대지 · 가이아 프로젝트 연구 1단계로 시작합니다.',
+    '가이아 영역에 넣어둔 파워 토큰이 가이아 단계에 2단계로 돌아옵니다. 다른 종족은 1단계입니다.',
+    '행성의회: 가이아 단계에 가이아 영역의 파워를 파워→자원 자유 행동으로 바꿔 쓸 수 있습니다.',
+    '파워 토큰 4/4로 시작해 초반 파워가 넉넉합니다.',
+  ], '가이아 프로젝트를 많이 돌릴수록 이득이 커집니다. 차원변형행성이 많은 자리를 노리세요.'),
+
+  faction('Lantids', '상대가 이미 차지한 행성에 광산을 얹어 지을 수 있습니다.', [
+    '고향 행성: 대지.',
+    '상대 행성에 광산을 겹쳐 짓습니다(동거). 테라포밍도, 가이아 정보 큐브도 들지 않습니다.',
+    '동거 광산은 업그레이드할 수 없습니다.',
+    '행성의회: 동거 광산을 지을 때마다 지식 2를 받습니다.',
+    '매 라운드 1단계에 파워 토큰 1개를 더 받습니다. 대신 행성의회의 보너스 파워 토큰은 없습니다.',
+  ], '상대가 좋은 자리를 먼저 차지해도 사거리만 닿으면 따라 들어갈 수 있습니다.'),
+
+  faction('Xenos', '광산 3개로 시작하고, 연방을 파워 6에 만들 수 있습니다.', [
+    '고향 행성: 사막 · 인공지능 연구 1단계.',
+    '광산 3개로 시작합니다. 세 번째 광산은 모두가 놓은 뒤 마지막에 놓습니다.',
+    '행성의회: 연방에 필요한 파워 합계가 7에서 6으로 줄고, 매 라운드 정보 큐브 1을 받습니다.',
+    `전용 자유 행동 — ${factionFreeActions('Xenos').join(' · ')}`,
+  ]),
+
+  faction('Gleens', '정보 큐브를 쓰지 않고 광석으로 대신합니다.', [
+    '고향 행성: 사막 · 항법 연구 1단계 · 정보 큐브 0으로 시작.',
+    '정보 큐브를 받을 자리에서 대신 광석을 받습니다. 정보 아카데미를 지으면 그때부터 정보 큐브를 정상적으로 받습니다.',
+    '가이아 행성에 지을 때 정보 큐브 대신 광석 1을 냅니다.',
+    '행성의회: 매 라운드 광석 1을 받습니다(파워 토큰 대신).',
+    '탐사 보드 특수 행동(라운드당 한 번): 사거리 +2로 광산 건설·가이아 프로젝트·함선 탐사를 합니다.',
+  ]),
+
+  faction('Taklons', '브레인스톤이라는 특별한 파워 토큰 하나를 씁니다.', [
+    '고향 행성: 늪.',
+    '브레인스톤은 3단계에 있을 때 파워 3개 몫을 합니다. 1단계에서 시작합니다.',
+    '행성의회: 상대 건설로 충전할 때, 파워 토큰 1개를 충전 전에 받을지 후에 받을지 고릅니다.',
+    '함선을 탐사하려면 브레인스톤이 파워 순환(1~3단계) 안에 있어야 하고, 탐사하면 가이아 영역으로 옮겨집니다.',
+  ]),
+
+  faction('Ambas', '행성의회와 광산의 자리를 맞바꿀 수 있습니다.', [
+    '고향 행성: 늪 · 항법 연구 1단계.',
+    '행성의회 능력(라운드당 한 번): 행성의회와 내 광산 하나의 위치를 맞바꿉니다.',
+    '행성의회는 매 라운드 파워 토큰 2개를 줍니다(보통 1개).',
+  ], '연방을 만들기 좋은 자리로 의회를 옮기면 파워 값 3을 통째로 옮기는 셈입니다.'),
+
+  faction('HadschHallas', '남는 크레딧을 다른 자원으로 바꿔 씁니다.', [
+    '고향 행성: 산성 · 경제 연구 1단계.',
+    '행성의회를 지으면 크레딧 전용 자유 행동이 열립니다.',
+    ...factionFreeActions('HadschHallas'),
+  ], '크레딧 수입을 크게 만들어 두면 그대로 광석·지식이 됩니다. 교역소를 많이 지으세요.'),
+
+  faction('Ivits', '행성의회로 시작하고, 연방 하나를 계속 키웁니다.', [
+    '고향 행성: 산성 · 행성의회 1개로 시작합니다(광산 없음).',
+    '시작 건물은 모두가 놓은 뒤 마지막에 놓습니다.',
+    '연방은 하나만 만들고, 그 뒤로는 그 연방을 넓힙니다. 넓힐 때마다 필요한 파워 합계가 7씩 늘어납니다.',
+    '위성은 파워를 버리는 대신 정보 큐브 1개씩을 씁니다.',
+    '행성의회 능력(라운드당 한 번): 우주정거장을 놓습니다. 사거리 규칙은 광산 건설과 같습니다.',
+    '행성의회: 매 라운드 정보 큐브 1을 더 받습니다.',
+  ]),
+
+  faction('Geodens', '처음 밟는 행성 종류마다 지식을 크게 받습니다.', [
+    '고향 행성: 화산 · 테라포밍 연구 1단계.',
+    '행성의회: 의회를 지은 뒤 처음 광산을 놓는 행성 종류마다 지식 3을 받습니다.',
+    '정보 아카데미의 행동이 정보 큐브 1 대신 크레딧 4를 줍니다.',
+  ], '행성 종류를 골고루 밟을수록 이득입니다. 테라포밍 연구를 일찍 올려두세요.'),
+
+  faction('BalTaks', '가이아포머를 정보 큐브로 바꿔 쓰지만, 항법 연구가 늦게 열립니다.', [
+    '고향 행성: 화산 · 가이아 프로젝트 연구 1단계 · 정보 큐브 0으로 시작.',
+    '행성의회를 짓기 전에는 항법 트랙을 올릴 수 없습니다.',
+    `전용 자유 행동 — ${factionFreeActions('BalTaks').join(' · ')}`,
+    '정보 아카데미의 행동이 크레딧 4를 줍니다.',
+    '함선 탐사에 승점 5가 아니라 7이 듭니다.',
+  ]),
+
+  faction('Firaks', '연구소를 교역소로 되돌리면서 연구를 공짜로 올립니다.', [
+    '고향 행성: 티타늄 · 광석 3, 지식 2로 조금 적게 시작합니다.',
+    '연구소 수입이 기본 지식 2입니다(보통 1).',
+    '행성의회 능력(라운드당 한 번): 연구소 하나를 교역소로 강등하고 연구를 1칸 올립니다.',
+  ], '강등한 교역소를 다시 연구소로 올리면 기술 타일을 또 받습니다.'),
+
+  faction('Bescods', '건물 등급이 뒤집혀 있고, 교역소와 연구소의 수입이 서로 바뀝니다.', [
+    '고향 행성: 티타늄.',
+    '업그레이드 경로가 다릅니다: 교역소 → 아카데미, 연구소 → 행성의회.',
+    '교역소가 지식을, 연구소가 크레딧을 줍니다.',
+    '라운드당 한 번, 지금 가장 낮은 연구 트랙을 1칸 올립니다.',
+    '행성의회: 매 라운드 파워 토큰 2개를 받고, 가이아 변환되지 않은 티타늄 행성의 내 건물은 연방 파워 값이 1씩 늘어납니다.',
+  ]),
+
+  faction('Nevlas', '3단계 파워 토큰을 두 배로 씁니다.', [
+    '고향 행성: 얼음 · 과학 연구 1단계.',
+    '연구소 수입이 지식 대신 파워 2입니다.',
+    '행성의회: 3단계 파워 토큰 하나를 파워 2처럼 씁니다.',
+    `전용 자유 행동 — ${factionFreeActions('Nevlas').join(' · ')}`,
+  ]),
+
+  faction('Itars', '가이아 영역에 쌓인 파워를 기술 타일로 바꿉니다.', [
+    '고향 행성: 얼음 · 광석 5, 파워 토큰 4/4로 시작.',
+    '과학 아카데미 수입이 지식 3입니다(보통 2).',
+    '행성의회: 가이아 단계에 가이아 영역의 파워 4개를 버리고 기술 타일 1개를 받습니다.',
+  ]),
+
+  faction('Tinkeroids', '라운드마다 팅커링 타일 하나를 골라 씁니다.', [
+    '잃어버린 함대 확장 종족 · 소행성에서 시작 · 과학 연구 1단계.',
+    '행성의회 1개로 시작합니다.',
+    '라운드가 시작되면 그 라운드에 쓸 팅커링 타일을 하나 고릅니다. 한 번 쓴 타일은 다시 나오지 않습니다.',
+    '가이아 행성에 지을 때 정보 큐브가 2개 듭니다.',
+  ]),
+
+  faction('Moweyds', '건물에 파워 링을 끼워 그 건물의 파워 값을 키웁니다.', [
+    '잃어버린 함대 확장 종족 · 원시 행성에서 시작 · 가이아 프로젝트 연구 1단계.',
+    '광석 6, 지식 5, 정보 큐브 2로 넉넉하게 시작합니다.',
+    '행성의회 능력(라운드당 한 번): 내 건물이 있는 칸에 파워 링을 놓아 그 건물의 파워 값을 2 올립니다. 링은 6개뿐입니다.',
+    '파워 값이 오르면 연방 계산에는 유리하지만, 상대가 내 옆에 지을 때 받아 가는 충전량도 함께 늘어납니다.',
+    'T F 마스에 셔틀 하나를 이미 놓은 채로 시작합니다. 남은 셔틀은 2개입니다.',
+    '가이아 행성에 지을 때 정보 큐브가 2개 듭니다.',
+  ]),
+
+  faction('SpaceGiants', '테라포밍이 몇 칸 떨어졌든 항상 2단계입니다.', [
+    '잃어버린 함대 확장 종족 · 원시 행성에서 시작 · 항법 연구 1단계 · 광산 1개로 시작.',
+    '어떤 행성이든 테라포밍이 항상 2단계입니다. 고향에서 먼 행성일수록 이득입니다.',
+    '가이아 행성에 지을 때 정보 큐브가 2개 듭니다.',
+    '행성의회: 지을 때 기술 타일 1개를 즉시 받습니다(게임당 한 번). 매 라운드 파워 6을 충전합니다(보통 4).',
+    '탐사 보드 특수 행동(라운드당 한 번): 테라포밍 2단계를 공짜로 받아 광산을 짓습니다.',
+  ]),
+
+  faction('Darkanians', '테라포밍이 몇 칸 떨어졌든 항상 1단계입니다.', [
+    '잃어버린 함대 확장 종족 · 소행성에서 시작 · 항법과 경제 연구 1단계 · 광산 1개, 광석 7로 시작.',
+    '어떤 행성이든 테라포밍이 항상 1단계입니다.',
+    '가이아 행성에 지을 때 정보 큐브가 2개 듭니다.',
+    '행성의회: 각 섹터에 처음 식민할 때마다 크레딧 2와 지식 1을 받습니다. 인터스페이스 칸은 섹터로 치지 않습니다.',
+  ], '여러 섹터에 하나씩 뻗어 나가면 의회 보상이 계속 나옵니다.'),
+];
+
+export const GUIDE_ENTRIES: GuideEntry[] = [...FLOW, ...MAIN, ...FREE, ...EXPANSION, ...FACTIONS];
 
 /** Case-insensitive search across every field a player might type a word from. */
 export function searchGuide(entries: GuideEntry[], query: string): GuideEntry[] {

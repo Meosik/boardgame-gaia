@@ -4,6 +4,7 @@ import { Tutorial } from '../components/Tutorial';
 import { GUIDE_CATEGORIES, GUIDE_ENTRIES, searchGuide } from '../tutorial/guide';
 import { FREE_ACTIONS } from '../components/freeActions';
 import { POWER_ACTION_SPACES } from '../components/boardActionSpaces';
+import { FACTION_DISPLAY_NAMES } from '../displayNames';
 
 describe('guide content', () => {
   it('gives every entry a title, a one-line summary and details', () => {
@@ -31,6 +32,21 @@ describe('guide content', () => {
     for (const option of FREE_ACTIONS.filter((item) => !item.faction)) {
       expect(freeEntry?.detail.includes(option.label), option.label).toBe(true);
     }
+  });
+
+  it('describes every faction that can be dealt, under its shared display name', () => {
+    const factionEntries = GUIDE_ENTRIES.filter((entry) => entry.category === 'faction');
+    const ids = new Set(factionEntries.map((entry) => entry.id));
+    const factions = Object.keys(FACTION_DISPLAY_NAMES) as (keyof typeof FACTION_DISPLAY_NAMES)[];
+
+    for (const faction of factions) {
+      expect(ids.has(`faction-${faction}`), faction).toBe(true);
+      expect(
+        factionEntries.some((entry) => entry.title === FACTION_DISPLAY_NAMES[faction]),
+        faction,
+      ).toBe(true);
+    }
+    expect(ids.size).toBe(factions.length);
   });
 
   it('carries the costs the engine actually charges', () => {
