@@ -9,6 +9,7 @@ import type {
   SetupMode,
 } from '../types/game';
 import { decodeHexCoordinates } from './websocket';
+import { apiError } from './errors';
 
 const BASE = '/api';
 
@@ -25,7 +26,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status}: ${body}`);
+    throw apiError(res.status, body);
   }
   return decodeHexCoordinates(await res.json()) as T;
 }
