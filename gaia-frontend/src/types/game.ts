@@ -797,8 +797,13 @@ export interface RoomInfo {
 // since `join_room` rejects anything else (`gaia-server/src/room/manager.rs`).
 export interface RoomSummary {
   code: string;
+  /** Room title; the server fills in "<host>님의 방" when the host left it blank. */
+  name: string;
   host_nickname: string;
   player_count: number;
+  /** Whether joining needs the room's password. The password itself never leaves the server. */
+  has_password: boolean;
+  setup_mode: SetupMode | null;
 }
 
 export interface CreateRoomResponse {

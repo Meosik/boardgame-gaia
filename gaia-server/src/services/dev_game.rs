@@ -551,6 +551,8 @@ mod tests {
         (
             Room {
                 code: "DEV003".into(),
+                name: "DEV003".into(),
+                password_hash: None,
                 host_player: 7,
                 players: vec![(7, "DEV".into(), true)],
                 state: RoomState::InGame,

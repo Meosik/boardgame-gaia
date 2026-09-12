@@ -218,7 +218,10 @@ describe('CreateRoomView bidding mode', () => {
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: 'Host' } });
     fireEvent.click(screen.getByRole('button', { name: '방 만들기' }));
     await waitFor(() => {
-      expect(createRoom).toHaveBeenCalledWith('Host', undefined, 'bidding');
+      expect(createRoom).toHaveBeenCalledWith('Host', undefined, 'bidding', false, {
+        name: undefined,
+        password: undefined,
+      });
     });
     unmount();
 
@@ -228,7 +231,10 @@ describe('CreateRoomView bidding mode', () => {
     fireEvent.click(screen.getByText('순차 선택'));
     fireEvent.click(screen.getByRole('button', { name: '방 만들기' }));
     await waitFor(() => {
-      expect(createRoom).toHaveBeenCalledWith('Host', undefined, 'sequential');
+      expect(createRoom).toHaveBeenCalledWith('Host', undefined, 'sequential', false, {
+        name: undefined,
+        password: undefined,
+      });
     });
   });
 });

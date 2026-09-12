@@ -58,10 +58,12 @@ export const api = {
     nickname: string,
     seed?: string,
     setupMode: SetupMode = 'sequential',
+    name?: string,
+    password?: string,
   ): Promise<CreateRoomResponse> {
     return request(`${BASE}/rooms`, {
       method: 'POST',
-      body: JSON.stringify({ nickname, seed, setup_mode: setupMode }),
+      body: JSON.stringify({ nickname, seed, setup_mode: setupMode, name, password }),
     });
   },
 
@@ -69,10 +71,11 @@ export const api = {
     code: string,
     nickname: string,
     sessionToken?: string,
+    password?: string,
   ): Promise<JoinRoomResponse> {
     return request(`${BASE}/rooms/${code}/join`, {
       method: 'POST',
-      body: JSON.stringify({ nickname, session_token: sessionToken }),
+      body: JSON.stringify({ nickname, session_token: sessionToken, password }),
     });
   },
 

@@ -551,22 +551,18 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .mono { font-family: 'Fira Code', 'Courier New', monospace; }
 
 /* ── Lobby ───────────────────────────────────────────────────────────────── */
-.home-view { text-align: center; padding: 3rem 2rem; }
 .game-title { font-size: 3rem; font-weight: 700; color: var(--color-accent); margin-bottom: 0.5rem; }
 .game-subtitle { color: var(--color-muted); margin-bottom: 2rem; }
-.home-actions { display: flex; gap: 1rem; justify-content: center; }
-.home-replay-entry { margin-top: 1rem; }
-.home-replay-entry a { text-decoration: none; }
 
-.create-room-view, .join-room-view { max-width: 480px; padding: 2rem; background: var(--color-surface); border-radius: 12px; }
-.create-room-view h2, .join-room-view h2 { margin-bottom: 1.5rem; }
+.create-room-view, .lobby-home-view { max-width: 480px; padding: 2rem; background: var(--color-surface); border-radius: 12px; }
+.create-room-view h2, .lobby-home-view h2 { margin-bottom: 1.5rem; }
 
 /* Room browser (join-by-list) */
 .room-list { background: var(--color-surface2); border-radius: 8px; padding: 1rem; margin: 1rem 0; }
 .room-list h3 { font-size: 0.875rem; color: var(--color-muted); margin-bottom: 0.75rem; text-transform: uppercase; }
 .room-list-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .room-list-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; }
-.room-list-item > span:nth-child(2) { flex: 1; }
+.room-list-name { display: flex; align-items: center; gap: 0.35rem; flex: 1; font-weight: 700; }
 
 /* Setup preview */
 .setup-preview { background: var(--color-surface2); border-radius: 8px; padding: 1rem; margin: 1rem 0; }

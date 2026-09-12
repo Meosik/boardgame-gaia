@@ -70,6 +70,10 @@ impl AppState {
 
         let room = Room {
             code: room_code.to_string(),
+            // Titles and passwords live only in memory: a rehydrated room has already left the
+            // lobby (it has a snapshot), so neither is still in play for joining.
+            name: format!("방 {room_code}"),
+            password_hash: None,
             host_player,
             players,
             state: RoomState::from_db_str(&state_str),

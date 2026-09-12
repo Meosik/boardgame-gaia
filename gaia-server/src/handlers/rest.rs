@@ -28,6 +28,10 @@ pub struct CreateRoomRequest {
     pub seed: Option<String>,
     #[serde(default)]
     pub setup_mode: SetupMode,
+    /// Room title for the lobby list; blank falls back to the host's nickname.
+    pub name: Option<String>,
+    /// Optional join password. Absent or blank leaves the room open to anyone with the code.
+    pub password: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -44,6 +48,8 @@ pub struct CreateRoomResponse {
 pub struct JoinRoomRequest {
     pub nickname: String,
     pub session_token: Option<String>,
+    /// Required only for a room created with a password.
+    pub password: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -93,7 +99,15 @@ pub async fn create_room(
     Json(req): Json<CreateRoomRequest>,
 ) -> ServerResult<(StatusCode, Json<CreateRoomResponse>)> {
     let (code, player_id, setup) =
-        GameSetupService::create_room(&app, &req.nickname, req.seed, req.setup_mode).await?;
+        GameSetupService::create_room(
+            &app,
+            &req.nickname,
+            req.seed,
+            req.setup_mode,
+            req.name.as_deref(),
+            req.password.as_deref(),
+        )
+        .await?;
 
     let session_token = app.sessions.create_session(player_id, &code).await?;
 
@@ -152,7 +166,8 @@ pub async fn create_dev_game(
     };
     let faction = req.faction.unwrap_or(FactionId::Terrans);
     let (code, player_id, setup) =
-        GameSetupService::create_room(&app, nickname, Some(seed.clone()), setup_mode).await?;
+        GameSetupService::create_room(&app, nickname, Some(seed.clone()), setup_mode, None, None)
+            .await?;
     let bot_player_ids = {
         let mut rooms = app.rooms.write().await;
         rooms.alloc_virtual_player_ids(3)
@@ -252,7 +267,7 @@ pub async fn join_room(
 
     let player_id = {
         let mut rooms = app.rooms.write().await;
-        rooms.join_room(&code, &req.nickname)?
+        rooms.join_room(&code, &req.nickname, req.password.as_deref())?
     };
 
     let session_token = app.sessions.create_session(player_id, &code).await?;

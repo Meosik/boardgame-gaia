@@ -12,6 +12,8 @@ interface Props {
 
 export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }: Props) {
   const [nickname, setNickname] = useState(manualControl ? 'DEV' : '');
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [setupMode, setSetupMode] = useState<SetupMode>('bidding');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,10 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
       if (manualControl) {
         await actions.createRoom(nickname.trim(), undefined, setupMode, true);
       } else {
-        await actions.createRoom(nickname.trim(), undefined, setupMode);
+        await actions.createRoom(nickname.trim(), undefined, setupMode, false, {
+          name: name.trim() || undefined,
+          password: password.trim() || undefined,
+        });
       }
       onRoomCreated();
     } catch (e) {
@@ -67,6 +72,28 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
           onChange={(e) => setNickname(e.target.value)}
           maxLength={16}
           placeholder="닉네임 입력"
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="room-name">방 제목</label>
+        <input
+          id="room-name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={24}
+          placeholder="비워두면 '닉네임님의 방'"
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="room-password">비밀번호 (선택)</label>
+        <input
+          id="room-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          maxLength={32}
+          placeholder="비워두면 누구나 참가"
         />
       </div>
       <fieldset className="setup-mode-picker">

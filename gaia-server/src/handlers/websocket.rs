@@ -86,7 +86,10 @@ async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) 
                         None => {
                             let pid = {
                                 let mut rooms = app.rooms.write().await;
-                                match rooms.join_room(&room_code, &nickname) {
+                                // No password here: this fallback join is for a client with no
+                                // session token, and a locked room is meant to be entered through
+                                // the REST join that checks it. Locked rooms therefore fail closed.
+                                match rooms.join_room(&room_code, &nickname, None) {
                                     Ok(p) => p,
                                     Err(e) => {
                                         send_error(&mut socket, "JOIN_FAILED", &e.to_string())

@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
-import { HomeView } from './HomeView';
+import { LobbyHomeView } from './LobbyHomeView';
 import { CreateRoomView } from './CreateRoomView';
-import { JoinRoomView } from './JoinRoomView';
 import { WaitingRoomView } from './WaitingRoomView';
 import { FactionSelectView } from './FactionSelectView';
 import { useRoomStore } from '../../store/roomStore';
 
 import { readRecentRoom, rememberRoom } from '../../store/recentRoom';
 
-type LobbyView = 'home' | 'create' | 'join' | 'waiting' | 'faction';
+type LobbyView = 'lobby' | 'create' | 'waiting' | 'faction';
 
 interface Props {
   onGameStart: () => void;
@@ -27,8 +26,14 @@ export function GameLobby({ onGameStart, manualControl = false }: Props) {
     }
   }, [roomCode, manualControl]);
 
-  // If we already have a roomCode (e.g. reconnect), skip to waiting
-  const initialView: LobbyView = roomCode ? 'waiting' : recentRoom ? 'home' : manualControl ? 'create' : 'home';
+  // The room list is the front page: joining an existing game is the common case, and creating one
+  // is a button on it. A reconnect still skips straight to the room the player already sits in, and
+  // a saved room keeps its resume shortcut reachable even in the DEV flow that opens on creation.
+  const initialView: LobbyView = roomCode
+    ? 'waiting'
+    : manualControl && !recentRoom
+      ? 'create'
+      : 'lobby';
   const [currentView, setCurrentView] = useState<LobbyView>(initialView);
 
   function navigate(to: LobbyView) {
@@ -36,16 +41,16 @@ export function GameLobby({ onGameStart, manualControl = false }: Props) {
   }
 
   switch (currentView) {
-    case 'home':
+    case 'lobby':
       return (
-        <HomeView
+        <LobbyHomeView
           recentRoomCode={recentRoom?.roomCode}
           onResumeRoom={recentRoom ? () => {
             useRoomStore.getState().actions.resumeRoom(recentRoom);
             navigate('waiting');
           } : undefined}
           onCreateRoom={() => navigate('create')}
-          onJoinRoom={() => navigate('join')}
+          onRoomJoined={() => navigate('waiting')}
         />
       );
     case 'create':
@@ -53,14 +58,7 @@ export function GameLobby({ onGameStart, manualControl = false }: Props) {
         <CreateRoomView
           manualControl={manualControl}
           onRoomCreated={() => navigate('waiting')}
-          onBack={() => navigate('home')}
-        />
-      );
-    case 'join':
-      return (
-        <JoinRoomView
-          onRoomJoined={() => navigate('waiting')}
-          onBack={() => navigate('home')}
+          onBack={() => navigate('lobby')}
         />
       );
     case 'waiting':

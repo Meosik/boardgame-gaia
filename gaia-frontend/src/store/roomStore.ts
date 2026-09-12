@@ -30,8 +30,14 @@ interface RoomStore {
 
   actions: {
     resumeRoom: (room: RecentRoom) => void;
-    createRoom: (nickname: string, seed?: string, setupMode?: SetupMode, manualControl?: boolean) => Promise<void>;
-    joinRoom: (code: string, nickname: string, sessionToken?: string) => Promise<void>;
+    createRoom: (
+      nickname: string,
+      seed?: string,
+      setupMode?: SetupMode,
+      manualControl?: boolean,
+      options?: { name?: string; password?: string },
+    ) => Promise<void>;
+    joinRoom: (code: string, nickname: string, sessionToken?: string, password?: string) => Promise<void>;
     regenerateSetup: (seed?: string) => Promise<void>;
     fetchPreviewBoard: () => Promise<void>;
     setRoomInfo: (info: Partial<Omit<RoomStore, 'actions'>>) => void;
@@ -68,10 +74,10 @@ export const useRoomStore = create<RoomStore>()(
         resumeRoom(room) {
           set({ ...initialState, ...room });
         },
-        async createRoom(nickname, seed, setupMode = 'sequential', manualControl = false) {
+        async createRoom(nickname, seed, setupMode = 'sequential', manualControl = false, options = {}) {
           const res = manualControl
             ? await api.createDevRoom(nickname, seed, setupMode)
-            : await api.createRoom(nickname, seed, setupMode);
+            : await api.createRoom(nickname, seed, setupMode, options.name, options.password);
           set({
             manualControl,
             roomCode: res.room_code ?? res.code,
@@ -90,8 +96,8 @@ export const useRoomStore = create<RoomStore>()(
           }
         },
 
-        async joinRoom(code, nickname, sessionToken) {
-          const res = await api.joinRoom(code, nickname, sessionToken);
+        async joinRoom(code, nickname, sessionToken, password) {
+          const res = await api.joinRoom(code, nickname, sessionToken, password);
           set({
             manualControl: false,
             roomCode: res.room_code ?? code,

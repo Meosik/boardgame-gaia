@@ -36,6 +36,9 @@ pub enum ServerError {
     #[error("nickname must not be empty")]
     InvalidNickname,
 
+    #[error("room password does not match")]
+    InvalidRoomPassword,
+
     #[error("database error: {0}")]
     Database(#[from] sqlx::Error),
 
@@ -69,6 +72,7 @@ impl IntoResponse for ServerError {
             ServerError::Unauthorised => (StatusCode::FORBIDDEN, "UNAUTHORISED"),
             ServerError::InvalidSession => (StatusCode::UNAUTHORIZED, "INVALID_SESSION"),
             ServerError::InvalidNickname => (StatusCode::UNPROCESSABLE_ENTITY, "INVALID_NICKNAME"),
+            ServerError::InvalidRoomPassword => (StatusCode::FORBIDDEN, "INVALID_ROOM_PASSWORD"),
             ServerError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR"),
             ServerError::Serialise(_) => (StatusCode::INTERNAL_SERVER_ERROR, "SERIALISE_ERROR"),
             ServerError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR"),

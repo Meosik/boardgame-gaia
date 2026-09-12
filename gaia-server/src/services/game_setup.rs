@@ -17,10 +17,12 @@ impl GameSetupService {
         host_nickname: &str,
         seed: Option<String>,
         setup_mode: SetupMode,
+        name: Option<&str>,
+        password: Option<&str>,
     ) -> ServerResult<(String, PlayerId, GameSetup)> {
         let (code, player_id) = {
             let mut rooms = state.rooms.write().await;
-            rooms.create_room(host_nickname, seed, setup_mode)?
+            rooms.create_room(host_nickname, seed, setup_mode, name, password)?
         };
 
         let setup = {
