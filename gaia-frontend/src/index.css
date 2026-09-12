@@ -5438,14 +5438,13 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .game-table-help-button:hover { background: rgba(8, 47, 73, 0.85); }
 .floating-board-panel .tutorial--compact { color: #edf2fa; }
 
-/* ── Lobby home: arcade-style room grid on a starfield ───────────────────── */
+/* ── Lobby home: room list on a starfield ────────────────────────────────── */
 /* The sky is drawn in CSS rather than shipped as an image: nothing to license or
    download, a few KB instead of a photo, and it stays crisp at any resolution.
    Two star tiles at different scales plus two soft nebula washes give it depth
    without any animation cost. Scoped with :has() so only the front page gets it —
    the waiting room and faction select keep their own backgrounds. */
 .app--lobby:has(.lobby-home-view) {
-  align-items: flex-start;
   padding: clamp(1rem, 4vh, 3rem) 1rem;
   background:
     radial-gradient(1100px 720px at 78% 8%, rgba(124, 77, 255, 0.18), transparent 62%),
@@ -5455,25 +5454,19 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
     #06060f;
 }
 
+/* `margin-block: auto` rather than `align-items: center`: it centres the panel the
+   same way but still lets a short window scroll instead of clipping the top. */
 .lobby-home-view {
   width: 100%;
   max-width: 1040px;
+  margin-block: auto;
   background: rgba(20, 20, 38, 0.86);
   border: 1px solid var(--color-border);
   backdrop-filter: blur(2px);
 }
 
-.lobby-columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 250px;
-  gap: 1rem;
-  align-items: start;
-}
-.lobby-side { display: grid; gap: 0.75rem; }
-.lobby-side .form-actions { margin: 0; }
-.lobby-side .btn { width: 100%; }
-
-.room-list-empty { margin-bottom: 0.75rem; color: var(--color-muted); font-size: 0.85rem; }
+.lobby-nickname { max-width: 320px; }
+.room-list-empty { margin: 0; color: var(--color-muted); font-size: 0.85rem; }
 
 .room-grid {
   display: grid;
@@ -5492,7 +5485,6 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
     "meta join";
   align-items: center;
   gap: 0.15rem 0.6rem;
-  min-height: 84px;
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -5511,16 +5503,61 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .room-card-seats { color: var(--color-muted); font-weight: 700; }
 .room-card-join { grid-area: join; }
 
-.room-card--empty {
-  display: grid;
-  place-items: center;
-  border-style: dashed;
-  background: rgba(22, 33, 62, 0.35);
-  color: var(--color-muted);
-  font-size: 0.8rem;
+/* Joining by code is the fallback path now, so it reads as one compact row
+   instead of owning a column of its own. */
+.lobby-code-join {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
+.lobby-code-join label { color: var(--color-muted); font-size: 0.78rem; }
+.lobby-code-join input { width: 8.5rem; }
+
+/* The tutorial and the AI replay are destinations, not toolbar buttons — full-width
+   entries so they are actually findable, and they carry the panel to the bottom. */
+.lobby-entries {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.lobby-entry {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent2) 35%, var(--color-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-accent2) 8%, var(--color-surface));
+  color: inherit;
+  text-decoration: none;
+}
+.lobby-entry:hover { border-color: var(--color-accent2); background: color-mix(in srgb, var(--color-accent2) 16%, var(--color-surface)); }
+.lobby-entry-title { font-size: 0.95rem; font-weight: 800; }
+.lobby-entry-desc { color: var(--color-muted); font-size: 0.78rem; }
 
 @media (max-width: 860px) {
-  .lobby-columns { grid-template-columns: 1fr; }
-  .room-grid { grid-template-columns: 1fr; }
+  .room-grid, .lobby-entries { grid-template-columns: 1fr; }
+}
+
+/* ── Waiting room: the faction pool is the thing people look at ──────────── */
+/* Four factions, a panel with room to spare below the ready button, and badges
+   sized for a sidebar a third as wide. Scoped to `.setup-factions-pool` so the
+   shuttle preview's own six-column pool keeps its compact badges. */
+.waiting-room-view { --waiting-room-panel-width: clamp(240px, 19vw, 360px); }
+.setup-factions-pool { gap: 0.5rem; margin-top: 0.75rem; }
+.setup-factions-pool-label { font-size: 0.78rem; font-weight: 700; }
+.setup-factions-pool .faction-pool-list { grid-template-columns: 1fr; gap: 0.4rem; }
+.setup-factions-pool .faction-pool-badge {
+  gap: 0.6rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.setup-factions-pool .faction-pool-portrait {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
 }

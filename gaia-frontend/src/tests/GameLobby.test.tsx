@@ -54,7 +54,8 @@ describe('LobbyHomeView', () => {
     const onCreateRoom = vi.fn();
     render(<LobbyHomeView onRoomJoined={vi.fn()} onCreateRoom={onCreateRoom} />);
 
-    expect(screen.getByRole('link', { name: 'AI 보기' })).toHaveAttribute('href', '?aiReplay=1');
+    // The AI replay is a full-width entry card now, so its link carries a description too.
+    expect(screen.getByRole('link', { name: /AI 보기/ })).toHaveAttribute('href', '?aiReplay=1');
     fireEvent.click(screen.getByText('방 만들기'));
     expect(onCreateRoom).toHaveBeenCalledOnce();
     await waitFor(() => expect(api.listRooms).toHaveBeenCalled());
