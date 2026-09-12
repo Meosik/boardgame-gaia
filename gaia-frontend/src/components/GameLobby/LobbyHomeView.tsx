@@ -13,8 +13,13 @@ interface Props {
 
 const SETUP_MODE_LABELS = { bidding: '승점 비딩', sequential: '순차 선택' } as const;
 
-/** The lobby's front page: what rooms exist right now, with creating a room and watching an AI
- * replay as the two things to do when none of them suit. */
+/** The grid always shows this many slots, padding with empty ones. A lobby with one room (or
+ *  none) then still reads as a room list rather than a blank panel — the arcade-lobby look the
+ *  front page is going for. */
+const ROOM_SLOTS = 6;
+
+/** The lobby's front page: what rooms exist right now as a card grid, with creating a room,
+ * the tutorial and watching an AI replay as the things to do when none of them suit. */
 export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onResumeRoom }: Props) {
   const [code, setCode] = useState('');
   const [nickname, setNickname] = useState('');
@@ -68,6 +73,8 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onRe
     void handleJoin(room.code);
   }
 
+  const emptySlots = rooms ? Math.max(0, ROOM_SLOTS - rooms.length) : 0;
+
   return (
     <div className="lobby-home-view">
       <header className="lobby-home-header">
@@ -87,98 +94,112 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onRe
         </div>
       </header>
 
-      <div className="form-group">
-        <label htmlFor="nickname">닉네임</label>
-        <input
-          id="nickname"
-          type="text"
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          maxLength={16}
-          placeholder="닉네임 입력"
-        />
-      </div>
+      <div className="lobby-columns">
+        <div className="room-list" aria-label="참가 가능한 방">
+          <h3>참가 가능한 방</h3>
+          {roomsError ? (
+            <p className="error-msg">{roomsError}</p>
+          ) : rooms === null ? (
+            <p className="preview-loading">방 목록을 불러오는 중...</p>
+          ) : (
+            <>
+              {rooms.length === 0 && (
+                <p className="room-list-empty">지금 대기 중인 방이 없습니다. 방을 만들거나 룸 코드로 참가해보세요.</p>
+              )}
+              <ul className="room-grid">
+                {rooms.map((room) => (
+                  <li key={room.code} className="room-card">
+                    <span className="room-list-name">
+                      {room.has_password && <span aria-label="비밀번호가 있는 방" title="비밀번호가 있는 방">🔒</span>}
+                      {room.name}
+                    </span>
+                    <span className="room-list-host">{room.host_nickname}</span>
+                    <span className="room-card-meta">
+                      <span className="mono">{room.code}</span>
+                      <span className="room-card-seats">{room.player_count}/4</span>
+                      {room.setup_mode && <span className="room-list-mode">{SETUP_MODE_LABELS[room.setup_mode]}</span>}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-small btn-secondary room-card-join"
+                      disabled={loading}
+                      onClick={() => selectRoom(room)}
+                    >
+                      참가
+                    </button>
+                  </li>
+                ))}
+                {Array.from({ length: emptySlots }, (_, index) => (
+                  <li key={`empty-${index}`} className="room-card room-card--empty" aria-hidden>
+                    <span>비어 있음</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
-      <div className="room-list" aria-label="참가 가능한 방 목록">
-        <h3>참가 가능한 방</h3>
-        {roomsError ? (
-          <p className="error-msg">{roomsError}</p>
-        ) : rooms === null ? (
-          <p className="preview-loading">방 목록을 불러오는 중...</p>
-        ) : rooms.length === 0 ? (
-          <p>지금 대기 중인 방이 없습니다. 방을 만들거나 룸 코드로 참가해보세요.</p>
-        ) : (
-          <ul className="room-list-items">
-            {rooms.map((room) => (
-              <li key={room.code} className="room-list-item">
-                <span className="room-list-name">
-                  {room.has_password && <span aria-label="비밀번호가 있는 방" title="비밀번호가 있는 방">🔒</span>}
-                  {room.name}
-                </span>
-                <span className="room-list-host">{room.host_nickname}</span>
-                <span className="mono">{room.code}</span>
-                <span>{room.player_count}/4</span>
-                {room.setup_mode && <span className="room-list-mode">{SETUP_MODE_LABELS[room.setup_mode]}</span>}
-                <button
-                  type="button"
-                  className="btn btn-small btn-secondary"
-                  disabled={loading}
-                  onClick={() => selectRoom(room)}
-                >
-                  참가
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {lockedRoom && (
-        <div className="form-group room-password-prompt">
-          <label htmlFor="room-password">{lockedRoom.name} · 비밀번호</label>
-          <input
-            id="room-password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            maxLength={32}
-            placeholder="방 비밀번호"
-            onKeyDown={(e) => { if (e.key === 'Enter') void handleJoin(lockedRoom.code, password); }}
-          />
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={loading}
-            onClick={() => void handleJoin(lockedRoom.code, password)}
-          >
-            {loading ? '참가 중...' : '비밀번호 확인'}
-          </button>
+          {lockedRoom && (
+            <div className="form-group room-password-prompt">
+              <label htmlFor="room-password">{lockedRoom.name} · 비밀번호</label>
+              <input
+                id="room-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                maxLength={32}
+                placeholder="방 비밀번호"
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleJoin(lockedRoom.code, password); }}
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={loading}
+                onClick={() => void handleJoin(lockedRoom.code, password)}
+              >
+                {loading ? '참가 중...' : '비밀번호 확인'}
+              </button>
+            </div>
+          )}
         </div>
-      )}
 
-      <div className="form-group">
-        <label htmlFor="room-code">룸 코드로 참가</label>
-        <input
-          id="room-code"
-          type="text"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          maxLength={8}
-          placeholder="XXXXXX"
-          className="mono"
-        />
-      </div>
+        <aside className="lobby-side">
+          <div className="form-group">
+            <label htmlFor="nickname">닉네임</label>
+            <input
+              id="nickname"
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              maxLength={16}
+              placeholder="닉네임 입력"
+            />
+          </div>
 
-      {error && <p className="error-msg">{error}</p>}
+          <div className="form-group">
+            <label htmlFor="room-code">룸 코드로 참가</label>
+            <input
+              id="room-code"
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              maxLength={8}
+              placeholder="XXXXXX"
+              className="mono"
+            />
+          </div>
 
-      <div className="form-actions">
-        <button
-          className="btn btn-primary"
-          onClick={() => void handleJoin(code, lockedRoom?.code === code ? password : undefined)}
-          disabled={loading}
-        >
-          {loading ? '참가 중...' : '참가하기'}
-        </button>
+          {error && <p className="error-msg">{error}</p>}
+
+          <div className="form-actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => void handleJoin(code, lockedRoom?.code === code ? password : undefined)}
+              disabled={loading}
+            >
+              {loading ? '참가 중...' : '참가하기'}
+            </button>
+          </div>
+        </aside>
       </div>
     </div>
   );
