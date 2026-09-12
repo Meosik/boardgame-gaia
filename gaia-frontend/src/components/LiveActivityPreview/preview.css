@@ -1,0 +1,44 @@
+.live-activity-preview { width: min(1060px, 100%); margin: 0 auto; padding: 36px 24px; color: #edf2fa; }
+.live-activity-preview-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.live-activity-preview-header h1 { font-size: clamp(22px, 3vw, 32px); margin: 4px 0; }
+.live-activity-preview-header a { flex-shrink: 0; text-decoration: none; }
+.live-activity-preview-eyebrow { color: #73d9e5; font-size: 11px; letter-spacing: 0.16em; font-weight: 800; }
+.live-activity-preview-description { margin: 14px 0 24px; color: #a9b4c8; font-size: 13px; line-height: 1.6; }
+.live-activity-preview-note { margin: 12px 0 0; color: #879cb2; font-size: 12px; line-height: 1.6; }
+
+.live-activity-preview-block {
+  margin: 0 0 22px;
+  padding: 20px 22px;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  background: #111625;
+}
+.live-activity-preview-block h2 { margin: 0 0 14px; font-size: 16px; }
+.live-activity-preview-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.live-activity-preview-buttons .btn { font-size: 12px; }
+
+/* The real components pin themselves over the table; the preview shows them in place instead. */
+.live-activity-preview-stage {
+  display: flex;
+  justify-content: center;
+  min-height: 78px;
+  padding: 16px;
+  border-radius: 12px;
+  background: radial-gradient(ellipse at 50% 40%, #193347 0, #0d1120 70%);
+}
+.live-activity-preview-stage--right { justify-content: flex-end; }
+.live-activity-preview-stage .turn-banner,
+.live-activity-preview-stage .action-toast {
+  position: static;
+  transform: none;
+  inset: auto;
+}
+
+.live-activity-preview-sidebar {
+  display: grid;
+  gap: 12px;
+  width: min(320px, 100%);
+  padding: 14px;
+  border-radius: 12px;
+  background: #0d1120;
+}

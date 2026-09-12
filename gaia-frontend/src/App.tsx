@@ -3,7 +3,7 @@ import { resourceMotionBatch, type RewardBatch } from './components/RewardMotion
 import { DevTestControls } from './components/DevTestControls';
 import { ActionCancelButton } from './components/ActionCancelButton';
 import { shipActionPrerequisiteNotice } from './components/shipActionPreflight';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { shallow } from 'zustand/shallow';
 import { CalibrationView } from './components/CalibrationView';
@@ -40,6 +40,12 @@ import { SidebarTurnControls } from './components/SidebarTurnControls';
 import { TopPassControl } from './components/TopPassControl';
 import { PlayerActionShelf } from './components/PlayerActionShelf';
 import { GameOverScreen } from './components/GameOverScreen';
+import { TurnBanner } from './components/TurnBanner';
+import { ActionToast } from './components/ActionToast';
+import { RecentActions } from './components/RecentActions';
+import { liveActionEntries, liveHighlight, turnStatus } from './liveActivity';
+import { ReplayHighlightContext } from './replay/highlight';
+import { recentActionHex, scrollBoardIntoView } from './boardScroll';
 import { FACTION_STRUCTURE_COLOR, STRUCTURE_COLOR_HEX } from './assets/structureImages';
 import { useGameStore, type FinalResult } from './store/gameStore';
 import { useRoomStore } from './store/roomStore';
@@ -192,8 +198,35 @@ function DraggableActionPopup({
 
 function scrollToGameBoard(id: string) {
   window.requestAnimationFrame(() => {
-    document.getElementById(id)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    const section = document.getElementById(id);
+    if (!section) return;
+    // The map reads as one picture, and the hex field itself does fit the viewport even though its
+    // section (heading plus padding) does not — so center the board and let the heading scroll off.
+    // Only the research board trades its top for its bottom, where its power-action row sits;
+    // every other shortcut still lands on the section's top edge as before.
+    const mapBoard = id === 'game-map' ? section.querySelector('.game-board-container') : null;
+    const target = mapBoard ?? section;
+    const hex = recentActionHex();
+    scrollBoardIntoView(target, {
+      behavior: 'smooth',
+      preferred: mapBoard ? 'center' : 'start',
+      allowBottomAlign: id === 'game-research',
+      keepVisible: hex && target.contains(hex) ? hex : null,
+    });
   });
+}
+
+/** Live play reuses the replay highlight markers to show what the last action touched. In replay
+ * mode the surrounding `AiReplay` already provides its own value, which this must not override. */
+function LiveHighlightScope({ highlight, enabled, children }: {
+  highlight: ReturnType<typeof liveHighlight>;
+  enabled: boolean;
+  children: ReactNode;
+}) {
+  if (!enabled) return <>{children}</>;
+  return (
+    <ReplayHighlightContext.Provider value={highlight}>{children}</ReplayHighlightContext.Provider>
+  );
 }
 
 function federationTokenKind(
@@ -223,6 +256,8 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
   const rewardSequence = useRef(0);
   const rewardClick = useRef<{ x: number; y: number; time: number } | null>(null);
   const [sidebarTab, setSidebarTab] = useState<'info' | 'log'>('info');
+  const [seenActionCount, setSeenActionCount] = useState(0);
+  const [recentActionIndex, setRecentActionIndex] = useState<number | null>(null);
   const [rangePreviewQic, setRangePreviewQic] = useState(0);
   const [gameNotice, setGameNotice] = useState<string | null>(null);
   const [suppressTerraformOreConfirmation, setSuppressTerraformOreConfirmation] = useState(false);
@@ -421,6 +456,33 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
     setView('lobby');
   }
 
+  // Live activity: the log panel's own grouped entries, so the toast, the recent list, and the
+  // board highlight all describe one action with the same wording. Replays keep their own feed.
+  const actionEntries = useMemo(
+    () => (replay ? [] : liveActionEntries(gameState?.event_log, gameState?.players ?? [], gameState?.board)),
+    [replay, gameState?.event_log, gameState?.players, gameState?.board],
+  );
+  const latestActionIndex = actionEntries.length > 0
+    ? actionEntries[actionEntries.length - 1].index
+    : null;
+  // A snapshot arrives with the whole game's history (join, refresh, reconnect). Only actions
+  // that happen while watching are "just now" — the backlog must not toast or count as unread.
+  const activitySynced = useRef(false);
+  useEffect(() => {
+    if (replay || latestActionIndex === null) return;
+    if (!activitySynced.current) {
+      activitySynced.current = true;
+      setSeenActionCount(actionEntries.length);
+      return;
+    }
+    setRecentActionIndex(latestActionIndex);
+    const timer = window.setTimeout(() => setRecentActionIndex(null), 7000);
+    return () => window.clearTimeout(timer);
+  }, [replay, latestActionIndex, actionEntries.length]);
+  useEffect(() => {
+    if (sidebarTab === 'log') setSeenActionCount(actionEntries.length);
+  }, [sidebarTab, actionEntries.length]);
+
   // Prefer the authoritative snapshot's own `Ended` phase over the one-time `game_ended`
   // broadcast in `finalResult` — a client that only ever loads a later snapshot (reconnect,
   // refresh, restart recovery) never sees that broadcast at all, but `gameState.phase` still
@@ -502,6 +564,12 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
         .map((hex) => hex.coord)
     : [];
   const pendingDecisionPlayer = pendingDecisionPlayerId(gameState.phase);
+  const latestAction = actionEntries[actionEntries.length - 1] ?? null;
+  const toastAction = !replay && latestAction?.index === recentActionIndex ? latestAction : null;
+  const activityHighlight = liveHighlight(gameState.event_log, toastAction);
+  const unseenActions = replay ? 0 : Math.max(0, actionEntries.length - seenActionCount);
+  const recentEntries = actionEntries.slice(-3).reverse();
+  const turnBannerStatus = replay ? null : turnStatus(gameState, myId);
   const mainActionLocked =
     !!replay ||
     selectedAction !== null ||
@@ -1164,6 +1232,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
   }
 
   return (
+    <LiveHighlightScope highlight={activityHighlight} enabled={!replay}>
     <div className="app app--game app--game-table" onClickCapture={(event) => {
       const target = event.target;
       if (!replay && target instanceof Element && target.closest('button, [role="button"]')) {
@@ -1175,6 +1244,8 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
       }
     }}>
       {!replay && <RewardMotion batch={rewardBatch} />}
+      {!replay && <TurnBanner status={turnBannerStatus} />}
+      {!replay && <ActionToast entry={toastAction} myPlayerId={myId} />}
       {!replay && (lastError || gameNotice) && (
         <div
           className="error-banner"
@@ -1188,10 +1259,25 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
         </div>
       )}
       <nav className="game-section-nav game-table-top-nav" aria-label="보드 바로가기">
-        <a href="#game-overview">목표·부스터</a>
-        <a href="#game-map">우주</a>
-        <a href="#game-research">연구·함선</a>
-        <a href="#game-factions">종족</a>
+        {/* Plain anchors would jump with the browser's own top alignment, which cuts the bottom
+            of a board taller than the viewport — `scrollToGameBoard` applies this app's rule. */}
+        {([
+          ['game-overview', '목표·부스터'],
+          ['game-map', '우주'],
+          ['game-research', '연구·함선'],
+          ['game-factions', '종족'],
+        ] as const).map(([id, label]) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            onClick={(event) => {
+              event.preventDefault();
+              scrollToGameBoard(id);
+            }}
+          >
+            {label}
+          </a>
+        ))}
         <div className="game-table-top-actions">
           {!replay && savedManualControl && <DevTestControls refillDisabled={mainActionLocked || !isMyActionTurn} />}
           <TopPassControl
@@ -1469,6 +1555,11 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
             onClick={() => setSidebarTab('log')}
           >
             로그
+            {unseenActions > 0 && (
+              <span className="game-sidebar-unread" aria-label={`읽지 않은 기록 ${unseenActions}개`}>
+                {unseenActions}
+              </span>
+            )}
           </button>
         </div>
         {sidebarTab === 'info' ? (
@@ -1478,6 +1569,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
             role="tabpanel"
             aria-labelledby="game-sidebar-info-tab"
           >
+            <RecentActions entries={recentEntries} onOpenLog={() => setSidebarTab('log')} />
             <OpponentPanels
               players={orderedPlayers}
               myPlayerId={myId}
@@ -1521,7 +1613,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
             role="tabpanel"
             aria-labelledby="game-sidebar-log-tab"
           >
-            <GameLog events={replay?.events ?? gameState.event_log ?? []} players={gameState.players}
+            <GameLog events={replay?.events ?? gameState.event_log ?? []} players={gameState.players} board={gameState.board}
               onEventSelect={replay?.onEventSelect} activeEventRange={replay ? [replay.eventStart, replay.eventEnd] : undefined} />
           </div>
         )}
@@ -1624,6 +1716,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
         </PersonalBoardDrawer>
       )}
     </div>
+    </LiveHighlightScope>
   );
 }
 
