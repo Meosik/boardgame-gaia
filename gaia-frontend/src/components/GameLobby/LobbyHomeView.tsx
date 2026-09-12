@@ -82,6 +82,7 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onRe
             </button>
           )}
           <button className="btn btn-primary" onClick={onCreateRoom}>방 만들기</button>
+          <a className="btn btn-secondary" href="?tutorial=1">튜토리얼</a>
           <a className="btn btn-secondary" href="?aiReplay=1">AI 보기</a>
         </div>
       </header>

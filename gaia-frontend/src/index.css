@@ -5421,3 +5421,19 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   gap: 0.5rem;
 }
 .room-password-prompt label { grid-column: 1 / -1; }
+
+/* In-game entry to the tutorial reference, sitting with the top bar's other controls. */
+.game-table-help-button {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid color-mix(in srgb, #22d3ee 60%, var(--color-border));
+  border-radius: 999px;
+  background: rgba(8, 47, 73, 0.55);
+  color: #cffafe;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.game-table-help-button:hover { background: rgba(8, 47, 73, 0.85); }
+.floating-board-panel .tutorial--compact { color: #edf2fa; }

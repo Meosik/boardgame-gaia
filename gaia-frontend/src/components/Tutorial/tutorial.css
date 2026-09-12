@@ -1,0 +1,108 @@
+.tutorial { width: min(860px, 100%); margin: 0 auto; padding: 32px 24px; color: #edf2fa; }
+.tutorial--compact { width: 100%; padding: 0; }
+
+.tutorial-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.tutorial-header h1 { margin: 4px 0 0; font-size: clamp(20px, 3vw, 30px); }
+.tutorial-header a { flex-shrink: 0; text-decoration: none; }
+.tutorial-eyebrow { margin: 0; color: #73d9e5; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; }
+
+.tutorial-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.tutorial-tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.tutorial-tabs button {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.5);
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tutorial-tabs button.is-active { border-color: var(--color-accent); background: rgba(76, 29, 149, 0.55); color: #f5f3ff; }
+.tutorial-search { display: flex; align-items: center; gap: 0.4rem; }
+.tutorial-search-label { color: var(--color-muted); font-size: 0.72rem; font-weight: 700; }
+.tutorial-search input { min-width: 180px; }
+
+.tutorial-blurb { margin: 0.8rem 0 1rem; color: var(--color-muted); font-size: 0.82rem; }
+.tutorial-empty { color: var(--color-muted); }
+
+.tutorial-entries { display: grid; gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
+.tutorial-entry {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+.tutorial-entry h2 { margin: 0 0 0.3rem; font-size: 1rem; }
+.tutorial-summary { margin: 0 0 0.6rem; color: #e2e8f0; font-size: 0.86rem; font-weight: 600; }
+
+.tutorial-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 0.6rem;
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: var(--color-surface2);
+  font-size: 0.78rem;
+}
+.tutorial-facts dt { color: var(--color-muted); font-weight: 800; }
+.tutorial-facts dd { margin: 0; }
+
+.tutorial-detail { display: grid; gap: 0.25rem; margin: 0; padding-left: 1.1rem; font-size: 0.82rem; line-height: 1.55; }
+.tutorial-tip {
+  margin: 0.6rem 0 0;
+  padding: 0.45rem 0.6rem;
+  border-left: 3px solid #38bdf8;
+  border-radius: 0 6px 6px 0;
+  background: rgba(56, 189, 248, 0.08);
+  color: #cbd5e1;
+  font-size: 0.78rem;
+}
+.tutorial-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+
+/* ── In-game panel: guided first game ─────────────────────────────────────── */
+.tutorial-panel { display: grid; gap: 0.7rem; }
+.tutorial-panel-tabs { display: flex; gap: 0.35rem; }
+.tutorial-panel-tabs button {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.5);
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tutorial-panel-tabs button.is-active { border-color: var(--color-accent); background: rgba(76, 29, 149, 0.55); color: #f5f3ff; }
+
+.guided-steps { display: grid; gap: 0.6rem; }
+.guided-steps-progress { margin: 0; color: var(--color-muted); font-size: 0.74rem; font-weight: 800; }
+.guided-steps-current {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+  border-radius: 10px;
+  background: rgba(76, 29, 149, 0.28);
+}
+.guided-steps-current h3 { margin: 0 0 0.3rem; font-size: 0.86rem; }
+.guided-steps-instruction { margin: 0 0 0.35rem; font-size: 0.82rem; font-weight: 700; }
+.guided-steps-hint { margin: 0; color: #cbd5e1; font-size: 0.76rem; line-height: 1.5; }
+
+.guided-steps-list { display: grid; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
+.guided-steps-list li {
+  display: grid;
+  grid-template-columns: 1.1rem 1fr max-content;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 7px;
+  background: var(--color-surface2);
+  font-size: 0.78rem;
+}
+.guided-steps-list li.is-done { color: var(--color-muted); }
+.guided-steps-list li.is-done .guided-steps-mark { color: #4ade80; }
+.guided-steps-state { color: var(--color-muted); font-size: 0.7rem; font-weight: 700; }
+.guided-steps-note { margin: 0; color: var(--color-muted); font-size: 0.72rem; }

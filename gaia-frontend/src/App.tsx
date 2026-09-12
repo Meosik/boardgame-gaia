@@ -46,6 +46,8 @@ import { RecentActions } from './components/RecentActions';
 import { liveActionEntries, liveHighlight, turnStatus } from './liveActivity';
 import { ReplayHighlightContext } from './replay/highlight';
 import { recentActionHex, scrollBoardIntoView } from './boardScroll';
+import { TutorialPanel } from './components/Tutorial/TutorialPanel';
+import { FloatingBoardPanel } from './components/FloatingBoardPanel';
 import { FACTION_STRUCTURE_COLOR, STRUCTURE_COLOR_HEX } from './assets/structureImages';
 import { useGameStore, type FinalResult } from './store/gameStore';
 import { useRoomStore } from './store/roomStore';
@@ -258,6 +260,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
   const [sidebarTab, setSidebarTab] = useState<'info' | 'log'>('info');
   const [seenActionCount, setSeenActionCount] = useState(0);
   const [recentActionIndex, setRecentActionIndex] = useState<number | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const [rangePreviewQic, setRangePreviewQic] = useState(0);
   const [gameNotice, setGameNotice] = useState<string | null>(null);
   const [suppressTerraformOreConfirmation, setSuppressTerraformOreConfirmation] = useState(false);
@@ -1279,6 +1282,13 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
           </a>
         ))}
         <div className="game-table-top-actions">
+          {/* The same reference the lobby's 튜토리얼 page shows, as a pinned panel so the board
+              stays usable while reading it. */}
+          {!replay && (
+            <button type="button" className="game-table-help-button" onClick={() => setTutorialOpen(true)}>
+              도움말
+            </button>
+          )}
           {!replay && savedManualControl && <DevTestControls refillDisabled={mainActionLocked || !isMyActionTurn} />}
           <TopPassControl
             player={me}
@@ -1706,6 +1716,11 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
             hideFederationTechPicker
           />
         </DraggableActionPopup>
+      )}
+      {!replay && tutorialOpen && (
+        <FloatingBoardPanel title="도움말 · 따라 하기와 행동 설명" onClose={() => setTutorialOpen(false)}>
+          <TutorialPanel events={gameState.event_log} myPlayerId={myPlayerId} />
+        </FloatingBoardPanel>
       )}
       {personalBoardPlayer && (
         <PersonalBoardDrawer
