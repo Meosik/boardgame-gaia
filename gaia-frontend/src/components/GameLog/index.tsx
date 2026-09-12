@@ -3,13 +3,16 @@ import {
   FACTION_STRUCTURE_COLOR,
   STRUCTURE_COLOR_HEX,
 } from '../../assets/structureImages';
-import type { FreeActionKind, GameEvent, PlayerId, PlayerState } from '../../types/game';
+import type { BoardState, FreeActionKind, GameEvent, PlayerId, PlayerState } from '../../types/game';
+import { hexLocationLabel } from '../../hexLocation';
 import { FACTION_DISPLAY_NAMES, SPACESHIP_DISPLAY_NAMES } from '../../displayNames';
 import { ACTION_NAMES as REPLAY_ACTION_NAMES } from '../../replay/records';
 
 interface Props {
   events: GameEvent[];
   players: PlayerState[];
+  /** Turns coordinates in the log into board positions ("3번 섹터 화산 행성"). */
+  board?: BoardState | null;
   onEventSelect?: (eventIndex: number) => void;
   activeEventRange?: [number, number];
 }
@@ -79,10 +82,17 @@ function valueId(value: unknown): string {
   return typeof first === 'number' || typeof first === 'string' ? String(first) : '?';
 }
 
-function hexLabel(value: unknown): string {
-  if (typeof value === 'string') return `(${value})`;
+/** Board position in the words on the table ("3번 섹터 화산 행성"); the raw axial coordinate is the
+ * fallback for snapshots rendered without a board. */
+function hexLabel(value: unknown, board?: BoardState | null): string {
+  if (typeof value === 'string') {
+    const [q, r] = value.split(',').map(Number);
+    return Number.isFinite(q) && Number.isFinite(r) ? hexLocationLabel({ q, r }, board) : `(${value})`;
+  }
   const hex = asRecord(value);
-  return hex && typeof hex.q === 'number' && typeof hex.r === 'number' ? `(${hex.q},${hex.r})` : '(?)';
+  return hex && typeof hex.q === 'number' && typeof hex.r === 'number'
+    ? hexLocationLabel({ q: hex.q, r: hex.r }, board)
+    : '(?)';
 }
 
 function escapeRegExp(value: string): string {
@@ -136,13 +146,13 @@ function vpReason(value: unknown): string {
   return '점수 효과';
 }
 
-function formatEvent(event: GameEvent, players: PlayerState[]): string | null {
+function formatEvent(event: GameEvent, players: PlayerState[], board?: BoardState | null): string | null {
   let payload = payloadFor(event, 'ReplayDecision');
   if (payload) {
     const action = asRecord(payload.action) ?? {};
     const type = String(action.type);
     const details = [
-      action.coord != null ? hexLabel(action.coord) : '',
+      action.coord != null ? hexLabel(action.coord, board) : '',
       action.to != null ? structureLabel(action.to) : '',
       action.track != null ? TRACK_LABELS[String(action.track)] ?? String(action.track) : '',
       action.ship != null ? SPACESHIP_DISPLAY_NAMES[action.ship as keyof typeof SPACESHIP_DISPLAY_NAMES] ?? String(action.ship) : '',
@@ -204,21 +214,21 @@ function formatEvent(event: GameEvent, players: PlayerState[]): string | null {
   }
 
   payload = payloadFor(event, 'StructureBuilt');
-  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)}에 ${structureLabel(payload.kind)} 건설`;
+  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex, board)}에 ${structureLabel(payload.kind)} 건설`;
   payload = payloadFor(event, 'StructureUpgraded');
-  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)} ${structureLabel(payload.from)} → ${structureLabel(payload.to)}`;
+  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex, board)} ${structureLabel(payload.from)} → ${structureLabel(payload.to)}`;
   payload = payloadFor(event, 'StructuresSwapped');
-  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.first)}와 ${hexLabel(payload.second)}의 행성의회·광산 교환`;
+  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.first, board)}와 ${hexLabel(payload.second, board)}의 행성의회·광산 교환`;
   payload = payloadFor(event, 'FederationFormed');
   if (payload) return `${playerName(players, payload.player)}: 연방 형성 (토큰 #${valueId(payload.token)})`;
   payload = payloadFor(event, 'ResearchAdvanced');
   if (payload) return `${playerName(players, payload.player)}: ${TRACK_LABELS[String(payload.track)] ?? String(payload.track)} 연구 ${String(payload.level)}단계`;
   payload = payloadFor(event, 'LostPlanetPlaced');
-  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)}에 검은 행성 배치`;
+  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex, board)}에 검은 행성 배치`;
   payload = payloadFor(event, 'GaiaFormingStarted');
-  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)} 가이아포밍 시작`;
+  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex, board)} 가이아포밍 시작`;
   payload = payloadFor(event, 'GaiaFormingComplete');
-  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)} 가이아포밍 완료`;
+  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex, board)} 가이아포밍 완료`;
   payload = payloadFor(event, 'BoosterSelected');
   if (payload) return `${playerName(players, payload.player)}: 초기 부스터 #${valueId(payload.booster)} 선택`;
   payload = payloadFor(event, 'PlayerPassed');
@@ -234,9 +244,9 @@ function formatEvent(event: GameEvent, players: PlayerState[]): string | null {
   payload = payloadFor(event, 'ShipExplored');
   if (payload) return `${playerName(players, payload.player)}: ${spaceshipName(payload.ship_id)} 함선 탐사`;
   payload = payloadFor(event, 'AsteroidColonized');
-  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)} 소행성 식민지 건설`;
+  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex, board)} 소행성 식민지 건설`;
   payload = payloadFor(event, 'ProtoPlanetColonized');
-  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex)} 원시 행성 식민지 건설`;
+  if (payload) return `${playerName(players, payload.player)}: ${hexLabel(payload.hex, board)} 원시 행성 식민지 건설`;
   payload = payloadFor(event, 'ArtifactExamined');
   if (payload) return `${playerName(players, payload.player)}: 아티팩트 #${valueId(payload.artifact)} 조사`;
   payload = payloadFor(event, 'TechTileGained');
@@ -253,6 +263,8 @@ function formatEvent(event: GameEvent, players: PlayerState[]): string | null {
 
 interface LogEntry {
   index: number;
+  /** Actor of the grouped action, for live UI that treats own and opponents' moves differently. */
+  player: number | null;
   text: string;
   details: string[];
 }
@@ -279,7 +291,7 @@ function eventPlayer(event: GameEvent): unknown {
   return payloadFor(event, eventTag(event))?.player;
 }
 
-function makeEntry(events: GameEvent[], index: number, players: PlayerState[], action?: EventPayload): LogEntry | null {
+function makeEntry(events: GameEvent[], index: number, players: PlayerState[], action?: EventPayload, board?: BoardState | null): LogEntry | null {
   const decision = payloadFor(events[0], 'ReplayDecision');
   if (decision) {
     const changes = Array.isArray(decision.net_changes) ? decision.net_changes : [];
@@ -290,12 +302,13 @@ function makeEntry(events: GameEvent[], index: number, players: PlayerState[], a
       if (!change || !delta) return [];
       return [`${playerName(players, change.player)} 순변화: ${Object.entries(delta).map(([key, amount]) => `${labels[key] ?? key} ${Number(amount) > 0 ? '+' : ''}${String(amount)}`).join(', ')}`];
     });
-    return { index, text: formatEvent(events[0], players) ?? 'AI 행동', details: [
+    return { index, player: typeof decision.player === 'number' ? decision.player : null,
+      text: formatEvent(events[0], players, board) ?? 'AI 행동', details: [
       '기록된 상태 간 순변화입니다. 자동 수입·라운드 전환·최종 정산이 포함될 수 있습니다.',
       ...details, `선택 데이터: ${JSON.stringify(decision.action)}`,
     ] };
   }
-  const formatted = events.map(event => ({ event, text: formatEvent(event, players) }))
+  const formatted = events.map(event => ({ event, text: formatEvent(event, players, board) }))
     .filter((item): item is { event: GameEvent; text: string } => item.text !== null);
   const primary = formatted.find(({ event }) => !DETAIL_TAGS.has(eventTag(event)));
   const fallback = action
@@ -303,12 +316,14 @@ function makeEntry(events: GameEvent[], index: number, players: PlayerState[], a
     : formatted[0]?.text;
   const text = primary?.text ?? fallback;
   if (!text) return null;
-  return { index, text, details: formatted.filter(item => item !== primary && (primary || action)).map(item => item.text) };
+  const actor = action?.player ?? eventPlayer(primary?.event ?? events[0]);
+  return { index, player: typeof actor === 'number' ? actor : null, text,
+    details: formatted.filter(item => item !== primary && (primary || action)).map(item => item.text) };
 }
 
 // Old snapshots have no action boundaries. Only join recognizable adjacent patterns;
 // orphan costs/rewards remain visible rather than being assigned to a different action.
-function legacyEntries(events: GameEvent[], offset: number, players: PlayerState[]): LogEntry[] {
+function legacyEntries(events: GameEvent[], offset: number, players: PlayerState[], board?: BoardState | null): LogEntry[] {
   const result: LogEntry[] = [];
   for (let i = 0; i < events.length; i += 1) {
     const start = i;
@@ -323,7 +338,7 @@ function legacyEntries(events: GameEvent[], offset: number, players: PlayerState
       batch.push(next);
       i += 1;
     }
-    if (!DETAIL_TAGS.has(eventTag(primary)) && formatEvent(primary, players) !== null) {
+    if (!DETAIL_TAGS.has(eventTag(primary)) && formatEvent(primary, players, board) !== null) {
       const player = eventPlayer(primary);
       while (player !== undefined && i + 1 < events.length && eventPlayer(events[i + 1]) === player) {
         const following = events[i + 1];
@@ -334,13 +349,13 @@ function legacyEntries(events: GameEvent[], offset: number, players: PlayerState
         i += 1;
       }
     }
-    const entry = makeEntry(batch, offset + start, players);
+    const entry = makeEntry(batch, offset + start, players, undefined, board);
     if (entry) result.push(entry);
   }
   return result;
 }
 
-function groupedEntries(events: GameEvent[], players: PlayerState[], unlimited = false): LogEntry[] {
+function groupedEntries(events: GameEvent[], players: PlayerState[], unlimited = false, board?: BoardState | null): LogEntry[] {
   const entries: LogEntry[] = [];
   let pendingStart = 0;
   events.forEach((event, index) => {
@@ -349,13 +364,25 @@ function groupedEntries(events: GameEvent[], players: PlayerState[], unlimited =
     const count = marker.event_count;
     if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0 || count > index - pendingStart) return;
     const start = index - count;
-    entries.push(...legacyEntries(events.slice(pendingStart, start), pendingStart, players));
-    const entry = makeEntry(events.slice(start, index), start, players, marker);
+    entries.push(...legacyEntries(events.slice(pendingStart, start), pendingStart, players, board));
+    const entry = makeEntry(events.slice(start, index), start, players, marker, board);
     if (entry) entries.push(entry);
     pendingStart = index + 1;
   });
-  entries.push(...legacyEntries(events.slice(pendingStart), pendingStart, players));
+  entries.push(...legacyEntries(events.slice(pendingStart), pendingStart, players, board));
   return unlimited ? entries : entries.slice(-30).reverse();
+}
+
+export type GameLogEntry = LogEntry;
+
+/** Same grouping the log panel shows, in play order and unabridged, for the live activity UI
+ * (toast, recent-action list) so both describe an action with one wording. */
+export function gameLogEntries(
+  events: GameEvent[],
+  players: PlayerState[],
+  board?: BoardState | null,
+): GameLogEntry[] {
+  return groupedEntries(events, players, true, board);
 }
 
 function LogRow({ entry, players, onEventSelect, active }: { entry: LogEntry; players: PlayerState[]; onEventSelect?: (index: number) => void; active?: boolean }) {
@@ -382,8 +409,8 @@ function LogRow({ entry, players, onEventSelect, active }: { entry: LogEntry; pl
   );
 }
 
-export function GameLog({ events, players, onEventSelect, activeEventRange }: Props) {
-  const entries = groupedEntries(events, players, !!onEventSelect);
+export function GameLog({ events, players, board, onEventSelect, activeEventRange }: Props) {
+  const entries = groupedEntries(events, players, !!onEventSelect, board);
   return (
     <section className="game-log" aria-label="게임 로그">
       <h3 className="game-log-title">게임 로그</h3>

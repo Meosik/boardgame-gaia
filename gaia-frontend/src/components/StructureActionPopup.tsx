@@ -6,6 +6,7 @@ import {
 import { standardTechTileImageSrc } from '../assets/techTileImages';
 import { ResourceTokens } from './ResourceTokens';
 import { axialDistance } from './GameBoard/hex-utils';
+import { hexLocationLabel } from '../hexLocation';
 import type { BoardState, FactionId, HexCoord, PlayerState, StructureType } from '../types/game';
 
 export type StructurePopupMode =
@@ -161,7 +162,7 @@ export function StructureActionPopup({
 
       {mode.kind === 'structure' && (
         <>
-          <div className="structure-action-popup__eyebrow">{coord.q}, {coord.r}</div>
+          <div className="structure-action-popup__eyebrow">{hexLocationLabel(coord, board)}</div>
           <div className="structure-action-popup__choices">
             {options.map(({ label, to }) => {
               const asset = structureAssetName(to);
