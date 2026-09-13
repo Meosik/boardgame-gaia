@@ -5549,3 +5549,20 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   height: 52px;
   flex: 0 0 52px;
 }
+
+/* ── Waiting room: leaving and host removal ──────────────────────────────── */
+/* Both sit next to the controls they belong with: leaving under the ready
+   button, removal on the row of the player it removes. */
+.waiting-room-leave { width: 100%; margin-top: 0.5rem; }
+.lobby-player-kick {
+  flex: 0 0 auto;
+  padding: 0.15rem 0.5rem;
+  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-border));
+  color: #fecaca;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+.lobby-player-kick:hover:not(:disabled) {
+  border-color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 22%, transparent);
+}

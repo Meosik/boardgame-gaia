@@ -28,6 +28,11 @@ pub const SCHEMA_HASH: Digest32 = Digest32::from_bytes([0u8; 32]);
 pub enum ClientCommand {
     /// Toggle this player's lobby ready state.
     PlayerReady { ready: bool },
+    /// Leave a lobby room, freeing the seat.
+    LeaveRoom,
+    /// Host-only: remove another player from a lobby room. Removal is not a ban — the freed
+    /// seat can be taken again, by the same person or anyone else.
+    KickPlayer { player_id: PlayerId },
     /// Host-only: regenerate the randomised game setup.
     RegenerateSetup { seed: Option<String> },
     /// Faction choice during the setup phase.
@@ -280,6 +285,21 @@ mod tests {
             json!({ "type": "undo_free_action" }),
             json!({ "type": "request_turn_undo" }),
             json!({ "type": "respond_turn_undo", "approve": true }),
+        ] {
+            let mut value = valid_command_frame();
+            value["command"] = command;
+            assert!(matches!(
+                decode_client_frame(&value.to_string()),
+                Ok(ClientFrame::Command(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn lobby_membership_commands_decode_through_the_command_envelope() {
+        for command in [
+            json!({ "type": "leave_room" }),
+            json!({ "type": "kick_player", "player_id": 3 }),
         ] {
             let mut value = valid_command_frame();
             value["command"] = command;

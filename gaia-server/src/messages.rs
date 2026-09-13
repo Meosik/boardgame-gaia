@@ -15,6 +15,15 @@ pub struct LobbyPlayer {
     pub ready: bool,
 }
 
+/// Why a seat disappeared from the roster, so a client can tell being removed by the host from
+/// someone else simply leaving.
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RemovalReason {
+    Left,
+    Kicked,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ServerMessage {
@@ -33,6 +42,13 @@ pub enum ServerMessage {
         player_id: PlayerId,
         nickname: String,
         player_count: usize,
+    },
+    /// A player left the lobby or was removed by the host — broadcast to everyone still in the
+    /// room, including the player it names, whose client uses it to return to the room list.
+    /// A `LobbyState` with the new roster follows, unless the room emptied and was dropped.
+    PlayerRemoved {
+        player_id: PlayerId,
+        reason: RemovalReason,
     },
     /// Full lobby player state — broadcast whenever membership or readiness changes.
     LobbyState {

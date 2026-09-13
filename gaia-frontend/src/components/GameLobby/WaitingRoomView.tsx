@@ -4,15 +4,18 @@ import { shallow } from 'zustand/shallow';
 import { useRoomStore } from '../../store/roomStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { factionBoardImageSrc } from '../../assets/factionBoardImages';
-import { isGameState } from '../../types/game';
+import { isGameState, type PlayerId } from '../../types/game';
 import { factionDisplayName } from '../../displayNames';
 
 interface Props {
   onGameStart: () => void;
   onFactionSelect: () => void;
+  /** Called once the server confirms this seat is gone — never straight from the button, so the
+   *  view only leaves after the seat is actually freed. */
+  onLeaveRoom: () => void;
 }
 
-export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
+export function WaitingRoomView({ onGameStart, onFactionSelect, onLeaveRoom }: Props) {
   const {
     roomCode,
     playerId,
@@ -83,6 +86,11 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
         case 'player_joined':
           actions.setRoomInfo({ playerCount: message.player_count });
           break;
+        case 'player_removed':
+          // Broadcast to the whole room; only the seat it names leaves. Everyone else gets the
+          // new roster from the `lobby_state` that follows.
+          if (message.player_id === playerId) onLeaveRoom();
+          break;
         case 'lobby_state':
           actions.setRoomInfo({
             lobbyPlayers: message.players,
@@ -149,6 +157,14 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
     void actions.regenerateSetup();
   }
 
+  function handleLeaveRoom() {
+    sendCommand({ type: 'leave_room' }, revision);
+  }
+
+  function handleKick(target: PlayerId) {
+    sendCommand({ type: 'kick_player', player_id: target }, revision);
+  }
+
   return (
     <SetupBoardLayout previewBoard={previewBoard} gameSetup={gameSetup}>
           <h2>대기실</h2>
@@ -181,6 +197,16 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
                 <span className="ready-state">
                   {player.ready ? '준비됨 ✓' : '대기 중'}
                 </span>
+                {isHost && player.player_id !== playerId && (
+                  <button
+                    type="button"
+                    className="btn btn-small btn-secondary lobby-player-kick"
+                    onClick={() => handleKick(player.player_id)}
+                    disabled={!isConnected}
+                  >
+                    내보내기
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -230,6 +256,14 @@ export function WaitingRoomView({ onGameStart, onFactionSelect }: Props) {
             disabled={!isConnected}
           >
             {isReady ? '준비 취소' : '준비 완료'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary waiting-room-leave"
+            onClick={handleLeaveRoom}
+            disabled={!isConnected}
+          >
+            방 나가기
           </button>
           <div className="waiting-hint">
             {playerCount < 4

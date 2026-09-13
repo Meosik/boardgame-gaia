@@ -5,7 +5,7 @@ import { WaitingRoomView } from './WaitingRoomView';
 import { FactionSelectView } from './FactionSelectView';
 import { useRoomStore } from '../../store/roomStore';
 
-import { readRecentRoom, rememberRoom } from '../../store/recentRoom';
+import { forgetRecentRoom, readRecentRoom, rememberRoom } from '../../store/recentRoom';
 
 type LobbyView = 'lobby' | 'create' | 'waiting' | 'faction';
 
@@ -66,6 +66,14 @@ export function GameLobby({ onGameStart, manualControl = false }: Props) {
         <WaitingRoomView
           onGameStart={onGameStart}
           onFactionSelect={() => navigate('faction')}
+          onLeaveRoom={() => {
+            // The seat is already freed server-side; drop the saved session too, or 이어하기
+            // would offer to walk straight back into a room this player just left.
+            const store = useRoomStore.getState();
+            if (store.roomCode) forgetRecentRoom(store.roomCode);
+            store.actions.reset();
+            navigate('lobby');
+          }}
         />
       );
     case 'faction':

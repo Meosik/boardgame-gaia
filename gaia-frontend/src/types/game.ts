@@ -679,6 +679,8 @@ export interface LobbyState {
 
 export type ClientCommand =
   | { type: 'player_ready'; ready: boolean }
+  | { type: 'leave_room' }
+  | { type: 'kick_player'; player_id: PlayerId }
   | { type: 'regenerate_setup'; seed?: string }
   | { type: 'place_setup_action'; action: SetupAction }
   | { type: 'place_game_action'; action: GameAction }
@@ -774,6 +776,7 @@ export type LobbyMessage =
       revision: number;
     }
   | { type: 'player_joined'; player_id: PlayerId; nickname: string; player_count: number }
+  | { type: 'player_removed'; player_id: PlayerId; reason: 'left' | 'kicked' }
   | ({ type: 'lobby_state' } & LobbyState)
   | { type: 'round_ended'; round: number; scores: [PlayerId, number][] }
   | { type: 'game_ended'; final_scores: [PlayerId, number][]; winners: PlayerId[] }

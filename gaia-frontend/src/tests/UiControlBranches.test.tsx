@@ -217,7 +217,7 @@ describe('WaitingRoomView lobby controls and overlays', () => {
   it('sends ready toggle commands and host reroll succeeds when nobody is ready', async () => {
     const { regenerateSetup } = seedWaitingRoom();
 
-    render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />);
+    render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: '준비 완료' }));
     expect(socket.sendCommand).toHaveBeenCalledWith({ type: 'player_ready', ready: true }, 7);
@@ -234,7 +234,7 @@ describe('WaitingRoomView lobby controls and overlays', () => {
       ],
     });
     const { rerender } = render(
-      <WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />,
+      <WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: '랜더마이저 재설정' }));
@@ -244,9 +244,65 @@ describe('WaitingRoomView lobby controls and overlays', () => {
     act(() => {
       seedWaitingRoom({ playerId: 1, nickname: 'P1', hostPlayerId: 0 });
     });
-    rerender(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />);
+    rerender(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />);
 
     expect(screen.queryByRole('button', { name: '랜더마이저 재설정' })).not.toBeInTheDocument();
+  });
+
+  it('leaves through the server rather than locally', () => {
+    seedWaitingRoom();
+    render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '방 나가기' }));
+
+    expect(socket.sendCommand).toHaveBeenCalledWith({ type: 'leave_room' }, 7);
+  });
+
+  it('offers removal to the host for every seat but their own, and to nobody else', () => {
+    seedWaitingRoom();
+    const { rerender } = render(
+      <WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />,
+    );
+
+    // Four seats, so the host sees three buttons — never one on their own row.
+    const kicks = screen.getAllByRole('button', { name: '내보내기' });
+    expect(kicks).toHaveLength(3);
+    fireEvent.click(kicks[0]);
+    expect(socket.sendCommand).toHaveBeenCalledWith({ type: 'kick_player', player_id: 1 }, 7);
+
+    act(() => { seedWaitingRoom({ playerId: 1, nickname: 'P1', hostPlayerId: 0 }); });
+    rerender(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: '내보내기' })).not.toBeInTheDocument();
+  });
+
+  it('leaves the room only when a removal names this seat', async () => {
+    seedWaitingRoom();
+    const onLeaveRoom = vi.fn();
+    socket.messages = [{ type: 'player_removed', player_id: 1, reason: 'kicked' }];
+
+    await act(async () => {
+      render(
+        <WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={onLeaveRoom} />,
+      );
+    });
+
+    // Everyone in the room gets the broadcast; only the seat it names acts on it.
+    expect(onLeaveRoom).not.toHaveBeenCalled();
+  });
+
+  it('returns to the room list when the removal names this seat', async () => {
+    seedWaitingRoom();
+    const onLeaveRoom = vi.fn();
+    socket.messages = [{ type: 'player_removed', player_id: 0, reason: 'kicked' }];
+
+    await act(async () => {
+      render(
+        <WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={onLeaveRoom} />,
+      );
+    });
+
+    expect(onLeaveRoom).toHaveBeenCalledOnce();
   });
 
   it('shows command rejection errors and resyncs revision', async () => {
@@ -263,7 +319,7 @@ describe('WaitingRoomView lobby controls and overlays', () => {
     ];
 
     await act(async () => {
-      render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />);
+      render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />);
     });
 
     expect(await screen.findByText('stale revision')).toBeInTheDocument();
@@ -272,7 +328,7 @@ describe('WaitingRoomView lobby controls and overlays', () => {
 
   it('opens and closes scoring, booster, and personal-board panels from the top bar', async () => {
     seedWaitingRoom();
-    render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />);
+    render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: '라운드·게임 종료 목표' }));
     expect(screen.getByText('Mock scoring board content')).toBeInTheDocument();

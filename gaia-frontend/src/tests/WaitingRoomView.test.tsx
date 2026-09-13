@@ -107,7 +107,7 @@ describe('WaitingRoomView message-batch handling', () => {
 
     const onFactionSelect = vi.fn();
     await act(async () => {
-      render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={onFactionSelect} />);
+      render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={onFactionSelect} onLeaveRoom={vi.fn()} />);
     });
 
     expect(onFactionSelect).toHaveBeenCalledOnce();
@@ -129,7 +129,7 @@ describe('WaitingRoomView message-batch handling', () => {
 
     const onFactionSelect = vi.fn();
     await act(async () => {
-      render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={onFactionSelect} />);
+      render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={onFactionSelect} onLeaveRoom={vi.fn()} />);
     });
 
     expect(onFactionSelect).not.toHaveBeenCalled();
@@ -141,7 +141,7 @@ describe('WaitingRoomView board preview', () => {
   it('fetches the preview board for the current seed on mount', async () => {
     let container!: HTMLElement;
     await act(async () => {
-      ({ container } = render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />));
+      ({ container } = render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />));
     });
 
     await waitFor(() => expect(api.getPreviewBoard).toHaveBeenCalledWith('BID001'));
@@ -166,7 +166,7 @@ describe('WaitingRoomView board preview', () => {
 
   it('re-fetches when the seed changes (reroll)', async () => {
     await act(async () => {
-      render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />);
+      render(<WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />);
     });
     await waitFor(() => expect(api.getPreviewBoard).toHaveBeenCalledTimes(1));
 
@@ -179,7 +179,7 @@ describe('WaitingRoomView board preview', () => {
 
   it('keeps ship boards docked and opens the personal board as a non-modal drawer', async () => {
     const { container } = render(
-      <WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} />,
+      <WaitingRoomView onGameStart={vi.fn()} onFactionSelect={vi.fn()} onLeaveRoom={vi.fn()} />,
     );
     await waitFor(() => expect(api.getPreviewBoard).toHaveBeenCalled());
 

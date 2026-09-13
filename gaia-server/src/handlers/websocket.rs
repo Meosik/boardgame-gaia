@@ -13,7 +13,7 @@ use gaia_protocol::Revision;
 use crate::{
     coordinator::{self, CommandResult},
     messages::LobbyPlayer,
-    messages::{OutboundMessage, ServerMessage},
+    messages::{OutboundMessage, RemovalReason, ServerMessage},
     protocol::{self, ClientCommand, ClientFrame},
     room::manager::{Room, RoomState},
     services::{
@@ -312,6 +312,30 @@ async fn handle_client_message(
             )
             .await
         }
+        ClientCommand::LeaveRoom => {
+            handle_remove_player(
+                app,
+                room_code,
+                player_id,
+                player_id,
+                RemovalReason::Left,
+                command_id.clone(),
+                expected_revision,
+            )
+            .await
+        }
+        ClientCommand::KickPlayer { player_id: target } => {
+            handle_remove_player(
+                app,
+                room_code,
+                player_id,
+                target,
+                RemovalReason::Kicked,
+                command_id.clone(),
+                expected_revision,
+            )
+            .await
+        }
         ClientCommand::RegenerateSetup { seed } => {
             GameSetupService::regenerate_setup(
                 app,
@@ -505,6 +529,73 @@ async fn handle_player_ready(
     };
     if let Some(lobby_state) = lobby_state {
         app.event_bus.broadcast(room_code, lobby_state).await;
+    }
+
+    Ok(outcome)
+}
+
+/// Frees a seat — the same operation whether someone left or the host removed them, so both
+/// commands share it and differ only in who may ask and what the broadcast says.
+///
+/// Lobby-only: a started room's roster is rebuilt from its snapshot on rehydrate, so a mid-game
+/// removal would reappear on the next load. Leaving mid-game stays the existing
+/// disconnect/`RoomPaused` path, which keeps the seat for the player to come back to.
+async fn handle_remove_player(
+    app: &AppState,
+    room_code: &str,
+    actor: u8,
+    target: u8,
+    reason: RemovalReason,
+    command_id: gaia_protocol::CommandId,
+    expected_revision: Revision,
+) -> CommandResult {
+    let outcome =
+        coordinator::apply_command(app, room_code, command_id, expected_revision, |room| {
+            if room.state != RoomState::Lobby {
+                return Err(RuleError::WrongPhase);
+            }
+            if actor != target && !room.is_host(actor) {
+                return Err(RuleError::ActionNotAllowed(
+                    "only the host can remove another player".into(),
+                ));
+            }
+            room.remove_player(target)
+                .map_err(|_| RuleError::ActionNotAllowed("player not found".into()))?;
+            Ok(Vec::new())
+        })
+        .await?;
+
+    coordinator::broadcast_snapshot(app, room_code, outcome.revision).await;
+    app.event_bus
+        .broadcast(
+            room_code,
+            ServerMessage::PlayerRemoved {
+                player_id: target,
+                reason,
+            },
+        )
+        .await;
+
+    // Nobody left to play, and no snapshot to rehydrate a lobby room from, so drop it rather
+    // than leaving an empty row in the browser for someone to walk into.
+    let emptied = {
+        let mut rooms = app.rooms.write().await;
+        match rooms.get_room(room_code) {
+            Some(room) if room.player_count() == 0 => {
+                rooms.remove_room(room_code);
+                true
+            }
+            _ => false,
+        }
+    };
+    if !emptied {
+        let lobby_state = {
+            let rooms = app.rooms.read().await;
+            rooms.get_room(room_code).map(lobby_state_message)
+        };
+        if let Some(lobby_state) = lobby_state {
+            app.event_bus.broadcast(room_code, lobby_state).await;
+        }
     }
 
     Ok(outcome)

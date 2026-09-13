@@ -129,6 +129,27 @@ impl Room {
         Ok(())
     }
 
+    /// Frees a seat, handing the host role to the next remaining player. Returns `true` when the
+    /// room is left empty, so the caller can drop it.
+    ///
+    /// Only meaningful before the game starts. A started room's roster is rebuilt from its
+    /// game-state snapshot by `AppState::ensure_room_loaded`, so a mid-game removal would simply
+    /// reappear on the next load; the command layer keeps this to `RoomState::Lobby`.
+    pub fn remove_player(&mut self, player_id: PlayerId) -> ServerResult<bool> {
+        if !self.players.iter().any(|(id, _, _)| *id == player_id) {
+            return Err(ServerError::PlayerNotFound);
+        }
+        self.players.retain(|(id, _, _)| *id != player_id);
+        self.connected.remove(&player_id);
+        if self.host_player == player_id {
+            if let Some((next, _, _)) = self.players.first() {
+                self.host_player = *next;
+            }
+        }
+        self.recompute_paused();
+        Ok(self.players.is_empty())
+    }
+
     pub fn all_ready(&self) -> bool {
         !self.players.is_empty() && self.players.iter().all(|(_, _, ready)| *ready)
     }
@@ -444,5 +465,58 @@ mod tests {
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
 
         assert!(rooms.join_room(&code, "Guest", Some("anything")).is_ok());
+    }
+
+    #[test]
+    fn leaving_frees_the_seat_and_hands_the_host_role_to_the_next_player() {
+        let mut rooms = RoomManager::new();
+        let (code, host) = rooms
+            .create_room("Host", Some("leave-host".to_string()), SetupMode::Bidding, None, None)
+            .unwrap_or_else(|error| panic!("room should be created: {error}"));
+        let guest = rooms
+            .join_room(&code, "Guest", None)
+            .unwrap_or_else(|error| panic!("guest should join: {error}"));
+        let room = rooms.get_room_mut(&code).unwrap_or_else(|| panic!("room should exist"));
+
+        let emptied = room
+            .remove_player(host)
+            .unwrap_or_else(|error| panic!("the host should be removable: {error}"));
+
+        assert!(!emptied, "a room with someone still in it is not empty");
+        assert_eq!(room.player_count(), 1);
+        assert_eq!(room.host_player, guest, "the remaining player becomes the host");
+        // The freed seat is joinable again — a removed player is not banned.
+        assert!(rooms.join_room(&code, "Host", None).is_ok());
+    }
+
+    #[test]
+    fn removing_the_last_player_reports_the_room_as_empty() {
+        let mut rooms = RoomManager::new();
+        let (code, host) = rooms
+            .create_room("Host", Some("leave-last".to_string()), SetupMode::Bidding, None, None)
+            .unwrap_or_else(|error| panic!("room should be created: {error}"));
+        let room = rooms.get_room_mut(&code).unwrap_or_else(|| panic!("room should exist"));
+
+        let emptied = room
+            .remove_player(host)
+            .unwrap_or_else(|error| panic!("the host should be removable: {error}"));
+
+        assert!(emptied, "the caller needs to know the room can be dropped");
+        assert_eq!(room.player_count(), 0);
+    }
+
+    #[test]
+    fn removing_someone_who_is_not_in_the_room_is_an_error() {
+        let mut rooms = RoomManager::new();
+        let (code, host) = rooms
+            .create_room("Host", Some("leave-absent".to_string()), SetupMode::Bidding, None, None)
+            .unwrap_or_else(|error| panic!("room should be created: {error}"));
+        let room = rooms.get_room_mut(&code).unwrap_or_else(|| panic!("room should exist"));
+
+        assert!(matches!(
+            room.remove_player(host.wrapping_add(9)),
+            Err(crate::error::ServerError::PlayerNotFound)
+        ));
+        assert_eq!(room.player_count(), 1, "a failed removal changes nothing");
     }
 }

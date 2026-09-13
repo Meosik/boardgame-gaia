@@ -12,7 +12,8 @@ use axum_test::{TestServer, TestWebSocket};
 use serde_json::{json, Value};
 
 use super::harness::{
-    next_command_id, receive_until, send_command_and_await_accept, spawn_test_app, RoomCleanupGuard,
+    command_msg, next_command_id, receive_until, send_command_and_await_accept, spawn_test_app,
+    RoomCleanupGuard,
 };
 
 struct CreatedRoom {
@@ -408,6 +409,81 @@ async fn regenerate_setup_covers_host_non_host_and_invalid_session() {
         .await;
     invalid.assert_status(StatusCode::UNAUTHORIZED);
     assert_error(invalid.json::<Value>(), "INVALID_SESSION");
+}
+
+#[tokio::test]
+#[ignore = "requires DATABASE_URL"]
+async fn leaving_frees_the_seat_hands_over_the_host_role_and_drops_an_empty_room() {
+    let server = spawn_test_app().await;
+    let created = create_room(&server, "Host", Some("sequential")).await;
+    let _cleanup = RoomCleanupGuard::new(created.code.clone());
+    let guest = join_room(&server, &created.code, "Guest").await;
+
+    let mut host_ws =
+        join_existing_player_ws(&server, &created.code, "Host", &created.host_token).await;
+    let mut guest_ws =
+        join_existing_player_ws(&server, &created.code, &guest.nickname, &guest.token).await;
+
+    // Removing someone else is the host's alone; a guest asking is rejected without effect.
+    guest_ws
+        .ws
+        .send_json(&command_msg(
+            &created.code,
+            "kick-forbidden",
+            0,
+            json!({ "type": "kick_player", "player_id": created.host_id }),
+        ))
+        .await;
+    let rejected = receive_until(&mut guest_ws.ws, "command_rejected").await;
+    assert_eq!(
+        rejected["rejection"]["code"].as_str(),
+        Some("ACTION_NOT_ALLOWED"),
+        "a non-host kick should be refused: {rejected}"
+    );
+
+    // The host leaves; the seat is freed and the remaining player inherits the room.
+    let revision = send_command_and_await_accept(
+        &mut host_ws.ws,
+        &created.code,
+        "host-leaves",
+        0,
+        json!({ "type": "leave_room" }),
+    )
+    .await;
+    let removed = receive_until(&mut guest_ws.ws, "player_removed").await;
+    assert_eq!(removed["player_id"].as_u64(), Some(created.host_id));
+    assert_eq!(removed["reason"].as_str(), Some("left"));
+
+    let room = server.get(&format!("/api/rooms/{}", created.code)).await;
+    room.assert_status_ok();
+    let body = room.json::<Value>();
+    assert_eq!(body["player_count"].as_u64(), Some(1));
+    assert_eq!(
+        body["host_player_id"].as_u64(),
+        Some(guest.id),
+        "the remaining player becomes the host: {body}"
+    );
+
+    // The last player out takes the room off the browser rather than leaving an empty row.
+    send_command_and_await_accept(
+        &mut guest_ws.ws,
+        &created.code,
+        "guest-leaves",
+        revision,
+        json!({ "type": "leave_room" }),
+    )
+    .await;
+    let listed = server.get("/api/rooms").await;
+    listed.assert_status_ok();
+    assert!(
+        !listed
+            .json::<Value>()
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|room| room["code"].as_str() == Some(created.code.as_str())),
+        "an emptied room should not stay in the room list"
+    );
 }
 
 #[tokio::test]
