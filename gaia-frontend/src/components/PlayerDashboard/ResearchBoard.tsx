@@ -143,9 +143,22 @@ export function ResearchBoard({
   // overlay tile. This spot has no limit"). Without drawing them the pieces just vanish from the
   // game with nothing to show where they went. They fan across the tile's right-hand area — the
   // one the tile's own red arrow points into.
-  const spentGaiaformers = active.flatMap((player) =>
-    Array.from({ length: player.resources.spent_gaia_formers }, (_, index) => ({ player, index })),
-  );
+  // Deployed ones are elsewhere on the table — each sits on the planet it is transforming — but
+  // the engine records only a count, with no hex, so there is nowhere else to draw them. Parking
+  // them here at least answers "how many of mine are out"; they stay visually distinct from spent
+  // ones, which are gone for good, so the tile does not imply these are lost too.
+  const parkedGaiaformers = active.flatMap((player) => [
+    ...Array.from({ length: player.resources.spent_gaia_formers }, (_, index) => ({
+      player,
+      index,
+      state: 'spent' as const,
+    })),
+    ...Array.from({ length: player.gaiaformers_deployed }, (_, index) => ({
+      player,
+      index,
+      state: 'deployed' as const,
+    })),
+  ]);
 
   return (
     <section className="research-board" aria-label="연구판">
@@ -163,14 +176,17 @@ export function ResearchBoard({
           src={qicOverlayImageSrc}
           alt={`${LOST_FLEET_DISPLAY_NAME} 식민화 오버레이 — 기존 정보 큐브 액션 3개 폐쇄`}
         />
-        {spentGaiaformers.map(({ player, index }, position) => {
+        {parkedGaiaformers.map(({ player, index, state }, position) => {
           const src = structureImageSrc(FACTION_STRUCTURE_COLOR[player.faction!], 'gaiaformer');
           if (!src) return null;
-          const tooltip = `${player.nickname} · ${factionDisplayName(player.faction)} · 소행성에 쓴 가이아포머`;
+          const what = state === 'spent'
+            ? '소행성에 쓴 가이아포머'
+            : '가이아 프로젝트 중인 가이아포머';
+          const tooltip = `${player.nickname} · ${factionDisplayName(player.faction)} · ${what}`;
           return (
             <img
-              key={`spent-gaiaformer-${player.player_id}-${index}`}
-              className="research-board-spent-gaiaformer"
+              key={`${state}-gaiaformer-${player.player_id}-${index}`}
+              className={`research-board-spent-gaiaformer research-board-spent-gaiaformer--${state}`}
               style={{
                 left: `${88.7 + (position % 5) * 2.05}%`,
                 top: `${92.3 + Math.floor(position / 5) * 3.2}%`,

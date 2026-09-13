@@ -5577,3 +5577,8 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   filter: drop-shadow(0 1px 2px #000);
   pointer-events: none;
 }
+
+/* Spent Gaiaformers are out of the game; deployed ones are only away until the next Gaia phase.
+   Same spot, different weight, so the tile does not read as if both were lost. */
+.research-board-spent-gaiaformer--spent { opacity: 0.55; filter: grayscale(0.5) drop-shadow(0 1px 2px #000); }
+.research-board-spent-gaiaformer--deployed { outline: 1px solid rgba(125, 211, 252, 0.9); outline-offset: 1px; border-radius: 50%; }

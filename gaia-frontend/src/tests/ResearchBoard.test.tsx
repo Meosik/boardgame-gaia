@@ -106,6 +106,14 @@ describe('ResearchBoard', () => {
     expect(screen.queryByAltText(/^P2 .*소행성에 쓴 가이아포머/)).not.toBeInTheDocument();
   });
 
+  it('marks a deployed Gaiaformer as away on a project, not as spent', () => {
+    render(<ResearchBoard players={[mockPlayer({ gaiaformers_deployed: 2 })]} board={board} />);
+
+    // Deployed ones come back at the next Gaia phase, so they must not read as gone for good.
+    expect(screen.getAllByAltText(/가이아 프로젝트 중인 가이아포머/)).toHaveLength(2);
+    expect(screen.queryByAltText(/소행성에 쓴 가이아포머/)).not.toBeInTheDocument();
+  });
+
   it('removes the reserved Terraforming reward after it has been claimed', () => {
     render(
       <ResearchBoard
