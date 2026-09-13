@@ -67,6 +67,45 @@ describe('ResearchBoard', () => {
     expect(screen.getByAltText('항법 5레벨 검은 행성 토큰')).toBeInTheDocument();
   });
 
+  it('parks each spent Gaiaformer on the overlay tile, and nothing for a player who has spent none', () => {
+    const spender = (
+      player_id: number,
+      nickname: string,
+      faction: PlayerState['faction'],
+      spent: number,
+    ) =>
+      mockPlayer({
+        player_id,
+        nickname,
+        faction,
+        resources: {
+          ore: 0,
+          credits: 0,
+          knowledge: 0,
+          qic: 0,
+          power: { bowl1: 0, bowl2: 0, bowl3: 0, gaia_bowl: 0, gaia_forming: 0 },
+          spent_gaia_formers: spent,
+        },
+      });
+
+    render(
+      <ResearchBoard
+        players={[
+          spender(0, 'P0', 'Terrans', 2),
+          spender(1, 'P1', 'Xenos', 1),
+          spender(2, 'P2', 'Ambas', 0),
+        ]}
+        board={board}
+      />,
+    );
+
+    // A Gaiaformer spent on an Asteroid is out of the game, so the count only ever grows —
+    // one piece per spend, in the owner's colour.
+    expect(screen.getAllByAltText(/소행성에 쓴 가이아포머/)).toHaveLength(3);
+    expect(screen.getAllByAltText(/^P0 .*소행성에 쓴 가이아포머/)).toHaveLength(2);
+    expect(screen.queryByAltText(/^P2 .*소행성에 쓴 가이아포머/)).not.toBeInTheDocument();
+  });
+
   it('removes the reserved Terraforming reward after it has been claimed', () => {
     render(
       <ResearchBoard

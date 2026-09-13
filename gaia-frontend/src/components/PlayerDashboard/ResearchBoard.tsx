@@ -10,6 +10,7 @@ import lostPlanetImageSrc from '../../assets/boards/normalized/lost_planet.webp'
 import { factionDisplayName, LOST_FLEET_DISPLAY_NAME } from '../../displayNames';
 import qicOverlayImageSrc from '../../assets/boards/normalized/lost_fleet_qic_board_overlay.webp';
 import { POWER_ACTION_SPACES } from '../boardActionSpaces';
+import { FACTION_STRUCTURE_COLOR, structureImageSrc } from '../../assets/structureImages';
 import { GamePieceIcon } from '../GamePieceIcon';
 import type {
   PlayerState,
@@ -136,6 +137,16 @@ export function ResearchBoard({
   const active = players.filter((p) => p.faction);
   const lostPlanetAvailable = !active.some((player) => player.research_tracks.navigation >= 5);
 
+  // A Gaiaformer spent colonizing an Asteroid is gone for the rest of the game, and on the table
+  // it is parked on this overlay tile rather than on the asteroid (expansion rulebook p.10,
+  // "Do not place that Gaiaformer on the asteroid, but instead on the available spot on the
+  // overlay tile. This spot has no limit"). Without drawing them the pieces just vanish from the
+  // game with nothing to show where they went. They fan across the tile's right-hand area — the
+  // one the tile's own red arrow points into.
+  const spentGaiaformers = active.flatMap((player) =>
+    Array.from({ length: player.resources.spent_gaia_formers }, (_, index) => ({ player, index })),
+  );
+
   return (
     <section className="research-board" aria-label="연구판">
       <div className="research-board-image-wrap">
@@ -152,6 +163,24 @@ export function ResearchBoard({
           src={qicOverlayImageSrc}
           alt={`${LOST_FLEET_DISPLAY_NAME} 식민화 오버레이 — 기존 정보 큐브 액션 3개 폐쇄`}
         />
+        {spentGaiaformers.map(({ player, index }, position) => {
+          const src = structureImageSrc(FACTION_STRUCTURE_COLOR[player.faction!], 'gaiaformer');
+          if (!src) return null;
+          const tooltip = `${player.nickname} · ${factionDisplayName(player.faction)} · 소행성에 쓴 가이아포머`;
+          return (
+            <img
+              key={`spent-gaiaformer-${player.player_id}-${index}`}
+              className="research-board-spent-gaiaformer"
+              style={{
+                left: `${88.7 + (position % 5) * 2.05}%`,
+                top: `${92.3 + Math.floor(position / 5) * 3.2}%`,
+              }}
+              src={src}
+              alt={tooltip}
+              title={tooltip}
+            />
+          );
+        })}
         {board?.terraforming_level_5_token != null && federationTokenImageSrc(board.terraforming_level_5_token) && (
           <img
             className="research-board-terraforming-federation"
