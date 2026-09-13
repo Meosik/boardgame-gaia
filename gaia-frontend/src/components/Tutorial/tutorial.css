@@ -106,3 +106,44 @@
 .guided-steps-list li.is-done .guided-steps-mark { color: #4ade80; }
 .guided-steps-state { color: var(--color-muted); font-size: 0.7rem; font-weight: 700; }
 .guided-steps-note { margin: 0; color: var(--color-muted); font-size: 0.72rem; }
+
+/* ── Entry illustrations ─────────────────────────────────────────────────── */
+/* The portrait reuses `.faction-pool-portrait` so the crop coordinates live in one
+   place. That class sizes itself as a flex item — the waiting room's badge is a flex
+   container — so here, where the card is an ordinary block, it needs `display: block`
+   too, or the span stays inline, ignores width/height, and shows as a hairline. */
+.tutorial-entry .tutorial-portrait {
+  display: block;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  margin-bottom: 0.55rem;
+}
+
+.tutorial-figure { margin: 0 0 0.6rem; }
+.tutorial-figure img {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.45);
+  object-fit: contain;
+}
+
+.tutorial-ring {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.7rem;
+  padding: 0;
+  list-style: none;
+}
+.tutorial-ring li {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  width: 56px;
+  color: var(--color-muted);
+  font-size: 0.68rem;
+}
+.tutorial-ring img { width: 40px; height: 40px; object-fit: contain; }

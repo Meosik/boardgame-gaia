@@ -1,6 +1,54 @@
 import { useMemo, useState } from 'react';
-import { GUIDE_CATEGORIES, GUIDE_ENTRIES, searchGuide, type GuideCategory } from '../../tutorial/guide';
+import {
+  GUIDE_CATEGORIES,
+  GUIDE_ENTRIES,
+  searchGuide,
+  type GuideCategory,
+  type GuideIllustration,
+} from '../../tutorial/guide';
+import { factionBoardImageSrc } from '../../assets/factionBoardImages';
+import { planetImageSrc, TERRAFORMING_RING } from '../../assets/planetImages';
+import { planetTypeDisplayName } from '../../displayNames';
 import './tutorial.css';
+
+/** Draws an entry's art from the same assets the table uses, so a beginner recognises the piece
+ *  when they meet it in a real game. Anything the asset modules can't supply is simply omitted
+ *  rather than rendered as a broken image. */
+function Illustration({ illustration }: { illustration: GuideIllustration }) {
+  if (illustration.kind === 'terraforming-ring') {
+    return (
+      <ol className="tutorial-ring" aria-label="테라포밍 고리 순서">
+        {TERRAFORMING_RING.map((planet) => {
+          const src = planetImageSrc(planet);
+          return (
+            <li key={planet}>
+              {src && <img src={src} alt="" />}
+              <span>{planetTypeDisplayName(planet)}</span>
+            </li>
+          );
+        })}
+      </ol>
+    );
+  }
+
+  if (illustration.kind === 'portrait') {
+    const src = factionBoardImageSrc(illustration.faction);
+    // Decorative: the card's heading already names the faction, so announcing it twice adds noise.
+    return src ? (
+      <span
+        className="faction-pool-portrait tutorial-portrait"
+        aria-hidden
+        style={{ backgroundImage: `url(${src})` }}
+      />
+    ) : null;
+  }
+
+  return (
+    <figure className="tutorial-figure">
+      <img src={illustration.src} alt={illustration.alt} />
+    </figure>
+  );
+}
 
 interface Props {
   /** Rendered as a page when absent; the in-game panel passes its own close handler. */
@@ -70,6 +118,7 @@ export function Tutorial({ onClose, compact = false }: Props) {
           {entries.map((entry) => (
             <li key={entry.id} className="tutorial-entry">
               <h2>{entry.title}</h2>
+              {entry.illustration && <Illustration illustration={entry.illustration} />}
               <p className="tutorial-summary">{entry.summary}</p>
               {(entry.cost || entry.requires) && (
                 <dl className="tutorial-facts">

@@ -1,28 +1,6 @@
 import type { PlanetType } from '../../types/game';
 
-import terraPng    from '../../assets/planets/terra.png';
-import desertPng   from '../../assets/planets/desert.png';
-import icePng      from '../../assets/planets/ice.png';
-import swampPng    from '../../assets/planets/swamp.png';
-import oxidePng    from '../../assets/planets/oxide.png';
-import titaniumPng from '../../assets/planets/titanium.png';
-import volcanicPng from '../../assets/planets/volcanic.png';
-import transdimPng from '../../assets/planets/transdim.png';
-import gaiaPng     from '../../assets/planets/gaia.png';
-import lostPng     from '../../assets/boards/normalized/lost_planet.webp';
-
-const PLANET_IMAGE: Partial<Record<PlanetType, string>> = {
-  Terra:      terraPng,
-  Desert:     desertPng,
-  Ice:        icePng,
-  Swamp:      swampPng,
-  Oxide:      oxidePng,
-  Titanium:   titaniumPng,
-  Volcanic:   volcanicPng,
-  Transdim:   transdimPng,
-  Gaia:       gaiaPng,
-  LostPlanet: lostPng,
-};
+import { planetImageSrc } from '../../assets/planetImages';
 
 const PLANET_VISUAL: Record<PlanetType, { color: string; ring?: boolean }> = {
   Terra:       { color: '#4a7c59' },
@@ -54,7 +32,7 @@ export function PlanetHex({ planetType, cx, cy, size, hexKey = '' }: Props) {
   // Scale past that transparent margin so the visible planet fills the overlay.
   const imageRadius = planetType === 'Gaia' ? r * 528 / 452 : r;
   const vis = PLANET_VISUAL[planetType];
-  const img = PLANET_IMAGE[planetType];
+  const img = planetImageSrc(planetType);
 
   if (img) {
     const clipId = `planet-clip-${hexKey}`;

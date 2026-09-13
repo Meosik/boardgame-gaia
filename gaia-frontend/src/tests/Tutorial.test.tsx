@@ -49,6 +49,22 @@ describe('guide content', () => {
     expect(ids.size).toBe(factions.length);
   });
 
+  it('illustrates every faction with its own board art, and never with an empty image', () => {
+    for (const entry of GUIDE_ENTRIES.filter((entry) => entry.category === 'faction')) {
+      expect(entry.illustration, entry.id).toEqual({
+        kind: 'portrait',
+        faction: entry.id.replace('faction-', ''),
+      });
+    }
+
+    for (const entry of GUIDE_ENTRIES) {
+      if (entry.illustration?.kind === 'image') {
+        expect(entry.illustration.src, entry.id).not.toBe('');
+        expect(entry.illustration.alt, entry.id).not.toBe('');
+      }
+    }
+  });
+
   it('carries the costs the engine actually charges', () => {
     const text = GUIDE_ENTRIES
       .map((entry) => [entry.title, entry.cost, entry.requires, ...entry.detail].join(' '))
@@ -81,6 +97,16 @@ describe('Tutorial', () => {
     fireEvent.click(screen.getByRole('tab', { name: '주요 행동' }));
     expect(screen.getByText('광산 건설')).toBeInTheDocument();
     expect(screen.queryByText('게임 전체 구조')).not.toBeInTheDocument();
+  });
+
+  it('shows the terraforming ring on the build entry, in printed order', () => {
+    render(<Tutorial />);
+    fireEvent.click(screen.getByRole('tab', { name: '주요 행동' }));
+
+    const ring = screen.getByRole('list', { name: '테라포밍 고리 순서' });
+    expect(ring).toBeInTheDocument();
+    // Seven standard types; the ring's order is what terraforming distance is measured on.
+    expect(ring.querySelectorAll('li')).toHaveLength(7);
   });
 
   it('searches across categories, not just the open one', () => {

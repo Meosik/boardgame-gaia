@@ -1,6 +1,9 @@
 import { FREE_ACTIONS } from '../components/freeActions';
 import { POWER_ACTION_SPACES } from '../components/boardActionSpaces';
 import { FACTION_DISPLAY_NAMES } from '../displayNames';
+import { researchBoardImageSrc } from '../assets/researchBoardImage';
+import { scoringBoardImageSrc } from '../assets/scoringBoardImage';
+import { spaceshipBoardImageSrc } from '../assets/spaceshipBoardImages';
 import type { FactionId } from '../types/game';
 
 /**
@@ -12,10 +15,22 @@ import type { FactionId } from '../types/game';
 
 export type GuideCategory = 'flow' | 'main' | 'free' | 'expansion' | 'faction';
 
+/**
+ * What to show alongside an entry. Every option resolves to art the game already ships and uses
+ * elsewhere, so the tutorial shows a player the same picture they will meet at the table:
+ * `portrait` is the faction board crop the waiting room uses, `image` is a board or tile from the
+ * asset modules, and `terraforming-ring` lays out the planet types in printed ring order.
+ */
+export type GuideIllustration =
+  | { kind: 'portrait'; faction: FactionId }
+  | { kind: 'image'; src: string; alt: string }
+  | { kind: 'terraforming-ring' };
+
 export interface GuideEntry {
   id: string;
   category: GuideCategory;
   title: string;
+  illustration?: GuideIllustration;
   /** What it costs, in the resources the player counts on their board. */
   cost?: string;
   /** What has to be true before the action is offered at all. */
@@ -32,6 +47,10 @@ export const GUIDE_CATEGORIES: { id: GuideCategory; label: string; blurb: string
   { id: 'expansion', label: '확장 (잃어버린 함대)', blurb: '함선, 아티팩트, 새 행성' },
   { id: 'faction', label: '종족 능력', blurb: '18개 종족이 서로 무엇이 다른지' },
 ];
+
+/** Skips the illustration rather than rendering a broken image when an asset module has none. */
+const imageOf = (src: string | null, alt: string): GuideIllustration | undefined =>
+  src ? { kind: 'image', src, alt } : undefined;
 
 const FLOW: GuideEntry[] = [
   {
@@ -97,6 +116,7 @@ const FLOW: GuideEntry[] = [
   {
     id: 'flow-scoring',
     category: 'flow',
+    illustration: imageOf(scoringBoardImageSrc(), '점수판'),
     title: '5. 라운드 정산',
     summary: '모두 패스하면 라운드 목표 점수를 정산하고 다음 라운드로 넘어갑니다.',
     detail: [
@@ -110,6 +130,7 @@ const MAIN: GuideEntry[] = [
   {
     id: 'action-build',
     category: 'main',
+    illustration: { kind: 'terraforming-ring' },
     title: '광산 건설',
     cost: '광석 1 + 크레딧 2 (+ 테라포밍 광석)',
     requires: '내 건물에서 사거리 안에 있는 빈 행성',
@@ -141,6 +162,7 @@ const MAIN: GuideEntry[] = [
   {
     id: 'action-research',
     category: 'main',
+    illustration: imageOf(researchBoardImageSrc(), '연구판'),
     title: '연구 진전',
     cost: '지식 4',
     summary: '연구 트랙을 한 칸 올려 능력과 점수를 얻습니다.',
@@ -252,6 +274,7 @@ const EXPANSION: GuideEntry[] = [
   {
     id: 'lf-explore',
     category: 'expansion',
+    illustration: imageOf(spaceshipBoardImageSrc('Twilight'), '트와일라잇 함선 보드'),
     title: '함선 탐사',
     cost: '승점 5 (발 타크는 7) + 종족별 추가 비용',
     requires: '사거리 안의 함선 타일, 남은 탐사 셔틀',
@@ -306,7 +329,15 @@ const factionFreeActions = (faction: FactionId): string[] =>
   FREE_ACTIONS.filter((option) => option.faction === faction).map((option) => option.label);
 
 function faction(id: FactionId, summary: string, detail: string[], tip?: string): GuideEntry {
-  return { id: `faction-${id}`, category: 'faction', title: FACTION_DISPLAY_NAMES[id], summary, detail, tip };
+  return {
+    id: `faction-${id}`,
+    category: 'faction',
+    title: FACTION_DISPLAY_NAMES[id],
+    illustration: { kind: 'portrait', faction: id },
+    summary,
+    detail,
+    tip,
+  };
 }
 
 const FACTIONS: GuideEntry[] = [
