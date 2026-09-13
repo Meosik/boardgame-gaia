@@ -1,9 +1,19 @@
+# Container logs are the only record of who reached the server, and json-file keeps them
+# forever by default — one busy day of gate lines would grow until the disk filled. 10 MB x 3
+# bounds that while still leaving recent history to look through.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
 
   # ── Infrastructure ────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: gaiaproject
       POSTGRES_USER: gaia
@@ -24,6 +34,7 @@ services:
       context: .
       dockerfile: gaia-server/Dockerfile
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,6 +57,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
+    logging: *default-logging
     command: tunnel run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in .env}

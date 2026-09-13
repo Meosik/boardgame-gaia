@@ -76,6 +76,19 @@ fn cookie_value(raw: &str, name: &str) -> Option<String> {
     })
 }
 
+/// The visitor's real address, for the gate's own log lines.
+///
+/// The TCP peer is always the `cloudflared` container, so it says nothing about who is calling;
+/// Cloudflare adds `Cf-Connecting-Ip` to every proxied request and that is the only useful
+/// source here — the same header `rate_limit::ClientIpKeyExtractor` buckets on. Absent on a
+/// direct local run, where there is no tunnel in front.
+fn client_ip(headers: &HeaderMap) -> &str {
+    headers
+        .get("cf-connecting-ip")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("<unknown>")
+}
+
 pub async fn require_password(gate: SiteGate, request: Request, next: Next) -> Response {
     let path = request.uri().path();
     // Health checks (hit in-container, no browser/cookie involved) and the
@@ -85,8 +98,9 @@ pub async fn require_password(gate: SiteGate, request: Request, next: Next) -> R
     }
     let satisfied = gate.satisfied_by(&request);
     log::info!(
-        "gate check {} {path} ua={:?} satisfied={satisfied}",
+        "gate check {} {path} ip={} ua={:?} satisfied={satisfied}",
         request.method(),
+        client_ip(request.headers()),
         request
             .headers()
             .get(header::USER_AGENT)
@@ -139,12 +153,13 @@ async fn submit(gate: SiteGate, headers: HeaderMap, body: Bytes) -> Response {
         .and_then(|v| v.to_str().ok())
         .unwrap_or("<none>")
         .to_string();
+    let ip = client_ip(&headers).to_string();
 
     let form: GateForm = match serde_urlencoded::from_bytes(&body) {
         Ok(form) => form,
         Err(err) => {
             log::warn!(
-                "/gate POST body unparseable (ua={user_agent}, content-type={:?}, len={}): {err}",
+                "/gate POST body unparseable (ip={ip}, ua={user_agent}, content-type={:?}, len={}): {err}",
                 headers
                     .get(header::CONTENT_TYPE)
                     .and_then(|v| v.to_str().ok()),
@@ -161,13 +176,13 @@ async fn submit(gate: SiteGate, headers: HeaderMap, body: Bytes) -> Response {
         return Redirect::to("/").into_response();
     };
     let submitted = hash(&form.password);
-    log::info!(
-        "/gate POST ua={user_agent} matched={}",
-        submitted == *expected
-    );
     if submitted != *expected {
+        // Warn rather than info: a wrong shared password is the one gate event worth grepping
+        // for on its own, and the only trace a brute-force attempt leaves on this server.
+        log::warn!("/gate POST ip={ip} ua={user_agent} matched=false");
         return Html(render_form(Some("비밀번호가 틀렸습니다."))).into_response();
     }
+    log::info!("/gate POST ip={ip} ua={user_agent} matched=true");
 
     let cookie = format!(
         "{COOKIE_NAME}={submitted}; Path=/; Max-Age={COOKIE_MAX_AGE}; HttpOnly; Secure; SameSite=Lax"
@@ -247,6 +262,15 @@ mod tests {
                 async move { require_password(gate, req, next).await }
             }));
         TestServer::new(router).expect("test server")
+    }
+
+    #[test]
+    fn client_ip_reads_the_cloudflare_header_and_says_so_when_it_is_missing() {
+        let mut headers = HeaderMap::new();
+        assert_eq!(client_ip(&headers), "<unknown>");
+
+        headers.insert("cf-connecting-ip", "203.0.113.7".parse().expect("header"));
+        assert_eq!(client_ip(&headers), "203.0.113.7");
     }
 
     #[tokio::test]
