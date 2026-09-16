@@ -1,7 +1,8 @@
 # Offline Gaia AI
 
 Local four-player Lost Fleet simulator, PettingZoo AEC adapter and shared-policy
-RLlib PPO candidate scorer. **No game-server or frontend integration.**
+RLlib PPO candidate scorer. **No live-game AI opponent integration.**
+Completed evaluations can be published to the read-only frontend replay viewer.
 The bundled pilot checkpoints are verification artifacts, not a strong opponent.
 
 ## Build
@@ -18,6 +19,20 @@ A fresh environment needs Python 3.12+, maturin and the pinned dependencies from
 `pyproject.toml` (including the `train` extra for PPO/evaluation).
 
 ## Short training, resume, evaluation
+
+For normal **evaluation with automatic public replays**, use the external runner
+(from repository root). It preserves checkpoint fingerprints and does not train:
+
+```sh
+gaia-rl/.venv/bin/python gaia-rl/tools/simulate.py ppo \
+  --checkpoint gaia-rl/runs/example-resumed --seeds 2 \
+  --output gaia-rl/runs/new-evaluation
+```
+
+The approved origin is `agentmaco` / `shgaia.com`. SSH must already work; no credential,
+tunnel or service-restart automation is performed. See [replay operations](tools/README.md)
+for teacher comparisons, retries and retention. Commands below are the frozen low-level
+training/reproducibility interfaces; they do **not** publish on their own.
 
 ```sh
 .venv/bin/python -m gaia_rl.training --output runs/example --iterations 1
@@ -66,6 +81,21 @@ for inference with v2. Existing fingerprint/encoding checks reject that mismatch
 checkpoint migration and training are not performed by this update.
 
 Manual faction verification: [Korean checklist](../docs/faction-manual-test-checklist.md).
+
+## Booster 12 and conversion candidates (2026-09-12)
+
+Encoding v3 adds `RoundBoosterTerraformBuild`: one free terraforming step, not a
+free mine. The engine still charges the normal mine cost, additional terraforming
+and applicable range/Gaia-entry QIC. Ownership and once-per-round usage are checked.
+The AI menu also includes every legal same-kind free-action count (1–30), retaining
+single conversions. Nevlas PI can therefore choose a two-ore batch for three tokens;
+this is availability, not a strategy bonus. Mixed-kind batches are not implemented.
+
+Rebuild native rules before a new run. The added category changes normalized
+features, and the expanded candidate menu changes both policy and random-opponent
+choices. Do not resume v2 checkpoints or treat old evaluations as matched controls.
+Archived teacher experiments and their weights remain unchanged; this repair does
+not add booster-tier scoring, train/promote a model or rewrite historical replays.
 
 ## Inference boundary
 

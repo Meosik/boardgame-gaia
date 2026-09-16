@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GameLog } from '../components/GameLog';
 import type { PlayerState } from '../types/game';
 
@@ -140,4 +140,65 @@ it('labels replay state changes as net observations and exposes selected action 
   expect(screen.getByRole('listitem')).toHaveTextContent('Gaia 순변화: 승점 +3, 지식 -4');
   expect(screen.getByText(/자동 수입·라운드 전환·최종 정산/)).toBeInTheDocument();
   expect(screen.getByText(/선택 데이터:/)).toHaveTextContent('Economy');
+});
+
+describe('replay log follows the current action inside its own panel', () => {
+  const events = Array.from({ length: 35 }, (_, index) => ({ RoundStarted: { round: index + 1 } }));
+  const onSelect = vi.fn();
+  const view = (range?: [number, number], replay = true) => (
+    <div className="game-sidebar-tab-panel--log">
+      <GameLog events={events} players={[]} onEventSelect={replay ? onSelect : undefined} activeEventRange={range} />
+    </div>
+  );
+
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(200);
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(1400);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const panel = this.closest<HTMLElement>('.game-sidebar-tab-panel--log');
+      const index = Number(this.getAttribute('aria-label')?.match(/^(\d+)라운드/)?.[1]) - 1;
+      const top = this.tagName === 'LI' ? 100 + index * 40 - (panel?.scrollTop ?? 0) : 100;
+      const height = this.tagName === 'LI' ? 40 : this.tagName === 'H3' ? 30 : 200;
+      return { top, bottom: top + height, height } as DOMRect;
+    });
+  });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('reveals the current row on opening, then follows forward and backward seeks', () => {
+    const { container, rerender } = render(view([20, 21]));
+    const panel = container.firstElementChild as HTMLElement;
+    expect(panel.scrollTop).toBe(640);
+    rerender(view([30, 31]));
+    expect(panel.scrollTop).toBe(1040);
+    rerender(view([2, 3]));
+    expect(panel.scrollTop).toBe(50); // Keep the row below the sticky log title.
+    expect(screen.getByRole('listitem', { name: '3라운드 시작' })).toHaveAttribute('aria-current', 'step');
+  });
+
+  it('does not move visible rows or undo a manual scroll on unrelated renders', () => {
+    const { container, rerender } = render(view([2, 3]));
+    const panel = container.firstElementChild as HTMLElement;
+    expect(panel.scrollTop).toBe(0);
+    panel.scrollTop = 600;
+    rerender(view([2, 3]));
+    expect(panel.scrollTop).toBe(600);
+    rerender(view([2, 4]));
+    expect(panel.scrollTop).toBe(50);
+  });
+
+  it('leaves the live log and empty replay ranges alone', () => {
+    const { container, rerender } = render(view([20, 21], false));
+    const panel = container.firstElementChild as HTMLElement;
+    expect(panel.scrollTop).toBe(0);
+    rerender(view([0, 0]));
+    expect(panel.scrollTop).toBe(0);
+    rerender(view());
+    expect(panel.scrollTop).toBe(0);
+  });
+
+  it('does not scroll the board/page when the log has no independently overflowing viewport', () => {
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(200);
+    const { container } = render(view([20, 21]));
+    expect((container.firstElementChild as HTMLElement).scrollTop).toBe(0);
+  });
 });

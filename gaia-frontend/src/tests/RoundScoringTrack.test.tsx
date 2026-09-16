@@ -14,6 +14,18 @@ const tiles: RoundTile[] = [
 ];
 
 describe('RoundScoringTrack', () => {
+  it('matches expansion images to the established engine conditions, not the swapped source numbers', () => {
+    const expansionTiles: RoundTile[] = [
+      { id: 10, condition: 'BuildMineOnNewPlanetType', vp_per_unit: 3 },
+      { id: 11, condition: 'BuildMineInNewSector', vp_per_unit: 3 },
+    ];
+    render(<RoundScoringTrack tiles={expansionTiles} currentRound={1} />);
+    expect(decodeURI(screen.getByAltText('라운드 1: 새로운 행성 유형에 광산 건설').getAttribute('src') ?? ''))
+      .toContain('새행성종류광산');
+    expect(decodeURI(screen.getByAltText('라운드 2: 이전에 개척하지 않은 우주·심우주 섹터에 광산 건설').getAttribute('src') ?? ''))
+      .toContain('새구역광산');
+  });
+
   it('maps every supported id to exactly one matching image asset', () => {
     for (let id = 1; id <= 12; id += 1) {
       const imageSrc = roundScoringTileImageSrc(id);

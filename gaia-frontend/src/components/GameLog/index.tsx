@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   FACTION_STRUCTURE_COLOR,
   STRUCTURE_COLOR_HEX,
@@ -207,6 +207,11 @@ function formatEvent(event: GameEvent, players: PlayerState[], board?: BoardStat
     if (typeof income.vp === 'number' && income.vp > 0) gains.push(`승점 +${income.vp}점`);
     return `${playerName(players, income.player)}: ${String(income.round)}라운드 수입 ${gains.join(', ') || '없음'}`;
   }
+  payload = payloadFor(event, 'ReplaySettlement');
+  if (payload) {
+    const amount = Number(payload.amount);
+    return `정산 · ${String(payload.title)} · ${playerName(players, payload.player)}: ${String(payload.detail)} · 승점 ${amount > 0 ? '+' : ''}${amount}점 · 누적 ${String(payload.total)}점`;
+  }
   payload = payloadFor(event, 'VpAwarded');
   if (payload) {
     const particle = payload.reason === 'QicAction' ? '으로' : '로';
@@ -410,9 +415,31 @@ function LogRow({ entry, players, onEventSelect, active }: { entry: LogEntry; pl
 }
 
 export function GameLog({ events, players, board, onEventSelect, activeEventRange }: Props) {
+  const logRef = useRef<HTMLElement>(null);
+  const replay = !!onEventSelect;
+  const [activeStart, activeEnd] = activeEventRange ?? [];
   const entries = groupedEntries(events, players, !!onEventSelect, board);
+
+  useLayoutEffect(() => {
+    if (!replay || activeStart === undefined || activeEnd === undefined) return;
+    const row = logRef.current?.querySelector<HTMLElement>('li[aria-current="step"]');
+    const panel = logRef.current?.closest<HTMLElement>('.game-sidebar-tab-panel--log');
+    if (!row || !panel || panel.clientHeight === 0 || panel.scrollHeight <= panel.clientHeight) return;
+    // Only move the log viewport, never the board/page followed by replay navigation.
+    const rowBounds = row.getBoundingClientRect();
+    const panelTop = panel.getBoundingClientRect().top + panel.clientTop;
+    const panelBottom = panelTop + panel.clientHeight;
+    const titleBottom = logRef.current?.querySelector('.game-log-title')?.getBoundingClientRect().bottom ?? panelTop;
+    const visibleTop = Math.max(panelTop, titleBottom);
+    if (rowBounds.top < visibleTop || rowBounds.height > panelBottom - visibleTop) {
+      panel.scrollTop += rowBounds.top - visibleTop;
+    } else if (rowBounds.bottom > panelBottom) {
+      panel.scrollTop += rowBounds.bottom - panelBottom;
+    }
+  }, [replay, activeStart, activeEnd, events]);
+
   return (
-    <section className="game-log" aria-label="게임 로그">
+    <section ref={logRef} className="game-log" aria-label="게임 로그">
       <h3 className="game-log-title">게임 로그</h3>
       {entries.length === 0 ? (
         <p className="game-log-empty">아직 기록된 행동이 없습니다.</p>

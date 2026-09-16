@@ -1,0 +1,56 @@
+.ai-coach { min-height: 100dvh; color: #e2e8f0; background: #080812; }
+.ai-coach .app--game-table { --game-sidebar-width: 380px; }
+.ai-coach .game-sidebar { overflow-y: auto; }
+.coach-panel { padding: 1rem; display: flex; flex-direction: column; gap: .85rem; min-width: 0; }
+.coach-panel h1 { font-size: 1.35rem; margin: .25rem 0; }
+.coach-panel h2 { font-size: .95rem; margin: 0 0 .35rem; }
+.coach-panel p { margin: .35rem 0; line-height: 1.5; overflow-wrap: anywhere; }
+.coach-eyebrow { color: #7dd3fc; font-size: .8rem; font-weight: 700; }
+.coach-position { display: flex; justify-content: space-between; gap: .5rem; }
+.coach-position strong { color: #fde68a; }
+.coach-resources { color: #cbd5e1; font-size: .85rem; }
+.coach-panel label { display: flex; flex-direction: column; gap: .35rem; font-size: .85rem; }
+.coach-panel input, .coach-panel textarea, .coach-panel select { width: 100%; min-width: 0; box-sizing: border-box;
+  padding: .5rem; background: #0f172a; color: #e2e8f0; border: 1px solid #64748b; border-radius: 5px; font: inherit; }
+.coach-panel textarea { resize: vertical; }
+.coach-panel select { font-size: .78rem; }
+.coach-panel option { padding: .35rem .1rem; }
+.coach-panel button { padding: .6rem; min-height: 40px; background: #1e293b; color: #f1f5f9;
+  border: 1px solid #64748b; border-radius: 6px; font: inherit; cursor: pointer; }
+.coach-panel button:disabled { opacity: .45; cursor: default; }
+.coach-panel :is(button, input, textarea, select):focus-visible { outline: 2px solid #7dd3fc; outline-offset: 2px; }
+.coach-suggestion, .coach-chosen { border: 1px solid #334155; border-radius: 8px; padding: .75rem; }
+.coach-suggestion { border-color: #2563eb; background: #17255466; }
+.coach-panel .coach-confirm { background: #075985; font-weight: 700; border-color: #38bdf8; }
+.coach-panel fieldset { border: 1px solid #d97706; border-radius: 7px; padding: .65rem; display: grid; gap: .6rem; }
+.coach-panel legend { font-size: .85rem; color: #fcd34d; }
+.coach-muted, .coach-panel details { font-size: .75rem; color: #a8b5c8; }
+.coach-panel summary { cursor: pointer; }
+.coach-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.coach-panel footer { border-top: 1px solid #334155; padding-top: .75rem; }
+.coach-panel a { color: #7dd3fc; }
+.coach-error { color: #fda4af; }
+.coach-loading { max-width: 600px; padding: 1rem; margin: auto; }
+.ai-coach [data-replay-highlight="true"] { outline: 3px solid #fde047; outline-offset: 3px; }
+@media (max-width: 800px) {
+  .ai-coach .app--game-table { display: grid; grid-template-areas: 'topnav' 'sidebar' 'table';
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr; height: auto; }
+  .ai-coach .game-sidebar { max-height: 65dvh; overflow-y: auto; }
+}
+.coach-panel .coach-technology { border-color: #38bdf8; background: #082f4933; }
+.coach-panel .coach-technology legend { color: #7dd3fc; }
+.coach-tech-image { max-width: 150px; max-height: 170px; object-fit: contain; align-self: center; }
+.coach-track-result { color: #fde68a; font-size: .85rem; }
+.coach-board-instructions { border: 1px solid #38bdf8; border-radius: 8px; padding: .75rem; background: #082f4933; }
+.coach-board-shortcuts { display: flex; flex-wrap: wrap; gap: .4rem; }
+.coach-board-shortcuts button { flex: 1; font-size: .8rem; }
+.coach-board-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-top: .6rem; }
+.coach-board-choices button { display: flex; flex-direction: column; align-items: center; gap: .4rem; font-size: .8rem; overflow-wrap: anywhere; }
+.coach-board-choices :is(img, svg) { width: 70px; height: 70px; object-fit: contain; }
+.coach-text-fallback > summary { padding: .5rem 0; }
+.coach-ai-legend { color: #fde047; font-size: .8rem; }
+.coach-board-choices [data-coach-recommended="true"] { border: 2px solid #fde047; background: #422006; }
+.ai-coach .hex-cell > polygon[stroke="#ffeb3b"] { stroke: #38bdf8; }
+.coach-feedback-scrim { position: fixed; inset: 0; z-index: 1500; background: #020617b8; display: grid; place-items: center; padding: 1rem; }
+.coach-feedback-dialog { width: min(520px, 100%); max-height: 90dvh; overflow-y: auto; padding: 1rem; box-sizing: border-box; border: 1px solid #fcd34d; border-radius: 12px; background: #0f172a; box-shadow: 0 20px 60px #0009; }
+.coach-feedback-dialog fieldset { margin: .75rem 0; }

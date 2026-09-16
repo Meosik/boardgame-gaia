@@ -3,6 +3,38 @@ import { describe, expect, it, vi } from 'vitest';
 import { CalibrationView } from '../components/CalibrationView';
 
 describe('CalibrationView action sources', () => {
+  it('offers the shared one-QIC academy source without changing the initial source', () => {
+    render(<CalibrationView />);
+    const select = screen.getByRole('combobox', { name: '이미지 (배치할 소스) 액션 이미지' });
+    expect(select).toHaveValue('standard-10');
+    fireEvent.change(select, { target: { value: 'academy-qic' } });
+    expect(screen.getByRole('img', { name: '공통 아카데미 행동 · 정보 큐브 1' })).toHaveAttribute('src', expect.stringContaining('hadsch_hallas'));
+  });
+
+  it('opens booster 12 alone and copies original-pixel coordinates with its identity', () => {
+    window.history.replaceState({}, '', '/?calibrate=1&asset=booster-12');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    try {
+      render(<CalibrationView />);
+      expect(screen.getAllByRole('img')).toHaveLength(1);
+      const img = screen.getByRole('img', { name: '부스터 12 · 테라포밍 1단계 무료 (광산 비용 별도)' });
+      expect(screen.getByRole('combobox', { name: '이미지 (배치할 소스) 액션 이미지' })).toHaveValue('booster-12');
+      Object.defineProperties(img, { naturalWidth: { value: 720 }, naturalHeight: { value: 2104 } });
+      vi.spyOn(img, 'getBoundingClientRect').mockReturnValue({
+        left: 10, top: -100, width: 360, height: 1052,
+        right: 370, bottom: 952, x: 10, y: -100, toJSON: () => ({}),
+      });
+      fireEvent.click(img, { clientX: 110, clientY: 200 });
+      fireEvent.click(screen.getByRole('button', { name: 'px 좌표 복사' }));
+      expect(writeText).toHaveBeenCalledWith(
+        '부스터 12 · 테라포밍 1단계 무료 (광산 비용 별도) [booster-12]\n원본: 720 × 2104\n200, 600',
+      );
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
+  });
+
   it('offers named action sources and copies source identity with coordinates', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });

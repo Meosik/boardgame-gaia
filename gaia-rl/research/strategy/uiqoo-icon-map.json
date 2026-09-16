@@ -1,0 +1,1680 @@
+{
+  "schema_version": 1,
+  "reviewed_date": "2026-09-13",
+  "timezone": "Asia/Seoul",
+  "purpose": "Manual icon correspondence reference; not an automated recognizer or training episode",
+  "source_site": "uiqoo spectator UI",
+  "source_transport": "Previously captured existing browser panels and local accessibility metadata",
+  "scope": {
+    "new_connection": false,
+    "server_api_called": false,
+    "game_action_clicked": false,
+    "continuous_recorder": false,
+    "training_started": false,
+    "screenshots_published": false
+  },
+  "coordinates": {
+    "screen_origin": [
+      0,
+      0
+    ],
+    "capture_window_origin_screen_xy": [
+      66,
+      32
+    ]
+  },
+  "status_definitions": {
+    "visual_match": "Artwork manually matched to local asset; external numeric ID and runtime parity unverified",
+    "covered_unknown": "Standard technology exists beneath advanced tile, but its identity is not visible"
+  },
+  "catalog": [
+    {
+      "key": "std-03",
+      "local_pool": "std",
+      "local_id": 3,
+      "visual_fingerprint_ko": "동전 4 아래 손",
+      "local_effect_ko": "크레딧 4 수입",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_03_수입크레딧4.webp",
+      "asset_sha256": "91d9c155c3947abc33e19fc6e77217489da851f95512ceaab0870d3c38121d61",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-04",
+      "local_pool": "std",
+      "local_id": 4,
+      "visual_fingerprint_ko": "반짝이는 광석 1 + 초록 큐브",
+      "local_effect_ko": "즉시 광석 1 + 정보큐브 1",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_04_즉시광석1_정보큐브1.webp",
+      "asset_sha256": "422e5221af70c8bdb12540bc0abc72a04a274cf0e8e7fcfba0d21bee9d045b5a",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-05",
+      "local_pool": "std",
+      "local_id": 5,
+      "visual_fingerprint_ko": "지식 1과 크레딧 1 아래 손",
+      "local_effect_ko": "지식 1 + 크레딧 1 수입",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_05_수입지식1_크레딧1.webp",
+      "asset_sha256": "036195aefb5883c81f40d5a5ebe4c9af34cca28e7d4b7c584848d1e047b9fdb0",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-06",
+      "local_pool": "std",
+      "local_id": 6,
+      "visual_fingerprint_ko": "의회와 아카데미 아래 보라 점 각 4개",
+      "local_effect_ko": "의회·아카데미 건물 파워 가치 +1",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_06_의회아카데미파워가치증가.webp",
+      "asset_sha256": "d83113a7513865af5c959584a15452e458dd7f8671796ae5c0bb4b743b78147c",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-07",
+      "local_pool": "std",
+      "local_id": 7,
+      "visual_fingerprint_ko": "반짝이는 승점 7",
+      "local_effect_ko": "즉시 7점",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_07_즉시7점.webp",
+      "asset_sha256": "f95e7fd4d611ec13513507da402f97f78360672a330bd2c18b177fdba30b2627",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-08",
+      "local_pool": "std",
+      "local_id": 8,
+      "visual_fingerprint_ko": "가이아 광산에서 초록 화살표로 3점",
+      "local_effect_ko": "가이아 행성에 광산 건설 시 3점",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_08_가이아광산건설시3점.webp",
+      "asset_sha256": "4101e6b28d09a97d75c16bbe65a060b3741ca1e667280179bb0052f105138af9",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-09",
+      "local_pool": "std",
+      "local_id": 9,
+      "visual_fingerprint_ko": "행성 종류 바퀴에서 흰 화살표로 지식 1",
+      "local_effect_ko": "즉시 식민화한 행성 종류당 지식 1",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_09_즉시행성종류당지식1.webp",
+      "asset_sha256": "c7ddb47052abed19d90de73341d5fd70de1fd3b5200b105f9d0df4cc711d9a51",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-10",
+      "local_pool": "std",
+      "local_id": 10,
+      "visual_fingerprint_ko": "주황 행동 안 보라 4·회전 화살표",
+      "local_effect_ko": "라운드당 1회 파워 4 충전",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_10_행동파워충전4.webp",
+      "asset_sha256": "37fabfbcc201ad47a143eb4cff19df2e08e94b55cc4b2ca15d966eded1d8b5ee",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-11",
+      "local_pool": "std",
+      "local_id": 11,
+      "visual_fingerprint_ko": "테라포밍 원 2개와 광산·하향 화살표",
+      "local_effect_ko": "즉시 광산 건설 비용·테라포밍 최대 2단계 무료; 사거리 등 별도 조건 유지",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_11_함선_테라포밍2단계광산.webp",
+      "asset_sha256": "373191ca6886e26d5e9b595702f56bd50b31cee1cacca327a95483d9906ca6c3",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-12",
+      "local_pool": "std",
+      "local_id": 12,
+      "visual_fingerprint_ko": "우주 이동 화살표와 +1",
+      "local_effect_ko": "기본 사거리 +1",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_12_함선_기본사거리1증가.webp",
+      "asset_sha256": "8b377dca272fb9586cd1ff822b7e13a56212b0fa6010a45bb32c66f9b70a49ec",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "std-13",
+      "local_pool": "std",
+      "local_id": 13,
+      "visual_fingerprint_ko": "반짝이는 광석 1과 지식 3",
+      "local_effect_ko": "즉시 광석 1 + 지식 3",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/std_13_함선_즉시광석1_지식3.webp",
+      "asset_sha256": "8b8f66b72a953a64d08a197d26427ec9347b67e4c71b29593ba059856b429f88",
+      "local_effect_references": [
+        "gaia-frontend/src/components/ActionPanel/index.tsx:TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_immediate_reward",
+        "gaia-engine/src/rules/engine.rs:apply_tech_tile_income"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "adv-09",
+      "local_pool": "adv",
+      "local_id": 9,
+      "visual_fingerprint_ko": "가이아 행성에서 흰 화살표로 2점",
+      "local_effect_ko": "획득 즉시 식민화한 가이아 행성당 2점",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/adv_09_즉시가이아행성당2점.webp",
+      "asset_sha256": "044bef6b5c7ff16d11402bd0e15a7499c256d431c6169d1bb91e56ddf93e9c6c",
+      "local_effect_references": [
+        "gaia-frontend/src/components/advancedTechDescriptions.ts:ADVANCED_TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_advanced_tech_tile_immediate_reward"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "adv-10",
+      "local_pool": "adv",
+      "local_id": 10,
+      "visual_fingerprint_ko": "광산에서 흰 화살표로 2점",
+      "local_effect_ko": "획득 즉시 광산당 2점",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/adv_10_즉시광산당2점.webp",
+      "asset_sha256": "424bd71ee074d304017134d97aebc5e67edafe3b478002b6a8805c27511e7bdd",
+      "local_effect_references": [
+        "gaia-frontend/src/components/advancedTechDescriptions.ts:ADVANCED_TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_advanced_tech_tile_immediate_reward"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "adv-13",
+      "local_pool": "adv",
+      "local_id": 13,
+      "visual_fingerprint_ko": "의회와 아카데미에서 흰 화살표로 6점",
+      "local_effect_ko": "획득 즉시 대형 건물당 6점",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/adv_13_즉시대형건물당6점.webp",
+      "asset_sha256": "14621046ad38e1deb79f7701f20e1a584559debb484c9cd9841ec3adedf188ea",
+      "local_effect_references": [
+        "gaia-frontend/src/components/advancedTechDescriptions.ts:ADVANCED_TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_advanced_tech_tile_immediate_reward"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "adv-17",
+      "local_pool": "adv",
+      "local_id": 17,
+      "visual_fingerprint_ko": "테라포밍에서 초록 화살표로 2점",
+      "local_effect_ko": "테라포밍 단계당 2점",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/adv_17_테라포밍단계당2점.webp",
+      "asset_sha256": "3668a606f2d03798707df3e5d83d0fcbe32bb7d0e19f585988d8ab99d88c6b52",
+      "local_effect_references": [
+        "gaia-frontend/src/components/advancedTechDescriptions.ts:ADVANCED_TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_advanced_tech_tile_immediate_reward"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "adv-19",
+      "local_pool": "adv",
+      "local_id": 19,
+      "visual_fingerprint_ko": "행성 종류 바퀴·빨간 패스 표식·1점",
+      "local_effect_ko": "패스 시 식민화한 행성 종류당 1점",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/adv_19_패스행성종류당1점.webp",
+      "asset_sha256": "96c8f2d3452f40b5e6c3d09a168f248ad0f455e1f174eb5a76446882e0cdab05",
+      "local_effect_references": [
+        "gaia-frontend/src/components/advancedTechDescriptions.ts:ADVANCED_TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_advanced_tech_tile_immediate_reward"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "adv-22",
+      "local_pool": "adv",
+      "local_id": 22,
+      "visual_fingerprint_ko": "주황 행동 안 정보큐브와 동전 5",
+      "local_effect_ko": "라운드당 1회 정보큐브 1 + 크레딧 5",
+      "local_asset": "gaia-frontend/src/assets/tech_tiles/rendered/adv_22_행동정보큐브1_크레딧5.webp",
+      "asset_sha256": "291e8dc44d7355de118a23815539f858e3b41e9a0bd2bf40666852bc94acb549",
+      "local_effect_references": [
+        "gaia-frontend/src/components/advancedTechDescriptions.ts:ADVANCED_TECH_TILE_LABELS",
+        "gaia-engine/src/rules/engine.rs:apply_advanced_tech_tile_immediate_reward"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-01",
+      "local_pool": "fed",
+      "local_id": 1,
+      "visual_fingerprint_ko": "은색 테두리·회색 방패·12점",
+      "local_effect_ko": "12점; 금색 테두리 함선 토큰 ID 9와 구별",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens/normalized/fed_01_12점.webp",
+      "asset_sha256": "0ea5786c96d621fbb82169c0ac2ad5bf72d480969777069a3caf3dedd11a1b1b",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-02",
+      "local_pool": "fed",
+      "local_id": 2,
+      "visual_fingerprint_ko": "8점과 초록 큐브",
+      "local_effect_ko": "8점 + 정보큐브 1",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens/normalized/fed_02_8점_정보큐브1.webp",
+      "asset_sha256": "3abc92ff829c6aa5651d3d2d177c4bba1b9857e5bb73098c8bcea8f19d421a65",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-03",
+      "local_pool": "fed",
+      "local_id": 3,
+      "visual_fingerprint_ko": "8점과 보라 I +2",
+      "local_effect_ko": "8점 + 새 파워 토큰 2개",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens/normalized/fed_03_8점_파워토큰2.webp",
+      "asset_sha256": "a6bb572659444d5d2f4bb192b34fa95912804191bb3f177569a3150f4a6ecf43",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-04",
+      "local_pool": "fed",
+      "local_id": 4,
+      "visual_fingerprint_ko": "7점과 광석 2",
+      "local_effect_ko": "7점 + 광석 2",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens/normalized/fed_04_7점_광석2.webp",
+      "asset_sha256": "bd237915aa927a855b79b87692afa731b419a0d8df930115780b1a9850edfea8",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-05",
+      "local_pool": "fed",
+      "local_id": 5,
+      "visual_fingerprint_ko": "7점과 크레딧 6",
+      "local_effect_ko": "7점 + 크레딧 6",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens/normalized/fed_05_7점_크레딧6.webp",
+      "asset_sha256": "c0d97ae53b0494b16a75576574f8424b9b7ed2b781dff90683315e64cb6410de",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-06",
+      "local_pool": "fed",
+      "local_id": 6,
+      "visual_fingerprint_ko": "6점과 지식 2",
+      "local_effect_ko": "6점 + 지식 2",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens/normalized/fed_06_6점_지식2.webp",
+      "asset_sha256": "34fc3b094a95b45714a10ce689f777eae47a964ce255f044755c504b8f5aff27",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-11",
+      "local_pool": "fed",
+      "local_id": 11,
+      "visual_fingerprint_ko": "함선 테두리·4점·광석 2·정보큐브",
+      "local_effect_ko": "함선: 4점 + 광석 2 + 정보큐브 1",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens_lost_fleet/normalized/fed_11_함선_4점_광석2_정보큐브1.png",
+      "asset_sha256": "ab12a987ecdb0c255fa481984d62c2641c2e56e2d6067d3d1e259da6ec64b857",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-13",
+      "local_pool": "fed",
+      "local_id": 13,
+      "visual_fingerprint_ko": "함선 테두리·7점·보라 III +2",
+      "local_effect_ko": "함선: 7점 + 새 파워 토큰 2개를 III구역에 추가",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens_lost_fleet/normalized/fed_13_함선_7점_3구역파워토큰2.png",
+      "asset_sha256": "6910ff4ae43f290a4aa9e9add681e3833418ce2530b3101ff278f6f54b997e46",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-14",
+      "local_pool": "fed",
+      "local_id": 14,
+      "visual_fingerprint_ko": "함선 테두리·광산·테라포밍 원 3개",
+      "local_effect_ko": "함선: 광산 건설 비용·테라포밍 최대 3단계 무료; 사거리 등 별도 조건 유지",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens_lost_fleet/normalized/fed_14_함선_테라포밍3단계광산.png",
+      "asset_sha256": "eaaaaf4735bc9f688a5db87fe684a00bbfdc8e0d45531acc08bcd3eae0b3172d",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "fed-16",
+      "local_pool": "fed",
+      "local_id": 16,
+      "visual_fingerprint_ko": "글린 방패·광석 1·지식 1·크레딧 2",
+      "local_effect_ko": "글린 전용: 광석 1 + 지식 1 + 크레딧 2; 공유 풀 ID 7 아님",
+      "local_asset": "gaia-frontend/src/assets/federation_tokens/normalized/fed_16_글린전용_광석1_지식1_크레딧2.webp",
+      "asset_sha256": "a9877aa0b1d76ead99e229f40ccdeb813254687a728521a88efcc7f02c9004ac",
+      "local_effect_references": [
+        "gaia-frontend/src/assets/federationTokenImages.ts",
+        "gaia-engine/src/rules/engine.rs:federation_token_kind"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "artifact-01",
+      "local_pool": "artifact",
+      "local_id": 1,
+      "visual_fingerprint_ko": "타원·검은 우주 육각 3개에서 흰 화살표로 3점",
+      "local_effect_ko": "즉시 식민화한 심우주 구역당 3점",
+      "local_asset": "gaia-frontend/src/assets/artifacts/normalized/artifact_01_심우주구역당3점.webp",
+      "asset_sha256": "987bdbcca8648561d22e97ca27d2f4e70c26858a41a82b324a80bc2069dea030",
+      "local_effect_references": [
+        "gaia-frontend/src/components/artifactDescriptions.ts:ARTIFACT_LABELS",
+        "gaia-engine/src/rules/engine.rs:artifact_effect"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "artifact-04",
+      "local_pool": "artifact",
+      "local_id": 4,
+      "visual_fingerprint_ko": "타원·보라 가이아 연구에서 흰 화살표로 3점",
+      "local_effect_ko": "획득 당시 가이아 프로젝트 레벨당 3점",
+      "local_asset": "gaia-frontend/src/assets/artifacts/normalized/artifact_04_가이아프로젝트레벨당3점.webp",
+      "asset_sha256": "617a05e3dbba04693279c6fb2aa93d7b804b5b81844ef8830f692e0e20cfa90d",
+      "local_effect_references": [
+        "gaia-frontend/src/components/artifactDescriptions.ts:ARTIFACT_LABELS",
+        "gaia-engine/src/rules/engine.rs:artifact_effect"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "artifact-05",
+      "local_pool": "artifact",
+      "local_id": 5,
+      "visual_fingerprint_ko": "타원·파란 과학 연구에서 흰 화살표로 3점",
+      "local_effect_ko": "획득 당시 과학 레벨당 3점",
+      "local_asset": "gaia-frontend/src/assets/artifacts/normalized/artifact_05_과학레벨당3점.webp",
+      "asset_sha256": "d00db11b2e582914345e028cdcd8370425b9c637b23874e074b708800bf4cbf1",
+      "local_effect_references": [
+        "gaia-frontend/src/components/artifactDescriptions.ts:ARTIFACT_LABELS",
+        "gaia-engine/src/rules/engine.rs:artifact_effect"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    },
+    {
+      "key": "artifact-10",
+      "local_pool": "artifact",
+      "local_id": 10,
+      "visual_fingerprint_ko": "타원·연방 방패를 둘러싼 자원과 승점",
+      "local_effect_ko": "보유 연방 토큰 효과 복사; 복사 대상은 이 보유 화면에서 미확인",
+      "local_asset": "gaia-frontend/src/assets/artifacts/normalized/artifact_10_보유연방토큰효과복사.webp",
+      "asset_sha256": "3f05a6b8195b475cbee93aee5608c26b5061be9acd728cc7c5d0d9d1c1025a22",
+      "local_effect_references": [
+        "gaia-frontend/src/components/artifactDescriptions.ts:ARTIFACT_LABELS",
+        "gaia-engine/src/rules/engine.rs:artifact_effect"
+      ],
+      "match_method": "manual_visual_comparison",
+      "source_internal_id": null,
+      "source_runtime_effect_verified": false
+    }
+  ],
+  "observations": [
+    {
+      "faction": "Gleens",
+      "capture_path": "gaia-rl/runs/icon-mapping-20260913.YOm5qukx/verified-panel-Gleens.png",
+      "capture_sha256": "569735359fc09e93b8f1f0b6b64e2532d980fa0f4019bf81a083ad76803da40e",
+      "phase": "finished",
+      "display_order_is_acquisition_order": false,
+      "items": [
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            935,
+            208,
+            54,
+            65
+          ],
+          "rect_capture_xywh": [
+            869,
+            176,
+            54,
+            65
+          ],
+          "catalog_key": "fed-11",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            997,
+            208,
+            54,
+            65
+          ],
+          "rect_capture_xywh": [
+            931,
+            176,
+            54,
+            65
+          ],
+          "catalog_key": "fed-16",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 3,
+          "rect_screen_xywh": [
+            1059,
+            208,
+            54,
+            65
+          ],
+          "rect_capture_xywh": [
+            993,
+            176,
+            54,
+            65
+          ],
+          "catalog_key": "fed-03",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 4,
+          "rect_screen_xywh": [
+            1121,
+            208,
+            54,
+            65
+          ],
+          "rect_capture_xywh": [
+            1055,
+            176,
+            54,
+            65
+          ],
+          "catalog_key": "fed-01",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            809,
+            290,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            743,
+            258,
+            106,
+            81
+          ],
+          "catalog_key": "std-03",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            917,
+            290,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            851,
+            258,
+            106,
+            81
+          ],
+          "catalog_key": "std-06",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 3,
+          "rect_screen_xywh": [
+            1025,
+            290,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            959,
+            258,
+            106,
+            81
+          ],
+          "catalog_key": "std-08",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 4,
+          "rect_screen_xywh": [
+            1133,
+            290,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1067,
+            258,
+            106,
+            81
+          ],
+          "catalog_key": null,
+          "identity_status": "covered_unknown",
+          "covered_by_advanced": true,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 5,
+          "rect_screen_xywh": [
+            1241,
+            290,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1175,
+            258,
+            106,
+            81
+          ],
+          "catalog_key": null,
+          "identity_status": "covered_unknown",
+          "covered_by_advanced": true,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 6,
+          "rect_screen_xywh": [
+            1349,
+            290,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1283,
+            258,
+            106,
+            81
+          ],
+          "catalog_key": null,
+          "identity_status": "covered_unknown",
+          "covered_by_advanced": true,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "advtech",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            1139,
+            297,
+            84,
+            65
+          ],
+          "rect_capture_xywh": [
+            1073,
+            265,
+            84,
+            65
+          ],
+          "catalog_key": "adv-10",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null,
+          "covers_standard_slot": 4
+        },
+        {
+          "source_kind": "advtech",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            1247,
+            297,
+            84,
+            65
+          ],
+          "rect_capture_xywh": [
+            1181,
+            265,
+            84,
+            65
+          ],
+          "catalog_key": "adv-17",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null,
+          "covers_standard_slot": 5
+        },
+        {
+          "source_kind": "advtech",
+          "position_left_to_right": 3,
+          "rect_screen_xywh": [
+            1355,
+            297,
+            84,
+            65
+          ],
+          "rect_capture_xywh": [
+            1289,
+            265,
+            84,
+            65
+          ],
+          "catalog_key": "adv-09",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null,
+          "covers_standard_slot": 6
+        }
+      ]
+    },
+    {
+      "faction": "Ambas",
+      "capture_path": "gaia-rl/runs/icon-mapping-20260913.YOm5qukx/verified-panel-Ambas.png",
+      "capture_sha256": "df62d9cedbda3b285c986aa9d4d9b27d5b1c4714b6c4417c621fb1bb95c404d2",
+      "phase": "finished",
+      "display_order_is_acquisition_order": false,
+      "items": [
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            935,
+            394,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            869,
+            362,
+            54,
+            66
+          ],
+          "catalog_key": "fed-14",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            997,
+            394,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            931,
+            362,
+            54,
+            66
+          ],
+          "catalog_key": "fed-13",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 3,
+          "rect_screen_xywh": [
+            1059,
+            394,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            993,
+            362,
+            54,
+            66
+          ],
+          "catalog_key": "fed-06",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 4,
+          "rect_screen_xywh": [
+            1121,
+            394,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            1055,
+            362,
+            54,
+            66
+          ],
+          "catalog_key": "fed-02",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "artifact",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            1183,
+            386,
+            109,
+            83
+          ],
+          "rect_capture_xywh": [
+            1117,
+            354,
+            109,
+            83
+          ],
+          "catalog_key": "artifact-10",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "artifact",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            1300,
+            386,
+            109,
+            83
+          ],
+          "rect_capture_xywh": [
+            1234,
+            354,
+            109,
+            83
+          ],
+          "catalog_key": "artifact-05",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            809,
+            477,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            743,
+            445,
+            106,
+            81
+          ],
+          "catalog_key": null,
+          "identity_status": "covered_unknown",
+          "covered_by_advanced": true,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            917,
+            477,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            851,
+            445,
+            106,
+            81
+          ],
+          "catalog_key": "std-13",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 3,
+          "rect_screen_xywh": [
+            1025,
+            477,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            959,
+            445,
+            106,
+            81
+          ],
+          "catalog_key": "std-06",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 4,
+          "rect_screen_xywh": [
+            1133,
+            477,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1067,
+            445,
+            106,
+            81
+          ],
+          "catalog_key": "std-09",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "advtech",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            815,
+            484,
+            84,
+            64
+          ],
+          "rect_capture_xywh": [
+            749,
+            452,
+            84,
+            64
+          ],
+          "catalog_key": "adv-19",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null,
+          "covers_standard_slot": 1
+        }
+      ]
+    },
+    {
+      "faction": "Ivits",
+      "capture_path": "gaia-rl/runs/icon-mapping-20260913.YOm5qukx/verified-panel-Ivits.png",
+      "capture_sha256": "81c67db6915e9e0604efbc7d4a5c3a81673bac3fef0f2021522b1fcf9fd605b9",
+      "phase": "finished",
+      "display_order_is_acquisition_order": false,
+      "items": [
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            1061,
+            580,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            995,
+            548,
+            54,
+            66
+          ],
+          "catalog_key": "fed-04",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            1123,
+            580,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            1057,
+            548,
+            54,
+            66
+          ],
+          "catalog_key": "fed-04",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 3,
+          "rect_screen_xywh": [
+            1185,
+            580,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            1119,
+            548,
+            54,
+            66
+          ],
+          "catalog_key": "fed-05",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 4,
+          "rect_screen_xywh": [
+            1247,
+            580,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            1181,
+            548,
+            54,
+            66
+          ],
+          "catalog_key": "fed-04",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 5,
+          "rect_screen_xywh": [
+            1309,
+            580,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            1243,
+            548,
+            54,
+            66
+          ],
+          "catalog_key": "fed-01",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "artifact",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            1371,
+            572,
+            109,
+            84
+          ],
+          "rect_capture_xywh": [
+            1305,
+            540,
+            109,
+            84
+          ],
+          "catalog_key": "artifact-04",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "artifact",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            1488,
+            572,
+            109,
+            84
+          ],
+          "rect_capture_xywh": [
+            1422,
+            540,
+            109,
+            84
+          ],
+          "catalog_key": "artifact-01",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            809,
+            663,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            743,
+            631,
+            106,
+            81
+          ],
+          "catalog_key": null,
+          "identity_status": "covered_unknown",
+          "covered_by_advanced": true,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            917,
+            663,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            851,
+            631,
+            106,
+            81
+          ],
+          "catalog_key": "std-11",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 3,
+          "rect_screen_xywh": [
+            1025,
+            663,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            959,
+            631,
+            106,
+            81
+          ],
+          "catalog_key": "std-09",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 4,
+          "rect_screen_xywh": [
+            1133,
+            663,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1067,
+            631,
+            106,
+            81
+          ],
+          "catalog_key": "std-05",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 5,
+          "rect_screen_xywh": [
+            1241,
+            663,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1175,
+            631,
+            106,
+            81
+          ],
+          "catalog_key": "std-13",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 6,
+          "rect_screen_xywh": [
+            1349,
+            663,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1283,
+            631,
+            106,
+            81
+          ],
+          "catalog_key": "std-06",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 7,
+          "rect_screen_xywh": [
+            1457,
+            663,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1391,
+            631,
+            106,
+            81
+          ],
+          "catalog_key": "std-10",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "advtech",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            815,
+            670,
+            84,
+            64
+          ],
+          "rect_capture_xywh": [
+            749,
+            638,
+            84,
+            64
+          ],
+          "catalog_key": "adv-22",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null,
+          "covers_standard_slot": 1
+        }
+      ]
+    },
+    {
+      "faction": "Tinkeroids",
+      "capture_path": "gaia-rl/runs/icon-mapping-20260913.YOm5qukx/verified-panel-Tinkeroids.png",
+      "capture_sha256": "0fdcafb7adcbb0778f613f03cb2d243cf2e23b693a993845e9d206d5ccc85a07",
+      "phase": "finished",
+      "display_order_is_acquisition_order": false,
+      "items": [
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            935,
+            766,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            869,
+            734,
+            54,
+            66
+          ],
+          "catalog_key": "fed-05",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            997,
+            766,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            931,
+            734,
+            54,
+            66
+          ],
+          "catalog_key": "fed-05",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 3,
+          "rect_screen_xywh": [
+            1059,
+            766,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            993,
+            734,
+            54,
+            66
+          ],
+          "catalog_key": "fed-06",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "fed",
+          "position_left_to_right": 4,
+          "rect_screen_xywh": [
+            1121,
+            766,
+            54,
+            66
+          ],
+          "rect_capture_xywh": [
+            1055,
+            734,
+            54,
+            66
+          ],
+          "catalog_key": "fed-02",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            809,
+            849,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            743,
+            817,
+            106,
+            81
+          ],
+          "catalog_key": "std-12",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 2,
+          "rect_screen_xywh": [
+            917,
+            849,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            851,
+            817,
+            106,
+            81
+          ],
+          "catalog_key": "std-09",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 3,
+          "rect_screen_xywh": [
+            1025,
+            849,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            959,
+            817,
+            106,
+            81
+          ],
+          "catalog_key": "std-06",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 4,
+          "rect_screen_xywh": [
+            1133,
+            849,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1067,
+            817,
+            106,
+            81
+          ],
+          "catalog_key": null,
+          "identity_status": "covered_unknown",
+          "covered_by_advanced": true,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 5,
+          "rect_screen_xywh": [
+            1241,
+            849,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1175,
+            817,
+            106,
+            81
+          ],
+          "catalog_key": "std-04",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "tech",
+          "position_left_to_right": 6,
+          "rect_screen_xywh": [
+            1349,
+            849,
+            106,
+            81
+          ],
+          "rect_capture_xywh": [
+            1283,
+            817,
+            106,
+            81
+          ],
+          "catalog_key": "std-07",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null
+        },
+        {
+          "source_kind": "advtech",
+          "position_left_to_right": 1,
+          "rect_screen_xywh": [
+            1139,
+            856,
+            84,
+            65
+          ],
+          "rect_capture_xywh": [
+            1073,
+            824,
+            84,
+            65
+          ],
+          "catalog_key": "adv-13",
+          "identity_status": "visual_match",
+          "covered_by_advanced": false,
+          "source_used_state": "unknown",
+          "acquisition_round": null,
+          "covers_standard_slot": 4
+        }
+      ]
+    }
+  ],
+  "scoreboard_cross_check": {
+    "source": "Already-open browser accessibility tree; no new spectator connection or endpoint calls",
+    "final_scores": {
+      "Gleens": 158,
+      "Tinkeroids": 150,
+      "Ivits": 190,
+      "Ambas": 180
+    },
+    "selected_detail_faction": "Ivits",
+    "selected_detail": {
+      "Base": 10,
+      "Round Bonus": 28,
+      "Round Boosters": 8,
+      "Fed Tokens": 40,
+      "Explorations": -15,
+      "QIC Actions": 22,
+      "Artifacts": 24,
+      "Protoplanets": 12,
+      "Leech": -5,
+      "Research": 32,
+      "Final Scorings": 33,
+      "Resources": 1
+    },
+    "total": 190,
+    "scope": "One final scoreboard observation; not full historical action data or rules parity proof",
+    "icon_cross_checks": {
+      "Ivits_federation_printed_vp": [
+        7,
+        7,
+        7,
+        7,
+        12
+      ],
+      "Ivits_displayed_artifact_vp": [
+        12,
+        12
+      ]
+    }
+  },
+  "unknowns": [
+    "Six covered standard-technology identities",
+    "Acquisition times and complete action history",
+    "Which federation token was copied",
+    "External used/available-state semantics",
+    "External internal tile IDs and background-image URLs",
+    "Complete starting setup and research-board allocation"
+  ]
+}

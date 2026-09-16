@@ -1,5 +1,6 @@
 use gaia_engine::game_state::{
-    AcademyType, AdvancedTechTile, FactionId, GamePhase, HexCoord, Structure, StructureType,
+    AcademyType, AdvancedTechTile, FactionId, GameEvent, GamePhase, HexCoord, Structure,
+    StructureType,
 };
 use gaia_engine::rules::actions::GameAction;
 use gaia_engine::test_utils::builders::GameStateBuilder;
@@ -472,4 +473,70 @@ fn baltaks_academy_qic_action_grants_four_credits_instead() {
     let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
     assert_eq!(player.resources.qic, 0);
     assert_eq!(player.resources.credits, 4);
+}
+
+#[test]
+fn academy_action_rewards_and_round_limits_match_all_faction_boards() {
+    for faction in FactionId::all() {
+        let credits = matches!(faction, FactionId::Geodens | FactionId::BalTaks);
+        let mut state = GameStateBuilder::new()
+            .with_player_fn(0, |p| {
+                p.faction = Some(faction);
+                p.resources.ore = 0;
+                p.resources.credits = 0;
+                p.resources.qic = 0;
+                p.structures = vec![structure(StructureType::Academy(AcademyType::Qic))];
+            })
+            .build();
+        let events = RuleEngine::apply_action(&mut state, 0, GameAction::AcademyQicAction)
+            .unwrap_or_else(|e| panic!("{faction:?}: {e}"));
+        let player = &state.players[0];
+        assert_eq!(player.resources.ore, 0, "{faction:?}");
+        assert_eq!(
+            player.resources.credits,
+            if credits { 4 } else { 0 },
+            "{faction:?}"
+        );
+        assert_eq!(
+            player.resources.qic,
+            if credits { 0 } else { 1 },
+            "{faction:?}"
+        );
+        assert!(
+            events.iter().any(|event| matches!(event,
+                GameEvent::ResourceChanged { player: 0, delta }
+                if delta.ore == 0 && delta.knowledge == 0
+                    && delta.credits == if credits { 4 } else { 0 }
+                    && delta.qic == if credits { 0 } else { 1 }
+            )),
+            "{faction:?}: reward event"
+        );
+        assert!(RuleEngine::apply_action(&mut state, 0, GameAction::AcademyQicAction).is_err());
+        state = advance_from_round_scoring(state);
+        assert!(
+            !state.players[0].academy_qic_action_used_this_round,
+            "{faction:?}"
+        );
+        if let GamePhase::TinkeroidsTileSelectionPending { player, .. } = state.phase {
+            RuleEngine::apply_action(
+                &mut state,
+                player,
+                GameAction::SelectTinkeringTile { tile: 1 },
+            )
+            .unwrap_or_else(|e| panic!("{faction:?}: round-start selection: {e}"));
+        }
+        let before = state.players[0].resources.clone();
+        RuleEngine::apply_action(&mut state, 0, GameAction::AcademyQicAction)
+            .unwrap_or_else(|e| panic!("{faction:?}: second round: {e}"));
+        assert_eq!(
+            state.players[0].resources.credits - before.credits,
+            if credits { 4 } else { 0 },
+            "{faction:?}"
+        );
+        assert_eq!(
+            state.players[0].resources.qic - before.qic,
+            if credits { 0 } else { 1 },
+            "{faction:?}"
+        );
+    }
 }

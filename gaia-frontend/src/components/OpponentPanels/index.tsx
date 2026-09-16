@@ -1,4 +1,5 @@
 import { factionDisplayName } from '../../displayNames';
+import { projectedIncome } from '../../income';
 import { clsx } from 'clsx';
 import { ResourceToken, VictoryPointToken, type DisplayResource } from '../ResourceTokens';
 import { GamePieceIcon } from '../GamePieceIcon';
@@ -9,10 +10,7 @@ import {
 import type {
   EconomyResearchTileSide,
   GameEvent,
-  IncomeReceivedEvent,
   PlayerState,
-  ResearchTrack,
-  ResearchTracks,
 } from '../../types/game';
 
 interface Props {
@@ -25,133 +23,12 @@ interface Props {
   onPlayerSelect?: (player: PlayerState) => void;
 }
 
-interface IndexedIncome {
-  income: IncomeReceivedEvent['IncomeReceived'];
-  eventIndex: number;
-}
-
-interface RecurringTrackIncome {
-  ore: number;
-  credits: number;
-  knowledge: number;
-  qic: number;
-  power_charge: number;
-}
-
-const EMPTY_TRACK_INCOME: RecurringTrackIncome = {
-  ore: 0,
-  credits: 0,
-  knowledge: 0,
-  qic: 0,
-  power_charge: 0,
-};
-
-function latestIncome(
-  events: GameEvent[],
-  playerId: number,
-  round: number | undefined,
-): IndexedIncome | null {
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index];
-    if (!('IncomeReceived' in event)) continue;
-    const income = event.IncomeReceived as IncomeReceivedEvent['IncomeReceived'] | undefined;
-    if (!income) continue;
-    if (income.player === playerId && (round === undefined || income.round === round)) {
-      return { income, eventIndex: index };
-    }
-  }
-  return null;
-}
-
-function trackLevel(tracks: ResearchTracks, track: ResearchTrack): number {
-  switch (track) {
-    case 'Terraforming': return tracks.terraforming;
-    case 'Navigation': return tracks.navigation;
-    case 'ArtificialIntelligence': return tracks.ai;
-    case 'GaiaProject': return tracks.gaia;
-    case 'Economy': return tracks.economy;
-    case 'Science': return tracks.science;
-  }
-}
-
-function trackIncome(
-  tracks: ResearchTracks,
-  economySide: EconomyResearchTileSide,
-): RecurringTrackIncome {
-  const result = { ...EMPTY_TRACK_INCOME };
-  const economy = tracks.economy;
-  if (economy === 1) {
-    result.credits += 2;
-    result.power_charge += 1;
-  } else if (economy === 2) {
-    result.ore += 1;
-    result.credits += 2;
-    result.power_charge += 2;
-  } else if (economy === 3) {
-    result.ore += 1;
-    result.credits += economySide === 'VictoryPoints' ? 3 : 2;
-    result.power_charge += economySide === 'VictoryPoints' ? 0 : 3;
-  } else if (economy === 4) {
-    result.ore += 2;
-    result.credits += economySide === 'VictoryPoints' ? 4 : 2;
-    result.power_charge += economySide === 'VictoryPoints' ? 0 : 2;
-  }
-  if (tracks.science >= 1 && tracks.science <= 4) {
-    result.knowledge += tracks.science;
-  }
-  return result;
-}
-
-function projectedIncome(
-  events: GameEvent[],
-  player: PlayerState,
-  round: number | undefined,
-  economySide: EconomyResearchTileSide,
-): IncomeReceivedEvent['IncomeReceived'] | null {
-  const latest = latestIncome(events, player.player_id, round);
-  if (!latest) return null;
-
-  const incomeTimeTracks = { ...player.research_tracks };
-  for (let index = latest.eventIndex + 1; index < events.length; index += 1) {
-    const event = events[index];
-    if (!('ResearchAdvanced' in event)) continue;
-    const advance = event.ResearchAdvanced as {
-      player?: number;
-      track?: ResearchTrack;
-    } | undefined;
-    if (advance?.player !== player.player_id || !advance.track) continue;
-    const current = trackLevel(incomeTimeTracks, advance.track);
-    const previous = Math.max(0, current - 1);
-    switch (advance.track) {
-      case 'Terraforming': incomeTimeTracks.terraforming = previous; break;
-      case 'Navigation': incomeTimeTracks.navigation = previous; break;
-      case 'ArtificialIntelligence': incomeTimeTracks.ai = previous; break;
-      case 'GaiaProject': incomeTimeTracks.gaia = previous; break;
-      case 'Economy': incomeTimeTracks.economy = previous; break;
-      case 'Science': incomeTimeTracks.science = previous; break;
-    }
-  }
-
-  const before = trackIncome(incomeTimeTracks, economySide);
-  const after = trackIncome(player.research_tracks, economySide);
-  return {
-    ...latest.income,
-    ore: latest.income.ore + after.ore - before.ore,
-    credits: latest.income.credits + after.credits - before.credits,
-    knowledge: latest.income.knowledge + after.knowledge - before.knowledge,
-    qic: latest.income.qic + after.qic - before.qic,
-    power_charge: latest.income.power_charge + after.power_charge - before.power_charge,
-  };
-}
-
 /** BGA-style always-open player status cards. The caller supplies the players
  * in turn order, including the controlled player. */
 export function OpponentPanels({
   players,
   myPlayerId,
   activePlayerId = null,
-  events = [],
-  round,
   economyResearchTileSide = 'Power',
   onPlayerSelect,
 }: Props) {
@@ -160,12 +37,7 @@ export function OpponentPanels({
   return (
     <section className="opponent-panels" aria-label="플레이어 현황">
       {players.map((player, index) => {
-        const income = projectedIncome(
-          events,
-          player,
-          round,
-          economyResearchTileSide,
-        );
+        const income = projectedIncome(player, economyResearchTileSide);
         const factionColor = player.faction
           ? STRUCTURE_COLOR_HEX[FACTION_STRUCTURE_COLOR[player.faction]]
           : '#64748b';
@@ -222,7 +94,7 @@ export function OpponentPanels({
               <PowerBowl label="III" value={power.bowl3} tone="three" brainstone={power.brainstone === 'Area3'} />
             </span>
             <span className="opponent-footer">
-              <span className="opponent-income-power">이번 수입 충전 {income?.power_charge ?? 0}</span>
+              <span className="opponent-income-power">예상 수입 충전 {income?.power_charge ?? 0}</span>
               {player.passed && <span className="passed-badge">패스</span>}
               <span className="opponent-board-link" aria-hidden>
                 개인 보드 ›
@@ -255,7 +127,7 @@ function PlayerResource({
   return (
     <span className="opponent-resource-item">
       <ResourceToken resource={resource} value={value} rewardTarget />
-      <small aria-label={`이번 수입 ${labels[resource]} ${income}`}>+{income}</small>
+      <small title="현재 건물·기술·부스터 기준 수입. 이후 행동과 자원 보유 한도에 따라 실제 획득량은 달라질 수 있습니다." aria-label={`예상 수입 ${labels[resource]} ${income}`}>+{income}</small>
     </span>
   );
 }

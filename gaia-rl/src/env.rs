@@ -1,5 +1,5 @@
 use gaia_engine::game_state::{GamePhase, GameState, PlayerId};
-use gaia_engine::rules::engine::{AiActionError, AiDecision};
+use gaia_engine::rules::engine::{AiActionError, AiCandidateDiagnostics, AiDecision};
 use gaia_engine::{MapEngine, Randomizer, RuleEngine, SetupAction};
 use serde::{Deserialize, Serialize};
 
@@ -34,6 +34,8 @@ pub struct DecisionSnapshot {
     pub candidates: Vec<AiDecision>,
     pub state: GameState,
     pub steps: usize,
+    #[serde(default)]
+    pub candidate_generation: AiCandidateDiagnostics,
 }
 
 #[derive(Clone)]
@@ -43,6 +45,7 @@ pub struct Environment {
     decision_id: u64,
     steps: usize,
     max_steps: usize,
+    candidate_generation: AiCandidateDiagnostics,
 }
 
 impl Environment {
@@ -50,17 +53,18 @@ impl Environment {
         if max_steps == 0 {
             return Err(EnvError::Configuration("max_steps must be positive"));
         }
-        let (state, candidates) = Self::initial(seed)?;
+        let (state, candidates, candidate_generation) = Self::initial(seed)?;
         Ok(Self {
             state,
             candidates,
             decision_id: 0,
             steps: 0,
             max_steps,
+            candidate_generation,
         })
     }
 
-    fn initial(seed: &str) -> Result<(GameState, Vec<AiDecision>), EnvError> {
+    fn initial(seed: &str) -> Result<(GameState, Vec<AiDecision>, AiCandidateDiagnostics), EnvError> {
         let setup = Randomizer::generate_setup(seed)?;
         let players: Vec<_> = (0..4).map(|i| (i, format!("AI-{i}"))).collect();
         let mut state = MapEngine::init_game_state("RL", seed, &players, &setup);
@@ -81,14 +85,15 @@ impl Environment {
             RuleEngine::apply_setup_action(&mut state, player, action.clone())?;
         }
         RuleEngine::advance_automatic(&mut state)?;
-        let candidates = RuleEngine::ai_decisions(&state)?;
-        Ok((state, candidates))
+        let (candidates, diagnostics) = RuleEngine::ai_decisions_with_diagnostics(&state)?;
+        Ok((state, candidates, diagnostics))
     }
 
     pub fn reset(&mut self, seed: &str) -> Result<(), EnvError> {
-        let (state, candidates) = Self::initial(seed)?;
+        let (state, candidates, candidate_generation) = Self::initial(seed)?;
         self.state = state;
         self.candidates = candidates;
+        self.candidate_generation = candidate_generation;
         self.decision_id += 1;
         self.steps = 0;
         Ok(())
@@ -138,6 +143,7 @@ impl Environment {
             candidates: self.candidates.clone(),
             state: self.state.clone(),
             steps: self.steps,
+            candidate_generation: self.candidate_generation.clone(),
         })
     }
 
@@ -152,6 +158,20 @@ impl Environment {
     /// Candidate generation and automatic transitions also happen on the clone. If any stage
     /// fails, the caller retains the previous decision and can capture/replay it exactly.
     pub fn step(&mut self, decision_id: u64, index: usize) -> Result<(), EnvError> {
+        let next = self.preview_state(decision_id, index)?;
+        let (candidates, diagnostics) = RuleEngine::ai_decisions_with_diagnostics(&next)?;
+        self.state = next;
+        self.candidates = candidates;
+        self.candidate_generation = diagnostics;
+        self.decision_id += 1;
+        self.steps += 1;
+        Ok(())
+    }
+
+    /// Apply the exact paid decision and automatic transitions without enumerating
+    /// the next player's candidates. This is a state for evaluation, not a branch
+    /// from which an unchecked follow-up may be executed.
+    pub fn preview_state(&self, decision_id: u64, index: usize) -> Result<GameState, EnvError> {
         if decision_id != self.decision_id {
             return Err(EnvError::Stale {
                 expected: self.decision_id,
@@ -180,11 +200,6 @@ impl Environment {
             }
         }
         RuleEngine::advance_automatic(&mut next)?;
-        let candidates = RuleEngine::ai_decisions(&next)?;
-        self.state = next;
-        self.candidates = candidates;
-        self.decision_id += 1;
-        self.steps += 1;
-        Ok(())
+        Ok(next)
     }
 }

@@ -2,6 +2,8 @@ import type { ClientCommand, ClientFrame, ServerMessage } from '../types/game';
 
 type MessageListener = (msg: ServerMessage) => void;
 type StateListener = (connected: boolean) => void;
+export interface CommandState { ready: boolean; pending: boolean }
+type CommandStateListener = (state: CommandState) => void;
 
 const BACKOFF_INITIAL = 1000;
 const BACKOFF_MAX = 30000;
@@ -58,7 +60,12 @@ export class GaiaWebSocket {
   private roomCode: string;
   private listeners: Set<MessageListener> = new Set();
   private stateListeners: Set<StateListener> = new Set();
-  private queue: ClientFrame[] = [];
+  private joinFrame: Extract<ClientFrame, { type: 'join_room' }> | null = null;
+  private joinSent = false;
+  private ready = false;
+  private latestSnapshotRevision = -1;
+  private pendingCommands = new Map<string, Extract<ClientFrame, { type: 'command' }>>();
+  private commandStateListeners = new Set<CommandStateListener>();
   private retryDelay = BACKOFF_INITIAL;
   private stopped = false;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -75,47 +82,74 @@ export class GaiaWebSocket {
   private openSocket(): void {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const url = `${protocol}://${window.location.host}/ws/${this.roomCode}`;
-    this.ws = new WebSocket(url);
+    const socket = new WebSocket(url);
+    this.ws = socket;
+    this.joinSent = false;
+    this.ready = false;
 
-    this.ws.onopen = () => {
+    socket.onopen = () => {
+      if (this.ws !== socket || this.stopped) return;
       this.retryDelay = BACKOFF_INITIAL;
+      this.sendJoin();
       this.notifyState(true);
-      this.flushQueue();
     };
 
-    this.ws.onmessage = (ev: MessageEvent) => {
+    socket.onmessage = (ev: MessageEvent) => {
+      if (this.ws !== socket || this.stopped) return;
       try {
         const msg = decodeHexCoordinates(JSON.parse(ev.data as string)) as ServerMessage;
+        if (msg.type === 'snapshot') {
+          // Replaying a recorded outcome can broadcast a snapshot tagged with its old revision.
+          if (msg.revision < this.latestSnapshotRevision) return;
+          this.latestSnapshotRevision = msg.revision;
+        }
+        if (msg.type === 'room_joined' && this.joinFrame) {
+          this.joinFrame = { ...this.joinFrame, session_token: msg.session_token };
+        }
+        if (msg.type === 'command_accepted' || msg.type === 'command_rejected') {
+          if (msg.command_id !== null) this.pendingCommands.delete(msg.command_id);
+        }
         this.listeners.forEach((l) => l(msg));
+        if (this.ws !== socket || this.stopped) return;
+        // Apply the catch-up snapshot before enabling input or retrying uncertain commands.
+        if (msg.type === 'snapshot' && this.joinSent && !this.ready) {
+          this.ready = true;
+          this.flushPendingCommands();
+        }
+        this.notifyCommandState();
       } catch {
         // ignore malformed messages
       }
     };
 
-    this.ws.onclose = () => {
+    socket.onclose = () => {
+      if (this.ws !== socket || this.stopped) return;
+      this.ready = false;
+      this.notifyCommandState();
       this.notifyState(false);
       if (!this.stopped) {
         this.scheduleRetry();
       }
     };
 
-    this.ws.onerror = () => {
-      this.ws?.close();
+    socket.onerror = () => {
+      if (this.ws === socket) socket.close();
     };
   }
 
   private scheduleRetry(): void {
     this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      if (this.stopped) return;
       this.retryDelay = Math.min(this.retryDelay * 2, BACKOFF_MAX);
       this.openSocket();
     }, this.retryDelay);
   }
 
-  private flushQueue(): void {
-    while (this.queue.length > 0) {
-      const msg = this.queue.shift();
-      if (msg) this.doSend(msg);
-    }
+  private flushPendingCommands(): void {
+    // The server remembers outcomes by command_id. Never mint a new ID or revision for a
+    // lost acknowledgement: it may already have applied the original action.
+    this.pendingCommands.forEach((command) => this.doSend(command));
   }
 
   private doSend(msg: ClientFrame): void {
@@ -125,11 +159,36 @@ export class GaiaWebSocket {
   }
 
   send(msg: ClientFrame): void {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.doSend(msg);
-    } else {
-      this.queue.push(msg);
+    if (this.stopped) return;
+    if (msg.type === 'join_room') {
+      // Lobby hooks also send JoinRoom on onStateChange(true); deduplicate that send.
+      if (!this.joinSent) this.joinFrame = msg;
+      this.sendJoin();
+      return;
     }
+    this.pendingCommands.set(msg.command_id, msg);
+    if (this.isReady) this.doSend(msg);
+    this.notifyCommandState();
+  }
+
+  private sendJoin(): void {
+    if (!this.joinSent && this.joinFrame && this.isConnected) {
+      this.joinSent = true;
+      this.doSend(this.joinFrame);
+    }
+  }
+
+  get isReady(): boolean { return this.ready && this.isConnected; }
+  get hasPendingCommands(): boolean { return this.pendingCommands.size > 0; }
+
+  onCommandStateChange(listener: CommandStateListener): () => void {
+    this.commandStateListeners.add(listener);
+    return () => this.commandStateListeners.delete(listener);
+  }
+
+  private notifyCommandState(): void {
+    const state = { ready: this.isReady, pending: this.hasPendingCommands };
+    this.commandStateListeners.forEach((listener) => listener(state));
   }
 
   /**
@@ -178,7 +237,15 @@ export class GaiaWebSocket {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;
     }
-    this.ws?.close();
+    const socket = this.ws;
     this.ws = null;
+    this.ready = false;
+    this.joinSent = false;
+    this.joinFrame = null;
+    this.latestSnapshotRevision = -1;
+    this.pendingCommands.clear();
+    socket?.close();
+    this.notifyState(false);
+    this.notifyCommandState();
   }
 }

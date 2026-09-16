@@ -217,6 +217,10 @@ starting_bowl1 = 2
 starting_bowl2 = 4
 starting_bowl3 = 0
 gaiaformers = 3
+# The right academy has the same 4-credit action as Bal T'aks.
+[factions.academy_qic_action]
+resource = "Credits"
+amount = 4
 [[factions.starting_structures]]
 rel_q = 0
 rel_r = 0

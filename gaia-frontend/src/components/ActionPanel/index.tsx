@@ -1,6 +1,7 @@
 import { ADVANCED_TECH_TILE_LABELS } from '../advancedTechDescriptions';
 import { ARTIFACT_LABELS } from '../artifactDescriptions';
 import { ActionCrop } from '../ActionCrop';
+import { academyActionReward } from '../academyAction';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { shallow } from 'zustand/shallow';
@@ -66,6 +67,7 @@ const ACTION_BUTTONS: { label: string; actionType: ActionKind; shortcut?: string
   { label: '가이아 프로젝트', actionType: 'GaiaFormation', shortcut: 'G' },
   { label: '부스터 즉시 가이아포밍', actionType: 'RoundBoosterImmediateGaiaFormation' },
   { label: '부스터 +3 사거리 광산 건설', actionType: 'RoundBoosterRangeBuild' },
+  { label: '부스터 광산 건설 (테라포밍 1단계 무료)', actionType: 'RoundBoosterTerraformBuild' },
   { label: '부스터 +3 사거리 가이아 프로젝트', actionType: 'RoundBoosterRangeGaiaFormation' },
   { label: '부스터 +3 사거리 함선 탐사', actionType: 'RoundBoosterRangeExploreSpaceship' },
   { label: '스페이스자이언트 행성의회: 기술 타일 획득', actionType: 'SpecialAction', shortcut: 'S' },
@@ -184,6 +186,7 @@ function tinkeroidsAvailableTiles(
 const REQUIRED_ROUND_BOOSTER_BY_ACTION: Partial<Record<ActionKind, number>> = {
   RoundBoosterImmediateGaiaFormation: 5,
   RoundBoosterRangeBuild: 8,
+  RoundBoosterTerraformBuild: 12,
   RoundBoosterRangeGaiaFormation: 8,
   RoundBoosterRangeExploreSpaceship: 8,
 };
@@ -416,6 +419,7 @@ export function ActionPanel({
     Partial<Record<FreeActionKind, number>>
   >({});
   const currentPlayer = gameState.players.find((player) => player.player_id === myPlayerId);
+  const academyReward = academyActionReward(currentPlayer?.faction ?? null);
   const ownedFederationKinds = Array.from(new Set([
     ...(currentPlayer?.federation_tokens ?? []),
     ...(currentPlayer?.gray_federation_tokens ?? []),
@@ -972,6 +976,11 @@ export function ActionPanel({
           actions.sendAction({ type: 'RoundBoosterRangeBuild', coord: activePlanet });
         }
         break;
+      case 'RoundBoosterTerraformBuild':
+        if (activePlanet) {
+          actions.sendAction({ type: 'RoundBoosterTerraformBuild', coord: activePlanet });
+        }
+        break;
       case 'RoundBoosterRangeGaiaFormation':
         if (activePlanet) {
           actions.sendAction({ type: 'RoundBoosterRangeGaiaFormation', coord: activePlanet });
@@ -1201,6 +1210,7 @@ export function ActionPanel({
     selectedAction === 'GaiaFormation' ||
     selectedAction === 'RoundBoosterImmediateGaiaFormation' ||
     selectedAction === 'RoundBoosterRangeBuild' ||
+    selectedAction === 'RoundBoosterTerraformBuild' ||
     selectedAction === 'RoundBoosterRangeGaiaFormation' ||
     selectedAction === 'Upgrade' ||
     selectedAction === 'AmbasSwapPlanetaryInstitute' ||
@@ -1262,6 +1272,7 @@ export function ActionPanel({
     (selectedAction === 'GaiaFormation' && !!activePlanet) ||
     (selectedAction === 'RoundBoosterImmediateGaiaFormation' && !!activePlanet) ||
     (selectedAction === 'RoundBoosterRangeBuild' && !!activePlanet) ||
+    (selectedAction === 'RoundBoosterTerraformBuild' && !!activePlanet) ||
     (selectedAction === 'RoundBoosterRangeGaiaFormation' && !!activePlanet) ||
     (selectedAction === 'RoundBoosterRangeExploreSpaceship' && !!spaceshipId) ||
     (selectedAction === 'Upgrade' &&
@@ -1426,7 +1437,7 @@ export function ActionPanel({
         {REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType] !== undefined && (() => {
           const boosterId = REQUIRED_ROUND_BOOSTER_BY_ACTION[actionType]!;
           const src = roundBoosterImageSrc(boosterId);
-          return src ? <ActionCrop id={boosterId === 5 ? 'booster-5' : 'booster-8'} src={src} used={usedThisRound} /> : null;
+          return src ? <ActionCrop id={boosterId === 5 ? 'booster-5' : boosterId === 12 ? 'booster-12' : 'booster-8'} src={src} used={usedThisRound} /> : null;
         })()}
         <span className="action-label">
           {unavailableReason ? `${label} (${unavailableReason})` : renderLabelWithRangeIcon(label)}
@@ -1945,8 +1956,10 @@ export function ActionPanel({
           onClick={handleAcademyQicAction}
         >
           {academyQicActionUsedThisRound(gameState, myPlayerId)
-            ? '아카데미(정보 큐브) 행동 — 이번 라운드 사용 완료'
-            : '아카데미(정보 큐브) 행동 — 정보 큐브 획득'}
+            ? `아카데미(${academyReward.label}) 행동 — 이번 라운드 사용 완료`
+            : academyReward.resource === 'credits'
+              ? '아카데미(크레딧) 행동 — 크레딧 4 획득'
+              : '아카데미(정보 큐브) 행동 — 정보 큐브 획득'}
         </button>
       )}
 

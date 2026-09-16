@@ -1,8 +1,10 @@
 import { useId } from 'react';
 import { GamePieceIcon } from './GamePieceIcon';
 
-// User-mapped original-pixel octagons; keep source dimensions independent of display size.
+// Original-pixel octagons; preserve user mappings and keep source dimensions independent of display size.
 export const ACTION_CROPS = {
+  // Shared one-QIC art from Hadsch Hallas, excluding the surrounding building slot.
+  'academy-qic': { width: 2323, height: 1489, points: [[1438,775],[1407,807],[1407,849],[1438,880],[1493,880],[1525,849],[1525,807],[1493,775]] },
   'faction-Firaks-downgrade': { width: 2323, height: 1489, points: [[553,670],[513,729],[513,823],[556,893],[777,903],[820,839],[820,752],[785,687]] },
   'faction-Ivits-space-station': { width: 2323, height: 1489, points: [[556,676],[518,737],[499,821],[548,888],[769,898],[820,833],[818,752],[774,684]] },
   'exploration-Gleens-range': { width: 884, height: 1778, points: [[361,474],[288,550],[280,649],[367,726],[511,725],[602,651],[600,546],[517,467]] },
@@ -17,6 +19,7 @@ export const ACTION_CROPS = {
   'advanced-22': { width: 668, height: 528, points: [[195,55],[92,157],[89,296],[188,397],[374,398],[476,297],[479,160],[373,57]] },
   'booster-5': { width: 720, height: 2104, points: [[255,385],[136,503],[135,662],[249,768],[467,770],[589,662],[587,506],[461,380]] },
   'booster-8': { width: 720, height: 2104, points: [[255,381],[135,500],[134,649],[254,764],[463,765],[586,645],[589,495],[467,384]] },
+  'booster-12': { width: 720, height: 2104, points: [[267,387],[147,504],[142,652],[263,771],[475,770],[597,653],[596,501],[475,387]] },
 } as const;
 
 export type ActionCropId = keyof typeof ACTION_CROPS;

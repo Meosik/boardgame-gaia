@@ -177,6 +177,10 @@ pub enum GameAction {
     /// Lost Fleet extension of round booster 8: immediately explore a spaceship with +3 range.
     RoundBoosterRangeExploreSpaceship { ship: SpaceshipId },
 
+    /// Round booster 12 special action: Build a Mine with one free terraforming step.
+    /// The normal mine cost, additional terraforming and range/entry QIC still apply.
+    RoundBoosterTerraformBuild { coord: HexCoord },
+
     /// Pass for the remainder of the round, optionally activating a booster.
     Pass { booster_id: Option<u8> },
 

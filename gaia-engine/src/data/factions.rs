@@ -1,14 +1,15 @@
 use crate::game_state::{FactionId, PlanetType, ResearchTrack, ResourceKind, StructureType};
 use serde::Deserialize;
+use std::sync::LazyLock;
 
 static FACTIONS_TOML: &str = include_str!("../../data/factions.toml");
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct FactionDataFile {
     pub factions: Vec<FactionData>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct FactionData {
     pub id: String,
     pub home_planet: String,
@@ -58,7 +59,7 @@ pub struct FactionData {
     #[serde(default)]
     pub planetary_institute_bonus_resource: Option<BonusResource>,
     /// Overrides the universal Academy(Qic) action (gain 1 QIC) when taken.
-    /// Only BalTaks deviates (gain 4 credits instead).
+    /// Geodens and BalTaks gain 4 credits instead.
     #[serde(default)]
     pub academy_qic_action: Option<BonusResource>,
 }
@@ -66,7 +67,7 @@ pub struct FactionData {
 /// A flat `amount` of `resource` (rulebook resource name — see
 /// `parse_resource_kind`), used for faction-board deviations that are just
 /// "gain N of resource X" with no table/base structure.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct BonusResource {
     pub resource: String,
     pub amount: u8,
@@ -82,7 +83,7 @@ impl BonusResource {
 /// table (rulebook: each round, gain `base` plus the revealed portion of
 /// `table`, left-to-right, as the Nth structure of that type is built —
 /// i.e. total = base + table[0..count_built].sum()).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct StructureIncomeOverride {
     pub base: u8,
     pub table: Vec<u8>,
@@ -98,13 +99,13 @@ impl StructureIncomeOverride {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct StartingTrackBonus {
     pub track: String,
     pub level: u8,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct RelativeStructure {
     pub rel_q: i32,
     pub rel_r: i32,
@@ -204,7 +205,44 @@ pub fn parse_structure_kind(s: &str) -> Option<StructureType> {
 }
 
 pub fn load_factions() -> FactionDataFile {
-    #[allow(clippy::expect_used)]
-    toml::from_str(FACTIONS_TOML)
-        .expect("factions.toml embedded at compile time — parse failure is a build error")
+    // Terrain checks request this data for many candidates in each native preview.
+    // Parse the immutable embedded source once, but keep callers' owned data isolated.
+    static DATA: LazyLock<FactionDataFile> = LazyLock::new(|| {
+        #[allow(clippy::expect_used)]
+        toml::from_str(FACTIONS_TOML)
+            .expect("factions.toml embedded at compile time — parse failure is a build error")
+    });
+    DATA.clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn faction_loads_match_embedded_data_and_remain_independently_owned(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let expected: FactionDataFile = toml::from_str(FACTIONS_TOML)?;
+        let mut changed = load_factions();
+        assert_eq!(format!("{changed:?}"), format!("{expected:?}"));
+        for faction in &mut changed.factions {
+            faction.id.clear();
+            faction.starting_ore = 0;
+            faction.starting_structures.clear();
+            faction.starting_track_bonuses.clear();
+            if let Some(income) = &mut faction.research_lab_income {
+                income.table.clear();
+                income.resource = None;
+            }
+            if let Some(bonus) = &mut faction.planetary_institute_bonus_resource {
+                bonus.resource.clear();
+            }
+        }
+        assert_eq!(format!("{:?}", load_factions()), format!("{expected:?}"));
+        let threaded = std::thread::spawn(load_factions)
+            .join()
+            .map_err(|_| "faction loader thread panicked")?;
+        assert_eq!(format!("{threaded:?}"), format!("{expected:?}"));
+        Ok(())
+    }
 }

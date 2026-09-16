@@ -4,7 +4,7 @@ from gymnasium import spaces
 from .vocabulary import CATEGORIES
 from ._native import ENGINE_BUILD_ID, ENV_SCHEMA_VERSION
 
-ENCODING_VERSION = 2
+ENCODING_VERSION = 3
 BOARD_CAPACITY = 256
 CATEGORY_IDS = {name: i + 1 for i, name in enumerate(CATEGORIES)}
 ACTION_FIELDS = (

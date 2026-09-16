@@ -51,6 +51,35 @@ fn fork_preserves_stale_index_and_step_limit_guards() {
 }
 
 #[test]
+fn state_preview_matches_paid_steps_without_changing_parent() {
+    let mut env = Environment::new("rl-preview", 10000).unwrap();
+    for _ in 0..40 {
+        if env.is_terminal() { break; }
+        let before = serde_json::to_value(env.snapshot().unwrap()).unwrap();
+        for index in [0, env.legal_actions().len() - 1] {
+            let preview = env.preview_state(env.decision_id(), index).unwrap();
+            let branch = env.fork(env.decision_id(), index).unwrap();
+            assert_same_json(&preview.serialize(), &branch.state().serialize(), "preview");
+            assert_eq!(serde_json::to_value(env.snapshot().unwrap()).unwrap(), before);
+        }
+        let index = env.legal_actions().iter().position(|a|
+            matches!(a, AiDecision::Game(GameAction::Pass { .. }))).unwrap_or(0);
+        env.step(env.decision_id(), index).unwrap();
+    }
+}
+
+#[test]
+fn state_preview_preserves_validation_and_truncation_guards() {
+    let mut env = Environment::new("rl-preview-guards", 1).unwrap();
+    assert!(matches!(env.preview_state(99, 0), Err(EnvError::Stale { .. })));
+    assert!(matches!(env.preview_state(0, usize::MAX), Err(EnvError::InvalidIndex(_))));
+    env.step(0, 0).unwrap();
+    let before = serde_json::to_value(env.snapshot().unwrap()).unwrap();
+    assert!(matches!(env.preview_state(env.decision_id(), 0), Err(EnvError::StepLimit(1))));
+    assert_eq!(serde_json::to_value(env.snapshot().unwrap()).unwrap(), before);
+}
+
+#[test]
 fn identical_actions_finish_identically_and_all_candidates_validate() {
     let mut a = Environment::new("rl-complete", 10000).unwrap();
     let mut b = Environment::new("rl-complete", 10000).unwrap();

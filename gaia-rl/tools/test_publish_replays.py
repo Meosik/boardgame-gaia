@@ -68,6 +68,49 @@ class PublishReplayTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Invalid'):
             publish(batch, self.dest)
 
+    def test_retention_deletes_only_expired_nonvisible_payloads(self):
+        day = 86400
+        old = self.batch('old', 26)
+        publish(old, self.dest, now=100 * day)
+        unrelated = self.dest/'unlisted.json.gz'
+        unrelated.write_bytes(b'not owned by catalog')
+        publish(self.batch('new', 1), self.dest, now=131 * day)
+        self.assertEqual(len(self.catalog()), 24)
+        self.assertEqual(len(self.catalog('archive-index.json')), 24)
+        self.assertTrue((self.dest/'old-22.json.gz').exists())
+        self.assertFalse((self.dest/'old-23.json.gz').exists())
+        self.assertEqual(unrelated.read_bytes(), b'not owned by catalog')
+        # Raw evaluation/export files are outside the publication destination.
+        self.assertTrue((old/'old-25.json.gz').exists())
+
+    def test_legacy_age_starts_at_migration_and_recent_hidden_games_survive(self):
+        import shutil
+        day = 86400
+        shutil.copytree(self.batch('legacy', 26), self.dest)
+        new = self.batch('new', 1)
+        publish(new, self.dest, now=100 * day)
+        publish(new, self.dest, now=130 * day)
+        self.assertEqual(len(self.catalog('archive-index.json')), 27)
+        publish(new, self.dest, now=130 * day + 1)
+        self.assertEqual(len(self.catalog('archive-index.json')), 24)
+
+    def test_expired_ids_cannot_be_resurrected_by_retry(self):
+        old = self.batch('old', 1)
+        publish(old, self.dest, now=1)
+        publish(self.batch('new', 24), self.dest, now=32 * 86400)
+        before = (self.dest/'index.json').read_bytes()
+        with self.assertRaisesRegex(ValueError, 'expired'):
+            publish(old, self.dest, now=33 * 86400)
+        self.assertEqual((self.dest/'index.json').read_bytes(), before)
+
+    def test_symlink_payload_refused_before_writes(self):
+        batch = self.batch('new', 1)
+        target = batch/'new-0.json.gz'
+        target.unlink()
+        target.symlink_to(__file__)
+        with self.assertRaisesRegex(ValueError, 'symlink'):
+            publish(batch, self.dest)
+
 
 if __name__ == '__main__':
     unittest.main()

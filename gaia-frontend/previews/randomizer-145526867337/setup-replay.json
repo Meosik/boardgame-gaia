@@ -1,0 +1,2853 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "action": null,
+      "decision_id": 0,
+      "event_end": 0,
+      "legal_action_count": 0,
+      "legal_federation_count": 0,
+      "player": null,
+      "state": {
+        "bidding": null,
+        "board": {
+          "hexes": {
+            "-1,-1": {
+              "coord": "-1,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,-2": {
+              "coord": "-1,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,-3": {
+              "coord": "-1,-3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Ice"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,-4": {
+              "coord": "-1,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,-5": {
+              "coord": "-1,-5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Gaia"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,-6": {
+              "coord": "-1,-6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,0": {
+              "coord": "-1,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,1": {
+              "coord": "-1,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,2": {
+              "coord": "-1,2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,3": {
+              "coord": "-1,3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "-1,4": {
+              "coord": "-1,4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,5": {
+              "coord": "-1,5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Oxide"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-1,6": {
+              "coord": "-1,6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,-1": {
+              "coord": "-2,-1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "-2,-2": {
+              "coord": "-2,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,-3": {
+              "coord": "-2,-3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,-4": {
+              "coord": "-2,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,-5": {
+              "coord": "-2,-5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,0": {
+              "coord": "-2,0",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Oxide"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,1": {
+              "coord": "-2,1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Volcanic"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,2": {
+              "coord": "-2,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,3": {
+              "coord": "-2,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,4": {
+              "coord": "-2,4",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,5": {
+              "coord": "-2,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,6": {
+              "coord": "-2,6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-2,7": {
+              "coord": "-2,7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,-1": {
+              "coord": "-3,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,-2": {
+              "coord": "-3,-2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Desert"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,-3": {
+              "coord": "-3,-3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Terra"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,-4": {
+              "coord": "-3,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,0": {
+              "coord": "-3,0",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,1": {
+              "coord": "-3,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,2": {
+              "coord": "-3,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "-3,3": {
+              "coord": "-3,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,4": {
+              "coord": "-3,4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,5": {
+              "coord": "-3,5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Terra"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,6": {
+              "coord": "-3,6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-3,7": {
+              "coord": "-3,7",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,-1": {
+              "coord": "-4,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,-2": {
+              "coord": "-4,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,-3": {
+              "coord": "-4,-3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,0": {
+              "coord": "-4,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,1": {
+              "coord": "-4,1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Volcanic"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,2": {
+              "coord": "-4,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,3": {
+              "coord": "-4,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,4": {
+              "coord": "-4,4",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Swamp"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,5": {
+              "coord": "-4,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,6": {
+              "coord": "-4,6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-4,7": {
+              "coord": "-4,7",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Desert"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,-1": {
+              "coord": "-5,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,-2": {
+              "coord": "-5,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,0": {
+              "coord": "-5,0",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Titanium"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,1": {
+              "coord": "-5,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,2": {
+              "coord": "-5,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,3": {
+              "coord": "-5,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,4": {
+              "coord": "-5,4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,5": {
+              "coord": "-5,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,6": {
+              "coord": "-5,6",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Gaia"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-5,7": {
+              "coord": "-5,7",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-6,0": {
+              "coord": "-6,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-6,1": {
+              "coord": "-6,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-6,2": {
+              "coord": "-6,2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Ice"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-6,3": {
+              "coord": "-6,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-6,4": {
+              "coord": "-6,4",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-6,5": {
+              "coord": "-6,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-6,6": {
+              "coord": "-6,6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-6,7": {
+              "coord": "-6,7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-7,1": {
+              "coord": "-7,1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-7,2": {
+              "coord": "-7,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-7,3": {
+              "coord": "-7,3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Terra"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-7,4": {
+              "coord": "-7,4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "-7,5": {
+              "coord": "-7,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,-1": {
+              "coord": "0,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,-2": {
+              "coord": "0,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,-3": {
+              "coord": "0,-3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Titanium"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,-4": {
+              "coord": "0,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,-5": {
+              "coord": "0,-5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,-6": {
+              "coord": "0,-6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,0": {
+              "coord": "0,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,1": {
+              "coord": "0,1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Terra"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,2": {
+              "coord": "0,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,3": {
+              "coord": "0,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,4": {
+              "coord": "0,4",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Swamp"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,5": {
+              "coord": "0,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "0,6": {
+              "coord": "0,6",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,-1": {
+              "coord": "1,-1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Swamp"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,-2": {
+              "coord": "1,-2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Desert"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,-3": {
+              "coord": "1,-3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "1,-4": {
+              "coord": "1,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,-5": {
+              "coord": "1,-5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,-6": {
+              "coord": "1,-6",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,0": {
+              "coord": "1,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,1": {
+              "coord": "1,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,2": {
+              "coord": "1,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,3": {
+              "coord": "1,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,4": {
+              "coord": "1,4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,5": {
+              "coord": "1,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "1,6": {
+              "coord": "1,6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,-1": {
+              "coord": "10,-1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Gaia"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,-2": {
+              "coord": "10,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,-3": {
+              "coord": "10,-3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,-4": {
+              "coord": "10,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,-5": {
+              "coord": "10,-5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Volcanic"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,-6": {
+              "coord": "10,-6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,-7": {
+              "coord": "10,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,-8": {
+              "coord": "10,-8",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Oxide"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,0": {
+              "coord": "10,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "10,1": {
+              "coord": "10,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "11,-1": {
+              "coord": "11,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "11,-2": {
+              "coord": "11,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "11,-3": {
+              "coord": "11,-3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Gaia"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "11,-4": {
+              "coord": "11,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "11,-5": {
+              "coord": "11,-5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "11,-6": {
+              "coord": "11,-6",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Desert"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "11,-7": {
+              "coord": "11,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "11,-8": {
+              "coord": "11,-8",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "12,-2": {
+              "coord": "12,-2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Titanium"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "12,-3": {
+              "coord": "12,-3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "12,-4": {
+              "coord": "12,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "12,-5": {
+              "coord": "12,-5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "12,-6": {
+              "coord": "12,-6",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,-1": {
+              "coord": "2,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,-2": {
+              "coord": "2,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,-3": {
+              "coord": "2,-3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,-4": {
+              "coord": "2,-4",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,-5": {
+              "coord": "2,-5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Ice"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,-6": {
+              "coord": "2,-6",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "ProtoPlanet"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,-7": {
+              "coord": "2,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,0": {
+              "coord": "2,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,1": {
+              "coord": "2,1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "2,2": {
+              "coord": "2,2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Volcanic"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,3": {
+              "coord": "2,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,4": {
+              "coord": "2,4",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Ice"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,5": {
+              "coord": "2,5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Desert"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "2,6": {
+              "coord": "2,6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,-1": {
+              "coord": "3,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,-2": {
+              "coord": "3,-2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "3,-3": {
+              "coord": "3,-3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Volcanic"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,-4": {
+              "coord": "3,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,-5": {
+              "coord": "3,-5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,-6": {
+              "coord": "3,-6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,-7": {
+              "coord": "3,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,0": {
+              "coord": "3,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,1": {
+              "coord": "3,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,2": {
+              "coord": "3,2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Titanium"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,3": {
+              "coord": "3,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,4": {
+              "coord": "3,4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,5": {
+              "coord": "3,5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "3,6": {
+              "coord": "3,6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,-1": {
+              "coord": "4,-1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Volcanic"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,-2": {
+              "coord": "4,-2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Ice"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,-3": {
+              "coord": "4,-3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,-4": {
+              "coord": "4,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,-5": {
+              "coord": "4,-5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,-6": {
+              "coord": "4,-6",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Gaia"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,-7": {
+              "coord": "4,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,0": {
+              "coord": "4,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,1": {
+              "coord": "4,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,2": {
+              "coord": "4,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "4,3": {
+              "coord": "4,3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,4": {
+              "coord": "4,4",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "4,5": {
+              "coord": "4,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,-1": {
+              "coord": "5,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,-2": {
+              "coord": "5,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,-3": {
+              "coord": "5,-3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,-4": {
+              "coord": "5,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,-5": {
+              "coord": "5,-5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Titanium"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,-6": {
+              "coord": "5,-6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,-7": {
+              "coord": "5,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,0": {
+              "coord": "5,0",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Swamp"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,1": {
+              "coord": "5,1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Terra"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,2": {
+              "coord": "5,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,3": {
+              "coord": "5,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,4": {
+              "coord": "5,4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "5,5": {
+              "coord": "5,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,-1": {
+              "coord": "6,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,-2": {
+              "coord": "6,-2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Oxide"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,-3": {
+              "coord": "6,-3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,-4": {
+              "coord": "6,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "6,-5": {
+              "coord": "6,-5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Swamp"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,-6": {
+              "coord": "6,-6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,-7": {
+              "coord": "6,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,0": {
+              "coord": "6,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,1": {
+              "coord": "6,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,2": {
+              "coord": "6,2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Gaia"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,3": {
+              "coord": "6,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,4": {
+              "coord": "6,4",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Desert"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "6,5": {
+              "coord": "6,5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,-1": {
+              "coord": "7,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,-2": {
+              "coord": "7,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,-3": {
+              "coord": "7,-3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Titanium"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,-4": {
+              "coord": "7,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,-5": {
+              "coord": "7,-5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,-6": {
+              "coord": "7,-6",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Ice"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,-7": {
+              "coord": "7,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,-8": {
+              "coord": "7,-8",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,0": {
+              "coord": "7,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "7,1": {
+              "coord": "7,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,2": {
+              "coord": "7,2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,3": {
+              "coord": "7,3",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "7,4": {
+              "coord": "7,4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,-1": {
+              "coord": "8,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,-2": {
+              "coord": "8,-2",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,-3": {
+              "coord": "8,-3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "ProtoPlanet"
+              },
+              "satellites": [],
+              "space_tile_kind": "Single",
+              "structures": []
+            },
+            "8,-4": {
+              "coord": "8,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,-5": {
+              "coord": "8,-5",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Gaia"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,-6": {
+              "coord": "8,-6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,-7": {
+              "coord": "8,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,-8": {
+              "coord": "8,-8",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,0": {
+              "coord": "8,0",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,1": {
+              "coord": "8,1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,2": {
+              "coord": "8,2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Oxide"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "8,3": {
+              "coord": "8,3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Terra"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,-1": {
+              "coord": "9,-1",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,-2": {
+              "coord": "9,-2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Oxide"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,-3": {
+              "coord": "9,-3",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Swamp"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,-4": {
+              "coord": "9,-4",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,-5": {
+              "coord": "9,-5",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,-6": {
+              "coord": "9,-6",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,-7": {
+              "coord": "9,-7",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,-8": {
+              "coord": "9,-8",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,0": {
+              "coord": "9,0",
+              "planet": null,
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,1": {
+              "coord": "9,1",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Transdim"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            },
+            "9,2": {
+              "coord": "9,2",
+              "planet": {
+                "is_gaia_formed": false,
+                "owner": null,
+                "planet_type": "Asteroid"
+              },
+              "satellites": [],
+              "space_tile_kind": null,
+              "structures": []
+            }
+          },
+          "lost_planet": null,
+          "sectors": [
+            {
+              "id": 5,
+              "origin": "9,-6",
+              "rotation": 3
+            },
+            {
+              "id": 9,
+              "origin": "4,-5",
+              "rotation": 2
+            },
+            {
+              "id": 3,
+              "origin": "-1,-4",
+              "rotation": 5
+            },
+            {
+              "id": 7,
+              "origin": "10,-2",
+              "rotation": 3
+            },
+            {
+              "id": 4,
+              "origin": "5,-1",
+              "rotation": 5
+            },
+            {
+              "id": 1,
+              "origin": "0,0",
+              "rotation": 0
+            },
+            {
+              "id": 8,
+              "origin": "-5,1",
+              "rotation": 2
+            },
+            {
+              "id": 10,
+              "origin": "6,3",
+              "rotation": 2
+            },
+            {
+              "id": 2,
+              "origin": "1,4",
+              "rotation": 5
+            },
+            {
+              "id": 6,
+              "origin": "-4,5",
+              "rotation": 5
+            },
+            {
+              "id": 17,
+              "origin": "3,5",
+              "rotation": 1
+            },
+            {
+              "id": 13,
+              "origin": "10,1",
+              "rotation": 2
+            },
+            {
+              "id": 16,
+              "origin": "11,-5",
+              "rotation": 5
+            },
+            {
+              "id": 12,
+              "origin": "8,-8",
+              "rotation": 2
+            },
+            {
+              "id": 18,
+              "origin": "-3,7",
+              "rotation": 5
+            },
+            {
+              "id": 11,
+              "origin": "-6,4",
+              "rotation": 2
+            },
+            {
+              "id": 14,
+              "origin": "-5,-2",
+              "rotation": 5
+            },
+            {
+              "id": 15,
+              "origin": "2,-7",
+              "rotation": 0
+            }
+          ],
+          "spaceship_tiles": {
+            "Eclipse": "1,-3",
+            "Rebellion": "6,-4",
+            "TFMars": "-3,2",
+            "Twilight": "4,2"
+          }
+        },
+        "boosters": [
+          7,
+          11,
+          5,
+          13,
+          6,
+          4,
+          9
+        ],
+        "created_at": 1789317955,
+        "current_player": 0,
+        "event_log": [],
+        "faction_selection": {
+          "assignments": [],
+          "available_factions": [
+            "Geodens",
+            "Tinkeroids",
+            "HadschHallas",
+            "Moweyds"
+          ],
+          "current_index": 0,
+          "player_order": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "final_scoring_tiles": [
+          {
+            "condition": "MostSatellites",
+            "id": 10,
+            "vp_1st": 18,
+            "vp_2nd": 12,
+            "vp_3rd": 6
+          },
+          {
+            "condition": "GreatestDistancePiAcademy",
+            "id": 9,
+            "vp_1st": 18,
+            "vp_2nd": 12,
+            "vp_3rd": 6
+          }
+        ],
+        "pass_order": [],
+        "phase": {
+          "Setup": {
+            "FactionSelection": {
+              "active_player": 0
+            }
+          }
+        },
+        "players": [
+          {
+            "academy_qic_action_used_this_round": false,
+            "advanced_tech_tile_special_actions_used_this_round": [],
+            "advanced_tech_tiles": [],
+            "alliance_tiles": [],
+            "artifact_mines": [],
+            "artifacts": [],
+            "booster": null,
+            "covered_tech_tiles": [],
+            "expensive_terraforming_planet_types": [],
+            "exploration_shuttles_available": 3,
+            "explored_ships": [],
+            "faction": null,
+            "faction_special_action_used_this_round": false,
+            "federated_hexes": [],
+            "federation_tokens": [],
+            "first_colonization_bonus_used": false,
+            "gaiaformers_deployed": 0,
+            "gaiaformers_in_gaia_area": 0,
+            "gaiaformers_total": 0,
+            "geodens_rewarded_planet_types": [],
+            "gleens_special_action_used_this_round": false,
+            "gray_federation_tokens": [],
+            "moweyds_power_ring_hexes": [],
+            "nickname": "미배정 1",
+            "passed": false,
+            "pi_ability_used": false,
+            "player_id": 0,
+            "research_tracks": {
+              "ai": 0,
+              "economy": 0,
+              "gaia": 0,
+              "navigation": 0,
+              "science": 0,
+              "terraforming": 0
+            },
+            "resources": {
+              "credits": 0,
+              "knowledge": 0,
+              "ore": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 0,
+                "bowl3": 0,
+                "brainstone": null,
+                "gaia_bowl": 0,
+                "gaia_forming": 0
+              },
+              "qic": 0,
+              "spent_gaia_formers": 0
+            },
+            "round_booster_special_action_used_this_round": false,
+            "setup_bid_vp": 0,
+            "space_giants_special_action_used_this_round": false,
+            "structures": [],
+            "tech_tile_special_actions_used_this_round": [],
+            "tech_tiles": [],
+            "tinkeroids_selected_tile": null,
+            "tinkeroids_tiles_used": [],
+            "vp": 10
+          },
+          {
+            "academy_qic_action_used_this_round": false,
+            "advanced_tech_tile_special_actions_used_this_round": [],
+            "advanced_tech_tiles": [],
+            "alliance_tiles": [],
+            "artifact_mines": [],
+            "artifacts": [],
+            "booster": null,
+            "covered_tech_tiles": [],
+            "expensive_terraforming_planet_types": [],
+            "exploration_shuttles_available": 3,
+            "explored_ships": [],
+            "faction": null,
+            "faction_special_action_used_this_round": false,
+            "federated_hexes": [],
+            "federation_tokens": [],
+            "first_colonization_bonus_used": false,
+            "gaiaformers_deployed": 0,
+            "gaiaformers_in_gaia_area": 0,
+            "gaiaformers_total": 0,
+            "geodens_rewarded_planet_types": [],
+            "gleens_special_action_used_this_round": false,
+            "gray_federation_tokens": [],
+            "moweyds_power_ring_hexes": [],
+            "nickname": "미배정 2",
+            "passed": false,
+            "pi_ability_used": false,
+            "player_id": 1,
+            "research_tracks": {
+              "ai": 0,
+              "economy": 0,
+              "gaia": 0,
+              "navigation": 0,
+              "science": 0,
+              "terraforming": 0
+            },
+            "resources": {
+              "credits": 0,
+              "knowledge": 0,
+              "ore": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 0,
+                "bowl3": 0,
+                "brainstone": null,
+                "gaia_bowl": 0,
+                "gaia_forming": 0
+              },
+              "qic": 0,
+              "spent_gaia_formers": 0
+            },
+            "round_booster_special_action_used_this_round": false,
+            "setup_bid_vp": 0,
+            "space_giants_special_action_used_this_round": false,
+            "structures": [],
+            "tech_tile_special_actions_used_this_round": [],
+            "tech_tiles": [],
+            "tinkeroids_selected_tile": null,
+            "tinkeroids_tiles_used": [],
+            "vp": 10
+          },
+          {
+            "academy_qic_action_used_this_round": false,
+            "advanced_tech_tile_special_actions_used_this_round": [],
+            "advanced_tech_tiles": [],
+            "alliance_tiles": [],
+            "artifact_mines": [],
+            "artifacts": [],
+            "booster": null,
+            "covered_tech_tiles": [],
+            "expensive_terraforming_planet_types": [],
+            "exploration_shuttles_available": 3,
+            "explored_ships": [],
+            "faction": null,
+            "faction_special_action_used_this_round": false,
+            "federated_hexes": [],
+            "federation_tokens": [],
+            "first_colonization_bonus_used": false,
+            "gaiaformers_deployed": 0,
+            "gaiaformers_in_gaia_area": 0,
+            "gaiaformers_total": 0,
+            "geodens_rewarded_planet_types": [],
+            "gleens_special_action_used_this_round": false,
+            "gray_federation_tokens": [],
+            "moweyds_power_ring_hexes": [],
+            "nickname": "미배정 3",
+            "passed": false,
+            "pi_ability_used": false,
+            "player_id": 2,
+            "research_tracks": {
+              "ai": 0,
+              "economy": 0,
+              "gaia": 0,
+              "navigation": 0,
+              "science": 0,
+              "terraforming": 0
+            },
+            "resources": {
+              "credits": 0,
+              "knowledge": 0,
+              "ore": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 0,
+                "bowl3": 0,
+                "brainstone": null,
+                "gaia_bowl": 0,
+                "gaia_forming": 0
+              },
+              "qic": 0,
+              "spent_gaia_formers": 0
+            },
+            "round_booster_special_action_used_this_round": false,
+            "setup_bid_vp": 0,
+            "space_giants_special_action_used_this_round": false,
+            "structures": [],
+            "tech_tile_special_actions_used_this_round": [],
+            "tech_tiles": [],
+            "tinkeroids_selected_tile": null,
+            "tinkeroids_tiles_used": [],
+            "vp": 10
+          },
+          {
+            "academy_qic_action_used_this_round": false,
+            "advanced_tech_tile_special_actions_used_this_round": [],
+            "advanced_tech_tiles": [],
+            "alliance_tiles": [],
+            "artifact_mines": [],
+            "artifacts": [],
+            "booster": null,
+            "covered_tech_tiles": [],
+            "expensive_terraforming_planet_types": [],
+            "exploration_shuttles_available": 3,
+            "explored_ships": [],
+            "faction": null,
+            "faction_special_action_used_this_round": false,
+            "federated_hexes": [],
+            "federation_tokens": [],
+            "first_colonization_bonus_used": false,
+            "gaiaformers_deployed": 0,
+            "gaiaformers_in_gaia_area": 0,
+            "gaiaformers_total": 0,
+            "geodens_rewarded_planet_types": [],
+            "gleens_special_action_used_this_round": false,
+            "gray_federation_tokens": [],
+            "moweyds_power_ring_hexes": [],
+            "nickname": "미배정 4",
+            "passed": false,
+            "pi_ability_used": false,
+            "player_id": 3,
+            "research_tracks": {
+              "ai": 0,
+              "economy": 0,
+              "gaia": 0,
+              "navigation": 0,
+              "science": 0,
+              "terraforming": 0
+            },
+            "resources": {
+              "credits": 0,
+              "knowledge": 0,
+              "ore": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 0,
+                "bowl3": 0,
+                "brainstone": null,
+                "gaia_bowl": 0,
+                "gaia_forming": 0
+              },
+              "qic": 0,
+              "spent_gaia_formers": 0
+            },
+            "round_booster_special_action_used_this_round": false,
+            "setup_bid_vp": 0,
+            "space_giants_special_action_used_this_round": false,
+            "structures": [],
+            "tech_tile_special_actions_used_this_round": [],
+            "tech_tiles": [],
+            "tinkeroids_selected_tile": null,
+            "tinkeroids_tiles_used": [],
+            "vp": 10
+          }
+        ],
+        "research_board": {
+          "advanced_tech_tiles": [
+            7,
+            9,
+            13,
+            3,
+            8,
+            5
+          ],
+          "economy_research_tile_side": "VictoryPoints",
+          "federation_tokens": [
+            1,
+            1,
+            1,
+            2,
+            2,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4,
+            5,
+            5,
+            5,
+            6,
+            6,
+            6
+          ],
+          "lost_fleet_advanced_tech_requirement": "25-vp",
+          "lost_fleet_advanced_tech_tile": 19,
+          "tech_tile_slots": [
+            3,
+            2,
+            9,
+            8,
+            5,
+            10,
+            6,
+            7,
+            4
+          ],
+          "tech_tiles": [
+            3,
+            3,
+            3,
+            3,
+            2,
+            2,
+            2,
+            2,
+            9,
+            9,
+            9,
+            9,
+            8,
+            8,
+            8,
+            8,
+            5,
+            5,
+            5,
+            5,
+            10,
+            10,
+            10,
+            10,
+            6,
+            6,
+            6,
+            6,
+            7,
+            7,
+            7,
+            7,
+            4,
+            4,
+            4,
+            4
+          ],
+          "terraforming_level_5_token": 2,
+          "tracks": {
+            "ArtificialIntelligence": {
+              "alliance_taken": [
+                null,
+                null,
+                null
+              ],
+              "player_levels": {}
+            },
+            "Economy": {
+              "alliance_taken": [
+                null,
+                null,
+                null
+              ],
+              "player_levels": {}
+            },
+            "GaiaProject": {
+              "alliance_taken": [
+                null,
+                null,
+                null
+              ],
+              "player_levels": {}
+            },
+            "Navigation": {
+              "alliance_taken": [
+                null,
+                null,
+                null
+              ],
+              "player_levels": {}
+            },
+            "Science": {
+              "alliance_taken": [
+                null,
+                null,
+                null
+              ],
+              "player_levels": {}
+            },
+            "Terraforming": {
+              "alliance_taken": [
+                null,
+                null,
+                null
+              ],
+              "player_levels": {}
+            }
+          }
+        },
+        "room_code": "UIQOO-PREVIEW",
+        "round": 0,
+        "round_tiles": [
+          {
+            "condition": "BuildMine",
+            "id": 1,
+            "vp_per_unit": 2
+          },
+          {
+            "condition": "BuildMineOnGaia",
+            "id": 3,
+            "vp_per_unit": 4
+          },
+          {
+            "condition": "UpgradeLargeBuilding",
+            "id": 6,
+            "vp_per_unit": 5
+          },
+          {
+            "condition": "BuildMineOnGaia",
+            "id": 7,
+            "vp_per_unit": 3
+          },
+          {
+            "condition": "TerraformingStep",
+            "id": 2,
+            "vp_per_unit": 2
+          },
+          {
+            "condition": "UpgradeResearchLab",
+            "id": 12,
+            "vp_per_unit": 4
+          }
+        ],
+        "spaceship_boards": [
+          {
+            "artifact_pool": [
+              12,
+              6,
+              8,
+              3
+            ],
+            "explorers": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "federation_token": 11,
+            "id": "Twilight",
+            "tech_tiles": []
+          },
+          {
+            "artifact_pool": [],
+            "explorers": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "federation_token": 14,
+            "id": "Rebellion",
+            "tech_tiles": [
+              11,
+              11,
+              11,
+              11
+            ]
+          },
+          {
+            "artifact_pool": [],
+            "explorers": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "federation_token": 12,
+            "id": "TFMars",
+            "tech_tiles": [
+              13,
+              13,
+              13,
+              13
+            ]
+          },
+          {
+            "artifact_pool": [],
+            "explorers": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "federation_token": 8,
+            "id": "Eclipse",
+            "tech_tiles": [
+              12,
+              12,
+              12,
+              12
+            ]
+          }
+        ],
+        "terraforming_color_order": [
+          "Terra",
+          "Swamp",
+          "Titanium",
+          "Oxide",
+          "Ice",
+          "Desert",
+          "Volcanic"
+        ],
+        "turn_order": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "undo_state": {
+          "open_turn": null,
+          "pending_request": null,
+          "recent_turns": []
+        },
+        "used_power_actions": [],
+        "used_spaceship_actions": [],
+        "version": 0
+      }
+    }
+  ],
+  "metadata": {
+    "faction": "unassigned",
+    "focus_player": 0,
+    "policy": "observed-setup-only",
+    "seed": "145526867337",
+    "steps": 0,
+    "versions": {
+      "source_observation": {
+        "actions": [],
+        "advanced_tech_tile_ids": [
+          7,
+          9,
+          13,
+          3,
+          8,
+          5,
+          19
+        ],
+        "artifact_ids": [
+          12,
+          6,
+          8,
+          3
+        ],
+        "bids": null,
+        "booster_ids": [
+          7,
+          11,
+          5,
+          13,
+          6,
+          4,
+          9
+        ],
+        "economy_research_tile_side": "vp",
+        "factions_in_source_order": [
+          "Geodens",
+          "Tinkeroids",
+          "HadschHallas",
+          "Moweyds"
+        ],
+        "final_scoring_ids": [
+          10,
+          9
+        ],
+        "geometry_max_rounding_residual_hex": 0.05877333333333467,
+        "interspaces": [
+          {
+            "coord": "1,-3",
+            "kind": "eclipse",
+            "source_image": "map_interspace_eclipse.png"
+          },
+          {
+            "coord": "-2,-1",
+            "kind": "asteroid",
+            "source_image": "map_interspace_asteroid.png"
+          },
+          {
+            "coord": "-3,2",
+            "kind": "tfmars",
+            "source_image": "map_interspace_tfmars.png"
+          },
+          {
+            "coord": "-1,3",
+            "kind": "asteroid",
+            "source_image": "map_interspace_asteroid.png"
+          },
+          {
+            "coord": "2,1",
+            "kind": "asteroid",
+            "source_image": "map_interspace_asteroid.png"
+          },
+          {
+            "coord": "3,-2",
+            "kind": "asteroid",
+            "source_image": "map_interspace_asteroid.png"
+          },
+          {
+            "coord": "6,-4",
+            "kind": "rebellion",
+            "source_image": "map_interspace_rebellion.png"
+          },
+          {
+            "coord": "8,-3",
+            "kind": "proto",
+            "source_image": "map_interspace_proto.png"
+          },
+          {
+            "coord": "7,0",
+            "kind": "empty",
+            "source_image": "map_interspace_empty.png"
+          },
+          {
+            "coord": "4,2",
+            "kind": "twilight",
+            "source_image": "map_interspace_twilight.png"
+          }
+        ],
+        "kind": "observed-randomizer-setup",
+        "limits": [
+          "Initial setup only; source faction order is not a confirmed player assignment.",
+          "No initial mines, bids, selected boosters, or gameplay actions were invented.",
+          "The same numeric seed is not equivalent to the local randomizer sequence."
+        ],
+        "lost_fleet_advanced_tech_requirement": "vp",
+        "player_assignments": null,
+        "round_tile_ids": [
+          1,
+          3,
+          6,
+          7,
+          2,
+          12
+        ],
+        "schema_version": 1,
+        "sectors": [
+          {
+            "origin": "9,-6",
+            "rotation": 3,
+            "sector_id": 5,
+            "side": "A",
+            "source_image": "map_tile_05a.png",
+            "source_slot": "map0"
+          },
+          {
+            "origin": "4,-5",
+            "rotation": 2,
+            "sector_id": 9,
+            "side": null,
+            "source_image": "map_tile_09.png",
+            "source_slot": "map1"
+          },
+          {
+            "origin": "-1,-4",
+            "rotation": 5,
+            "sector_id": 3,
+            "side": null,
+            "source_image": "map_tile_03.png",
+            "source_slot": "map2"
+          },
+          {
+            "origin": "10,-2",
+            "rotation": 3,
+            "sector_id": 7,
+            "side": "A",
+            "source_image": "map_tile_07a.png",
+            "source_slot": "map3"
+          },
+          {
+            "origin": "5,-1",
+            "rotation": 5,
+            "sector_id": 4,
+            "side": null,
+            "source_image": "map_tile_04.png",
+            "source_slot": "map4"
+          },
+          {
+            "origin": "0,0",
+            "rotation": 0,
+            "sector_id": 1,
+            "side": null,
+            "source_image": "map_tile_01.png",
+            "source_slot": "map5"
+          },
+          {
+            "origin": "-5,1",
+            "rotation": 2,
+            "sector_id": 8,
+            "side": null,
+            "source_image": "map_tile_08.png",
+            "source_slot": "map6"
+          },
+          {
+            "origin": "6,3",
+            "rotation": 2,
+            "sector_id": 10,
+            "side": null,
+            "source_image": "map_tile_10.png",
+            "source_slot": "map7"
+          },
+          {
+            "origin": "1,4",
+            "rotation": 5,
+            "sector_id": 2,
+            "side": null,
+            "source_image": "map_tile_02.png",
+            "source_slot": "map8"
+          },
+          {
+            "origin": "-4,5",
+            "rotation": 5,
+            "sector_id": 6,
+            "side": "A",
+            "source_image": "map_tile_06a.png",
+            "source_slot": "map9"
+          },
+          {
+            "origin": "3,5",
+            "rotation": 1,
+            "sector_id": 17,
+            "side": "B",
+            "source_image": "map_deep_17b.png",
+            "source_slot": "deep0"
+          },
+          {
+            "origin": "10,1",
+            "rotation": 2,
+            "sector_id": 13,
+            "side": "A",
+            "source_image": "map_deep_13a.png",
+            "source_slot": "deep1"
+          },
+          {
+            "origin": "11,-5",
+            "rotation": 5,
+            "sector_id": 16,
+            "side": "B",
+            "source_image": "map_deep_16b.png",
+            "source_slot": "deep2"
+          },
+          {
+            "origin": "8,-8",
+            "rotation": 2,
+            "sector_id": 12,
+            "side": "B",
+            "source_image": "map_deep_12b.png",
+            "source_slot": "deep3"
+          },
+          {
+            "origin": "-3,7",
+            "rotation": 5,
+            "sector_id": 18,
+            "side": "B",
+            "source_image": "map_deep_18b.png",
+            "source_slot": "deep4"
+          },
+          {
+            "origin": "-6,4",
+            "rotation": 2,
+            "sector_id": 11,
+            "side": "B",
+            "source_image": "map_deep_11b.png",
+            "source_slot": "deep5"
+          },
+          {
+            "origin": "-5,-2",
+            "rotation": 5,
+            "sector_id": 14,
+            "side": "B",
+            "source_image": "map_deep_14b.png",
+            "source_slot": "deep6"
+          },
+          {
+            "origin": "2,-7",
+            "rotation": 0,
+            "sector_id": 15,
+            "side": "A",
+            "source_image": "map_deep_15a.png",
+            "source_slot": "deep7"
+          }
+        ],
+        "source": {
+          "center_balance": true,
+          "player_count": 4,
+          "rendered_dom_sha256": "41765e566084e89a346e6542aa35031c6a0807b5fb0e167383da9acb8e7b97c1",
+          "seed": "145526867337",
+          "url": "https://uiqoo.kr/boardgames/gaiaproject/randomizer.html?player=4&seed=145526867337&centerbalance=true&expan=lostfleet"
+        },
+        "spaceship_federation_ids": [
+          11,
+          12,
+          8,
+          14
+        ],
+        "spaceship_tech_ids": [
+          13,
+          12,
+          11
+        ],
+        "tech_tile_slot_ids": [
+          3,
+          2,
+          9,
+          8,
+          5,
+          10,
+          6,
+          7,
+          4
+        ],
+        "terraforming_color_order": [
+          "Terra",
+          "Swamp",
+          "Titanium",
+          "Oxide",
+          "Ice",
+          "Desert",
+          "Volcanic"
+        ],
+        "terraforming_level_5_token": 2
+      },
+      "warning": "Setup preview only. Player resources and VP are engine placeholders, not observed gameplay."
+    }
+  },
+  "schema_version": 1
+}

@@ -517,6 +517,22 @@ describe('ActionPanel — shared power action slots', () => {
 });
 
 describe('ActionPanel — Gaia round-booster special actions', () => {
+  it('submits booster 12 terraforming construction and disables it after use', () => {
+    const sendAction = vi.fn();
+    useGameStore.setState((s) => ({ actions: { ...s.actions, sendAction } }));
+    const state = mockGameState({ players: [mockPlayer({ booster: 12 })] });
+    const { rerender } = render(<ActionPanel gameState={state} myPlayerId={0} />);
+    fireEvent.click(screen.getByText('부스터 광산 건설 (테라포밍 1단계 무료)'));
+    act(() => { useGameStore.setState({ activePlanet: { q: 1, r: 0 } }); });
+    fireEvent.click(screen.getByText('확인'));
+    expect(sendAction).toHaveBeenCalledWith({ type: 'RoundBoosterTerraformBuild', coord: { q: 1, r: 0 } });
+    act(() => { useGameStore.setState({ selectedAction: null }); });
+    rerender(<ActionPanel gameState={{ ...state, players: [mockPlayer({
+      booster: 12, round_booster_special_action_used_this_round: true,
+    })] }} myPlayerId={0} />);
+    expect(screen.getByText(/부스터 광산 건설.*사용됨/).closest('button')).toBeDisabled();
+  });
+
   it('shows booster 5 immediate Gaia formation and sends its target', () => {
     const sendAction = vi.fn();
     useGameStore.setState((s) => ({ actions: { ...s.actions, sendAction } }));
@@ -571,12 +587,26 @@ describe('ActionPanel — Gaia round-booster special actions', () => {
     render(<ActionPanel gameState={mockGameState()} myPlayerId={0} />);
 
     expect(screen.queryByText('부스터 즉시 가이아포밍')).not.toBeInTheDocument();
+    expect(screen.queryByText('부스터 광산 건설 (테라포밍 1단계 무료)')).not.toBeInTheDocument();
     expect(screen.queryByText(byTextAcrossNodes(rangeActionLabel('부스터 +3 사거리 가이아 프로젝트')))).not.toBeInTheDocument();
     expect(screen.queryByText(byTextAcrossNodes(rangeActionLabel('부스터 +3 사거리 함선 탐사')))).not.toBeInTheDocument();
   });
 });
 
 describe('ActionPanel — Academy(Qic) action', () => {
+  it.each(['Geodens', 'BalTaks'] as const)('labels the %s academy reward as four credits', faction => {
+    const sendAction = vi.fn();
+    useGameStore.setState((s) => ({ actions: { ...s.actions, sendAction } }));
+    const state = mockGameState({ players: [mockPlayer({
+      player_id: 0, faction,
+      structures: [{ hex: { q: 0, r: 0 }, kind: { Academy: 'Qic' } }],
+    }), mockPlayer({ player_id: 1 })] });
+    render(<ActionPanel gameState={state} myPlayerId={0} />);
+    fireEvent.click(screen.getByRole('button', { name: '아카데미(크레딧) 행동 — 크레딧 4 획득' }));
+    expect(sendAction).toHaveBeenCalledWith({ type: 'AcademyQicAction' });
+    expect(screen.queryByText(/정보 큐브 획득/)).not.toBeInTheDocument();
+  });
+
   it('is hidden without an Academy(Qic) structure', () => {
     const state = mockGameState();
     render(<ActionPanel gameState={state} myPlayerId={0} />);

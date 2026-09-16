@@ -46,6 +46,11 @@ mod python {
         fn fork(&self, decision_id: u64, candidate_index: usize) -> PyResult<Self> {
             Ok(Self { inner: self.inner.fork(decision_id, candidate_index).map_err(environment_error)? })
         }
+        fn preview_state_json(&self, decision_id: u64, candidate_index: usize) -> PyResult<String> {
+            let state = self.inner.preview_state(decision_id, candidate_index)
+                .map_err(environment_error)?;
+            serde_json::to_string(&state).map_err(error)
+        }
         fn step(&mut self, decision_id: u64, candidate_index: usize) -> PyResult<()> {
             self.inner
                 .step(decision_id, candidate_index)

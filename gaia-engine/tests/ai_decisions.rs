@@ -349,3 +349,53 @@ fn pending_lost_planet_exposes_a_concrete_placement() -> Result<(), Box<dyn std:
     assert_eq!(state.board.lost_planet, Some(target));
     Ok(())
 }
+
+#[test]
+fn concrete_menu_includes_legal_same_kind_batches_without_replacing_single_conversions(
+) -> Result<(), Box<dyn std::error::Error>> {
+    use gaia_engine::rules::actions::FreeActionKind;
+    for faction in [FactionId::Nevlas, FactionId::Terrans] {
+        let state = GameStateBuilder::new()
+            .with_player_fn(0, |p| {
+                p.faction = Some(faction);
+                p.resources.power.bowl3 = 3;
+                p.resources.qic = 3;
+                p.structures.push(Structure {
+                    hex: HexCoord::new(0, 0),
+                    kind: StructureType::PlanetaryInstitute,
+                });
+            })
+            .with_player(1)
+            .build();
+        let before = state.serialize();
+        let candidates = RuleEngine::ai_decisions(&state)?;
+        for kind in FreeActionKind::ALL {
+            for count in 0..=31 {
+                let action = GameAction::FreeAction { kind, count };
+                assert_eq!(
+                    candidates.contains(&AiDecision::Game(action.clone())),
+                    RuleEngine::validate_action(&state, 0, &action).is_ok(),
+                    "{faction:?} {kind:?} x{count}"
+                );
+            }
+        }
+        assert_eq!(state.serialize(), before);
+        assert_eq!(candidates, RuleEngine::ai_decisions(&state)?);
+        if faction == FactionId::Nevlas {
+            let mut next = state.clone();
+            let ore = next.players[0].resources.ore;
+            RuleEngine::apply_action(
+                &mut next,
+                0,
+                GameAction::FreeAction {
+                    kind: FreeActionKind::PowerToOre,
+                    count: 2,
+                },
+            )?;
+            assert_eq!(next.players[0].resources.ore, ore + 2);
+            assert_eq!(next.players[0].resources.power.bowl3, 0);
+            assert_eq!(next.phase, state.phase);
+        }
+    }
+    Ok(())
+}

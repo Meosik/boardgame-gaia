@@ -53,6 +53,30 @@ const board = {
 };
 
 describe('PlanetActionPopup', () => {
+  it.each([[1, 2, true], [0, 2, false], [1, 1, false]] as const)(
+    'booster 12 discounts terraforming only, with ore=%i and credits=%i', (ore, credits, affordable) => {
+      const onConfirm = vi.fn();
+      const me = player({ resources: { ...player().resources, ore, credits } });
+      const hex = { ...planetHex('Oxide'), coord: { q: 1, r: 0 } };
+      render(<PlanetActionPopup anchor={{ x: 100, y: 100 }} hex={hex}
+        player={me} players={[me]} board={{ ...board, hexes: { ...board.hexes, '1,0': hex } }}
+        buildAction={{ action: { type: 'RoundBoosterTerraformBuild', coord: hex.coord }, freeTerraformingSteps: 1 }}
+        onConfirm={onConfirm} onClose={vi.fn()} />);
+      fireEvent.click(screen.getByRole('button', { name: '광산 건설' }));
+      expect(screen.getByLabelText('광산 건설비: 광석 1, 크레딧 2')).toBeInTheDocument();
+      const confirm = screen.getByRole('button', { name: affordable ? '행동 확정' : '필요 자원 부족' });
+      if (affordable) {
+        expect(confirm).toBeEnabled();
+        fireEvent.click(confirm);
+        expect(onConfirm).toHaveBeenCalledWith({ type: 'RoundBoosterTerraformBuild', coord: hex.coord });
+      } else {
+        expect(confirm).toBeDisabled();
+        fireEvent.click(confirm);
+        expect(onConfirm).not.toHaveBeenCalled();
+      }
+    },
+  );
+
   it.each(Object.keys(FACTION_STRUCTURE_COLOR) as FactionId[])(
     'uses the controlled %s faction color for mine and Gaiaformer choices and confirmation',
     (faction) => {

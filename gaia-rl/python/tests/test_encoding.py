@@ -7,6 +7,19 @@ from gaia_rl.encoding import FeatureEncoder, EncodingError
 
 
 class EncodingTests(unittest.TestCase):
+    def test_terraform_booster_and_batch_counts_have_distinct_candidate_features(self):
+        encoder = FeatureEncoder()
+        indices = {'1,0': 0}
+        def build(kind):
+            return {'phase': 'Game', 'action': {'type': kind, 'coord': '1,0'}}
+        booster = encoder.candidate(build('RoundBoosterTerraformBuild'), indices)
+        for kind in ('Build', 'RoundBoosterRangeBuild', 'SpaceGiantsBuildMine'):
+            self.assertFalse(np.array_equal(booster, encoder.candidate(build(kind), indices)))
+        def conversion(count):
+            return {'phase': 'Game', 'action': {'type': 'FreeAction', 'kind': 'PowerToOre', 'count': count}}
+        self.assertFalse(np.array_equal(encoder.candidate(conversion(1), indices),
+                                        encoder.candidate(conversion(2), indices)))
+
     def setUp(self):
         self.snapshot=json.loads(Environment('encoding-unit').snapshot_json())
         self.encoder=FeatureEncoder(256)

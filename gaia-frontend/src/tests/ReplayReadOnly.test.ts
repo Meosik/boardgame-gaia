@@ -6,7 +6,7 @@ afterEach(() => useGameStore.getState().actions.reset());
 describe('replay network isolation', () => {
   it('disconnects an existing client and blocks all commands and new clients', () => {
     const sendCommand = vi.fn(); const disconnect = vi.fn();
-    const client = { sendCommand, disconnect } as unknown as GaiaWebSocket;
+    const client = { sendCommand, disconnect, isReady: true, hasPendingCommands: false, onCommandStateChange: () => () => {} } as unknown as GaiaWebSocket;
     const actions = useGameStore.getState().actions;
     actions.setWsClient(client); actions.setReadOnly(true);
     expect(disconnect).toHaveBeenCalledOnce();
@@ -22,7 +22,7 @@ describe('replay network isolation', () => {
     const actions = useGameStore.getState().actions;
     actions.setReadOnly(true); actions.reset();
     const sendCommand = vi.fn().mockReturnValue('cmd');
-    actions.setWsClient({ sendCommand } as unknown as GaiaWebSocket);
+    actions.setWsClient({ sendCommand, isReady: true, hasPendingCommands: false, onCommandStateChange: () => () => {} } as unknown as GaiaWebSocket);
     expect(actions.sendAction({ type: 'Pass', booster_id: null })).toBe('cmd');
     expect(sendCommand).toHaveBeenCalledOnce();
   });

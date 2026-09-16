@@ -1,21 +1,10 @@
 import { finalScoringTileImageSrc } from '../../assets/finalScoringTileImages';
-import type { FinalScoringCondition, FinalScoringTile } from '../../types/game';
+import type { FinalScoringTile } from '../../types/game';
+import { FINAL_SCORING_LABELS as conditionLabels } from '../../finalScoring';
 
 interface Props {
   tiles: FinalScoringTile[];
 }
-
-const conditionLabels: Record<FinalScoringCondition, string> = {
-  MostGaiaPlanets: '가장 많은 가이아 행성',
-  MostDeepSpaceSectors: '가장 많은 심우주 섹터',
-  MostStructuresInFederation: '연방에 포함된 건물 수',
-  MostPlanetTypes: '개척한 행성 유형 수',
-  MostBuildings: '전체 건물 수',
-  MostAsteroids: '개척한 소행성 수',
-  MostSectors: '개척한 일반 우주 섹터 수',
-  GreatestDistancePiAcademy: '행성 의회와 아카데미 사이 최장 거리',
-  MostSatellites: '배치한 위성 수',
-};
 
 export function FinalScoringTiles({ tiles }: Props) {
   return (

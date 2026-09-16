@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from strategy_teacher import StrategyTeacher, distance, kind
+from scoring_cache import memoized, reuse
 
 RING = ('Terra', 'Oxide', 'Volcanic', 'Desert', 'Swamp', 'Titanium', 'Ice')
 HOME = {'Xenos': 'Desert', 'HadschHallas': 'Oxide'}
@@ -34,6 +35,7 @@ def paths(cells, start):
     return result
 
 
+@memoized('origins', lambda player: player['player_id'])
 def origins(state, player):
     return [coord for coord, cell in state['board']['hexes'].items()
             if any(s['owner'] == player['player_id'] for s in cell['structures'])
@@ -42,8 +44,10 @@ def origins(state, player):
 
 
 def path_distance(state, starts, target):
-    cells = frozenset(state['board']['hexes'])
-    return min((paths(cells, start).get(target, 999) for start in starts), default=999)
+    starts = tuple(starts)
+    cells = reuse(state, 'board-cells', (), lambda: frozenset(state['board']['hexes']))
+    return reuse(state, 'path-distance', (starts, target),
+                 lambda: min((paths(cells, start).get(target, 999) for start in starts), default=999))
 
 
 def navigation(player, bonus=0):
@@ -82,6 +86,16 @@ class Cost:
     terraform_ore: int = 0
 
 
+def _cost_key(player, action):
+    # Board/ownership are fixed by the scope; these are all prospective-player
+    # inputs used by construction_cost, steps_for, navigation and range_qic.
+    tracks = player.get('research_tracks', {})
+    return (player.get('faction'), player.get('player_id'), tracks.get('terraforming'),
+            tracks.get('navigation'), repr(player.get('tech_tiles')),
+            repr(player.get('covered_tech_tiles')), repr(action))
+
+
+@memoized('construction-cost', _cost_key)
 def construction_cost(state, player, action):
     """None means outside this estimator's scope, not a free action."""
     if player['faction'] not in HOME:

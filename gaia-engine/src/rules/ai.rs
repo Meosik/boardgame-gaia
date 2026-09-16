@@ -12,6 +12,13 @@ pub enum AiDecision {
     Game(GameAction),
 }
 
+/// One candidate-generation call, not a count of real game decisions or search branches.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AiCandidateDiagnostics {
+    pub federation_limit_hits: u64,
+    pub federation_limit_reasons: Vec<String>,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum AiActionError {
     #[error("unsupported autonomous phase: {0:?}")]
@@ -66,7 +73,16 @@ impl RuleEngine {
 
     /// Concrete stable candidates. Setup bidding is intentionally outside the initial RL scope.
     pub fn ai_decisions(state: &GameState) -> Result<Vec<AiDecision>, AiActionError> {
-        let Some(player_id) = Self::decision_player(state)? else { return Ok(Vec::new()); };
+        Self::ai_decisions_with_diagnostics(state).map(|(decisions, _)| decisions)
+    }
+
+    pub fn ai_decisions_with_diagnostics(
+        state: &GameState,
+    ) -> Result<(Vec<AiDecision>, AiCandidateDiagnostics), AiActionError> {
+        let mut diagnostics = AiCandidateDiagnostics::default();
+        let Some(player_id) = Self::decision_player(state)? else {
+            return Ok((Vec::new(), diagnostics));
+        };
         let mut decisions = Vec::new();
         if let GamePhase::Setup(phase) = &state.phase {
             let candidates: Vec<SetupAction> = match phase {
@@ -90,6 +106,13 @@ impl RuleEngine {
             let mut actions = Self::get_valid_actions(state, player_id);
             if matches!(state.phase, GamePhase::ActionPhase { .. }) {
                 let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
+                // UI representatives use count 1. AI also needs concrete batches, notably
+                // Nevlas PI conversions whose odd power costs can share a token in a batch.
+                for kind in FreeActionKind::ALL {
+                    for count in 2..=MAX_FREE_ACTION_COUNT {
+                        actions.push(GameAction::FreeAction { kind, count });
+                    }
+                }
                 for booster in &state.boosters {
                     actions.push(GameAction::Pass { booster_id: Some(booster.0) });
                 }
@@ -120,7 +143,12 @@ impl RuleEngine {
                         }
                     }
                 }
-                append_federation_candidates(&mut actions, federation_candidates(state, player_id), player_id)?;
+                if let Some(reason) = append_federation_candidates(
+                    &mut actions, federation_candidates(state, player_id), player_id,
+                )? {
+                    diagnostics.federation_limit_hits += 1;
+                    diagnostics.federation_limit_reasons.push(reason);
+                }
             }
             decisions.extend(actions.into_iter()
                 .filter(|a| Self::validate_action(state, player_id, a).is_ok())
@@ -131,7 +159,7 @@ impl RuleEngine {
             stable.insert(serde_json::to_string(&decision)?, decision);
         }
         if stable.is_empty() { return Err(AiActionError::Empty(player_id)); }
-        Ok(stable.into_values().collect())
+        Ok((stable.into_values().collect(), diagnostics))
     }
 }
 
@@ -139,15 +167,16 @@ fn append_federation_candidates(
     actions: &mut Vec<GameAction>,
     result: Result<Vec<GameAction>, AiActionError>,
     player_id: PlayerId,
-) -> Result<(), AiActionError> {
+) -> Result<Option<String>, AiActionError> {
     match result {
         Ok(candidates) => actions.extend(candidates),
         Err(AiActionError::SearchLimit(limit)) => {
             log::warn!("Player {player_id}: federation search exceeded {limit}; retaining other legal actions");
+            return Ok(Some(limit.to_owned()));
         }
         Err(error) => return Err(error),
     }
-    Ok(())
+    Ok(None)
 }
 
 #[cfg(test)]

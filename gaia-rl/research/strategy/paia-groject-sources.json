@@ -1,0 +1,859 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-09-13",
+  "scope": "Inventory/structural validation of all 26 user-provided SRT files; manually reviewed selected strategic excerpts. No audio verification, full-corpus semantic review, rules adoption, training or deployment.",
+  "metadata_source": {
+    "kind": "previously downloaded public RSS; no network refresh in this curation",
+    "url": "https://anchor.fm/s/b03d182c/podcast/rss",
+    "local_evidence_path": "/tmp/gaia-paia-download.zI8j9J/feed.xml",
+    "sha256": "4df215d5a3f8d228613b15d12621162d5999af86fe21aaa8770763880d33d717",
+    "published_at_meaning": "date reported by saved RSS, not verified original recording date"
+  },
+  "inventory_sha256": "6d6eca3964caf079f67d3714f60651739f910ab6c0d732fe1fc7a8ace5a5b794",
+  "inventory_digest_method": "SHA256 of UTF-8 concatenation of sha256 + two spaces + filename + LF, sorted by filename",
+  "episode_count": 26,
+  "cue_count": 20046,
+  "whitespace_word_count": 330106,
+  "reviewed_unique_cue_count": 2150,
+  "sum_last_cue_end_ms": 127672297,
+  "duration_note": "Sum of final subtitle endpoints, not exact audio duration or speech completeness.",
+  "structural_validation": {
+    "malformed_blocks": 0,
+    "nonsequential_indices": 0,
+    "backward_start_times": 0,
+    "nonpositive_intervals": 0,
+    "originals_unchanged": true
+  },
+  "review_range_selection": "Inclusive comparison of HH:MM:SS cue starts with recorded start/end. Duplicates count once in reviewed_unique_cue_count. An unlisted keyword snippet is not counted as contiguous review.",
+  "sources": [
+    {
+      "episode": 1,
+      "title": "Episode 1 - Faction Rankings (Part One)",
+      "published_at": "Sun, 14 Aug 2022 15:14:55 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/01 (transcribed on 12-Sep-2026 22-41-48).srt",
+      "sha256": "61020ddd1955011c4a45a5eed17c20b52b33885397db2cd7932b0f1a14b2c763",
+      "bytes": 74079,
+      "cue_count": 574,
+      "words": 10586,
+      "last_end": "01:05:47,600",
+      "id": "PG01",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 27,
+      "reviewed_ranges": [
+        {
+          "start": "00:02:30",
+          "end": "00:06:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 2,
+      "title": "Episode 2 - Faction Rankings (Part Two)",
+      "published_at": "Sun, 14 Aug 2022 19:37:46 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/02 (transcribed on 12-Sep-2026 22-52-34).srt",
+      "sha256": "d481b0a405a69acbe80cc337ccf39c2641795e225711e5558cd98dc045b4bd82",
+      "bytes": 98469,
+      "cue_count": 1161,
+      "words": 10643,
+      "last_end": "01:09:30,319",
+      "id": "PG02",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 33,
+      "reviewed_ranges": [
+        {
+          "start": "00:01:05",
+          "end": "00:04:30",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 3,
+      "title": "Episode 3 - (Don't Get) Mad About the Map",
+      "published_at": "Sun, 14 Aug 2022 21:27:01 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/03 (transcribed on 12-Sep-2026 22-59-16).srt",
+      "sha256": "0e7c4343525866112f1f6c07c12a79b04f6c20f9b6630c38ab5c37c9708479a7",
+      "bytes": 98840,
+      "cue_count": 768,
+      "words": 13681,
+      "last_end": "01:27:50,519",
+      "id": "PG03",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 65,
+      "reviewed_ranges": [
+        {
+          "start": "00:06:20",
+          "end": "00:11:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:18:10",
+          "end": "01:21:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 4,
+      "title": "Episode 4 - Faction Guide: Gleens",
+      "published_at": "Sun, 14 Aug 2022 21:35:33 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/04 (transcribed on 12-Sep-2026 23-06-49).srt",
+      "sha256": "33462ee945b59fe3f6e684825f22cc12811f201ffc6bf476c7d34aaff408a302",
+      "bytes": 108326,
+      "cue_count": 812,
+      "words": 14911,
+      "last_end": "01:28:41,000",
+      "id": "PG04",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 67,
+      "reviewed_ranges": [
+        {
+          "start": "00:11:45",
+          "end": "00:14:30",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:14:30",
+          "end": "00:15:35",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:32:40",
+          "end": "00:35:20",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 5,
+      "title": "Episode 5 - Advanced tech tiles",
+      "published_at": "Mon, 15 Aug 2022 09:47:47 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/05 (transcribed on 12-Sep-2026 23-12-58).srt",
+      "sha256": "21e1371f812f9f202302e14db5c21d61a3841f6bf48fbfab0b9ad4a5ccd57df1",
+      "bytes": 94880,
+      "cue_count": 967,
+      "words": 11440,
+      "last_end": "01:11:02,860",
+      "id": "PG05",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 173,
+      "reviewed_ranges": [
+        {
+          "start": "00:03:00",
+          "end": "00:06:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:33:20",
+          "end": "00:37:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:37:25",
+          "end": "00:41:30",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:54:30",
+          "end": "00:56:45",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 6,
+      "title": "Episode 6 - Faction guide: Lantids",
+      "published_at": "Mon, 15 Aug 2022 09:50:56 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/06 (transcribed on 12-Sep-2026 23-18-30).srt",
+      "sha256": "1331b01706b061c0cd19b3c25ce6e390a29ce011e68e2a72c540813819a544b7",
+      "bytes": 89387,
+      "cue_count": 689,
+      "words": 12589,
+      "last_end": "01:17:09,160",
+      "id": "PG06",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 47,
+      "reviewed_ranges": [
+        {
+          "start": "00:16:00",
+          "end": "00:18:20",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:31:05",
+          "end": "00:34:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 7,
+      "title": "Episode 7 - The Gaia Project International Tournament",
+      "published_at": "Mon, 15 Aug 2022 09:54:59 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/07 (transcribed on 12-Sep-2026 23-22-13).srt",
+      "sha256": "d8dbd53108ac9f425b8659b8295780f94ca78907d4d0fa19a56afd883a9e5386",
+      "bytes": 56511,
+      "cue_count": 441,
+      "words": 7962,
+      "last_end": "00:54:02,860",
+      "id": "PG07",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 19,
+      "reviewed_ranges": [
+        {
+          "start": "00:14:25",
+          "end": "00:17:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 8,
+      "title": "Episode 8 - Faction guide: Geodens",
+      "published_at": "Mon, 15 Aug 2022 09:57:43 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/08 (transcribed on 12-Sep-2026 23-32-05).srt",
+      "sha256": "6657e13f75fff86dc095b42773f7826a5aa961f2a59110b156028c24b13e860e",
+      "bytes": 110781,
+      "cue_count": 858,
+      "words": 15658,
+      "last_end": "01:34:13,120",
+      "id": "PG08",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 63,
+      "reviewed_ranges": [
+        {
+          "start": "00:51:10",
+          "end": "00:54:15",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:54:15",
+          "end": "00:58:20",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 9,
+      "title": "Episode 9 - Statistics in Gaia Project",
+      "published_at": "Mon, 15 Aug 2022 12:26:44 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/09 (transcribed on 12-Sep-2026 23-38-22).srt",
+      "sha256": "ab2a003562b1359a774360e8fcbf29c34f9bfcb1840d0dfb8d3c3d5e9f9eef58",
+      "bytes": 89154,
+      "cue_count": 599,
+      "words": 12801,
+      "last_end": "01:22:01,000",
+      "id": "PG09",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 83,
+      "reviewed_ranges": [
+        {
+          "start": "00:03:10",
+          "end": "00:06:20",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:20:30",
+          "end": "00:23:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:43:15",
+          "end": "00:46:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 10,
+      "title": "Episode 10 - Faction guide: Nevlas",
+      "published_at": "Tue, 16 Aug 2022 13:52:24 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/10 (transcribed on 12-Sep-2026 23-45-35).srt",
+      "sha256": "8aeb7b9d3e37ff4e350771fbbd5777122056e552bfe577ea44aae2d3ffb1e75f",
+      "bytes": 111054,
+      "cue_count": 897,
+      "words": 15169,
+      "last_end": "01:35:56,560",
+      "id": "PG10",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 61,
+      "reviewed_ranges": [
+        {
+          "start": "00:55:50",
+          "end": "00:58:50",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:13:00",
+          "end": "01:16:15",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 11,
+      "title": "Episode 11 - Round Scoring Bonuses",
+      "published_at": "Tue, 16 Aug 2022 13:56:42 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/11 (transcribed on 12-Sep-2026 23-52-14).srt",
+      "sha256": "36a9bcab1a4de74ec6c83ba66268c9fb90b36b72f1a38b171ecd2501fa68f7b3",
+      "bytes": 92525,
+      "cue_count": 600,
+      "words": 13390,
+      "last_end": "01:28:12,000",
+      "id": "PG11",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 60,
+      "reviewed_ranges": [
+        {
+          "start": "00:07:00",
+          "end": "00:09:30",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:53:20",
+          "end": "00:56:25",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:08:00",
+          "end": "01:11:20",
+          "mode": "contiguous text excerpt; not audio verified",
+          "provenance": "Reviewed in preceding file-check turn; recorded in .omh/sessions/codex-2026-09-10-ai-strategy-research.md"
+        },
+        {
+          "start": "01:09:15",
+          "end": "01:10:25",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 12,
+      "title": "Episode 12 - Interview with Helge Ostertag",
+      "published_at": "Tue, 16 Aug 2022 13:59:30 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/12 (transcribed on 12-Sep-2026 23-56-31).srt",
+      "sha256": "620b61b1070017b2c932bc22c9920c98baf6c927d01a07fa848f5ed64f852b28",
+      "bytes": 61229,
+      "cue_count": 497,
+      "words": 8261,
+      "last_end": "00:59:28,520",
+      "id": "PG12",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 25,
+      "reviewed_ranges": [
+        {
+          "start": "00:29:15",
+          "end": "00:32:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 13,
+      "title": "Episode 13 - Faction Guide: Firaks except it‘s not Firaks it‘s actually Bescods",
+      "published_at": "Wed, 17 Aug 2022 13:39:13 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/13 (transcribed on 13-Sep-2026 00-04-53).srt",
+      "sha256": "f756798665e05c1366fa50420c06c59c872cea32187ce341ed7288c1775ed349",
+      "bytes": 134635,
+      "cue_count": 1040,
+      "words": 19071,
+      "last_end": "01:52:02,020",
+      "id": "PG13",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 44,
+      "reviewed_ranges": [
+        {
+          "start": "00:41:50",
+          "end": "00:46:20",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 14,
+      "title": "Episode 14 - The Paia Groject Holiday Spectacular: Bal T’Aks faction guide",
+      "published_at": "Wed, 17 Aug 2022 13:42:00 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/14 (transcribed on 13-Sep-2026 00-13-33).srt",
+      "sha256": "854612d482edc7752e1a9df500a7b4ce874c9985595e547d16b9a196a743f525",
+      "bytes": 120575,
+      "cue_count": 1012,
+      "words": 16042,
+      "last_end": "01:45:37,000",
+      "id": "PG14",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 47,
+      "reviewed_ranges": [
+        {
+          "start": "00:31:20",
+          "end": "00:35:15",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:35:15",
+          "end": "00:37:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 15,
+      "title": "Episode 15 - Faction Guide: Xenos",
+      "published_at": "Wed, 17 Aug 2022 13:47:27 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/15 (transcribed on 13-Sep-2026 00-21-02).srt",
+      "sha256": "5adc92055afcd2cd47cd992901ec3557df238f9439222d29b52d30fdc81f888f",
+      "bytes": 109070,
+      "cue_count": 924,
+      "words": 14614,
+      "last_end": "01:39:23,240",
+      "id": "PG15",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 208,
+      "reviewed_ranges": [
+        {
+          "start": "00:06:30",
+          "end": "00:09:50",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:20:40",
+          "end": "00:24:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:28:10",
+          "end": "00:29:50",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:58:30",
+          "end": "01:09:30",
+          "mode": "contiguous text excerpt; not audio verified",
+          "provenance": "Reviewed in preceding file-check turn; recorded in .omh/sessions/codex-2026-09-10-ai-strategy-research.md"
+        },
+        {
+          "start": "01:02:10",
+          "end": "01:03:45",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:19:25",
+          "end": "01:22:35",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 16,
+      "title": "Episode 16 - How to approach a game",
+      "published_at": "Wed, 17 Aug 2022 13:50:33 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/16 (transcribed on 13-Sep-2026 00-27-42).srt",
+      "sha256": "73c177ce20020fa593901b0cc46bd3a541fa6fffe12704c5f7aabf0a9ef4627a",
+      "bytes": 86681,
+      "cue_count": 529,
+      "words": 13062,
+      "last_end": "01:33:50,040",
+      "id": "PG16",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 146,
+      "reviewed_ranges": [
+        {
+          "start": "00:03:00",
+          "end": "00:06:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:06:00",
+          "end": "00:10:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:10:00",
+          "end": "00:14:05",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:49:10",
+          "end": "00:54:35",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:19:25",
+          "end": "01:22:45",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 17,
+      "title": "Episode 17 - Faction guide: Firaks (this time for real!)",
+      "published_at": "Wed, 17 Aug 2022 13:54:00 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/17 (transcribed on 13-Sep-2026 00-36-28).srt",
+      "sha256": "fea7b90de51e22731288421d31cdaf5a27d2cd9a9ad0667d0d5a874e22f43716",
+      "bytes": 120296,
+      "cue_count": 836,
+      "words": 17244,
+      "last_end": "01:50:12,000",
+      "id": "PG17",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 25,
+      "reviewed_ranges": [
+        {
+          "start": "00:33:40",
+          "end": "00:36:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:43:50",
+          "end": "00:46:40",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 18,
+      "title": "Episode 18 - Faction guide: Terrans",
+      "published_at": "Tue, 27 Sep 2022 14:43:55 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/18 (transcribed on 13-Sep-2026 00-47-25).srt",
+      "sha256": "8e917c0cd77070d07c52f2f55a9b5e341743c90cb1c048d04dc2406519b25ca2",
+      "bytes": 175407,
+      "cue_count": 1882,
+      "words": 20641,
+      "last_end": "02:06:11,000",
+      "id": "PG18",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 82,
+      "reviewed_ranges": [
+        {
+          "start": "00:16:47",
+          "end": "00:19:50",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:16:34",
+          "end": "01:20:15",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 19,
+      "title": "Episode 19 - Faction guide: Hadsch Hallas",
+      "published_at": "Sat, 03 Dec 2022 22:36:08 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/19 (transcribed on 13-Sep-2026 00-57-37).srt",
+      "sha256": "58091da561ad54e9009a25c23d335bf0e2a557a7882ad27d37f9214cdaac3e1d",
+      "bytes": 147257,
+      "cue_count": 1195,
+      "words": 19751,
+      "last_end": "02:11:07,000",
+      "id": "PG19",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 155,
+      "reviewed_ranges": [
+        {
+          "start": "00:12:20",
+          "end": "00:16:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:06:00",
+          "end": "01:09:50",
+          "mode": "contiguous text excerpt; not audio verified",
+          "provenance": "Reviewed in preceding file-check turn; recorded in .omh/sessions/codex-2026-09-10-ai-strategy-research.md"
+        },
+        {
+          "start": "01:06:50",
+          "end": "01:07:55",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:12:00",
+          "end": "01:16:40",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:28:20",
+          "end": "01:31:25",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "01:49:15",
+          "end": "01:52:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 20,
+      "title": "Episode 20 - Faction guide: Ambas",
+      "published_at": "Sun, 14 Jul 2024 16:08:06 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/20 (transcribed on 13-Sep-2026 01-02-51).srt",
+      "sha256": "427bc35ae4744504597da3a17865bb5589f5c137d3d2c902930ac11371166a1e",
+      "bytes": 64078,
+      "cue_count": 422,
+      "words": 9414,
+      "last_end": "01:08:12,000",
+      "id": "PG20",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 16,
+      "reviewed_ranges": [
+        {
+          "start": "00:12:30",
+          "end": "00:15:45",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 21,
+      "title": "Episode 21 - Faction guide: Taklons",
+      "published_at": "Fri, 26 Jul 2024 10:54:03 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/21 (transcribed on 13-Sep-2026 01-06-57).srt",
+      "sha256": "723ab8f1f9c0a64f851827d7f49693dec0950256ba6465ea86bccd42b4439026",
+      "bytes": 51307,
+      "cue_count": 323,
+      "words": 7466,
+      "last_end": "00:51:42,000",
+      "id": "PG21",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 12,
+      "reviewed_ranges": [
+        {
+          "start": "00:16:42",
+          "end": "00:20:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 22,
+      "title": "Episode 22 - Faction guide: Itars - no sorry, we did it again, it's actually Ivits",
+      "published_at": "Sat, 10 Aug 2024 07:45:06 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/22 (transcribed on 13-Sep-2026 01-13-18).srt",
+      "sha256": "062c9745b32f20d59f2bbde1f8fc49407dcf5d3fe9c1a9c0f377676884dc496f",
+      "bytes": 88231,
+      "cue_count": 619,
+      "words": 12438,
+      "last_end": "01:19:51,840",
+      "id": "PG22",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 38,
+      "reviewed_ranges": [
+        {
+          "start": "00:36:15",
+          "end": "00:39:20",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:53:30",
+          "end": "00:55:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 23,
+      "title": "Episode 23 - Faction guide: Itars (really)",
+      "published_at": "Tue, 20 Aug 2024 08:19:55 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/23 (transcribed on 13-Sep-2026 01-18-43).srt",
+      "sha256": "0f02bde3bf00ff16f3f662b60aeea013b2f0234e2dc472c38e695687e2b057f1",
+      "bytes": 81114,
+      "cue_count": 758,
+      "words": 10302,
+      "last_end": "01:08:18,000",
+      "id": "PG23",
+      "edition_context": "base-game-context",
+      "reviewed_cue_count": 35,
+      "reviewed_ranges": [
+        {
+          "start": "00:20:43",
+          "end": "00:25:05",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 24,
+      "title": "Episode 24 - The Lost Fleet - Part 1",
+      "published_at": "Tue, 27 Aug 2024 07:50:07 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/24 (transcribed on 13-Sep-2026 01-23-28).srt",
+      "sha256": "059ed0cdfa222e2d77d8c2f5179c5198f2c73753a032473ba336d126ce1dbf72",
+      "bytes": 73413,
+      "cue_count": 564,
+      "words": 10339,
+      "last_end": "01:03:52,740",
+      "id": "PG24",
+      "edition_context": "lost-fleet-first-impressions",
+      "reviewed_cue_count": 228,
+      "reviewed_ranges": [
+        {
+          "start": "00:19:25",
+          "end": "00:22:10",
+          "mode": "contiguous text excerpt; not audio verified",
+          "provenance": "Reviewed in preceding file-check turn; recorded in .omh/sessions/codex-2026-09-10-ai-strategy-research.md"
+        },
+        {
+          "start": "00:22:05",
+          "end": "00:24:45",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:31:00",
+          "end": "00:35:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:35:10",
+          "end": "00:38:49",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:38:49",
+          "end": "00:43:42",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:47:43",
+          "end": "00:49:35",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:52:06",
+          "end": "00:56:45",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 25,
+      "title": "Episode 25 - The Lost Fleet - Part 2",
+      "published_at": "Wed, 28 Aug 2024 22:15:59 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/25 (transcribed on 13-Sep-2026 01-26-35).srt",
+      "sha256": "6270d51f554dbc529003722dae396d22abd7b58a526b9f8be93a150aed7cbf3f",
+      "bytes": 50120,
+      "cue_count": 527,
+      "words": 5915,
+      "last_end": "00:38:00,899",
+      "id": "PG25",
+      "edition_context": "lost-fleet-first-impressions",
+      "reviewed_cue_count": 316,
+      "reviewed_ranges": [
+        {
+          "start": "00:01:15",
+          "end": "00:04:15",
+          "mode": "contiguous text excerpt; not audio verified",
+          "provenance": "Reviewed in preceding file-check turn; recorded in .omh/sessions/codex-2026-09-10-ai-strategy-research.md"
+        },
+        {
+          "start": "00:05:22",
+          "end": "00:12:35",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:08:00",
+          "end": "00:09:30",
+          "mode": "contiguous text excerpt; not audio verified",
+          "provenance": "Reviewed in preceding file-check turn; recorded in .omh/sessions/codex-2026-09-10-ai-strategy-research.md"
+        },
+        {
+          "start": "00:19:10",
+          "end": "00:22:15",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:22:15",
+          "end": "00:24:05",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:26:02",
+          "end": "00:28:35",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:29:55",
+          "end": "00:32:42",
+          "mode": "contiguous text excerpt; not audio verified"
+        },
+        {
+          "start": "00:32:42",
+          "end": "00:35:00",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    },
+    {
+      "episode": 26,
+      "title": "Episode 26: Auctions in online Gaia Project",
+      "published_at": "Thu, 12 Sep 2024 13:38:12 GMT",
+      "path": "/home/sohegi/다운로드/Paia-Groject/26 (transcribed on 13-Sep-2026 01-30-03).srt",
+      "sha256": "c92b76ef033a5040c2c17f49a27fd68f7f5ee74c9ed12c08ac9e53068ce66411",
+      "bytes": 54935,
+      "cue_count": 552,
+      "words": 6716,
+      "last_end": "00:45:37,000",
+      "id": "PG26",
+      "edition_context": "online-auction-formats",
+      "reviewed_cue_count": 75,
+      "reviewed_ranges": [
+        {
+          "start": "00:36:42",
+          "end": "00:41:10",
+          "mode": "contiguous text excerpt; not audio verified"
+        }
+      ],
+      "semantic_coverage": "selected excerpts only; not a full episode review",
+      "audio_verified": false
+    }
+  ]
+}

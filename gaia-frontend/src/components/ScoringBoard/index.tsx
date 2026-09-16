@@ -3,6 +3,8 @@ import { scoringBoardImageSrc } from '../../assets/scoringBoardImage';
 import { roundScoringTileImageSrc, roundScoringTileBackImageSrc } from '../../assets/roundScoringTileImages';
 import { finalScoringTileImageSrc } from '../../assets/finalScoringTileImages';
 import type { FinalScoringTile, RoundTile } from '../../types/game';
+import type { FinalScoringState } from '../../finalScoring';
+import { FinalGoalMarkers } from './FinalGoalMarkers';
 
 interface Props {
   roundTiles: RoundTile[];
@@ -10,6 +12,7 @@ interface Props {
   /** 0 = nothing has been played yet (pre-game preview); otherwise the round currently in
    * progress (1-6) — every tile for a round below this has already been played and flips. */
   currentRound: number;
+  gameState?: FinalScoringState;
 }
 
 interface Point {
@@ -225,7 +228,7 @@ function roundTileStyle(targetCorners: Point[]): CSSProperties {
   };
 }
 
-export function ScoringBoard({ roundTiles, finalScoringTiles, currentRound }: Props) {
+export function ScoringBoard({ roundTiles, finalScoringTiles, currentRound, gameState }: Props) {
   return (
     <section className="scoring-board" aria-label="점수 보드">
       <div className="scoring-board-image-wrap">
@@ -265,6 +268,7 @@ export function ScoringBoard({ roundTiles, finalScoringTiles, currentRound }: Pr
             </div>
           );
         })}
+        {gameState && <FinalGoalMarkers state={gameState} tiles={finalScoringTiles} />}
       </div>
     </section>
   );

@@ -56,7 +56,7 @@ describe('OpponentPanels', () => {
     expect(screen.getByText('P1')).toBeInTheDocument();
     expect(screen.getByText('P2')).toBeInTheDocument();
     expect(screen.getAllByLabelText('광석 4')).toHaveLength(2);
-    expect(screen.getAllByLabelText('이번 수입 광석 0')).toHaveLength(2);
+    expect(screen.getAllByLabelText('예상 수입 광석 1')).toHaveLength(2);
     expect(screen.getByLabelText('1번째 행동 순서')).toHaveTextContent('1');
     expect(screen.getByLabelText('2번째 행동 순서')).toHaveTextContent('2');
     expect(screen.getByText('나')).toBeInTheDocument();
@@ -85,7 +85,7 @@ describe('OpponentPanels', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('updates the shown next income after advancing an income research track', () => {
+  it('uses current tracks instead of adding to historical received income', () => {
     const player = mockPlayer({
       research_tracks: {
         terraforming: 0,
@@ -120,8 +120,8 @@ describe('OpponentPanels', () => {
       />,
     );
 
-    expect(screen.getByLabelText('이번 수입 크레딧 5')).toBeInTheDocument();
-    expect(screen.getByLabelText('이번 수입 지식 2')).toBeInTheDocument();
-    expect(screen.getByText('이번 수입 충전 3')).toBeInTheDocument();
+    expect(screen.getByLabelText('예상 수입 크레딧 2')).toBeInTheDocument();
+    expect(screen.getByLabelText('예상 수입 지식 2')).toBeInTheDocument();
+    expect(screen.getByText('예상 수입 충전 1')).toBeInTheDocument();
   });
 });

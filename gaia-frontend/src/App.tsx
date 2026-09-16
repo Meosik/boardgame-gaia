@@ -1,3 +1,5 @@
+import type { CoachBoardControls } from './components/AiCoach/boardSelection';
+import { GameCommandControls, GameCommandStatus } from './components/GameCommandControls';
 import { RewardMotion } from './components/RewardMotion';
 import { resourceMotionBatch, type RewardBatch } from './components/RewardMotion/rewards';
 import { DevTestControls } from './components/DevTestControls';
@@ -124,6 +126,7 @@ const MAP_TARGET_SPACESHIP_ACTIONS = new Set<GameAction['type']>([
   'SpaceGiantsBuildMine',
   'RoundBoosterImmediateGaiaFormation',
   'RoundBoosterRangeBuild',
+  'RoundBoosterTerraformBuild',
   'TinkeroidsUseTile',
   'SpaceshipCreditTerraform',
   'TwilightFreeResearchLab',
@@ -246,7 +249,7 @@ export interface AppReplayControls {
   onEventSelect: (index: number) => void;
 }
 
-export function App({ replay }: { replay?: AppReplayControls } = {}) {
+export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; sidePanel?: ReactNode; coach?: CoachBoardControls } = {}) {
   const [view, setView] = useState<AppView>(replay ? 'game' : 'lobby');
   const [personalBoardPlayerId, setPersonalBoardPlayerId] = useState<number | null>(null);
   const [structurePopup, setStructurePopup] = useState<BoardStructurePopupState | null>(null);
@@ -304,6 +307,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
     selectedAction,
     selectedPowerActionId,
     finalResult,
+    wsClient, connectionReady, commandPending,
     actions: gameActions,
   } = useGameStore(
     (s) => ({
@@ -314,6 +318,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
       selectedAction: s.selectedAction,
       selectedPowerActionId: s.selectedPowerActionId,
       finalResult: s.finalResult,
+      wsClient: s.wsClient, connectionReady: s.connectionReady, commandPending: s.commandPending,
       actions: s.actions,
     }),
     shallow,
@@ -355,7 +360,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
           }
           break;
         case 'command_accepted':
-          roomActions.setRevision(msg.revision);
+          roomActions.setRevision(Math.max(useRoomStore.getState().revision, msg.revision));
           roomActions.setError(null);
           if (gameActions.acceptActionCommand(msg.command_id)) {
             closeBoardContext();
@@ -363,7 +368,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
           }
           break;
         case 'command_rejected':
-          roomActions.setRevision(msg.revision);
+          roomActions.setRevision(Math.max(useRoomStore.getState().revision, msg.revision));
           gameActions.rejectActionCommand(msg.command_id);
           roomActions.setError({
             code: msg.rejection.code,
@@ -373,6 +378,9 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
         case 'room_joined':
           gameActions.setMyPlayerId(msg.player_id);
           roomActions.setRevision(msg.revision);
+          break;
+        case 'error':
+          roomActions.setError({ code: msg.code, message: msg.message });
           break;
         case 'game_ended':
           gameActions.setFinalResult({
@@ -545,7 +553,8 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
       : (gameState.players.find((player) => player.player_id === personalBoardPlayerId) ?? null);
   const activePlayerId = activeActionPlayerId(gameState);
   const undoPending = gameState.undo_state?.pending_request ?? null;
-  const isMyActionTurn = !replay && activePlayerId === myId && undoPending === null;
+  const commandBlocked = !replay && wsClient !== null && (!connectionReady || commandPending);
+  const isMyActionTurn = !replay && !commandBlocked && activePlayerId === myId && undoPending === null;
   const hasServerFreeActions = gameState.undo_state?.open_turn?.player === myId
     && (gameState.undo_state.open_turn.free_action_revisions.length ?? 0) > 0;
   const usedPowerActions = gameState.used_power_actions;
@@ -806,6 +815,9 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
     }
 
     switch (selectedAction) {
+      case 'RoundBoosterTerraformBuild':
+        previewBuild(hex, anchor, { action: { type: 'RoundBoosterTerraformBuild', coord: hex.coord }, freeTerraformingSteps: 1 });
+        return true;
       case 'SpaceGiantsBuildMine':
         previewBuild(hex, anchor, { action: { type: 'SpaceGiantsBuildMine', coord: hex.coord }, freeTerraformingSteps: 2 });
         return true;
@@ -1282,6 +1294,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
           </a>
         ))}
         <div className="game-table-top-actions">
+          {!replay && wsClient && <GameCommandStatus ready={connectionReady} pending={commandPending} />}
           {/* The same reference the lobby's 튜토리얼 page shows, as a pinned panel so the board
               stays usable while reading it. */}
           {!replay && (
@@ -1294,18 +1307,20 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
             player={me}
             round={gameState.round}
             availableBoosters={gameState.boosters}
-            isMyTurn={isMyActionTurn && !mainActionLocked}
+            isMyTurn={coach ? coach.enabled : isMyActionTurn && !mainActionLocked}
             onChooseBooster={() => {
               setPassBoosterSelection(true);
               scrollToGameBoard('game-round-boosters');
             }}
             onPass={(boosterId) => {
+              if (coach) { coach.onAction({ type: 'Pass', booster_id: boosterId }); return; }
               setPassBoosterSelection(false);
               gameActions.sendAction({ type: 'Pass', booster_id: boosterId });
             }}
           />
         </div>
       </nav>
+      <GameCommandControls blocked={commandBlocked}>
       <main className="game-table-scroll">
         <section className="game-table-section game-table-overview" id="game-overview">
           <article className="game-table-card game-table-scoring-card">
@@ -1314,6 +1329,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               roundTiles={gameState.round_tiles}
               finalScoringTiles={gameState.final_scoring_tiles}
               currentRound={gameState.round}
+              gameState={gameState}
             />
           </article>
           <article
@@ -1326,8 +1342,9 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
             <RoundBoosters
               availableBoosters={gameState.boosters}
               players={gameState.players}
-              selectionMode={passBoosterSelection}
+              selectionMode={coach ? coach.enabled && coach.boosterSelection : passBoosterSelection}
               onSelectBooster={(boosterId) => {
+                if (coach) { coach.onAction({ booster_id: boosterId }); return; }
                 setPassBoosterSelection(false);
                 gameActions.sendAction({ type: 'Pass', booster_id: boosterId });
               }}
@@ -1343,10 +1360,10 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
             <FederationTokens
               availableTokens={gameState.research_board.federation_tokens}
               players={gameState.players}
-              selectionMode={federationSelection?.valid ?? false}
+              selectionMode={coach ? coach.enabled && coach.federationSelection : federationSelection?.valid ?? false}
               selectedToken={federationTokenChoice}
               spaceshipTokens={availableSpaceshipFederationTokens}
-              onSelectToken={handleFederationTokenChoice}
+              onSelectToken={coach ? token => coach.onAction({ type: 'FormFederation', token }) : handleFederationTokenChoice}
               showHoldings={false}
             />
           </article>
@@ -1370,11 +1387,11 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
           <GameBoard
             board={gameState.board}
             players={gameState.players}
-            validTargets={isMyLostPlanetPlacement ? lostPlanetTargets : bonusMineTargets}
+            validTargets={coach ? coach.targets : isMyLostPlanetPlacement ? lostPlanetTargets : bonusMineTargets}
             federationSelectableHexes={federationSelectableHexes}
             selectedCoord={isMyLostPlanetPlacement ? activePlanet : null}
             onHexClick={
-              isMyLostPlanetPlacement
+              coach ? coach.onHex : isMyLostPlanetPlacement
                 ? gameActions.selectPlanet
                 : techUpgradeFlow?.stage === 'bonus-mine'
                   ? handleBonusMineTarget
@@ -1414,6 +1431,9 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               <LostFleetTechRequirementBoard
                 side={gameState.research_board.lost_fleet_advanced_tech_requirement}
                 tileId={gameState.research_board.lost_fleet_advanced_tech_tile}
+                onSelect={coach?.enabled && coach.techMode && gameState.research_board.lost_fleet_advanced_tech_tile != null
+                  && coach.advancedTiles.includes(gameState.research_board.lost_fleet_advanced_tech_tile)
+                  ? () => coach.onTech(gameState.research_board.lost_fleet_advanced_tech_tile!, true) : undefined}
               />
             </div>
           </article>
@@ -1423,44 +1443,47 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               players={gameState.players}
               board={gameState.research_board}
               usedPowerActions={gameState.used_power_actions}
-              isMyTurn={isMyActionTurn}
-              mainActionLocked={mainActionLocked}
+              isMyTurn={coach ? coach.enabled : isMyActionTurn}
+              mainActionLocked={coach ? !coach.enabled : mainActionLocked}
               selectedPowerActionId={selectedPowerActionId}
-              onPowerAction={handleResearchBoardAction}
+              allowTechReselection={!!coach?.enabled && coach.techMode !== null}
+              onPowerAction={coach ? id => coach.onAction({ type: 'PowerAction', id }) : handleResearchBoardAction}
               techSelectionMode={
-                techUpgradeFlow?.stage === 'tile'
+                coach ? coach.techMode : techUpgradeFlow?.stage === 'tile'
                   ? 'tile'
                   : techUpgradeFlow?.stage === 'track' || selectedAction === 'EclipseResearchBoost' || selectedAction === 'BescodsLowestResearchAdvance'
                     ? 'track'
                     : null
               }
-              selectableStandardTiles={selectableStandardTiles}
-              selectableAdvancedTracks={selectableAdvancedTracks}
-              selectableResearchTracks={selectedAction === 'BescodsLowestResearchAdvance' ? selectableBescodsResearchTracks : selectableTechResearchTracks}
-              onStandardTechTile={handleStandardTechTile}
-              onAdvancedTechTile={handleAdvancedTechTile}
-              onResearchTrack={handleTechResearchTrack}
+              selectableStandardTiles={coach ? coach.standardTiles : selectableStandardTiles}
+              selectableAdvancedTracks={coach ? coach.advancedTracks : selectableAdvancedTracks}
+              selectableResearchTracks={coach ? coach.researchTracks : selectedAction === 'BescodsLowestResearchAdvance' ? selectableBescodsResearchTracks : selectableTechResearchTracks}
+              onStandardTechTile={coach ? tile => coach.onTech(tile) : handleStandardTechTile}
+              onAdvancedTechTile={coach ? tile => coach.onTech(tile, true) : handleAdvancedTechTile}
+              onResearchTrack={coach ? coach.onTrack : handleTechResearchTrack}
               onPaidResearchTrack={
-                !mainActionLocked && isMyActionTurn ? handlePaidResearchTrack : undefined
+                coach ? coach.enabled ? coach.onTrack : undefined : !mainActionLocked && isMyActionTurn ? handlePaidResearchTrack : undefined
               }
             />
           </article>
           <PlayerActionShelf
             id="game-player-actions"
             player={me}
-            isMyTurn={isMyActionTurn}
-            mainActionLocked={mainActionLocked}
+            isMyTurn={coach ? coach.enabled : isMyActionTurn}
+            mainActionLocked={coach ? !coach.enabled : mainActionLocked}
             federationSelectionMode={selectedAction === 'TwilightReplayFederationToken' || (selectedAction === 'ExamineArtifact' && boardArtifactId === 10)}
             selectedFederationKind={replayFederationKind}
             onSelectFederationKind={handleReplayFederationKind}
             onSelectBoosterAction={(booster) => {
+              if (coach) { coach.onTypes(booster === 5 ? ['RoundBoosterImmediateGaiaFormation'] : booster === 12 ? ['RoundBoosterTerraformBuild'] : ['RoundBoosterRangeBuild', 'RoundBoosterRangeGaiaFormation', 'RoundBoosterRangeExploreSpaceship']); return; }
               if (!isMyActionTurn || mainActionLocked) return;
               closeBoardContext();
               setGameNotice(null);
-              gameActions.selectAction(booster === 5 ? 'RoundBoosterImmediateGaiaFormation' : 'RoundBoosterRangeBuild');
+              gameActions.selectAction(booster === 5 ? 'RoundBoosterImmediateGaiaFormation' : booster === 12 ? 'RoundBoosterTerraformBuild' : 'RoundBoosterRangeBuild');
               scrollToGameBoard('game-map');
             }}
             onSelectExplorationAction={(action) => {
+              if (coach) { coach.onTypes([action]); return; }
               if (!isMyActionTurn || mainActionLocked) return;
               closeBoardContext();
               setGameNotice(null);
@@ -1468,6 +1491,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               scrollToGameBoard('game-map');
             }}
             onSelectFactionAction={(action) => {
+              if (coach) { coach.onTypes([action]); return; }
               if (!isMyActionTurn || mainActionLocked) return;
               closeBoardContext();
               setGameNotice(null);
@@ -1475,6 +1499,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               scrollToGameBoard('game-map');
             }}
             onSelectBescodsResearch={() => {
+              if (coach) { coach.onTypes(['BescodsLowestResearchAdvance']); return; }
               if (!isMyActionTurn || mainActionLocked) return;
               closeBoardContext();
               setGameNotice(null);
@@ -1482,12 +1507,13 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               scrollToGameBoard('game-research');
             }}
             onSelectTinkeringTile={() => {
+              if (coach) { coach.onTypes(['TinkeroidsUseTile']); return; }
               if (!isMyActionTurn || mainActionLocked) return;
               closeBoardContext();
               gameActions.selectAction('TinkeroidsUseTile');
               scrollToGameBoard('game-map');
             }}
-            onAction={gameActions.sendAction}
+            onAction={coach ? coach.onAction : gameActions.sendAction}
           />
           <article className="game-table-card game-table-ships-card">
             <h2>함선 보드</h2>
@@ -1495,15 +1521,15 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               spaceshipBoards={gameState.spaceship_boards}
               players={gameState.players}
               myPlayerId={myId}
-              isMyTurn={isMyActionTurn}
-              mainActionLocked={mainActionLocked}
+              isMyTurn={coach ? coach.enabled : isMyActionTurn}
+              mainActionLocked={coach ? !coach.enabled : mainActionLocked}
               usedActionIds={gameState.used_spaceship_actions}
               selectedAction={selectedAction}
-              selectableTechTiles={techUpgradeFlow?.stage === 'tile' ? selectableStandardTiles : []}
-              onActionSelect={handleShipActionSelect}
-              onArtifactSelect={handleArtifactClick}
+              selectableTechTiles={coach ? coach.standardTiles : techUpgradeFlow?.stage === 'tile' ? selectableStandardTiles : []}
+              onActionSelect={coach ? (_, types) => coach.onTypes(types) : handleShipActionSelect}
+              onArtifactSelect={coach ? artifact => coach.onAction({ type: 'ExamineArtifact', artifact }) : handleArtifactClick}
               onTechTileSelect={
-                techUpgradeFlow?.stage === 'tile'
+                coach ? tile => coach.onTech(tile) : techUpgradeFlow?.stage === 'tile'
                   ? (tile) => handleStandardTechTile(tile, -1)
                   : undefined
               }
@@ -1542,7 +1568,9 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
           </div>
         </section>
       </main>
+      </GameCommandControls>
       <aside className="game-sidebar">
+        {sidePanel ?? <>
         <div className="game-sidebar-tabs" role="tablist" aria-label="오른쪽 패널">
           <button
             type="button"
@@ -1589,9 +1617,10 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               economyResearchTileSide={gameState.research_board.economy_research_tile_side}
               onPlayerSelect={(player) => setPersonalBoardPlayerId(player.player_id)}
             />
+            <GameCommandControls blocked={commandBlocked}>
             <SidebarTurnControls
               player={me}
-              isMyTurn={isMyActionTurn}
+              isMyTurn={coach ? coach.enabled : isMyActionTurn}
               onFreeAction={(kind) => gameActions.sendAction({ type: 'FreeAction', kind, count: 1 })}
               rangePreviewQic={rangePreviewQic}
               onRangePreviewAdd={() => {
@@ -1615,6 +1644,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               onRequestTurnUndo={gameActions.requestTurnUndo}
               onRespondTurnUndo={gameActions.respondTurnUndo}
             />
+            </GameCommandControls>
           </div>
         ) : (
           <div
@@ -1627,7 +1657,9 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
               onEventSelect={replay?.onEventSelect} activeEventRange={replay ? [replay.eventStart, replay.eventEnd] : undefined} />
           </div>
         )}
+        </>}
       </aside>
+      <GameCommandControls blocked={commandBlocked}>
       {!replay && mainActionLocked && (
         <ActionCancelButton anchor={selectedAction === 'BescodsLowestResearchAdvance' ? document.getElementById('game-research') : actionAnchorRef.current} onCancel={cancelCurrentAction} />
       )}
@@ -1717,6 +1749,7 @@ export function App({ replay }: { replay?: AppReplayControls } = {}) {
           />
         </DraggableActionPopup>
       )}
+      </GameCommandControls>
       {!replay && tutorialOpen && (
         <FloatingBoardPanel title="도움말 · 따라 하기와 행동 설명" onClose={() => setTutorialOpen(false)}>
           <TutorialPanel events={gameState.event_log} myPlayerId={myPlayerId} />

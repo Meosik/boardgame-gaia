@@ -54,6 +54,7 @@ const ACTION_SOURCES = [
   })),
   { id: 'booster-5', label: '부스터 5 · 즉시 가이아포밍', src: roundBoosterImageSrc(5) },
   { id: 'booster-8', label: '부스터 8 · 사거리 +3', src: roundBoosterImageSrc(8) },
+  { id: 'booster-12', label: '부스터 12 · 테라포밍 1단계 무료 (광산 비용 별도)', src: roundBoosterImageSrc(12) },
   ...['테라포밍 1단계 무료 광산', '정보 큐브 1', '파워 4 충전', '정보 큐브 2', '테라포밍 3단계 무료 광산', '지식 3'].map((effect, index) => ({
     id: `tinkering-${index + 1}`,
     label: `팅커로이드 타일 ${index + 1} · ${index < 3 ? '1~3' : '4~6'}라운드 · ${effect}`,
@@ -72,6 +73,7 @@ const ACTION_SOURCES = [
   { id: 'exploration-Gleens-range', label: '글린 · 확장 보드 행동 · 사거리 +2 (광산·가이아 프로젝트·함선 탐사)', src: explorationBoardImageSrc('Gleens') },
   { id: 'faction-BalTaks-credit-academy', label: '발타크 · 크레딧 아카데미 행동', src: factionBoardImageSrc('BalTaks') },
   { id: 'faction-Geodens-credit-academy', label: '기오덴 · 크레딧 아카데미 행동', src: factionBoardImageSrc('Geodens') },
+  { id: 'academy-qic', label: '공통 아카데미 행동 · 정보 큐브 1', src: factionBoardImageSrc('HadschHallas') },
   { id: 'faction-Firaks-downgrade', label: '파이락 · 의회 능력 · 연구소 강등 + 무료 연구', src: factionBoardImageSrc('Firaks') },
   { id: 'faction-Ivits-space-station', label: '하이브 · 의회 능력 · 우주정거장 배치', src: factionBoardImageSrc('Ivits') },
   { id: 'faction-Moweyds-power-ring', label: '모웨이드 · 의회 능력 · 파워 링 설치', src: factionBoardImageSrc('Moweyds') },
@@ -170,9 +172,9 @@ function firstValidId(category: AssetCategory): string {
   return '1';
 }
 
-function CalibrationPanel({ title, moweyds = false }: { title: string; moweyds?: boolean }) {
+function CalibrationPanel({ title, moweyds = false, boosterTwelve = false }: { title: string; moweyds?: boolean; boosterTwelve?: boolean }) {
   const [category, setCategory] = useState<AssetCategory>('actionSource');
-  const [idInput, setIdInput] = useState<string>(moweyds ? 'faction-Moweyds-power-ring' : ACTION_SOURCES[0].id);
+  const [idInput, setIdInput] = useState<string>(moweyds ? 'faction-Moweyds-power-ring' : boosterTwelve ? 'booster-12' : ACTION_SOURCES[0].id);
   const [zoom, setZoom] = useState(moweyds ? 1 : 0);
   const [points, setPoints] = useState<Point[]>([]);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -344,7 +346,10 @@ function CalibrationPanel({ title, moweyds = false }: { title: string; moweyds?:
  * on the other, then read off natural-pixel coordinates directly instead of
  * eyeballing them in an external image editor. */
 export function CalibrationView() {
-  const moweyds = new URLSearchParams(window.location.search).get('asset') === 'Moweyds';
+  const asset = new URLSearchParams(window.location.search).get('asset');
+  const moweyds = asset === 'Moweyds';
+  const boosterTwelve = asset === 'booster-12';
+  const singlePanel = moweyds || boosterTwelve;
   return (
     <div className="calibration-view">
       <header className="calibration-header">
@@ -354,9 +359,9 @@ export function CalibrationView() {
           슬롯)을, 오른쪽엔 그 칸에 배치할 이미지를 띄워두고 대응되는 모서리를 순서대로 찍으세요.
         </p>
       </header>
-      <div className="calibration-panels" style={moweyds ? { gridTemplateColumns: 'minmax(0, 1fr)' } : undefined}>
-        {!moweyds && <CalibrationPanel title="칸 (대상 슬롯)" />}
-        <CalibrationPanel title="이미지 (배치할 소스)" moweyds={moweyds} />
+      <div className="calibration-panels" style={singlePanel ? { gridTemplateColumns: 'minmax(0, 1fr)' } : undefined}>
+        {!singlePanel && <CalibrationPanel title="칸 (대상 슬롯)" />}
+        <CalibrationPanel title="이미지 (배치할 소스)" moweyds={moweyds} boosterTwelve={boosterTwelve} />
       </div>
     </div>
   );

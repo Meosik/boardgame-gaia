@@ -95,6 +95,11 @@ fn ai_decisions_preserves_other_actions_for_a_fifteen_cluster_empire() {
     state.players[0].resources.power.bowl3 = 6;
     let before = serde_json::to_value(&state).unwrap_or_else(|e| panic!("{e}"));
     let decisions = RuleEngine::ai_decisions(&state).unwrap_or_else(|e| panic!("{e}"));
+    let (reported, diagnostics) = RuleEngine::ai_decisions_with_diagnostics(&state)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(reported, decisions);
+    assert_eq!(diagnostics.federation_limit_hits, 1);
+    assert!(!diagnostics.federation_limit_reasons.is_empty());
     assert!(decisions
         .iter()
         .any(|d| matches!(d, AiDecision::Game(GameAction::Pass { .. }))));

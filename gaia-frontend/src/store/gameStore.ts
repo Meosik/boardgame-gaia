@@ -1,6 +1,6 @@
 import { controlledPlayer } from '../devControl';
 import { create } from 'zustand';
-import type { GameAction, GameState, HexCoord, PlayerId } from '../types/game';
+import type { ClientCommand, GameAction, GameState, HexCoord, PlayerId } from '../types/game';
 import { GaiaWebSocket } from '../api/websocket';
 import { useRoomStore } from './roomStore';
 import { hexKey } from '../components/GameBoard/hex-utils';
@@ -33,6 +33,8 @@ interface GameStore {
    * cleared after this command is accepted; a rejection leaves the action and target intact. */
   pendingActionCommandId: string | null;
   wsClient: GaiaWebSocket | null;
+  connectionReady: boolean;
+  commandPending: boolean;
   finalResult: FinalResult | null;
 
   actions: {
@@ -67,15 +69,28 @@ const initialState = {
   selectedPowerActionId: null as number | null,
   pendingActionCommandId: null as string | null,
   wsClient: null,
+  connectionReady: false,
+  commandPending: false,
   finalResult: null as FinalResult | null,
 };
 
-export const useGameStore = create<GameStore>((set, get) => ({
+export const useGameStore = create<GameStore>((set, get) => {
+  let stopCommandState: (() => void) | null = null;
+  const sendCommand = (command: ClientCommand): string | null => {
+    const { readOnly, wsClient } = get();
+    // Check the transport synchronously, not just React's last rendered disabled state.
+    if (readOnly || !wsClient?.isReady || wsClient.hasPendingCommands) return null;
+    return wsClient.sendCommand(command, useRoomStore.getState().revision);
+  };
+  return ({
   ...initialState,
 
   actions: {
     setReadOnly(value) {
-      if (value) get().wsClient?.disconnect();
+      if (value) {
+        get().wsClient?.disconnect();
+        get().actions.setWsClient(null);
+      }
       set({ readOnly: value, ...(value ? { wsClient: null, selectedAction: null,
         selectedPowerActionId: null, activePlanet: null, selectedHexes: [], pendingActionCommandId: null } : {}) });
     },
@@ -128,11 +143,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     sendAction(action) {
-      if (get().readOnly) return null;
-      const { wsClient } = get();
-      const revision = useRoomStore.getState().revision;
-      if (!wsClient) return null;
-      const commandId = wsClient.sendCommand({ type: 'place_game_action', action }, revision);
+      const commandId = sendCommand({ type: 'place_game_action', action });
+      if (commandId === null) return null;
       // Free actions are deliberately allowed in the middle of a selected main action and must
       // never become the command that clears that selection when their acknowledgement arrives.
       if (action.type !== 'FreeAction') set({ pendingActionCommandId: commandId });
@@ -158,10 +170,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     triggerDevPowerCharge(coord) {
-      if (get().readOnly) return;
-      const { wsClient } = get();
-      const revision = useRoomStore.getState().revision;
-      wsClient?.sendCommand({ type: 'trigger_dev_power_charge', coord }, revision);
+      if (sendCommand({ type: 'trigger_dev_power_charge', coord }) === null) return;
       set({
         selectedAction: null,
         selectedPowerActionId: null,
@@ -172,35 +181,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     undoFreeAction() {
-      if (get().readOnly) return;
-      const { wsClient } = get();
-      wsClient?.sendCommand(
-        { type: 'undo_free_action' },
-        useRoomStore.getState().revision,
-      );
+      sendCommand({ type: 'undo_free_action' });
     },
 
     requestTurnUndo() {
-      if (get().readOnly) return;
-      const { wsClient } = get();
-      wsClient?.sendCommand(
-        { type: 'request_turn_undo' },
-        useRoomStore.getState().revision,
-      );
+      sendCommand({ type: 'request_turn_undo' });
     },
 
     respondTurnUndo(approve) {
-      if (get().readOnly) return;
-      const { wsClient } = get();
-      wsClient?.sendCommand(
-        { type: 'respond_turn_undo', approve },
-        useRoomStore.getState().revision,
-      );
+      sendCommand({ type: 'respond_turn_undo', approve });
     },
 
     setWsClient(client) {
       if (get().readOnly && client) { client.disconnect(); return; }
-      set({ wsClient: client });
+      stopCommandState?.();
+      stopCommandState = client?.onCommandStateChange(({ ready, pending }) => {
+        set({ connectionReady: ready, commandPending: pending });
+      }) ?? null;
+      set({ wsClient: client, connectionReady: client?.isReady ?? false,
+        commandPending: client?.hasPendingCommands ?? false, pendingActionCommandId: null });
     },
 
     setFinalResult(result) {
@@ -208,7 +207,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     reset() {
+      stopCommandState?.();
+      stopCommandState = null;
       set(initialState);
     },
   },
-}));
+});
+});

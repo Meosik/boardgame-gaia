@@ -47,9 +47,17 @@ vi.mock('../components/ActionPanel', () => ({
 vi.mock('../components/GameBoard', () => ({
   GameBoard: ({
     onOwnedStructureClick,
+    onSelectedActionHexClick,
   }: {
     onOwnedStructureClick?: (hex: Hex, anchor: { x: number; y: number }) => void;
+    onSelectedActionHexClick?: (hex: Hex, anchor: { x: number; y: number }) => boolean;
   }) => (
+    <>
+    <button type="button" onClick={() => onSelectedActionHexClick?.({
+      coord: { q: 1, r: 0 },
+      planet: { planet_type: 'Oxide', is_gaia_formed: false, owner: null },
+      space_tile_kind: null, structures: [], satellites: [],
+    }, { x: 100, y: 100 })}>테스트 테라포밍 행성</button>
     <button
       type="button"
       onClick={() => onOwnedStructureClick?.({
@@ -62,6 +70,7 @@ vi.mock('../components/GameBoard', () => ({
     >
       테스트 내 구조물
     </button>
+    </>
   ),
 }));
 vi.mock('../components/PlayerDashboard/ResearchBoard', () => ({
@@ -199,6 +208,35 @@ beforeEach(() => {
 });
 
 describe('App spaceship-board action flow', () => {
+  it('routes the mapped booster 12 through a paid-mine cost confirmation', () => {
+    const state = gameState();
+    const me = state.players[0];
+    me.booster = 12;
+    me.resources.ore = 1;
+    me.resources.credits = 2;
+    me.structures = [{ hex: { q: 0, r: 0 }, kind: 'Mine' }];
+    state.board.hexes = {
+      '0,0': { coord: { q: 0, r: 0 }, planet: { planet_type: 'Terra', is_gaia_formed: false, owner: 0 },
+        structures: [{ owner: 0, kind: 'Mine' }], satellites: [], space_tile_kind: null },
+      '1,0': { coord: { q: 1, r: 0 }, planet: { planet_type: 'Oxide', is_gaia_formed: false, owner: null },
+        structures: [], satellites: [], space_tile_kind: null },
+    };
+    useGameStore.setState({ gameState: state });
+    const sendAction = vi.spyOn(useGameStore.getState().actions, 'sendAction').mockReturnValue(null);
+    render(<App />);
+    fireEvent.click(screen.getByText('테스트 게임 입장'));
+    fireEvent.click(screen.getByRole('button', { name: '부스터 · 테라포밍 1단계 무료 (광산 비용 별도)' }));
+    expect(useGameStore.getState().selectedAction).toBe('RoundBoosterTerraformBuild');
+    fireEvent.click(screen.getByText('테스트 테라포밍 행성'));
+    fireEvent.click(screen.getByRole('button', { name: '광산 건설' }));
+    expect(screen.getByLabelText('광산 건설비: 광석 1, 크레딧 2')).toBeInTheDocument();
+    expect(sendAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '행동 확정' }));
+    expect(sendAction).toHaveBeenCalledOnce();
+    expect(sendAction).toHaveBeenCalledWith({ type: 'RoundBoosterTerraformBuild', coord: { q: 1, r: 0 } });
+    sendAction.mockRestore();
+  });
+
   it('chooses Space Giants institute technology before sending the single upgrade action', () => {
     const state = gameState();
     state.players[0].faction = 'SpaceGiants';

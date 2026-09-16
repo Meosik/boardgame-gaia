@@ -1,6 +1,16 @@
 import type { PlayerId } from '../types/game';
 import type { ReplayFrame } from './records';
 
+/** Round transitions already include the recorded income/phase state; never synthesize a frame. */
+export function replayRoundStarts(frames: readonly ReplayFrame[]): { round: number; cursor: number }[] {
+  const starts = new Map<number, number>();
+  frames.forEach((frame, cursor) => {
+    const round = frame.state.round;
+    if (round >= 1 && round <= 6 && !starts.has(round)) starts.set(round, cursor);
+  });
+  return [...starts].map(([round, cursor]) => ({ round, cursor }));
+}
+
 /** Only navigation is filtered; callers still render the original complete snapshot. */
 export function adjacentReplayFrame(
   frames: readonly ReplayFrame[],

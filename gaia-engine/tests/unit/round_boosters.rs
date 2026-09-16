@@ -342,12 +342,12 @@ fn booster_spaceship_state(booster: Option<u8>, ship: SpaceshipId) -> gaia_engin
 
 #[test]
 fn round_booster_special_action_resets_during_cleanup() {
-    let mut state = income_state(Some(5));
-    state.players[0].round_booster_special_action_used_this_round = true;
-
-    RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|error| panic!("{error}"));
-
-    assert!(!state.players[0].round_booster_special_action_used_this_round);
+    for booster in [5, 8, 12] {
+        let mut state = income_state(Some(booster));
+        state.players[0].round_booster_special_action_used_this_round = true;
+        RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|error| panic!("{error}"));
+        assert!(!state.players[0].round_booster_special_action_used_this_round);
+    }
 }
 
 #[test]
@@ -448,4 +448,150 @@ fn round_booster_eight_range_gaia_formation_rejects_when_booster_not_owned() {
     );
 
     assert!(result.is_err());
+}
+
+fn booster_twelve_state(target: HexCoord, planet_type: PlanetType) -> gaia_engine::GameState {
+    let mut state = booster_gaia_state(12, target);
+    let player = &mut state.players[0];
+    player.faction = Some(FactionId::Terrans);
+    player.resources.ore = 15;
+    player.resources.credits = 10;
+    player.resources.qic = 5;
+    player.research_tracks.terraforming = 0;
+    player.research_tracks.navigation = 0;
+    state
+        .board
+        .hexes
+        .get_mut(&target)
+        .unwrap_or_else(|| panic!("target"))
+        .planet
+        .as_mut()
+        .unwrap_or_else(|| panic!("planet"))
+        .planet_type = planet_type;
+    state
+}
+
+fn booster_twelve_action(coord: HexCoord) -> GameAction {
+    serde_json::from_value(serde_json::json!({
+        "type": "RoundBoosterTerraformBuild", "coord": coord,
+    }))
+    .unwrap_or_else(|error| panic!("booster 12 wire action must exist: {error}"))
+}
+
+#[test]
+fn booster_twelve_discounts_one_step_but_always_pays_normal_mine_cost() {
+    let target = HexCoord::new(1, 0);
+    // Terrans: Oxide is one step, Volcanic two; ProtoPlanet always needs three.
+    for (planet, ore_cost) in [
+        (PlanetType::Terra, 1),
+        (PlanetType::Oxide, 1),
+        (PlanetType::Volcanic, 4),
+        (PlanetType::ProtoPlanet, 7),
+    ] {
+        let mut state = booster_twelve_state(target, planet);
+        let power = state.players[0].resources.power.clone();
+        let events = RuleEngine::apply_action(&mut state, 0, booster_twelve_action(target))
+            .unwrap_or_else(|error| panic!("{planet:?}: {error}"));
+        assert_eq!(state.players[0].resources.ore, 15 - ore_cost);
+        assert_eq!(state.players[0].resources.credits, 8);
+        assert_eq!(state.players[0].resources.qic, 5);
+        assert_eq!(
+            state.players[0].resources.power, power,
+            "no activation power cost"
+        );
+        assert!(state.players[0].round_booster_special_action_used_this_round);
+        assert!(events.iter().any(|event| matches!(event,
+            GameEvent::StructureBuilt { player: 0, hex, .. } if *hex == target)));
+        assert_eq!(
+            state.board.hexes[&target].structures[0].kind,
+            StructureType::Mine
+        );
+    }
+}
+
+#[test]
+fn booster_twelve_rejects_unpaid_mine_or_extra_terraforming_without_mutation() {
+    let target = HexCoord::new(1, 0);
+    for (planet, ore, credits) in [
+        (PlanetType::Oxide, 0, 2),
+        (PlanetType::Oxide, 1, 1),
+        (PlanetType::Volcanic, 3, 2),
+    ] {
+        let mut state = booster_twelve_state(target, planet);
+        state.players[0].resources.ore = ore;
+        state.players[0].resources.credits = credits;
+        let before = state.serialize();
+        assert!(RuleEngine::apply_action(&mut state, 0, booster_twelve_action(target)).is_err());
+        assert_eq!(state.serialize(), before);
+    }
+}
+
+#[test]
+fn booster_twelve_pays_range_and_natural_gaia_entry_qic() {
+    // Base range 1; distance 3 needs one QIC. Natural Gaia also needs an entry QIC.
+    let target = HexCoord::new(3, 0);
+    for (planet, qic_cost) in [(PlanetType::Oxide, 1), (PlanetType::Gaia, 2)] {
+        let mut state = booster_twelve_state(target, planet);
+        state.players[0].resources.qic = qic_cost - 1;
+        let before = state.serialize();
+        assert!(RuleEngine::apply_action(&mut state, 0, booster_twelve_action(target)).is_err());
+        assert_eq!(state.serialize(), before);
+        state.players[0].resources.qic = qic_cost;
+        RuleEngine::apply_action(&mut state, 0, booster_twelve_action(target))
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(state.players[0].resources.qic, 0);
+        assert_eq!(state.players[0].resources.ore, 14);
+        assert_eq!(state.players[0].resources.credits, 8);
+    }
+}
+
+#[test]
+fn booster_twelve_requires_ownership_unused_action_and_legal_target() {
+    let target = HexCoord::new(1, 0);
+    for (booster, used, planet) in [
+        (None, false, PlanetType::Oxide),
+        (Some(8), false, PlanetType::Oxide),
+        (Some(12), true, PlanetType::Oxide),
+        (Some(12), false, PlanetType::Transdim),
+    ] {
+        let mut state = booster_twelve_state(target, planet);
+        state.players[0].booster = booster.map(Booster);
+        state.players[0].round_booster_special_action_used_this_round = used;
+        let before = state.serialize();
+        let action = booster_twelve_action(target);
+        assert!(!RuleEngine::get_valid_actions(&state, 0).contains(&action));
+        assert!(RuleEngine::apply_action(&mut state, 0, action).is_err());
+        assert_eq!(state.serialize(), before);
+    }
+}
+
+#[test]
+fn booster_twelve_is_an_ai_candidate_even_when_normal_terraforming_is_unaffordable() {
+    use gaia_engine::rules::engine::AiDecision;
+    let target = HexCoord::new(1, 0);
+    let mut state = booster_twelve_state(target, PlanetType::Oxide);
+    state.players[0].resources.ore = 1;
+    state.players[0].resources.credits = 2;
+    let before = state.serialize();
+    let action = booster_twelve_action(target);
+    assert!(RuleEngine::get_valid_actions(&state, 0).contains(&action));
+    let candidates = RuleEngine::ai_decisions(&state).unwrap_or_else(|error| panic!("{error}"));
+    assert!(candidates.contains(&AiDecision::Game(action.clone())));
+    assert!(!candidates.contains(&AiDecision::Game(GameAction::Build { coord: target })));
+    assert_eq!(state.serialize(), before);
+    RuleEngine::apply_action(&mut state, 0, action).unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(state.players[0].resources.ore, 0);
+    assert_eq!(state.players[0].resources.credits, 0);
+}
+
+#[test]
+fn booster_twelve_still_receives_two_credit_income() {
+    let mut control = income_state(None);
+    let mut boosted = income_state(Some(12));
+    RuleEngine::advance_to_next_round(&mut control).unwrap_or_else(|error| panic!("{error}"));
+    RuleEngine::advance_to_next_round(&mut boosted).unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        boosted.players[0].resources.credits,
+        control.players[0].resources.credits + 2
+    );
 }

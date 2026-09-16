@@ -4,6 +4,7 @@ import './index.css';
 import './styles/missing-classes.css';
 import { App } from './App';
 import { AiReplay } from './components/AiReplay';
+import { AiCoach } from './components/AiCoach';
 import { RewardPreview } from './components/RewardPreview';
 import { LiveActivityPreview } from './components/LiveActivityPreview';
 import { Tutorial } from './components/Tutorial';
@@ -12,6 +13,7 @@ const params = new URLSearchParams(window.location.search);
 const screen = params.get('rewardPreview') === '1' ? <RewardPreview />
   : params.get('activityPreview') === '1' ? <LiveActivityPreview />
     : params.get('tutorial') === '1' ? <Tutorial />
+      : params.get('aiCoach') === '1' ? <AiCoach />
       : params.get('aiReplay') === '1' ? <AiReplay />
         : <App />;
 

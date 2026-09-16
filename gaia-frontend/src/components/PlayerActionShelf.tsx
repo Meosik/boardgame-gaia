@@ -6,7 +6,7 @@ import { roundBoosterImageSrc } from '../assets/roundBoosterImages';
 import { tinkeringTileImageSrc } from '../assets/tinkeringTileImages';
 import { ActionCrop, type ActionCropId } from './ActionCrop';
 import { GamePieceIcon } from './GamePieceIcon';
-import { FACTION_STRUCTURE_COLOR, structureImageSrc } from '../assets/structureImages';
+import { academyActionReward } from './academyAction';
 import { advancedTechTileImageSrc, standardTechTileImageSrc } from '../assets/techTileImages';
 import {
   federationTokenBackImageSrc,
@@ -30,7 +30,7 @@ interface Props {
   onSelectTinkeringTile?: () => void;
   onSelectBescodsResearch?: () => void;
   onSelectFactionAction?: (action: 'FiraksDowngradeResearchLab' | 'IvitsPlaceSpaceStation') => void;
-  onSelectBoosterAction?: (booster: 5 | 8) => void;
+  onSelectBoosterAction?: (booster: 5 | 8 | 12) => void;
 }
 
 interface ActionTile {
@@ -90,13 +90,13 @@ export function PlayerActionShelf({
     });
   }
 
-  if (player.booster === 5 || player.booster === 8) {
+  if (player.booster === 5 || player.booster === 8 || player.booster === 12) {
     const imageSrc = roundBoosterImageSrc(player.booster);
     if (imageSrc) actionTiles.push({
       key: 'booster',
-      label: player.booster === 5 ? '부스터 · 즉시 가이아포밍' : '부스터 · 사거리 +3',
+      label: player.booster === 5 ? '부스터 · 즉시 가이아포밍' : player.booster === 12 ? '부스터 · 테라포밍 1단계 무료 (광산 비용 별도)' : '부스터 · 사거리 +3',
       imageSrc,
-      cropId: player.booster === 5 ? 'booster-5' : 'booster-8',
+      cropId: `booster-${player.booster}`,
       used: player.round_booster_special_action_used_this_round ?? false,
     });
   }
@@ -153,10 +153,15 @@ export function PlayerActionShelf({
     ({ kind }) => typeof kind === 'object' && 'Academy' in kind && kind.Academy === 'Qic',
   );
   if (hasQicAcademy && player.faction) {
-    actionTiles.push({
+    const reward = academyActionReward(player.faction);
+    const credits = reward.resource === 'credits';
+    const imageSrc = factionBoardImageSrc(credits ? player.faction : 'HadschHallas');
+    if (imageSrc) actionTiles.push({
       key: 'academy-qic',
-      label: '정보 큐브 아카데미 행동',
-      imageSrc: structureImageSrc(FACTION_STRUCTURE_COLOR[player.faction], 'academy'),
+      label: credits ? `${reward.label} 아카데미 행동 · ${reward.label} ${reward.amount}` : '정보 큐브 아카데미 행동',
+      imageSrc,
+      cropId: player.faction === 'Geodens' ? 'faction-Geodens-credit-academy'
+        : player.faction === 'BalTaks' ? 'faction-BalTaks-credit-academy' : 'academy-qic',
       used: player.academy_qic_action_used_this_round,
       action: { type: 'AcademyQicAction' },
     });
@@ -204,7 +209,7 @@ export function PlayerActionShelf({
                       onSelectBescodsResearch?.();
                     } else if (tile.key === 'exploration') {
                       onSelectExplorationAction?.(player.faction === 'Gleens' ? 'GleensBuildMine' : 'SpaceGiantsBuildMine');
-                    } else if (tile.key === 'booster' && (player.booster === 5 || player.booster === 8)) {
+                    } else if (tile.key === 'booster' && (player.booster === 5 || player.booster === 8 || player.booster === 12)) {
                       onSelectBoosterAction?.(player.booster);
                     } else if (tile.key === 'tinkering' && (tinkeringTile === 1 || tinkeringTile === 5)) {
                       onSelectTinkeringTile?.();

@@ -9,11 +9,13 @@ import { LOST_FLEET_DISPLAY_NAME } from '../../displayNames';
 interface Props {
   side?: LostFleetTechRequirementSide;
   tileId?: number | null;
+  onSelect?: () => void;
 }
 
 export function LostFleetTechRequirementBoard({
   side = 'exploration-shuttles',
   tileId = null,
+  onSelect,
 }: Props) {
   const requirementLabel = side === 'exploration-shuttles'
     ? '함선 3곳 탐사 고급 기술 조건 보드'
@@ -27,7 +29,11 @@ export function LostFleetTechRequirementBoard({
         src={lostFleetTechRequirementBoardImageSrc(side)}
         alt={requirementLabel}
       />
-      {tileSrc && (
+      {tileSrc && onSelect ? <button type="button" className="lost-fleet-tech-requirement-tile"
+        style={{ background: 'transparent', border: 0, padding: 0 }} onClick={onSelect}
+        aria-label={`함대 고급 기술 타일 ${tileId} 선택`}>
+        <img src={tileSrc} alt="" style={{ width: '100%', display: 'block' }} />
+      </button> : tileSrc && (
         <img
           className="lost-fleet-tech-requirement-tile"
           src={tileSrc}

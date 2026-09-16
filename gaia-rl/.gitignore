@@ -5,3 +5,8 @@ __pycache__/
 
 *.so
 /runs/
+
+# Re-fetchable boardgamers.space mirror (python -m bgs_records fetch); not a source document.
+/research/bgs-records/
+# Derived training sets built from the mirror (python -m bgs_records build).
+/datasets/

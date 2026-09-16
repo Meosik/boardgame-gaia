@@ -2,6 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { PlayerActionShelf } from '../components/PlayerActionShelf';
 import type { PlayerState } from '../types/game';
+import { factionBoardImageSrc } from '../assets/factionBoardImages';
+import { FACTION_VISUAL } from '../components/GameLobby/FactionBadge';
+import type { FactionId } from '../types/game';
 
 function player(overrides: Partial<PlayerState> = {}): PlayerState {
   return {
@@ -37,6 +40,27 @@ function player(overrides: Partial<PlayerState> = {}): PlayerState {
 }
 
 describe('PlayerActionShelf', () => {
+  it.each(Object.keys(FACTION_VISUAL) as FactionId[])('shows the correct mapped %s academy action and usage', faction => {
+    const credits = faction === 'Geodens' || faction === 'BalTaks';
+    const label = credits ? '크레딧 아카데미 행동 · 크레딧 4' : '정보 큐브 아카데미 행동';
+    const onAction = vi.fn();
+    const props = { player: player({ faction }), isMyTurn: true, onAction };
+    const { rerender } = render(<PlayerActionShelf {...props} />);
+    const button = screen.getByRole('button', { name: label });
+    expect(button.querySelector('.action-crop svg')).not.toBeNull();
+    expect(button.querySelector('image')).toHaveAttribute('href', factionBoardImageSrc(credits ? faction : 'HadschHallas'));
+    fireEvent.click(button);
+    expect(onAction).toHaveBeenCalledWith({ type: 'AcademyQicAction' });
+    rerender(<PlayerActionShelf {...props} player={{ ...props.player, academy_qic_action_used_this_round: true }} />);
+    const used = screen.getByRole('button', { name: `${label} · 이번 라운드 사용됨` });
+    expect(used).toBeDisabled();
+    expect(used.querySelector('.action-crop-closed')).not.toBeNull();
+    rerender(<PlayerActionShelf {...props} />);
+    expect(screen.getByRole('button', { name: label })).toBeEnabled();
+    rerender(<PlayerActionShelf {...props} player={{ ...props.player, structures: [] }} />);
+    expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument();
+  });
+
   it.each(['Firaks', 'Ivits'] as const)('opens the mapped %s PI action and respects locks', faction => {
     const onSelectFactionAction = vi.fn();
     const onAction = vi.fn();
@@ -93,7 +117,7 @@ describe('PlayerActionShelf', () => {
     expect(screen.queryByRole('button', { name: '팅커로이드 타일 2 사용' })).not.toBeInTheDocument();
   });
 
-  it.each([5, 8] as const)('includes cropped booster %i and closes it after use', (booster) => {
+  it.each([5, 8, 12] as const)('includes cropped booster %i and closes it after use', (booster) => {
     const onAction = vi.fn();
     const onSelectBoosterAction = vi.fn();
     const ready = player({ booster });

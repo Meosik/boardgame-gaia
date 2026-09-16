@@ -1,6 +1,6 @@
 #[path = "ai.rs"]
 mod ai;
-pub use ai::{AiActionError, AiDecision};
+pub use ai::{AiActionError, AiCandidateDiagnostics, AiDecision};
 
 use super::actions::{
     FederationTokenChoice, FreeActionKind, GameAction, SetupAction, TechTileChoice, TechTileRef,
@@ -284,6 +284,9 @@ impl RuleEngine {
             GameAction::RoundBoosterRangeBuild { coord } => {
                 validate_round_booster_range_build(state, player_id, *coord)
             }
+            GameAction::RoundBoosterTerraformBuild { coord } => {
+                validate_round_booster_terraform_build(state, player_id, *coord)
+            }
             GameAction::RoundBoosterRangeGaiaFormation { coord } => {
                 validate_round_booster_range_gaia_formation(state, player_id, *coord)
             }
@@ -502,6 +505,9 @@ impl RuleEngine {
             }
             GameAction::RoundBoosterRangeBuild { coord } => {
                 apply_round_booster_range_build(state, player_id, coord)
+            }
+            GameAction::RoundBoosterTerraformBuild { coord } => {
+                apply_round_booster_terraform_build(state, player_id, coord)
             }
             GameAction::RoundBoosterRangeGaiaFormation { coord } => {
                 apply_round_booster_range_gaia_formation(state, player_id, coord)
@@ -757,7 +763,7 @@ impl RuleEngine {
         }
 
         // Round-booster special actions. Enumerate the whole board rather than the base
-        // navigation reachable set because both actions can still extend range with QIC and
+        // navigation reachable set because these actions can still extend range with QIC and
         // booster 8 adds its printed +3 range before that extension.
         for &coord in state.board.hexes.keys() {
             if validate_round_booster_immediate_gaia_formation(state, player_id, coord).is_ok() {
@@ -765,6 +771,9 @@ impl RuleEngine {
             }
             if validate_round_booster_range_build(state, player_id, coord).is_ok() {
                 actions.push(GameAction::RoundBoosterRangeBuild { coord });
+            }
+            if validate_round_booster_terraform_build(state, player_id, coord).is_ok() {
+                actions.push(GameAction::RoundBoosterTerraformBuild { coord });
             }
             if validate_round_booster_range_gaia_formation(state, player_id, coord).is_ok() {
                 actions.push(GameAction::RoundBoosterRangeGaiaFormation { coord });
@@ -5424,6 +5433,7 @@ fn apply_immediate_gaia_formation_impl(
 
 const ROUND_BOOSTER_IMMEDIATE_GAIA: u8 = 5;
 const ROUND_BOOSTER_RANGE_PLUS_THREE: u8 = 8;
+const ROUND_BOOSTER_TERRAFORM: u8 = 12;
 const ROUND_BOOSTER_RANGE_BONUS: u8 = 3;
 
 fn validate_round_booster_special_access(
@@ -5467,6 +5477,24 @@ fn apply_round_booster_immediate_gaia_formation(
 ) -> Vec<GameEvent> {
     mark_round_booster_special_used(state, player_id);
     apply_immediate_gaia_formation_impl(state, player_id, coord, 0)
+}
+
+fn validate_round_booster_terraform_build(
+    state: &GameState,
+    player_id: PlayerId,
+    coord: HexCoord,
+) -> Result<(), RuleError> {
+    validate_round_booster_special_access(state, player_id, ROUND_BOOSTER_TERRAFORM)?;
+    validate_build_impl(state, player_id, coord, 1, 0, false, 0)
+}
+
+fn apply_round_booster_terraform_build(
+    state: &mut GameState,
+    player_id: PlayerId,
+    coord: HexCoord,
+) -> Vec<GameEvent> {
+    mark_round_booster_special_used(state, player_id);
+    apply_build_impl(state, player_id, coord, 1, 0, false, 0)
 }
 
 fn validate_round_booster_range_build(
@@ -7258,7 +7286,7 @@ fn validate_academy_qic_action(state: &GameState, player_id: PlayerId) -> Result
 
 /// The repeatable action granted by an Academy(Qic) (rulebook p.13): gain
 /// 1 QIC, or the faction's override (`factions.toml`'s `academy_qic_action`
-/// — only BalTaks deviates, gaining 4 credits instead).
+/// — Geodens and BalTaks gain 4 credits instead).
 fn apply_academy_qic_action(state: &mut GameState, player_id: PlayerId) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let faction = state.player(player_id).and_then(|p| p.faction);

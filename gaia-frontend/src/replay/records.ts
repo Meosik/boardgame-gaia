@@ -89,16 +89,25 @@ export function frameForEvent(frames: ReplayFrame[], eventIndex: number): number
   return found < 0 ? frames.length - 1 : found;
 }
 
-export async function loadReplay(file: string, signal: AbortSignal): Promise<ReplayRecord> {
+export async function loadReplay(file: string, signal: AbortSignal, directory: '/ai-replays' | '/ai-live' = '/ai-replays'): Promise<ReplayRecord> {
   if (!/^[a-z0-9_-]+\.json\.gz$/.test(file)) throw new Error('잘못된 리플레이 파일 경로입니다.');
-  const response = await fetch(`/ai-replays/${file}`, { signal });
+  const response = await fetch(`${directory}/${file}`, { signal });
   if (!response.ok || !response.body) throw new Error('리플레이 파일을 불러오지 못했습니다.');
+  // A server (the Vite dev server, a CDN) may send these as `Content-Encoding: gzip`, in which
+  // case the browser already decompressed the body and decompressing again would fail. Decide from
+  // the bytes rather than the headers, which `fetch` does not expose consistently.
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const gzipped = bytes[0] === 0x1f && bytes[1] === 0x8b;
+  if (!gzipped) return parseReplay(JSON.parse(new TextDecoder().decode(bytes)));
   if (typeof DecompressionStream === 'undefined') throw new Error('이 브라우저는 압축 리플레이를 지원하지 않습니다. 최신 브라우저로 열어 주세요.');
-  const raw: unknown = await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json();
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const raw: unknown = await new Response(stream).json();
   return parseReplay(raw);
 }
 
 export const POLICY_NAMES: Record<string, string> = {
+  live_observer: 'AI 실시간 관전',
+  quartet_teacher: '4종족 교사 대전',
   baseline: '일반 PPO', imitation_plus_ppo: '시범학습 + PPO', teacher: '교사 전략',
   continued_ppo: 'PPO 추가 학습', bc_only: '개선 시범학습만', economy_bc_ppo: '개선 시범학습 + PPO',
 };
@@ -115,6 +124,7 @@ export const ACTION_NAMES: Record<string, string> = {
   GaiaFormation: '가이아포밍', PlaceLostPlanet: '검은 행성 배치',
   EclipseAsteroidMine: '이클립스 소행성 광산', EclipseResearchBoost: '이클립스 연구 진전',
   RoundBoosterImmediateGaiaFormation: '부스터 즉시 가이아포밍', RoundBoosterRangeBuild: '부스터 사거리 건설',
+  RoundBoosterTerraformBuild: '부스터 광산 건설 (테라포밍 1단계 무료)',
   RoundBoosterRangeExploreSpaceship: '부스터 사거리 탐사', RoundBoosterRangeGaiaFormation: '부스터 사거리 가이아포밍',
   TwilightRangeGaiaFormation: '트와일라잇 사거리 가이아포밍', TwilightReplayFederationToken: '트와일라잇 연방 효과 복사',
 };

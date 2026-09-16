@@ -593,6 +593,7 @@ export type GameAction =
   | { type: 'GaiaFormation'; coord: HexCoord }
   | { type: 'RoundBoosterImmediateGaiaFormation'; coord: HexCoord }
   | { type: 'RoundBoosterRangeBuild'; coord: HexCoord }
+  | { type: 'RoundBoosterTerraformBuild'; coord: HexCoord }
   | { type: 'RoundBoosterRangeGaiaFormation'; coord: HexCoord }
   | { type: 'RoundBoosterRangeExploreSpaceship'; ship: SpaceshipId }
   | { type: 'Pass'; booster_id: number | null }

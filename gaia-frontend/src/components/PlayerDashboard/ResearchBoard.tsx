@@ -28,6 +28,8 @@ interface Props {
   selectedPowerActionId?: number | null;
   onPowerAction?: (id: number) => void;
   techSelectionMode?: 'tile' | 'track' | null;
+  /** Coaching can revise a tile while choosing its free track; never submits a game action. */
+  allowTechReselection?: boolean;
   selectableStandardTiles?: number[];
   selectableAdvancedTracks?: ResearchTrack[];
   selectableResearchTracks?: ResearchTrack[];
@@ -125,6 +127,7 @@ export function ResearchBoard({
   selectedPowerActionId = null,
   onPowerAction,
   techSelectionMode = null,
+  allowTechReselection = false,
   selectableStandardTiles,
   selectableAdvancedTracks,
   selectableResearchTracks,
@@ -221,7 +224,7 @@ export function ResearchBoard({
             width: `${slot.width}%`,
             aspectRatio: slot.aspectRatio,
           };
-          const selectable = techSelectionMode === 'tile'
+          const selectable = (techSelectionMode === 'tile' || allowTechReselection)
             && onStandardTechTile !== undefined
             && (selectableStandardTiles === undefined || selectableStandardTiles.includes(tileId));
           return (
@@ -233,7 +236,7 @@ export function ResearchBoard({
                 src={src}
                 alt={`표준 기술 타일 ${tileId}`}
               />
-              {techSelectionMode === 'tile' && (
+              {(techSelectionMode === 'tile' || allowTechReselection) && (
                 <button
                   type="button"
                   className="research-board-tech-hotspot research-board-tech-hotspot--standard"
@@ -258,7 +261,7 @@ export function ResearchBoard({
             width: `${slot.width}%`,
             aspectRatio: slot.aspectRatio,
           };
-          const selectable = techSelectionMode === 'tile'
+          const selectable = (techSelectionMode === 'tile' || allowTechReselection)
             && onAdvancedTechTile !== undefined
             && selectableAdvancedTracks?.includes(track) === true;
           return (
@@ -271,7 +274,7 @@ export function ResearchBoard({
                 alt={`고급 기술 타일 ${tileId}`}
                 title={ADVANCED_TECH_TILE_LABELS[tileId]}
               />
-              {techSelectionMode === 'tile' && (
+              {(techSelectionMode === 'tile' || allowTechReselection) && (
                 <button
                   type="button"
                   className="research-board-tech-hotspot research-board-tech-hotspot--advanced"
@@ -307,6 +310,7 @@ export function ResearchBoard({
             return (
               <span
                 key={`${key}-${player.player_id}`}
+                data-research-level={level}
                 data-replay-highlight={replay?.player === player.player_id && replay.research.has(key) || undefined}
                 className={`research-board-token${chooseTrack ? ' research-board-token--clickable' : ''}`}
                 style={{ top: `${yPct}%`, left: `${xPct + fanOffset}%` }}

@@ -160,20 +160,66 @@ fn awarded_vp(events: &[GameEvent]) -> i32 {
         .sum()
 }
 
+fn rendered_tech_asset_id(file_name: &str, prefix: &str) -> Option<u8> {
+    file_name
+        .strip_prefix(prefix)?
+        .strip_prefix('_')?
+        .strip_suffix(".webp")?
+        .split('_')
+        .next()?
+        .parse()
+        .ok()
+}
+
+#[test]
+fn rendered_tech_asset_names_use_numeric_ids_not_descriptions() {
+    for name in [
+        "std_02.webp",
+        "std_02_건물파워4.webp",
+        "std_02_다른_설명.webp",
+    ] {
+        assert_eq!(rendered_tech_asset_id(name, "std"), Some(2));
+    }
+    for name in [
+        "adv_02_설명.webp",
+        "std_02_설명.jpg",
+        "std_02_설명.webp.bak",
+        "std_02x_설명.webp",
+    ] {
+        assert_eq!(rendered_tech_asset_id(name, "std"), None);
+    }
+    assert_eq!(rendered_tech_asset_id("std_20_설명.webp", "std"), Some(20));
+    assert_eq!(rendered_tech_asset_id("adv_22_설명.webp", "adv"), Some(22));
+}
+
 #[test]
 fn technology_catalog_matches_assets_and_setup_pools() {
     let asset_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../gaia-frontend/src/assets/tech_tiles/rendered");
+    let asset_names: Vec<_> = std::fs::read_dir(&asset_dir)
+        .unwrap_or_else(|error| panic!("cannot read rendered tech assets: {error}"))
+        .map(|entry| entry.unwrap_or_else(|error| panic!("cannot read tech asset entry: {error}")))
+        .filter(|entry| entry.path().is_file())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
     for id in STANDARD_IDS {
-        assert!(
-            asset_dir.join(format!("std_{id:02}.webp")).is_file(),
-            "missing rendered Standard Tech tile {id}"
+        assert_eq!(
+            asset_names
+                .iter()
+                .filter(|name| rendered_tech_asset_id(name, "std") == Some(id))
+                .count(),
+            1,
+            "expected exactly one rendered Standard Tech tile {id}"
         );
     }
     for id in ADVANCED_TECH_TILE_IDS {
-        assert!(
-            asset_dir.join(format!("adv_{id:02}.webp")).is_file(),
-            "missing rendered Advanced Tech tile {id}"
+        assert_eq!(
+            asset_names
+                .iter()
+                .filter(|name| rendered_tech_asset_id(name, "adv") == Some(id))
+                .count(),
+            1,
+            "expected exactly one rendered Advanced Tech tile {id}"
         );
     }
 
