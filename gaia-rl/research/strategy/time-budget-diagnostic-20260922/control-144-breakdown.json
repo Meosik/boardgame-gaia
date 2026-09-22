@@ -1,0 +1,66 @@
+{
+  "source": "gaia-rl/runs/q-control-20260922/decisions.jsonl.gz",
+  "games": 1,
+  "seed": "state-evaluation-ab-20260917-1580",
+  "decisions": 221,
+  "fallback_decisions": 75,
+  "conversion_count": 144,
+  "path": {
+    "normal": {
+      "count": 77,
+      "ratio": 0.5347222222222222
+    },
+    "fallback": {
+      "count": 67,
+      "ratio": 0.4652777777777778
+    }
+  },
+  "by_type": {
+    "BurnPower": {
+      "fallback": 7,
+      "normal": 15
+    },
+    "OreToPower": {
+      "fallback": 32,
+      "normal": 47
+    },
+    "OreToPowerBowl3": {
+      "fallback": 16
+    },
+    "PowerToCredit": {
+      "fallback": 11,
+      "normal": 10
+    },
+    "PowerToOre": {
+      "normal": 2
+    },
+    "PowerToQic": {
+      "normal": 3,
+      "fallback": 1
+    }
+  },
+  "by_round": {
+    "1": {
+      "fallback": 2
+    },
+    "2": {
+      "fallback": 15
+    },
+    "3": {
+      "fallback": 10,
+      "normal": 12
+    },
+    "4": {
+      "fallback": 9,
+      "normal": 21
+    },
+    "5": {
+      "fallback": 17,
+      "normal": 25
+    },
+    "6": {
+      "fallback": 14,
+      "normal": 19
+    }
+  }
+}

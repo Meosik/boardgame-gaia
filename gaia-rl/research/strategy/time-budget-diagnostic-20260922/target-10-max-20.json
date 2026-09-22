@@ -1,0 +1,122 @@
+{
+  "seed": "state-evaluation-ab-20260917-1580",
+  "games": 1,
+  "mode": "B-lite+k+n+f-prime+g+h+o+p",
+  "density_bonus": false,
+  "target_seconds": 10.0,
+  "maximum_seconds": 20.0,
+  "complete": true,
+  "decisions": 220,
+  "elapsed_seconds": 2023.63,
+  "fallback_timeouts": 57,
+  "fallback_ratio": 0.2590909090909091,
+  "decision_seconds_mean": 9.195133181818182,
+  "decision_seconds_max": 9.9505,
+  "candidate_means_per_decision": {
+    "legal_candidates": 30.895454545454545,
+    "completed_comparisons": 0.9045454545454545,
+    "unique_compared_candidates": 0.18636363636363637,
+    "legal_mine_candidates": 1.0318181818181817,
+    "evaluated_mine_candidates": 0.9818181818181818
+  },
+  "candidate_metric_definition": {
+    "completed_comparisons": "number of completed deep-search plan rows; fallback has zero",
+    "evaluated_mine_candidates": "native-legal Build candidates scored by the normal root ranking, or explicitly scored by the quick fallback"
+  },
+  "free_action_conversions": {
+    "BurnPower": 18,
+    "OreToPower": 68,
+    "OreToPowerBowl3": 28,
+    "PowerToCredit": 31,
+    "PowerToKnowledge": 1,
+    "PowerToOre": 2,
+    "PowerToQic": 3
+  },
+  "free_action_conversion_count": 151,
+  "free_action_by_round_path_type": {
+    "2": {
+      "fallback": {
+        "BurnPower": 2,
+        "OreToPower": 2,
+        "OreToPowerBowl3": 5,
+        "PowerToCredit": 3
+      }
+    },
+    "3": {
+      "fallback": {
+        "BurnPower": 1,
+        "OreToPower": 3,
+        "OreToPowerBowl3": 4,
+        "PowerToCredit": 5,
+        "PowerToQic": 1
+      },
+      "normal": {
+        "BurnPower": 7,
+        "OreToPower": 1,
+        "PowerToQic": 2
+      }
+    },
+    "4": {
+      "fallback": {
+        "BurnPower": 2,
+        "OreToPower": 8,
+        "PowerToCredit": 2
+      },
+      "normal": {
+        "BurnPower": 1,
+        "OreToPower": 11,
+        "PowerToCredit": 4
+      }
+    },
+    "5": {
+      "fallback": {
+        "BurnPower": 1,
+        "OreToPower": 2,
+        "OreToPowerBowl3": 6,
+        "PowerToCredit": 5
+      },
+      "normal": {
+        "BurnPower": 1,
+        "OreToPower": 35,
+        "OreToPowerBowl3": 5,
+        "PowerToCredit": 7,
+        "PowerToOre": 1
+      }
+    },
+    "6": {
+      "fallback": {
+        "BurnPower": 1,
+        "OreToPowerBowl3": 8
+      },
+      "normal": {
+        "BurnPower": 2,
+        "OreToPower": 6,
+        "PowerToCredit": 5,
+        "PowerToKnowledge": 1,
+        "PowerToOre": 1
+      }
+    }
+  },
+  "factions": {
+    "Terrans": {
+      "buildings": 9,
+      "federations": 1,
+      "score": 86
+    },
+    "HadschHallas": {
+      "buildings": 7,
+      "federations": 1,
+      "score": 71
+    },
+    "Taklons": {
+      "buildings": 5,
+      "federations": 0,
+      "score": 40
+    },
+    "Xenos": {
+      "buildings": 8,
+      "federations": 1,
+      "score": 71
+    }
+  }
+}
