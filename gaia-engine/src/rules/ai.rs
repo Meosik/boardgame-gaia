@@ -143,8 +143,15 @@ impl RuleEngine {
                         }
                     }
                 }
+                let federations = federation_candidates(state, player_id).and_then(|candidates| {
+                    if std::env::var("GAIA_FEDERATION_TOP_FIVE").as_deref() == Ok("1") {
+                        select_federation_five(state, player_id, candidates)
+                    } else {
+                        Ok(candidates)
+                    }
+                });
                 if let Some(reason) = append_federation_candidates(
-                    &mut actions, federation_candidates(state, player_id), player_id,
+                    &mut actions, federations, player_id,
                 )? {
                     diagnostics.federation_limit_hits += 1;
                     diagnostics.federation_limit_reasons.push(reason);
@@ -177,6 +184,66 @@ fn append_federation_candidates(
         Err(error) => return Err(error),
     }
     Ok(None)
+}
+
+fn select_federation_five(
+    state: &GameState,
+    player_id: PlayerId,
+    candidates: Vec<GameAction>,
+) -> Result<Vec<GameAction>, AiActionError> {
+    let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
+    let available = if player.faction == Some(FactionId::Ivits) {
+        usize::from(player.resources.qic)
+    } else {
+        usize::from(player.resources.power.bowl1)
+            + usize::from(player.resources.power.bowl2)
+            + usize::from(player.resources.power.bowl3)
+    };
+    let mut rows = Vec::with_capacity(candidates.len());
+    for action in candidates {
+        let GameAction::FormFederation { hexes, satellite_hexes, token, .. } = &action else {
+            continue;
+        };
+        let kind = resolve_federation_token_choice(state, player_id, *token)?;
+        let printed_vp = match kind {
+            1 | 9 => 12i64,
+            2 | 3 | 8 => 8,
+            4 | 5 | 13 => 7,
+            6 => 6,
+            10 | 11 => 4,
+            _ => 0,
+        };
+        let committed = player.structures.iter().filter(|structure| {
+            hexes.contains(&structure.hex)
+                && matches!(structure.kind, StructureType::Mine | StructureType::ResearchLab)
+        }).count();
+        let satellites = satellite_hexes.len();
+        rows.push((action, satellites, available.saturating_sub(satellites), printed_vp,
+                   committed));
+    }
+    let minimum = rows.iter().map(|row| row.1).min().unwrap_or(0);
+    let mut chosen = Vec::with_capacity(5);
+    for criterion in 0..5 {
+        let index = (0..rows.len())
+            .filter(|index| !chosen.contains(index))
+            .filter(|&index| criterion != 1 || rows[index].1 == minimum + 1)
+            .min_by_key(|&index| {
+                let (_, satellites, slack, vp, committed) = &rows[index];
+                match criterion {
+                    0 => (*satellites as i64, -*vp, *committed as i64, index),
+                    1 => (-(*slack as i64), -*vp, *committed as i64, index),
+                    2 => (-*vp, *satellites as i64, *committed as i64, index),
+                    3 => (*committed as i64, *satellites as i64, -*vp, index),
+                    _ => (index as i64, 0, 0, index),
+                }
+            });
+        if let Some(index) = index { chosen.push(index); }
+    }
+    for index in 0..rows.len() {
+        if chosen.len() == 5 { break; }
+        if !chosen.contains(&index) { chosen.push(index); }
+    }
+    Ok(chosen.into_iter().map(|index| rows[index].0.clone()).collect())
 }
 
 #[cfg(test)]

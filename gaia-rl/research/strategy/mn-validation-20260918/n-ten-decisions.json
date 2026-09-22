@@ -1,0 +1,164 @@
+[
+  {
+    "step": 22,
+    "round": 1,
+    "selected_conversion_delta": -1.87,
+    "pass_delta": 13.2917,
+    "best_action": {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    "best_delta": 13.2917,
+    "best_pass_or_build_delta": 13.2917,
+    "best_pass_or_build_action": {
+      "type": "Pass",
+      "booster_id": 3
+    }
+  },
+  {
+    "step": 23,
+    "round": 1,
+    "selected_conversion_delta": -1.87,
+    "pass_delta": 13.2917,
+    "best_action": {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    "best_delta": 13.2917,
+    "best_pass_or_build_delta": 13.2917,
+    "best_pass_or_build_action": {
+      "type": "Pass",
+      "booster_id": 3
+    }
+  },
+  {
+    "step": 49,
+    "round": 3,
+    "selected_conversion_delta": -1.87,
+    "pass_delta": -11.796,
+    "best_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    },
+    "best_delta": 1.4626,
+    "best_pass_or_build_delta": 1.4626,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    }
+  },
+  {
+    "step": 50,
+    "round": 3,
+    "selected_conversion_delta": -1.87,
+    "pass_delta": -12.422,
+    "best_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    },
+    "best_delta": 1.4626,
+    "best_pass_or_build_delta": 1.4626,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    }
+  },
+  {
+    "step": 51,
+    "round": 3,
+    "selected_conversion_delta": -1.87,
+    "pass_delta": -12.048,
+    "best_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    },
+    "best_delta": 1.4626,
+    "best_pass_or_build_delta": 1.4626,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    }
+  },
+  {
+    "step": 65,
+    "round": 3,
+    "selected_conversion_delta": -1.87,
+    "pass_delta": -0.318,
+    "best_action": {
+      "type": "Pass",
+      "booster_id": 5
+    },
+    "best_delta": -0.318,
+    "best_pass_or_build_delta": -0.318,
+    "best_pass_or_build_action": {
+      "type": "Pass",
+      "booster_id": 5
+    }
+  },
+  {
+    "step": 71,
+    "round": 4,
+    "selected_conversion_delta": -1.496,
+    "pass_delta": -11.734,
+    "best_action": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "best_delta": -1.496,
+    "best_pass_or_build_delta": -5.5846,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "2,0"
+    }
+  },
+  {
+    "step": 72,
+    "round": 4,
+    "selected_conversion_delta": -1.496,
+    "pass_delta": -9.758,
+    "best_action": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "best_delta": -1.496,
+    "best_pass_or_build_delta": -5.5846,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "2,0"
+    }
+  },
+  {
+    "step": 94,
+    "round": 5,
+    "selected_conversion_delta": -1.122,
+    "pass_delta": -12.0723,
+    "best_action": {
+      "type": "ResearchAdvance",
+      "track": "Science"
+    },
+    "best_delta": 4.2703,
+    "best_pass_or_build_delta": 2.8452,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "0,-1"
+    }
+  },
+  {
+    "step": 95,
+    "round": 5,
+    "selected_conversion_delta": -1.122,
+    "pass_delta": -11.685,
+    "best_action": {
+      "type": "ResearchAdvance",
+      "track": "Science"
+    },
+    "best_delta": 4.2703,
+    "best_pass_or_build_delta": 2.8452,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "0,-1"
+    }
+  }
+]

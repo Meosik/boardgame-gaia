@@ -1,0 +1,33 @@
+{
+  "baseline_fingerprint": "8f269f027e69352cbe48ee61cf730c8f90c13eaa7f3503a53182acc3b964353e",
+  "changed": [
+    "bgg_openings/catalog.py"
+  ],
+  "allowed": {
+    "Terrans": [
+      "1AC+1M",
+      "1RL+2M",
+      "1RL+4M"
+    ],
+    "HadschHallas": [
+      "1RL+4M",
+      "1RL+1TS+2M"
+    ],
+    "Xenos": [
+      "1RL+5M",
+      "1RL+4M",
+      "1RL+1TS+2M"
+    ],
+    "Taklons": [
+      "1RL+5M",
+      "1RL+4M"
+    ]
+  },
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "fixed_openings": false,
+  "fallback": "unchanged four_factions/preparation.py::publish_current",
+  "games_run": 0
+}

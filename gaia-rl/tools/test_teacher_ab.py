@@ -1,0 +1,100 @@
+import json
+from collections import Counter
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+import teacher_ab as ab
+
+
+def game(a_seats, scores, factions=('Terrans', 'Xenos', 'Ivits', 'Firaks'), counters=None, **extra):
+    return {'seed': 's', 'factions': list(factions), 'a_seats': list(a_seats), 'complete': True,
+            'scores': {str(i): v for i, v in enumerate(scores)}, 'counters': counters or {}, **extra}
+
+
+class ScheduleTests(unittest.TestCase):
+    def test_every_pair_swaps_seats_so_each_teacher_plays_every_seat_once(self):
+        for pair in ab.schedule(['x', 'y'], 12):
+            first, second = pair['games']
+            self.assertEqual(sorted(first['a_seats'] + second['a_seats']), [0, 1, 2, 3])
+            self.assertEqual(first['a_seats'], second['b_seats'])
+            self.assertEqual(len(first['a_seats']), 2)
+
+    def test_repeated_seed_moves_to_a_different_seat_split(self):
+        for seeds in (['x'], ['x', 'y'], ['x', 'y', 'z']):
+            splits = {}
+            for pair in ab.schedule(seeds, 2*3*len(seeds)):
+                half = frozenset(min(pair['games'], key=lambda g: g['a_seats'])['a_seats'])
+                half = half if 0 in half else frozenset(range(4)) - half
+                splits.setdefault(pair['seed'], []).append(half)
+            for seed, halves in splits.items():
+                self.assertEqual(len(set(halves)), 3, (seeds, seed))
+
+    def test_odd_or_empty_inputs_are_rejected(self):
+        for seeds, games in ((['x'], 3), (['x'], 0), ([], 2), (['x', 'x'], 2)):
+            with self.subTest(seeds=seeds, games=games), self.assertRaises(ValueError):
+                ab.schedule(seeds, games)
+
+
+class StatisticsTests(unittest.TestCase):
+    def test_pair_difference_uses_the_game_where_each_teacher_held_the_seat(self):
+        rows = ab.pair_differences(game((0, 2), [100, 90, 80, 70]), game((1, 3), [110, 95, 60, 75]))
+        self.assertEqual([r['B_minus_A'] for r in rows], [10, -5, -20, -5])
+        with self.assertRaises(ValueError):
+            ab.pair_differences(game((0, 2), [1, 1, 1, 1]), game((0, 1), [1, 1, 1, 1]))
+
+    def test_confidence_interval_matches_t_distribution(self):
+        low, high = ab.confidence_interval([1, 2, 3, 4, 5])
+        self.assertAlmostEqual(low, 1.0367568385224393)
+        self.assertAlmostEqual(high, 4.963243161477561)
+        self.assertIsNone(ab.confidence_interval([3]))
+
+    def test_summary_counts_failures_timeouts_and_limit_omissions_per_arm(self):
+        counts = {'Terrans': {'A': Counter(decisions=10, federation_limit_hits=2, unsearched_comparisons=40,
+                                           unsearched_decisions=4),
+                              'B': Counter(decisions=9, fallback_timeouts=1)}}
+        done = [game((0, 2), [100, 90, 80, 70], counters=counts), game((1, 3), [110, 95, 60, 75])]
+        failed = [{'seed': 't', 'factions': ['Terrans', 'Nevlas', 'Itars', 'Gleens'], 'complete': False,
+                   'failure_kind': 'timeout', 'counters': {}},
+                  {'seed': 't', 'factions': ['Terrans', 'Nevlas', 'Itars', 'Gleens'], 'complete': False,
+                   'failure_kind': 'error', 'counters': {}}]
+        summary = ab.summarize([ab.pair_differences(*done)], done + failed)
+        total = summary['factions']['ALL']
+        self.assertEqual((total['pairs'], total['mean_B_minus_A']), (1, -5))
+        self.assertEqual((total['error_games'], total['timeout_games']), (1, 1))
+        self.assertEqual((total['A_federation_limit_hits'], total['A_unsearched_decisions'],
+                          total['A_unsearched_comparisons'], total['B_fallback_timeouts']), (2, 4, 40, 1))
+        self.assertEqual(summary['factions']['Nevlas']['pairs'], 0)
+        self.assertEqual(summary['factions']['Nevlas']['timeout_games'], 1)
+        table = ab.report_table(summary)
+        self.assertEqual(table.count('\n|---'), 1)   # exactly one table
+        self.assertIn('| Terrans | 1 | +10.0 | — | 1 | 1 | 0 / 1 | 2 / 0 | 4 / 0 |', table)
+
+
+class TeacherSpecTests(unittest.TestCase):
+    def test_frozen_teacher_detects_any_source_change(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)/'teacher'
+            (source/'pkg').mkdir(parents=True)
+            (source/'pkg/a.py').write_text('x = 1\n')
+            record = {'files': {'pkg/a.py': ab.sha256(source/'pkg/a.py')}, 'external_data': {}}
+            (source/'FROZEN.json').write_text(json.dumps(record))
+            teacher = {'source': str(source), 'frozen': True}
+            self.assertEqual(ab.frozen_problems(teacher), [])
+            (source/'pkg/a.py').write_text('x = 2\n')
+            (source/'pkg/b.py').write_text('')
+            self.assertEqual(sorted(ab.frozen_problems(teacher)),
+                             ['added: pkg/b.py', 'changed or missing: pkg/a.py'])
+            self.assertEqual(ab.frozen_problems({**teacher, 'frozen': False}), [])
+
+    def test_registry_baseline_is_frozen_and_currently_intact(self):
+        baseline = ab.resolve_teacher('baseline')
+        self.assertTrue(baseline['frozen'])
+        self.assertEqual(ab.frozen_problems(baseline), [])
+        with self.assertRaises(ValueError):
+            ab.resolve_teacher('no-such-teacher')
+
+
+if __name__ == '__main__':
+    unittest.main()

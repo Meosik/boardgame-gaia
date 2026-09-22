@@ -56,6 +56,9 @@ const UNIVERSAL_PI_BONUS_POWER_TOKENS: u8 = 1;
 /// Rulebook p.22: 0→1, 1→1, 2→2, 3→2, 4→3, 5→4.
 const NAV_RANGE: [u8; 6] = [1, 1, 2, 2, 3, 4];
 
+/// Read-only rule facts for offline evaluators; no action or scoring changes.
+pub mod evaluation_data;
+
 /// Player's basic Navigation range plus any action-specific `bonus_range` (Twilight's +3,
 /// Gleens' +2, etc.) and Lost Fleet Tech tile 12's permanent "+1 basic range for the rest of the
 /// game" — the single shared choke point for every range lookup in this file, so that tile's

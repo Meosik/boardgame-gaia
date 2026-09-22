@@ -1,0 +1,22 @@
+{
+  "baseline": {
+    "description": "Frozen 2026-09-17 shared teacher: native profiles, BGG R1 openings. Never edit its source.",
+    "source": "gaia-rl/baseline-teacher-20260917",
+    "factory": "four_factions.timed:TimedPreparationTeacher",
+    "kwargs": {"bgg_openings": true, "shared_factions": true},
+    "frozen": true
+  },
+  "working": {
+    "description": "Same configuration from the live gaia-rl/experiments tree (changes as it is edited).",
+    "source": "gaia-rl/experiments",
+    "factory": "four_factions.timed:TimedPreparationTeacher",
+    "kwargs": {"bgg_openings": true, "shared_factions": true}
+  },
+  "ob01": {
+    "description": "Working tree plus OB01 observed-game proposals for BalTaks, Ivits, Taklons, Firaks.",
+    "source": "gaia-rl/experiments",
+    "factory": "four_factions.timed:TimedPreparationTeacher",
+    "kwargs": {"bgg_openings": true, "shared_factions": true,
+               "observed_factions": ["BalTaks", "Ivits", "Taklons", "Firaks"]}
+  }
+}

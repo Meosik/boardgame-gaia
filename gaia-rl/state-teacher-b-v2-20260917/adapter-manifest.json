@@ -1,0 +1,19 @@
+{
+  "baseline_fingerprint": "8f269f027e69352cbe48ee61cf730c8f90c13eaa7f3503a53182acc3b964353e",
+  "modified": [
+    "action_purpose/teacher.py",
+    "four_factions/teacher.py",
+    "four_factions/preparation.py",
+    "four_factions/quick.py",
+    "current_actions/conservation.py",
+    "current_actions/teacher.py"
+  ],
+  "unchanged_search": [
+    "four_factions/timed.py",
+    "faction_teachers/clock.py",
+    "bgg_openings/planning.py",
+    "bgg_openings/catalog.py"
+  ],
+  "conservation_off": "explicit second comparison; not an evaluation-only claim",
+  "setup": "same A evaluation throughout initial-placement decisions and their rollouts"
+}

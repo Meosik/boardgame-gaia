@@ -1,0 +1,1427 @@
+{
+  "rows": [
+    {
+      "step": 13,
+      "round": 1,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 28,
+      "nonpass_options": 43,
+      "pass_delta": 5.772,
+      "booster": 10
+    },
+    {
+      "step": 14,
+      "round": 1,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 30,
+      "nonpass_options": 41,
+      "pass_delta": 8.6032,
+      "booster": 10
+    },
+    {
+      "step": 15,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 29,
+      "nonpass_options": 43,
+      "pass_delta": 3.9175,
+      "booster": 3
+    },
+    {
+      "step": 16,
+      "round": 1,
+      "seat": 3,
+      "faction": "Xenos",
+      "stock_units": 30,
+      "nonpass_options": 90,
+      "pass_delta": 5.5354,
+      "booster": 3
+    },
+    {
+      "step": 17,
+      "round": 1,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 28,
+      "nonpass_options": 37,
+      "pass_delta": 8.0062,
+      "booster": 3
+    },
+    {
+      "step": 18,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 25,
+      "nonpass_options": 33,
+      "pass_delta": 4.7185,
+      "booster": 3
+    },
+    {
+      "step": 19,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 25,
+      "nonpass_options": 33,
+      "pass_delta": 4.7331,
+      "booster": 3
+    },
+    {
+      "step": 20,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 25,
+      "nonpass_options": 33,
+      "pass_delta": 4.7477,
+      "booster": 3
+    },
+    {
+      "step": 21,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 26,
+      "nonpass_options": 32,
+      "pass_delta": 4.7477,
+      "booster": 3
+    },
+    {
+      "step": 22,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 27,
+      "nonpass_options": 31,
+      "pass_delta": 4.7477,
+      "booster": 3
+    },
+    {
+      "step": 23,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 27,
+      "nonpass_options": 30,
+      "pass_delta": 4.7477,
+      "booster": 3
+    },
+    {
+      "step": 24,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 27,
+      "nonpass_options": 28,
+      "pass_delta": 4.7477,
+      "booster": 3
+    },
+    {
+      "step": 25,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 27,
+      "nonpass_options": 23,
+      "pass_delta": 4.7477,
+      "booster": 3
+    },
+    {
+      "step": 26,
+      "round": 1,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 27,
+      "nonpass_options": 21,
+      "pass_delta": 4.7477,
+      "booster": 3
+    },
+    {
+      "step": 27,
+      "round": 1,
+      "seat": 3,
+      "faction": "Xenos",
+      "stock_units": 23,
+      "nonpass_options": 39,
+      "pass_delta": 11.4341,
+      "booster": 13
+    },
+    {
+      "step": 28,
+      "round": 1,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 24,
+      "nonpass_options": 27,
+      "pass_delta": 13.3462,
+      "booster": 13
+    },
+    {
+      "step": 29,
+      "round": 1,
+      "seat": 3,
+      "faction": "Xenos",
+      "stock_units": 19,
+      "nonpass_options": 27,
+      "pass_delta": 8.2402,
+      "booster": 7
+    },
+    {
+      "step": 30,
+      "round": 2,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 37,
+      "nonpass_options": 53,
+      "pass_delta": 10.534,
+      "booster": 1
+    },
+    {
+      "step": 31,
+      "round": 2,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 33,
+      "nonpass_options": 34,
+      "pass_delta": 10.675,
+      "booster": 10
+    },
+    {
+      "step": 32,
+      "round": 2,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 31,
+      "nonpass_options": 51,
+      "pass_delta": 7.806,
+      "booster": 3
+    },
+    {
+      "step": 34,
+      "round": 2,
+      "seat": 3,
+      "faction": "Xenos",
+      "stock_units": 26,
+      "nonpass_options": 48,
+      "pass_delta": 9.5415,
+      "booster": 3
+    },
+    {
+      "step": 35,
+      "round": 2,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 28,
+      "nonpass_options": 53,
+      "pass_delta": 7.806,
+      "booster": 7
+    },
+    {
+      "step": 36,
+      "round": 3,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 44,
+      "nonpass_options": 61,
+      "pass_delta": -18.997,
+      "booster": 13
+    },
+    {
+      "step": 37,
+      "round": 3,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 39,
+      "nonpass_options": 52,
+      "pass_delta": -12.397,
+      "booster": 1
+    },
+    {
+      "step": 38,
+      "round": 3,
+      "seat": 3,
+      "faction": "Xenos",
+      "stock_units": 33,
+      "nonpass_options": 69,
+      "pass_delta": -12.6702,
+      "booster": 1
+    },
+    {
+      "step": 39,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 34,
+      "nonpass_options": 63,
+      "pass_delta": -18.06,
+      "booster": 12
+    },
+    {
+      "step": 41,
+      "round": 3,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 35,
+      "nonpass_options": 45,
+      "pass_delta": -12.986,
+      "booster": 12
+    },
+    {
+      "step": 43,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 34,
+      "nonpass_options": 61,
+      "pass_delta": -18.929,
+      "booster": 12
+    },
+    {
+      "step": 44,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 34,
+      "nonpass_options": 61,
+      "pass_delta": -18.929,
+      "booster": 12
+    },
+    {
+      "step": 45,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 34,
+      "nonpass_options": 61,
+      "pass_delta": -18.929,
+      "booster": 12
+    },
+    {
+      "step": 46,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 34,
+      "nonpass_options": 73,
+      "pass_delta": -18.929,
+      "booster": 12
+    },
+    {
+      "step": 47,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 35,
+      "nonpass_options": 60,
+      "pass_delta": -18.849,
+      "booster": 12
+    },
+    {
+      "step": 48,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 36,
+      "nonpass_options": 59,
+      "pass_delta": -18.769,
+      "booster": 12
+    },
+    {
+      "step": 49,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 58,
+      "pass_delta": -18.689,
+      "booster": 12
+    },
+    {
+      "step": 50,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 57,
+      "pass_delta": -19.315,
+      "booster": 12
+    },
+    {
+      "step": 51,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 56,
+      "pass_delta": -18.941,
+      "booster": 12
+    },
+    {
+      "step": 52,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 54,
+      "pass_delta": -16.431,
+      "booster": 12
+    },
+    {
+      "step": 53,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 47,
+      "pass_delta": -16.057,
+      "booster": 12
+    },
+    {
+      "step": 54,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 46,
+      "pass_delta": -15.683,
+      "booster": 12
+    },
+    {
+      "step": 55,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 45,
+      "pass_delta": -16.309,
+      "booster": 12
+    },
+    {
+      "step": 56,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 44,
+      "pass_delta": -15.935,
+      "booster": 12
+    },
+    {
+      "step": 57,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 42,
+      "pass_delta": -13.425,
+      "booster": 12
+    },
+    {
+      "step": 58,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 40,
+      "pass_delta": -10.915,
+      "booster": 12
+    },
+    {
+      "step": 59,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 38,
+      "pass_delta": -8.936,
+      "booster": 3
+    },
+    {
+      "step": 60,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 33,
+      "pass_delta": -8.562,
+      "booster": 3
+    },
+    {
+      "step": 61,
+      "round": 3,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 31,
+      "pass_delta": -8.188,
+      "booster": 3
+    },
+    {
+      "step": 62,
+      "round": 3,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 34,
+      "nonpass_options": 32,
+      "pass_delta": -9.779,
+      "booster": 12
+    },
+    {
+      "step": 63,
+      "round": 3,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 34,
+      "nonpass_options": 38,
+      "pass_delta": -10.019,
+      "booster": 12
+    },
+    {
+      "step": 65,
+      "round": 3,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 31,
+      "nonpass_options": 29,
+      "pass_delta": -7.091,
+      "booster": 5
+    },
+    {
+      "step": 66,
+      "round": 3,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 31,
+      "nonpass_options": 27,
+      "pass_delta": -4.581,
+      "booster": 5
+    },
+    {
+      "step": 67,
+      "round": 3,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 31,
+      "nonpass_options": 25,
+      "pass_delta": -2.962,
+      "booster": 7
+    },
+    {
+      "step": 68,
+      "round": 4,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 48,
+      "nonpass_options": 77,
+      "pass_delta": -26.762,
+      "booster": 12
+    },
+    {
+      "step": 69,
+      "round": 4,
+      "seat": 3,
+      "faction": "Xenos",
+      "stock_units": 36,
+      "nonpass_options": 74,
+      "pass_delta": -22.983,
+      "booster": 13
+    },
+    {
+      "step": 70,
+      "round": 4,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 44,
+      "nonpass_options": 45,
+      "pass_delta": -11.488,
+      "booster": 1
+    },
+    {
+      "step": 71,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 37,
+      "pass_delta": -18.537,
+      "booster": 5
+    },
+    {
+      "step": 72,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 35,
+      "pass_delta": -16.561,
+      "booster": 5
+    },
+    {
+      "step": 73,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 34,
+      "pass_delta": -16.187,
+      "booster": 5
+    },
+    {
+      "step": 74,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 33,
+      "pass_delta": -15.813,
+      "booster": 5
+    },
+    {
+      "step": 75,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 31,
+      "pass_delta": -13.837,
+      "booster": 5
+    },
+    {
+      "step": 76,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 29,
+      "pass_delta": -11.861,
+      "booster": 5
+    },
+    {
+      "step": 77,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 27,
+      "pass_delta": -9.885,
+      "booster": 5
+    },
+    {
+      "step": 78,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 25,
+      "pass_delta": -8.32,
+      "booster": 3
+    },
+    {
+      "step": 79,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 22,
+      "pass_delta": -7.673,
+      "booster": 3
+    },
+    {
+      "step": 80,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 38,
+      "nonpass_options": 20,
+      "pass_delta": -7.299,
+      "booster": 3
+    },
+    {
+      "step": 81,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 37,
+      "nonpass_options": 18,
+      "pass_delta": -6.765,
+      "booster": 3
+    },
+    {
+      "step": 82,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 36,
+      "nonpass_options": 16,
+      "pass_delta": -6.231,
+      "booster": 3
+    },
+    {
+      "step": 83,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 35,
+      "nonpass_options": 14,
+      "pass_delta": -5.697,
+      "booster": 3
+    },
+    {
+      "step": 84,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 34,
+      "nonpass_options": 12,
+      "pass_delta": -6.936,
+      "booster": 3
+    },
+    {
+      "step": 85,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 33,
+      "nonpass_options": 10,
+      "pass_delta": -6.402,
+      "booster": 3
+    },
+    {
+      "step": 86,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 32,
+      "nonpass_options": 8,
+      "pass_delta": -5.868,
+      "booster": 3
+    },
+    {
+      "step": 87,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 31,
+      "nonpass_options": 2,
+      "pass_delta": -5.334,
+      "booster": 3
+    },
+    {
+      "step": 88,
+      "round": 4,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 30,
+      "nonpass_options": 0,
+      "pass_delta": -4.8,
+      "booster": 3
+    },
+    {
+      "step": 89,
+      "round": 5,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 51,
+      "nonpass_options": 84,
+      "pass_delta": -24.8943,
+      "booster": 12
+    },
+    {
+      "step": 90,
+      "round": 5,
+      "seat": 3,
+      "faction": "Xenos",
+      "stock_units": 38,
+      "nonpass_options": 76,
+      "pass_delta": -25.954,
+      "booster": 12
+    },
+    {
+      "step": 91,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 49,
+      "nonpass_options": 58,
+      "pass_delta": -24.861,
+      "booster": 12
+    },
+    {
+      "step": 92,
+      "round": 5,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 37,
+      "nonpass_options": 16,
+      "pass_delta": -7.972,
+      "booster": 10
+    },
+    {
+      "step": 93,
+      "round": 5,
+      "seat": 3,
+      "faction": "Xenos",
+      "stock_units": 32,
+      "nonpass_options": 64,
+      "pass_delta": -22.6217,
+      "booster": 12
+    },
+    {
+      "step": 94,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 43,
+      "nonpass_options": 50,
+      "pass_delta": -19.3543,
+      "booster": 13
+    },
+    {
+      "step": 95,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 43,
+      "nonpass_options": 49,
+      "pass_delta": -18.967,
+      "booster": 13
+    },
+    {
+      "step": 96,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 43,
+      "nonpass_options": 42,
+      "pass_delta": -18.5796,
+      "booster": 13
+    },
+    {
+      "step": 97,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 43,
+      "nonpass_options": 41,
+      "pass_delta": -18.1923,
+      "booster": 13
+    },
+    {
+      "step": 98,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 43,
+      "nonpass_options": 40,
+      "pass_delta": -17.805,
+      "booster": 13
+    },
+    {
+      "step": 99,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 43,
+      "nonpass_options": 40,
+      "pass_delta": -17.379,
+      "booster": 13
+    },
+    {
+      "step": 100,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 42,
+      "nonpass_options": 38,
+      "pass_delta": -16.203,
+      "booster": 13
+    },
+    {
+      "step": 101,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 42,
+      "nonpass_options": 37,
+      "pass_delta": -15.963,
+      "booster": 13
+    },
+    {
+      "step": 102,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 42,
+      "nonpass_options": 30,
+      "pass_delta": -18.404,
+      "booster": 13
+    },
+    {
+      "step": 103,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 41,
+      "nonpass_options": 28,
+      "pass_delta": -16.802,
+      "booster": 13
+    },
+    {
+      "step": 104,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 40,
+      "nonpass_options": 27,
+      "pass_delta": -16.268,
+      "booster": 13
+    },
+    {
+      "step": 105,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 39,
+      "nonpass_options": 23,
+      "pass_delta": -12.893,
+      "booster": 13
+    },
+    {
+      "step": 106,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 38,
+      "nonpass_options": 21,
+      "pass_delta": -12.359,
+      "booster": 13
+    },
+    {
+      "step": 107,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 37,
+      "nonpass_options": 19,
+      "pass_delta": -11.825,
+      "booster": 13
+    },
+    {
+      "step": 108,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 36,
+      "nonpass_options": 17,
+      "pass_delta": -11.291,
+      "booster": 13
+    },
+    {
+      "step": 109,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 35,
+      "nonpass_options": 15,
+      "pass_delta": -10.757,
+      "booster": 13
+    },
+    {
+      "step": 110,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 34,
+      "nonpass_options": 13,
+      "pass_delta": -10.223,
+      "booster": 13
+    },
+    {
+      "step": 111,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 33,
+      "nonpass_options": 11,
+      "pass_delta": -11.462,
+      "booster": 13
+    },
+    {
+      "step": 112,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 32,
+      "nonpass_options": 9,
+      "pass_delta": -10.928,
+      "booster": 13
+    },
+    {
+      "step": 113,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 31,
+      "nonpass_options": 2,
+      "pass_delta": -10.394,
+      "booster": 13
+    },
+    {
+      "step": 114,
+      "round": 5,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 30,
+      "nonpass_options": 0,
+      "pass_delta": -9.86,
+      "booster": 13
+    },
+    {
+      "step": 115,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 54,
+      "nonpass_options": 93,
+      "pass_delta": -30.6477,
+      "booster": null
+    },
+    {
+      "step": 116,
+      "round": 6,
+      "seat": 2,
+      "faction": "Taklons",
+      "stock_units": 44,
+      "nonpass_options": 35,
+      "pass_delta": -13.5553,
+      "booster": null
+    },
+    {
+      "step": 117,
+      "round": 6,
+      "seat": 3,
+      "faction": "Xenos",
+      "stock_units": 37,
+      "nonpass_options": 77,
+      "pass_delta": -19.7576,
+      "booster": null
+    },
+    {
+      "step": 118,
+      "round": 6,
+      "seat": 0,
+      "faction": "Terrans",
+      "stock_units": 39,
+      "nonpass_options": 20,
+      "pass_delta": -12.7508,
+      "booster": null
+    },
+    {
+      "step": 119,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 51,
+      "nonpass_options": 139,
+      "pass_delta": -30.6789,
+      "booster": null
+    },
+    {
+      "step": 120,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 45,
+      "nonpass_options": 129,
+      "pass_delta": -26.1227,
+      "booster": null
+    },
+    {
+      "step": 121,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 40,
+      "nonpass_options": 53,
+      "pass_delta": -19.9729,
+      "booster": null
+    },
+    {
+      "step": 122,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 36,
+      "nonpass_options": 46,
+      "pass_delta": -27.5342,
+      "booster": null
+    },
+    {
+      "step": 125,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 36,
+      "nonpass_options": 44,
+      "pass_delta": -18.1721,
+      "booster": null
+    },
+    {
+      "step": 126,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 43,
+      "nonpass_options": 31,
+      "pass_delta": -16.5855,
+      "booster": null
+    },
+    {
+      "step": 127,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 42,
+      "nonpass_options": 30,
+      "pass_delta": -15.5175,
+      "booster": null
+    },
+    {
+      "step": 128,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 41,
+      "nonpass_options": 29,
+      "pass_delta": -15.4495,
+      "booster": null
+    },
+    {
+      "step": 129,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 40,
+      "nonpass_options": 28,
+      "pass_delta": -14.3815,
+      "booster": null
+    },
+    {
+      "step": 130,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 39,
+      "nonpass_options": 26,
+      "pass_delta": -13.3135,
+      "booster": null
+    },
+    {
+      "step": 131,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 38,
+      "nonpass_options": 24,
+      "pass_delta": -13.4753,
+      "booster": null
+    },
+    {
+      "step": 132,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 37,
+      "nonpass_options": 22,
+      "pass_delta": -12.4073,
+      "booster": null
+    },
+    {
+      "step": 133,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 36,
+      "nonpass_options": 20,
+      "pass_delta": -11.5691,
+      "booster": null
+    },
+    {
+      "step": 134,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 35,
+      "nonpass_options": 18,
+      "pass_delta": -11.5011,
+      "booster": null
+    },
+    {
+      "step": 135,
+      "round": 6,
+      "seat": 1,
+      "faction": "HadschHallas",
+      "stock_units": 35,
+      "nonpass_options": 17,
+      "pass_delta": -11.0211,
+      "booster": null
+    }
+  ],
+  "summary": [
+    {
+      "round": 1,
+      "decisions": 17,
+      "stock_range": [
+        19,
+        30
+      ],
+      "nonpass_option_range": [
+        21,
+        90
+      ],
+      "pass_delta_range": [
+        3.9175,
+        13.3462
+      ],
+      "comparable_spend_pairs": 4,
+      "monotonic_pairs": 3,
+      "examples": [
+        {
+          "from": 17,
+          "to": 28,
+          "pass_delta_change": 5.34,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 15,
+          "to": 18,
+          "pass_delta_change": 0.801,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 16,
+          "to": 27,
+          "pass_delta_change": 5.8987,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 27,
+          "to": 29,
+          "pass_delta_change": -3.1939,
+          "expected_nondecreasing": false
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "decisions": 5,
+      "stock_range": [
+        26,
+        37
+      ],
+      "nonpass_option_range": [
+        34,
+        53
+      ],
+      "pass_delta_range": [
+        7.806,
+        10.675
+      ],
+      "comparable_spend_pairs": 0,
+      "monotonic_pairs": 0,
+      "examples": []
+    },
+    {
+      "round": 3,
+      "decisions": 29,
+      "stock_range": [
+        31,
+        44
+      ],
+      "nonpass_option_range": [
+        25,
+        73
+      ],
+      "pass_delta_range": [
+        -19.315,
+        -2.962
+      ],
+      "comparable_spend_pairs": 3,
+      "monotonic_pairs": 2,
+      "examples": [
+        {
+          "from": 37,
+          "to": 41,
+          "pass_delta_change": -0.589,
+          "expected_nondecreasing": false
+        },
+        {
+          "from": 41,
+          "to": 62,
+          "pass_delta_change": 3.207,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 63,
+          "to": 65,
+          "pass_delta_change": 2.928,
+          "expected_nondecreasing": true
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "decisions": 21,
+      "stock_range": [
+        30,
+        48
+      ],
+      "nonpass_option_range": [
+        0,
+        77
+      ],
+      "pass_delta_range": [
+        -26.762,
+        -4.8
+      ],
+      "comparable_spend_pairs": 8,
+      "monotonic_pairs": 7,
+      "examples": [
+        {
+          "from": 80,
+          "to": 81,
+          "pass_delta_change": 0.534,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 81,
+          "to": 82,
+          "pass_delta_change": 0.534,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 82,
+          "to": 83,
+          "pass_delta_change": 0.534,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 83,
+          "to": 84,
+          "pass_delta_change": -1.239,
+          "expected_nondecreasing": false
+        },
+        {
+          "from": 84,
+          "to": 85,
+          "pass_delta_change": 0.534,
+          "expected_nondecreasing": true
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "decisions": 26,
+      "stock_range": [
+        30,
+        51
+      ],
+      "nonpass_option_range": [
+        0,
+        84
+      ],
+      "pass_delta_range": [
+        -25.954,
+        -7.972
+      ],
+      "comparable_spend_pairs": 15,
+      "monotonic_pairs": 14,
+      "examples": [
+        {
+          "from": 91,
+          "to": 94,
+          "pass_delta_change": 5.5067,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 99,
+          "to": 100,
+          "pass_delta_change": 1.176,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 102,
+          "to": 103,
+          "pass_delta_change": 1.602,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 103,
+          "to": 104,
+          "pass_delta_change": 0.534,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 104,
+          "to": 105,
+          "pass_delta_change": 3.375,
+          "expected_nondecreasing": true
+        }
+      ]
+    },
+    {
+      "round": 6,
+      "decisions": 19,
+      "stock_range": [
+        35,
+        54
+      ],
+      "nonpass_option_range": [
+        17,
+        139
+      ],
+      "pass_delta_range": [
+        -30.6789,
+        -11.0211
+      ],
+      "comparable_spend_pairs": 11,
+      "monotonic_pairs": 9,
+      "examples": [
+        {
+          "from": 119,
+          "to": 120,
+          "pass_delta_change": 4.5562,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 120,
+          "to": 121,
+          "pass_delta_change": 6.1498,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 121,
+          "to": 122,
+          "pass_delta_change": -7.5613,
+          "expected_nondecreasing": false
+        },
+        {
+          "from": 126,
+          "to": 127,
+          "pass_delta_change": 1.068,
+          "expected_nondecreasing": true
+        },
+        {
+          "from": 127,
+          "to": 128,
+          "pass_delta_change": 0.068,
+          "expected_nondecreasing": true
+        }
+      ]
+    }
+  ]
+}

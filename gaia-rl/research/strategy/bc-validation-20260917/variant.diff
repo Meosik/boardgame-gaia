@@ -1,0 +1,162 @@
+--- Bdoubleprime/state_evaluation.py
++++ Btripleprime/state_evaluation.py
+@@ -32,6 +32,13 @@
+ INCOME_DISCOUNT = 0.5
+ # TODO(tune): delayed return retains half the destination bowl value.
+ GAIA_RETURN_DISCOUNT = 0.5
++# TODO(tune): user-approved LF01 retained-planet prices; no round-zero value.
++SECURED_PLANET_VP = (0.0, 4.0, 4.0, 4.0, 4.0, 3.0, 2.0)
++# TODO(tune): user-approved B02/LF01 missing-token penalty in VP.
++TOKEN_SHORTFALL_VP = 2.13
++# TODO(tune): approved remaining-income discount and linear charge price.
++REMAINING_INCOME_DISCOUNT = 0.7
++INCOME_CHARGE_VP = 0.6
+ 
+ 
+ @dataclass(frozen=True)
+@@ -44,6 +51,7 @@
+     vp: float = 0.0
+     federation: dict | None = None
+     brainstone_return: str | None = None
++    token_target: int = 5  # TODO(tune): base active-token target, not a rule limit.
+ 
+ 
+ @dataclass(frozen=True)
+@@ -107,6 +115,7 @@
+         navigation_research=faction != 'BalTaks' or institute,
+         federation=facts['federation'] if facts is not None else None,
+         brainstone_return=facts['brainstone_return'] if facts is not None else None,
++        token_target=4 if faction == 'Taklons' else 5,  # TODO(tune): B10; stone counts once.
+     )
+ 
+ 
+@@ -354,7 +363,7 @@
+     }
+ 
+ 
+-def technology_values(state: dict, player: dict, expected: dict, facts: dict) -> tuple[dict, ...]:
++def technology_values(state: dict, player: dict, expected: dict, facts: dict, *, remaining_income: bool = False) -> tuple[dict, ...]:
+     """Tile-by-tile retained value; immediate rewards are already in native stock/VP.
+ 
+     Every known tile gets a row, including zero-valued/unowned/covered tiles.
+@@ -367,7 +376,19 @@
+         active = tile_id in (player['advanced_tech_tiles'] if advanced else active_standard)
+         parts = {'income': 0.0, 'pass': 0.0, 'events': 0.0, 'action': 0.0, 'qic_events': 0.0}
+         if state['round'] < 6 and not advanced:
+-            parts['income'] = future_income_value(state, tile['income'])
++            parts['income'] = future_income_value(state, tile['income'],
++                remaining_income=remaining_income, active_tokens=facts['active_power_tokens'])
++            if remaining_income:
++                # Marginal contribution against TOTAL income, so a saturated charge
++                # cap cannot give the tile income that the aggregate does not have.
++                alternative = dict(facts['income'])
++                for resource, amount in tile['income'].items():
++                    alternative[resource] = alternative.get(resource, 0) + (-amount if active else amount)
++                current = future_income_value(state, facts['income'], remaining_income=True,
++                                              active_tokens=facts['active_power_tokens'])
++                other = future_income_value(state, alternative, remaining_income=True,
++                                            active_tokens=facts['active_power_tokens'])
++                parts['income'] = current-other if active else other-current
+         if not player['passed']:
+             parts['pass'] = float(tile['pass_vp'] or 0)
+             # TODO(tune): probability discount for possible near-term events.
+@@ -410,8 +431,24 @@
+     return _payout_vp(income) + (income.get('power_charge', 0) + income.get('power_tokens', 0)) / 3
+ 
+ 
+-def future_income_value(state: dict, income: dict) -> float:
++def future_income_value(state: dict, income: dict, *, remaining_income: bool = False,
++                        active_tokens: int | None = None) -> float:
++    if remaining_income:
++        if active_tokens is None or active_tokens < 0:
++            raise ValueError('Remaining-income evaluation requires the active token count')
++        phases = max(0, 6-state['round'])
++        effective_charge = min(income.get('power_charge', 0), 2*active_tokens)
++        # Preserve the old income-token coefficient; (b) prices current shortages only.
++        value = (_payout_vp(income) + effective_charge*INCOME_CHARGE_VP
++                 + income.get('power_tokens', 0)/3)
++        return value*phases*REMAINING_INCOME_DISCOUNT
+     return INCOME_DISCOUNT * income_vp(income) if state['round'] < 6 else 0.0
++
++
++def active_token_count(power: dict) -> int:
++    """Structural count, not current charge space; the Brainstone counts once."""
++    return sum(power[key] for key in ('bowl1', 'bowl2', 'bowl3')) + int(
++        power.get('brainstone') in ('Area1', 'Area2', 'Area3'))
+ 
+ 
+ def power_value(power: dict, return_bowl: str | None, *, future: bool = True) -> float:
+@@ -427,7 +464,8 @@
+     return result
+ 
+ 
+-def ship_values(state: dict, facts: dict, *, conserve_resources: bool) -> tuple[dict, ...]:
++def ship_values(state: dict, facts: dict, *, conserve_resources: bool,
++                remaining_income: bool = False) -> tuple[dict, ...]:
+     rows = []
+     for ship in facts['ships']:
+         alternatives = []
+@@ -439,8 +477,10 @@
+                      'expansion': COLONY_OPTION_VP * (option['new_colonies'] + PROJECT_DISCOUNT * option['new_gaia_projects']),
+                      'power': power_value(option['power_after'], facts['brainstone_return'], future=state['round'] < 6) -
+                               power_value(option['power_before'], facts['brainstone_return'], future=state['round'] < 6),
+-                     'income': future_income_value(state, option['income_after']) -
+-                               future_income_value(state, ship['income_before']),
++                     'income': future_income_value(state, option['income_after'], remaining_income=remaining_income,
++                                   active_tokens=active_token_count(option['power_after'])) -
++                               future_income_value(state, ship['income_before'], remaining_income=remaining_income,
++                                   active_tokens=active_token_count(option['power_before'])),
+                      'research': sum(facts['final_track_vp'][level] for level in option['research_after'].values()) -
+                                  sum(facts['final_track_vp'][level] for level in ship['research_before'].values())}
+             alternatives.append({'action': option['action'], 'breakdown': parts, 'value_vp': sum(parts.values())})
+@@ -455,7 +495,23 @@
+     return tuple(rows)
+ 
+ 
+-def evaluate_state(state: dict, actor: int, *, top_n: int = TOP_N, conserve_resources: bool = True) -> Evaluation:
++def secured_planet_coords(state: dict, actor: int) -> frozenset[str]:
++    """Built colonies, including native Lost Planet ownership; not reserved projects.
++
++    Coordinates are unique across structures. Empty-space stations and satellites
++    have no planet value. Native cohabiting mines occupy a built colony too.
++    """
++    return frozenset(coord for coord, cell in state['board']['hexes'].items()
++                     if cell['planet'] is not None and (
++                         any(s['owner'] == actor and s['kind'] != 'Satellite'
++                             for s in cell['structures'])
++                         or (cell['planet']['planet_type'] == 'LostPlanet'
++                             and cell['planet']['owner'] == actor)))
++
++
++def evaluate_state(state: dict, actor: int, *, top_n: int = TOP_N, conserve_resources: bool = True,
++                   secured_planets: bool = False, token_shortfall: bool = False,
++                   remaining_income: bool = False) -> Evaluation:
+     """Evaluate one player's current state; no candidate action is an input."""
+     if type(top_n) is not int or top_n < 0:
+         raise ValueError('top_n must be a nonnegative integer')
+@@ -489,17 +545,22 @@
+     federation = federation_values(state, player, modifier)
+     breakdown.update(federation)
+     expected = expected_events(state, player, options, facts, federation['federation_readiness'])
+-    tiles = technology_values(state, player, expected, facts)
++    tiles = technology_values(state, player, expected, facts, remaining_income=remaining_income)
+     # Tile income is described per tile but counted ONLY in native total income.
+     breakdown['technology_tiles'] = sum(row['expected_vp']-row['breakdown']['income']
+                                          for row in tiles if row['active'])
+-    breakdown['future_income'] = future_income_value(state, facts['income'])
++    breakdown['future_income'] = future_income_value(state, facts['income'],
++        remaining_income=remaining_income, active_tokens=facts['active_power_tokens'])
+     breakdown['power_stock'] = power_value(player['resources']['power'], modifier.brainstone_return,
+                                            future=state['round'] < 6)
+-    ships = ship_values(state, facts, conserve_resources=conserve_resources)
++    ships = ship_values(state, facts, conserve_resources=conserve_resources, remaining_income=remaining_income)
+     # Alternative ship options share today's stock; do not add every ship payoff.
+     breakdown['ships'] = max((row['expected_vp'] for row in ships), default=0.0)
+     breakdown['round_scoring'] = round_scoring_value(state, player, expected)
+     breakdown['final_scoring_rank'] = final_rank_value(facts, actor)
+     breakdown['faction_modifier'] = modifier.vp
++    breakdown['secured_planets'] = (len(secured_planet_coords(state, actor)) * SECURED_PLANET_VP[state['round']]
++                                     if secured_planets else 0.0)
++    breakdown['token_shortfall'] = (-TOKEN_SHORTFALL_VP * max(0, modifier.token_target-facts['active_power_tokens'])
++                                   if token_shortfall else 0.0)
+     return Evaluation(sum(breakdown.values()), breakdown, options, tiles, ships)

@@ -1,0 +1,17 @@
+{
+  "counts": {
+    "B-lite+k+n": {
+      "pass": 928,
+      "exception": 16
+    },
+    "B-lite+k+n+f-prime": {
+      "pass": 920,
+      "exception": 16,
+      "fail": 8
+    }
+  },
+  "token_sign_failures": 4,
+  "corrected_step_passes": 90,
+  "corrected_breadth_passes": 4,
+  "games_run": 0
+}

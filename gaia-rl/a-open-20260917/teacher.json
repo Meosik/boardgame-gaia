@@ -1,0 +1,9 @@
+{
+  "factory": "four_factions.timed:TimedPreparationTeacher",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "source": "gaia-rl/a-open-20260917",
+  "description": "A-open: frozen A with only BGG R1 catalog filtered; original fallback."
+}

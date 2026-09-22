@@ -1,0 +1,397 @@
+{
+  "rows": [
+    {
+      "step": 15,
+      "faction": "Taklons",
+      "round": 1,
+      "old_vp": 1.076046647230316,
+      "i_prime_vp": 0.0,
+      "abs_error": 1.076046647230316,
+      "old_top3": [
+        "3,-5",
+        "-1,-5",
+        "-10,5"
+      ],
+      "new_top3": [
+        "-1,-5",
+        "0,-2",
+        "1,0"
+      ],
+      "selection_changed": true
+    },
+    {
+      "step": 18,
+      "faction": "Terrans",
+      "round": 1,
+      "old_vp": 0.9101938775510297,
+      "i_prime_vp": 0.0,
+      "abs_error": 0.9101938775510297,
+      "old_top3": [
+        "-5,-4",
+        "-10,5",
+        "-10,7"
+      ],
+      "new_top3": [
+        "-3,-6",
+        "-5,-4",
+        "-6,-2"
+      ],
+      "selection_changed": true
+    },
+    {
+      "step": 21,
+      "faction": "HadschHallas",
+      "round": 1,
+      "old_vp": 7.476468367346937,
+      "i_prime_vp": 0.9751918367346922,
+      "abs_error": 6.5012765306122455,
+      "old_top3": [
+        "-2,1",
+        "-10,7",
+        "2,0"
+      ],
+      "new_top3": [
+        "-9,3",
+        "-10,7",
+        "-2,1"
+      ],
+      "selection_changed": true
+    },
+    {
+      "step": 30,
+      "faction": "HadschHallas",
+      "round": 1,
+      "old_vp": 5.9764683673469285,
+      "i_prime_vp": 0.9751918367346922,
+      "abs_error": 5.001276530612237,
+      "old_top3": [
+        "-2,1",
+        "-10,7",
+        "2,0"
+      ],
+      "new_top3": [
+        "-9,3",
+        "-10,7",
+        "-2,1"
+      ],
+      "selection_changed": true
+    },
+    {
+      "step": 33,
+      "faction": "HadschHallas",
+      "round": 1,
+      "old_vp": 5.9764683673469285,
+      "i_prime_vp": 0.9751918367346922,
+      "abs_error": 5.001276530612237,
+      "old_top3": [
+        "-2,1",
+        "-10,7",
+        "2,0"
+      ],
+      "new_top3": [
+        "-9,3",
+        "-10,7",
+        "-2,1"
+      ],
+      "selection_changed": true
+    },
+    {
+      "step": 39,
+      "faction": "HadschHallas",
+      "round": 1,
+      "old_vp": 2.5010938775510096,
+      "i_prime_vp": 0.6944571428571411,
+      "abs_error": 1.8066367346938685,
+      "old_top3": [
+        "-2,1",
+        "-9,3",
+        "-10,7"
+      ],
+      "new_top3": [
+        "-9,3",
+        "-10,7",
+        "-2,1"
+      ],
+      "selection_changed": true
+    },
+    {
+      "step": 45,
+      "faction": "Xenos",
+      "round": 1,
+      "old_vp": 2.3519249999999974,
+      "i_prime_vp": 1.3925999999999938,
+      "abs_error": 0.9593250000000035,
+      "old_top3": [
+        "-9,3",
+        "-7,2",
+        "0,-2"
+      ],
+      "new_top3": [
+        "-9,3",
+        "-4,-1",
+        "-5,5"
+      ],
+      "selection_changed": true
+    },
+    {
+      "step": 48,
+      "faction": "Xenos",
+      "round": 1,
+      "old_vp": 2.3519249999999974,
+      "i_prime_vp": 1.3925999999999938,
+      "abs_error": 0.9593250000000035,
+      "old_top3": [
+        "-9,3",
+        "-7,2",
+        "0,-2"
+      ],
+      "new_top3": [
+        "-9,3",
+        "-4,-1",
+        "-5,5"
+      ],
+      "selection_changed": true
+    },
+    {
+      "step": 57,
+      "faction": "Xenos",
+      "round": 2,
+      "old_vp": 4.052850000000018,
+      "i_prime_vp": 0.0,
+      "abs_error": 4.052850000000018,
+      "old_top3": [
+        "-7,2",
+        "0,-2",
+        "-11,3"
+      ],
+      "new_top3": [
+        "-4,-1",
+        "-5,5",
+        "-6,-2"
+      ],
+      "selection_changed": true
+    },
+    {
+      "step": 60,
+      "faction": "HadschHallas",
+      "round": 2,
+      "old_vp": 2.5050000000000066,
+      "i_prime_vp": 0.0,
+      "abs_error": 2.5050000000000066,
+      "old_top3": [
+        "-2,1",
+        "-10,7",
+        "-11,3"
+      ],
+      "new_top3": [
+        "-10,7",
+        "-2,1",
+        "-9,0"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-1",
+      "step": 15,
+      "faction": "Xenos",
+      "round": 1,
+      "old_vp": 4.528131632653062,
+      "i_prime_vp": 0.0,
+      "abs_error": 4.528131632653062,
+      "old_top3": [
+        "-6,6",
+        "-7,0",
+        "0,-1"
+      ],
+      "new_top3": [
+        "-6,6",
+        "-7,-2",
+        "-7,0"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-1",
+      "step": 18,
+      "faction": "Taklons",
+      "round": 1,
+      "old_vp": 3.495477113702629,
+      "i_prime_vp": 0.0,
+      "abs_error": 3.495477113702629,
+      "old_top3": [
+        "-10,7",
+        "-7,5",
+        "-6,2"
+      ],
+      "new_top3": [
+        "-10,3",
+        "-6,2",
+        "-6,3"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-1",
+      "step": 21,
+      "faction": "Xenos",
+      "round": 1,
+      "old_vp": 4.658762244897957,
+      "i_prime_vp": 0.0,
+      "abs_error": 4.658762244897957,
+      "old_top3": [
+        "-7,0",
+        "0,-1",
+        "-7,-2"
+      ],
+      "new_top3": [
+        "-6,6",
+        "-7,-2",
+        "-7,0"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-1",
+      "step": 24,
+      "faction": "Xenos",
+      "round": 1,
+      "old_vp": 4.625481122448975,
+      "i_prime_vp": 0.0,
+      "abs_error": 4.625481122448975,
+      "old_top3": [
+        "-7,0",
+        "-7,-2",
+        "0,-1"
+      ],
+      "new_top3": [
+        "-6,6",
+        "-7,-2",
+        "-7,0"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-1",
+      "step": 27,
+      "faction": "Xenos",
+      "round": 1,
+      "old_vp": 4.65876224489796,
+      "i_prime_vp": 0.0,
+      "abs_error": 4.65876224489796,
+      "old_top3": [
+        "-7,0",
+        "0,-1",
+        "-7,-2"
+      ],
+      "new_top3": [
+        "-6,6",
+        "-7,-2",
+        "-7,0"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-1",
+      "step": 30,
+      "faction": "HadschHallas",
+      "round": 1,
+      "old_vp": 8.583473469387757,
+      "i_prime_vp": 0.6095020408163329,
+      "abs_error": 7.973971428571424,
+      "old_top3": [
+        "-6,6",
+        "-7,5",
+        "2,-1"
+      ],
+      "new_top3": [
+        "-6,6",
+        "-7,5",
+        "-2,-3"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-003/game-1",
+      "step": 15,
+      "faction": "Taklons",
+      "round": 1,
+      "old_vp": 0.5814285714285689,
+      "i_prime_vp": 0.0,
+      "abs_error": 0.5814285714285689,
+      "old_top3": [
+        "-8,-1",
+        "-1,-6",
+        "-10,4"
+      ],
+      "new_top3": [
+        "-10,4",
+        "-12,3",
+        "-6,5"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-003/game-1",
+      "step": 21,
+      "faction": "Xenos",
+      "round": 1,
+      "old_vp": 0.9886775510204225,
+      "i_prime_vp": 0.4063346938775478,
+      "abs_error": 0.5823428571428748,
+      "old_top3": [
+        "-4,6",
+        "-9,3",
+        "-1,-6"
+      ],
+      "new_top3": [
+        "-5,0",
+        "-4,6",
+        "-6,3"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-003/game-1",
+      "step": 24,
+      "faction": "Xenos",
+      "round": 1,
+      "old_vp": 1.041869387755103,
+      "i_prime_vp": 0.5060693877550987,
+      "abs_error": 0.5358000000000044,
+      "old_top3": [
+        "-4,6",
+        "-9,3",
+        "-1,-6"
+      ],
+      "new_top3": [
+        "-5,0",
+        "-4,6",
+        "-6,3"
+      ],
+      "selection_changed": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-003/game-1",
+      "step": 27,
+      "faction": "Taklons",
+      "round": 1,
+      "old_vp": 0.26682857142857513,
+      "i_prime_vp": 0.6168857142857141,
+      "abs_error": 0.350057142857139,
+      "old_top3": [
+        "-5,0",
+        "-7,-2",
+        "-1,-6"
+      ],
+      "new_top3": [
+        "-7,-2",
+        "-10,4",
+        "-11,3"
+      ],
+      "selection_changed": true
+    }
+  ],
+  "mean_abs_error": 3.038171060495628,
+  "max_abs_error": 7.973971428571424,
+  "top3_changed_rate": 1.0
+}

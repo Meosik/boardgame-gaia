@@ -1,0 +1,821 @@
+{
+  "source_sha256": "00dc161bdac42ca848ffc82bb5bb930b31021133163afc044267dd34534f4b51",
+  "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-xenos-1",
+  "seat": 2,
+  "actions": [
+    {
+      "type": "PlaceStartingStructure",
+      "coord": "-3,4"
+    },
+    {
+      "type": "PlaceStartingStructure",
+      "coord": "4,-2"
+    },
+    {
+      "type": "PlaceStartingStructure",
+      "coord": "-2,3"
+    },
+    {
+      "type": "PlaceStartingStructure",
+      "coord": "4,-7"
+    },
+    {
+      "type": "PlaceStartingStructure",
+      "coord": "5,-6"
+    },
+    {
+      "type": "PlaceStartingStructure",
+      "coord": "-1,3"
+    },
+    {
+      "type": "PlaceStartingStructure",
+      "coord": "-8,7"
+    },
+    {
+      "type": "PlaceStartingStructure",
+      "coord": "-5,-1"
+    },
+    {
+      "type": "SelectStartingBooster",
+      "booster_id": 9
+    },
+    {
+      "type": "SelectStartingBooster",
+      "booster_id": 8
+    },
+    {
+      "type": "SelectStartingBooster",
+      "booster_id": 7
+    },
+    {
+      "type": "SelectStartingBooster",
+      "booster_id": 3
+    },
+    {
+      "type": "FreeAction",
+      "kind": "QicToOre",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 4
+    },
+    {
+      "type": "Pass",
+      "booster_id": 2
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 8
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    {
+      "type": "Pass",
+      "booster_id": 1
+    },
+    {
+      "type": "ResearchAdvance",
+      "track": "ArtificialIntelligence"
+    },
+    {
+      "type": "Build",
+      "coord": "3,-6"
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "ExploreSpaceship",
+      "ship": "TFMars"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    {
+      "type": "ResearchAdvance",
+      "track": "ArtificialIntelligence"
+    },
+    {
+      "type": "SpaceshipCreditTerraform",
+      "coord": "2,-1"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    {
+      "type": "Pass",
+      "booster_id": 10
+    },
+    {
+      "type": "ExploreSpaceship",
+      "ship": "Rebellion"
+    },
+    {
+      "type": "Upgrade",
+      "coord": "5,-6",
+      "to": "TradingStation",
+      "tech_tile_choice": null
+    },
+    {
+      "type": "ChargePower",
+      "accept": false
+    },
+    {
+      "type": "Upgrade",
+      "coord": "5,-6",
+      "to": "ResearchLab",
+      "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 3,
+        "advance_track": "ArtificialIntelligence",
+        "bonus_build_coord": null
+      }
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "PowerAction",
+      "id": 4,
+      "coord": null
+    },
+    {
+      "type": "RebellionGainTechTile",
+      "tile": 10,
+      "track": "ArtificialIntelligence",
+      "bonus_build_coord": null
+    },
+    {
+      "type": "FreeAction",
+      "kind": "QicToOre",
+      "count": 1
+    },
+    {
+      "type": "Upgrade",
+      "coord": "2,-1",
+      "to": "TradingStation",
+      "tech_tile_choice": null
+    },
+    {
+      "type": "TechTileSpecialAction",
+      "tile": {
+        "pool": "Standard",
+        "tile": 10
+      }
+    },
+    {
+      "type": "FreeAction",
+      "kind": "BurnPower",
+      "count": 3
+    },
+    {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 8
+    },
+    {
+      "type": "FreeAction",
+      "kind": "BurnPower",
+      "count": 2
+    },
+    {
+      "type": "ResearchAdvance",
+      "track": "Terraforming"
+    },
+    {
+      "type": "ExploreSpaceship",
+      "ship": "Eclipse"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    {
+      "type": "Pass",
+      "booster_id": 9
+    },
+    {
+      "type": "Upgrade",
+      "coord": "2,-1",
+      "to": "ResearchLab",
+      "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 13,
+        "advance_track": "GaiaProject",
+        "bonus_build_coord": null
+      }
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    {
+      "type": "Pass",
+      "booster_id": 8
+    },
+    {
+      "type": "EclipseAsteroidMine",
+      "coord": "-2,6"
+    },
+    {
+      "type": "TechTileSpecialAction",
+      "tile": {
+        "pool": "Standard",
+        "tile": 10
+      }
+    },
+    {
+      "type": "ResearchAdvance",
+      "track": "Terraforming"
+    },
+    {
+      "type": "SpaceshipCreditTerraform",
+      "coord": "-4,-2"
+    },
+    {
+      "type": "Pass",
+      "booster_id": 10
+    },
+    {
+      "type": "RebellionFreeTradingStation",
+      "coord": "4,-2"
+    },
+    {
+      "type": "RebellionCreditsAndQic"
+    },
+    {
+      "type": "Build",
+      "coord": "3,-4"
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "Pass",
+      "booster_id": 2
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 1
+    },
+    {
+      "type": "Build",
+      "coord": "-2,6"
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "RoundBoosterRangeBuild",
+      "coord": "-11,8"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 4
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 2
+    },
+    {
+      "type": "Upgrade",
+      "coord": "-1,3",
+      "to": "TradingStation",
+      "tech_tile_choice": null
+    },
+    {
+      "type": "ChargePower",
+      "accept": false
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "ResearchAdvance",
+      "track": "GaiaProject"
+    },
+    {
+      "type": "Build",
+      "coord": "-4,1"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "PowerToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "BurnPower",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "PowerToGaiaKnowledge",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    {
+      "type": "Pass",
+      "booster_id": 1
+    },
+    {
+      "type": "Upgrade",
+      "coord": "-1,3",
+      "to": "ResearchLab",
+      "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 11,
+        "advance_track": "ArtificialIntelligence",
+        "bonus_build_coord": "-3,7"
+      }
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "Upgrade",
+      "coord": "4,-2",
+      "to": "ResearchLab",
+      "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 5,
+        "advance_track": "GaiaProject",
+        "bonus_build_coord": null
+      }
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 2
+    },
+    {
+      "type": "Pass",
+      "booster_id": 8
+    },
+    {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    {
+      "type": "FormFederation",
+      "hexes": [
+        "2,-1",
+        "3,-4",
+        "4,-2",
+        "5,-6"
+      ],
+      "satellite_hexes": [
+        "2,-2",
+        "3,-3",
+        "3,-1",
+        "4,-5"
+      ],
+      "token": {
+        "source": "Supply",
+        "kind": 5
+      },
+      "bonus_build_coord": null,
+      "bonus_tech_tile": null,
+      "bonus_research_track": null
+    },
+    {
+      "type": "Pass",
+      "booster_id": 10
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 2
+    },
+    {
+      "type": "FreeAction",
+      "kind": "PowerToCredit",
+      "count": 1
+    },
+    {
+      "type": "ResearchAdvance",
+      "track": "Science"
+    },
+    {
+      "type": "RoundBoosterRangeBuild",
+      "coord": "-6,1"
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "Upgrade",
+      "coord": "-3,7",
+      "to": "TradingStation",
+      "tech_tile_choice": null
+    },
+    {
+      "type": "ChargePower",
+      "accept": false
+    },
+    {
+      "type": "SpaceshipCreditTerraform",
+      "coord": "1,0"
+    },
+    {
+      "type": "Pass",
+      "booster_id": 7
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "BurnPower",
+      "count": 1
+    },
+    {
+      "type": "Upgrade",
+      "coord": "4,-7",
+      "to": "TradingStation",
+      "tech_tile_choice": null
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 3
+    },
+    {
+      "type": "Pass",
+      "booster_id": 9
+    },
+    {
+      "type": "ResearchAdvance",
+      "track": "GaiaProject"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "PowerToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "BurnPower",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    {
+      "type": "Pass",
+      "booster_id": 2
+    },
+    {
+      "type": "TechTileSpecialAction",
+      "tile": {
+        "pool": "Standard",
+        "tile": 10
+      }
+    },
+    {
+      "type": "RebellionFreeTradingStation",
+      "coord": "-5,-1"
+    },
+    {
+      "type": "ChargePower",
+      "accept": false
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPowerBowl3",
+      "count": 1
+    },
+    {
+      "type": "TFMarsGaiaFormation",
+      "coord": "4,-3"
+    },
+    {
+      "type": "Build",
+      "coord": "4,-3"
+    },
+    {
+      "type": "RebellionCreditsAndQic"
+    },
+    {
+      "type": "Build",
+      "coord": "-3,-5"
+    },
+    {
+      "type": "GaiaFormation",
+      "coord": "-4,-4"
+    },
+    {
+      "type": "Pass",
+      "booster_id": 1
+    },
+    {
+      "type": "Pass",
+      "booster_id": 10
+    },
+    {
+      "type": "Upgrade",
+      "coord": "-3,7",
+      "to": "ResearchLab",
+      "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 5,
+        "advance_track": "Science",
+        "bonus_build_coord": null
+      }
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "Upgrade",
+      "coord": "4,-7",
+      "to": "ResearchLab",
+      "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 5,
+        "advance_track": null,
+        "bonus_build_coord": null
+      }
+    },
+    {
+      "type": "ChargePower",
+      "accept": true
+    },
+    {
+      "type": "ResearchAdvance",
+      "track": "Navigation"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "QicToOre",
+      "count": 2
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 2
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "BurnPower",
+      "count": 3
+    },
+    {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 2
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 2
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "PowerToCredit",
+      "count": 1
+    },
+    {
+      "type": "Pass",
+      "booster_id": 8
+    },
+    {
+      "type": "Upgrade",
+      "coord": "5,-6",
+      "to": {
+        "Academy": "Qic"
+      },
+      "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 7,
+        "advance_track": null,
+        "bonus_build_coord": null
+      }
+    },
+    {
+      "type": "ChargePower",
+      "accept": false
+    },
+    {
+      "type": "ExploreSpaceship",
+      "ship": "Twilight"
+    },
+    {
+      "type": "Pass",
+      "booster_id": 2
+    },
+    {
+      "type": "ResearchAdvance",
+      "track": "Science"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    {
+      "type": "EclipseResearchBoost",
+      "track": "ArtificialIntelligence"
+    },
+    {
+      "type": "RoundBoosterRangeBuild",
+      "coord": "0,-2"
+    },
+    {
+      "type": "AcademyQicAction"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 9
+    },
+    {
+      "type": "Pass",
+      "booster_id": null
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToPower",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "BurnPower",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 2
+    },
+    {
+      "type": "FreeAction",
+      "kind": "PowerToCredit",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "QicToOre",
+      "count": 1
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    {
+      "type": "Pass",
+      "booster_id": null
+    },
+    {
+      "type": "FreeAction",
+      "kind": "BurnPower",
+      "count": 2
+    },
+    {
+      "type": "FormFederation",
+      "hexes": [
+        "-6,1",
+        "-4,1",
+        "-2,3",
+        "0,-2",
+        "3,-6",
+        "4,-7"
+      ],
+      "satellite_hexes": [
+        "-5,1",
+        "-4,2",
+        "-4,3",
+        "-3,0",
+        "-3,3",
+        "-2,-1",
+        "-1,-2",
+        "0,-4",
+        "0,-3",
+        "1,-5",
+        "2,-5"
+      ],
+      "token": {
+        "source": "Supply",
+        "kind": 4
+      },
+      "bonus_build_coord": null,
+      "bonus_tech_tile": null,
+      "bonus_research_track": null
+    },
+    {
+      "type": "TechTileSpecialAction",
+      "tile": {
+        "pool": "Standard",
+        "tile": 10
+      }
+    },
+    {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    {
+      "type": "Upgrade",
+      "coord": "-4,1",
+      "to": "TradingStation",
+      "tech_tile_choice": null
+    },
+    {
+      "type": "TwilightRangeBuild",
+      "coord": "-10,1"
+    },
+    {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 3
+    },
+    {
+      "type": "Pass",
+      "booster_id": null
+    }
+  ]
+}

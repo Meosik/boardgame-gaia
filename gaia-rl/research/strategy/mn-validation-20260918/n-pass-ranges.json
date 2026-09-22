@@ -1,0 +1,744 @@
+{
+  "summary": [
+    {
+      "round": 1,
+      "decisions": 17,
+      "min": 10.5925,
+      "max": 23.4922
+    },
+    {
+      "round": 2,
+      "decisions": 5,
+      "min": 16.35,
+      "max": 21.69
+    },
+    {
+      "round": 3,
+      "decisions": 29,
+      "min": -12.422,
+      "max": 4.252
+    },
+    {
+      "round": 4,
+      "decisions": 21,
+      "min": -20.758,
+      "max": 2.414
+    },
+    {
+      "round": 5,
+      "decisions": 26,
+      "min": -21.342,
+      "max": -1.559
+    },
+    {
+      "round": 6,
+      "decisions": 19,
+      "min": -91.1726,
+      "max": -73.6253
+    }
+  ],
+  "rows": [
+    {
+      "step": 13,
+      "round": 1,
+      "seat": 0,
+      "pass_delta": 13.248
+    },
+    {
+      "step": 14,
+      "round": 1,
+      "seat": 1,
+      "pass_delta": 17.6192
+    },
+    {
+      "step": 15,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 10.5925
+    },
+    {
+      "step": 16,
+      "round": 1,
+      "seat": 3,
+      "pass_delta": 14.2669
+    },
+    {
+      "step": 17,
+      "round": 1,
+      "seat": 0,
+      "pass_delta": 15.4822
+    },
+    {
+      "step": 18,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 13.2625
+    },
+    {
+      "step": 19,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 13.2771
+    },
+    {
+      "step": 20,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 13.2917
+    },
+    {
+      "step": 21,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 13.2917
+    },
+    {
+      "step": 22,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 13.2917
+    },
+    {
+      "step": 23,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 13.2917
+    },
+    {
+      "step": 24,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 13.2917
+    },
+    {
+      "step": 25,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 13.2917
+    },
+    {
+      "step": 26,
+      "round": 1,
+      "seat": 2,
+      "pass_delta": 13.2917
+    },
+    {
+      "step": 27,
+      "round": 1,
+      "seat": 3,
+      "pass_delta": 22.8356
+    },
+    {
+      "step": 28,
+      "round": 1,
+      "seat": 0,
+      "pass_delta": 23.4922
+    },
+    {
+      "step": 29,
+      "round": 1,
+      "seat": 3,
+      "pass_delta": 20.7097
+    },
+    {
+      "step": 30,
+      "round": 2,
+      "seat": 1,
+      "pass_delta": 19.55
+    },
+    {
+      "step": 31,
+      "round": 2,
+      "seat": 2,
+      "pass_delta": 20.02
+    },
+    {
+      "step": 32,
+      "round": 2,
+      "seat": 0,
+      "pass_delta": 16.35
+    },
+    {
+      "step": 34,
+      "round": 2,
+      "seat": 3,
+      "pass_delta": 21.69
+    },
+    {
+      "step": 35,
+      "round": 2,
+      "seat": 0,
+      "pass_delta": 16.35
+    },
+    {
+      "step": 36,
+      "round": 3,
+      "seat": 1,
+      "pass_delta": -11.18
+    },
+    {
+      "step": 37,
+      "round": 3,
+      "seat": 2,
+      "pass_delta": -5.052
+    },
+    {
+      "step": 38,
+      "round": 3,
+      "seat": 3,
+      "pass_delta": -6.4562
+    },
+    {
+      "step": 39,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -12.036
+    },
+    {
+      "step": 41,
+      "round": 3,
+      "seat": 2,
+      "pass_delta": -5.962
+    },
+    {
+      "step": 43,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -12.036
+    },
+    {
+      "step": 44,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -12.036
+    },
+    {
+      "step": 45,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -12.036
+    },
+    {
+      "step": 46,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -12.036
+    },
+    {
+      "step": 47,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -11.956
+    },
+    {
+      "step": 48,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -11.876
+    },
+    {
+      "step": 49,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -11.796
+    },
+    {
+      "step": 50,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -12.422
+    },
+    {
+      "step": 51,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -12.048
+    },
+    {
+      "step": 52,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -9.538
+    },
+    {
+      "step": 53,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -9.164
+    },
+    {
+      "step": 54,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -8.79
+    },
+    {
+      "step": 55,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -9.416
+    },
+    {
+      "step": 56,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -9.042
+    },
+    {
+      "step": 57,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -6.532
+    },
+    {
+      "step": 58,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -4.022
+    },
+    {
+      "step": 59,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -1.722
+    },
+    {
+      "step": 60,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -1.348
+    },
+    {
+      "step": 61,
+      "round": 3,
+      "seat": 0,
+      "pass_delta": -0.974
+    },
+    {
+      "step": 62,
+      "round": 3,
+      "seat": 2,
+      "pass_delta": -3.755
+    },
+    {
+      "step": 63,
+      "round": 3,
+      "seat": 2,
+      "pass_delta": -3.995
+    },
+    {
+      "step": 65,
+      "round": 3,
+      "seat": 2,
+      "pass_delta": -0.318
+    },
+    {
+      "step": 66,
+      "round": 3,
+      "seat": 2,
+      "pass_delta": 2.192
+    },
+    {
+      "step": 67,
+      "round": 3,
+      "seat": 2,
+      "pass_delta": 4.252
+    },
+    {
+      "step": 68,
+      "round": 4,
+      "seat": 1,
+      "pass_delta": -20.758
+    },
+    {
+      "step": 69,
+      "round": 4,
+      "seat": 3,
+      "pass_delta": -15.968
+    },
+    {
+      "step": 70,
+      "round": 4,
+      "seat": 0,
+      "pass_delta": -4.274
+    },
+    {
+      "step": 71,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -11.734
+    },
+    {
+      "step": 72,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -9.758
+    },
+    {
+      "step": 73,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -9.384
+    },
+    {
+      "step": 74,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -9.01
+    },
+    {
+      "step": 75,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -7.034
+    },
+    {
+      "step": 76,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -5.058
+    },
+    {
+      "step": 77,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -3.082
+    },
+    {
+      "step": 78,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -1.106
+    },
+    {
+      "step": 79,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -0.459
+    },
+    {
+      "step": 80,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": -0.085
+    },
+    {
+      "step": 81,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": 0.449
+    },
+    {
+      "step": 82,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": 0.983
+    },
+    {
+      "step": 83,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": 1.517
+    },
+    {
+      "step": 84,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": 0.278
+    },
+    {
+      "step": 85,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": 0.812
+    },
+    {
+      "step": 86,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": 1.346
+    },
+    {
+      "step": 87,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": 1.88
+    },
+    {
+      "step": 88,
+      "round": 4,
+      "seat": 2,
+      "pass_delta": 2.414
+    },
+    {
+      "step": 89,
+      "round": 5,
+      "seat": 1,
+      "pass_delta": -18.6793
+    },
+    {
+      "step": 90,
+      "round": 5,
+      "seat": 3,
+      "pass_delta": -21.342
+    },
+    {
+      "step": 91,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -18.448
+    },
+    {
+      "step": 92,
+      "round": 5,
+      "seat": 2,
+      "pass_delta": -1.559
+    },
+    {
+      "step": 93,
+      "round": 5,
+      "seat": 3,
+      "pass_delta": -17.1407
+    },
+    {
+      "step": 94,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -12.0723
+    },
+    {
+      "step": 95,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -11.685
+    },
+    {
+      "step": 96,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -11.2976
+    },
+    {
+      "step": 97,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -10.9103
+    },
+    {
+      "step": 98,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -10.523
+    },
+    {
+      "step": 99,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -10.097
+    },
+    {
+      "step": 100,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -8.921
+    },
+    {
+      "step": 101,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -8.681
+    },
+    {
+      "step": 102,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -11.122
+    },
+    {
+      "step": 103,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -9.52
+    },
+    {
+      "step": 104,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -8.986
+    },
+    {
+      "step": 105,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -5.611
+    },
+    {
+      "step": 106,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -5.077
+    },
+    {
+      "step": 107,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -4.543
+    },
+    {
+      "step": 108,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -4.009
+    },
+    {
+      "step": 109,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -3.475
+    },
+    {
+      "step": 110,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -2.941
+    },
+    {
+      "step": 111,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -4.18
+    },
+    {
+      "step": 112,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -3.646
+    },
+    {
+      "step": 113,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -3.112
+    },
+    {
+      "step": 114,
+      "round": 5,
+      "seat": 0,
+      "pass_delta": -2.578
+    },
+    {
+      "step": 115,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -77.7277
+    },
+    {
+      "step": 116,
+      "round": 6,
+      "seat": 2,
+      "pass_delta": -73.6253
+    },
+    {
+      "step": 117,
+      "round": 6,
+      "seat": 3,
+      "pass_delta": -91.1726
+    },
+    {
+      "step": 118,
+      "round": 6,
+      "seat": 0,
+      "pass_delta": -83.1658
+    },
+    {
+      "step": 119,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -77.7589
+    },
+    {
+      "step": 120,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -74.2027
+    },
+    {
+      "step": 121,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -78.3979
+    },
+    {
+      "step": 122,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -85.9592
+    },
+    {
+      "step": 125,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -86.9421
+    },
+    {
+      "step": 126,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -85.3555
+    },
+    {
+      "step": 127,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -84.2875
+    },
+    {
+      "step": 128,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -84.2195
+    },
+    {
+      "step": 129,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -83.1515
+    },
+    {
+      "step": 130,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -82.0835
+    },
+    {
+      "step": 131,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -82.2453
+    },
+    {
+      "step": 132,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -81.1773
+    },
+    {
+      "step": 133,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -80.3391
+    },
+    {
+      "step": 134,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -80.2711
+    },
+    {
+      "step": 135,
+      "round": 6,
+      "seat": 1,
+      "pass_delta": -79.7911
+    }
+  ]
+}

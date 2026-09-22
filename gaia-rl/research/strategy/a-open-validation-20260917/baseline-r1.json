@@ -1,0 +1,407 @@
+{
+  "summary": {
+    "Terrans": {
+      "n": 5,
+      "distribution": {
+        "1TS+2M": 1,
+        "2M": 3,
+        "4M": 1
+      },
+      "allowed_count": 0,
+      "allowed_rate": 0.0
+    },
+    "HadschHallas": {
+      "n": 5,
+      "distribution": {
+        "1RL+3M": 2,
+        "1RL+1TS+2M": 1,
+        "1RL+4M": 1,
+        "5M": 1
+      },
+      "allowed_count": 2,
+      "allowed_rate": 0.4
+    },
+    "Xenos": {
+      "n": 5,
+      "distribution": {
+        "1TS+4M": 1,
+        "1RL+1TS+2M": 1,
+        "1RL+4M": 1,
+        "1RL+5M": 1,
+        "1RL+2TS+1M": 1
+      },
+      "allowed_count": 3,
+      "allowed_rate": 0.6
+    },
+    "Taklons": {
+      "n": 5,
+      "distribution": {
+        "1RL+2M": 3,
+        "1TS+2M": 1,
+        "4M": 1
+      },
+      "allowed_count": 0,
+      "allowed_rate": 0.0
+    }
+  },
+  "observations": [
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-000/game-0",
+      "seed": "state-evaluation-ab-20260917-1580",
+      "seat": 0,
+      "faction": "Terrans",
+      "opening": "1TS+2M",
+      "allowed": false,
+      "r1_decision_id": 37,
+      "counts": {
+        "mine": 2,
+        "trading_station": 1,
+        "research_lab": 0,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-000/game-0",
+      "seed": "state-evaluation-ab-20260917-1580",
+      "seat": 2,
+      "faction": "Taklons",
+      "opening": "1RL+2M",
+      "allowed": false,
+      "r1_decision_id": 37,
+      "counts": {
+        "mine": 2,
+        "trading_station": 0,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-000/game-1",
+      "seed": "state-evaluation-ab-20260917-1580",
+      "seat": 1,
+      "faction": "HadschHallas",
+      "opening": "1RL+3M",
+      "allowed": false,
+      "r1_decision_id": 56,
+      "counts": {
+        "mine": 3,
+        "trading_station": 0,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-000/game-1",
+      "seed": "state-evaluation-ab-20260917-1580",
+      "seat": 3,
+      "faction": "Xenos",
+      "opening": "1TS+4M",
+      "allowed": false,
+      "r1_decision_id": 56,
+      "counts": {
+        "mine": 4,
+        "trading_station": 1,
+        "research_lab": 0,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-0",
+      "seed": "state-evaluation-ab-20260917-5140",
+      "seat": 2,
+      "faction": "Xenos",
+      "opening": "1RL+1TS+2M",
+      "allowed": true,
+      "r1_decision_id": 59,
+      "counts": {
+        "mine": 2,
+        "trading_station": 1,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-0",
+      "seed": "state-evaluation-ab-20260917-5140",
+      "seat": 3,
+      "faction": "HadschHallas",
+      "opening": "1RL+1TS+2M",
+      "allowed": true,
+      "r1_decision_id": 59,
+      "counts": {
+        "mine": 2,
+        "trading_station": 1,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-1",
+      "seed": "state-evaluation-ab-20260917-5140",
+      "seat": 0,
+      "faction": "Terrans",
+      "opening": "2M",
+      "allowed": false,
+      "r1_decision_id": 36,
+      "counts": {
+        "mine": 2,
+        "trading_station": 0,
+        "research_lab": 0,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-001/game-1",
+      "seed": "state-evaluation-ab-20260917-5140",
+      "seat": 1,
+      "faction": "Taklons",
+      "opening": "1TS+2M",
+      "allowed": false,
+      "r1_decision_id": 36,
+      "counts": {
+        "mine": 2,
+        "trading_station": 1,
+        "research_lab": 0,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-002/game-0",
+      "seed": "state-evaluation-ab-20260917-11285",
+      "seat": 0,
+      "faction": "Terrans",
+      "opening": "4M",
+      "allowed": false,
+      "r1_decision_id": 52,
+      "counts": {
+        "mine": 4,
+        "trading_station": 0,
+        "research_lab": 0,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-002/game-0",
+      "seed": "state-evaluation-ab-20260917-11285",
+      "seat": 3,
+      "faction": "HadschHallas",
+      "opening": "1RL+4M",
+      "allowed": true,
+      "r1_decision_id": 52,
+      "counts": {
+        "mine": 4,
+        "trading_station": 0,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-002/game-1",
+      "seed": "state-evaluation-ab-20260917-11285",
+      "seat": 1,
+      "faction": "Taklons",
+      "opening": "1RL+2M",
+      "allowed": false,
+      "r1_decision_id": 56,
+      "counts": {
+        "mine": 2,
+        "trading_station": 0,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-002/game-1",
+      "seed": "state-evaluation-ab-20260917-11285",
+      "seat": 2,
+      "faction": "Xenos",
+      "opening": "1RL+4M",
+      "allowed": true,
+      "r1_decision_id": 56,
+      "counts": {
+        "mine": 4,
+        "trading_station": 0,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-003/game-0",
+      "seed": "state-evaluation-ab-20260917-13589",
+      "seat": 1,
+      "faction": "Taklons",
+      "opening": "4M",
+      "allowed": false,
+      "r1_decision_id": 49,
+      "counts": {
+        "mine": 4,
+        "trading_station": 0,
+        "research_lab": 0,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-003/game-0",
+      "seed": "state-evaluation-ab-20260917-13589",
+      "seat": 3,
+      "faction": "Xenos",
+      "opening": "1RL+5M",
+      "allowed": true,
+      "r1_decision_id": 49,
+      "counts": {
+        "mine": 5,
+        "trading_station": 0,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-003/game-1",
+      "seed": "state-evaluation-ab-20260917-13589",
+      "seat": 0,
+      "faction": "Terrans",
+      "opening": "2M",
+      "allowed": false,
+      "r1_decision_id": 40,
+      "counts": {
+        "mine": 2,
+        "trading_station": 0,
+        "research_lab": 0,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-003/game-1",
+      "seed": "state-evaluation-ab-20260917-13589",
+      "seat": 2,
+      "faction": "HadschHallas",
+      "opening": "1RL+3M",
+      "allowed": false,
+      "r1_decision_id": 40,
+      "counts": {
+        "mine": 3,
+        "trading_station": 0,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-004/game-0",
+      "seed": "state-evaluation-ab-20260917-14499",
+      "seat": 0,
+      "faction": "Xenos",
+      "opening": "1RL+2TS+1M",
+      "allowed": false,
+      "r1_decision_id": 58,
+      "counts": {
+        "mine": 1,
+        "trading_station": 2,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-004/game-0",
+      "seed": "state-evaluation-ab-20260917-14499",
+      "seat": 1,
+      "faction": "HadschHallas",
+      "opening": "5M",
+      "allowed": false,
+      "r1_decision_id": 58,
+      "counts": {
+        "mine": 5,
+        "trading_station": 0,
+        "research_lab": 0,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": true
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-004/game-1",
+      "seed": "state-evaluation-ab-20260917-14499",
+      "seat": 2,
+      "faction": "Taklons",
+      "opening": "1RL+2M",
+      "allowed": false,
+      "r1_decision_id": 37,
+      "counts": {
+        "mine": 2,
+        "trading_station": 0,
+        "research_lab": 1,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": false
+    },
+    {
+      "game": "gaia-rl/runs/state-evaluation-ab-v2-20260917/on/pair-004/game-1",
+      "seed": "state-evaluation-ab-20260917-14499",
+      "seat": 3,
+      "faction": "Terrans",
+      "opening": "2M",
+      "allowed": false,
+      "r1_decision_id": 37,
+      "counts": {
+        "mine": 2,
+        "trading_station": 0,
+        "research_lab": 0,
+        "planetary_institute": 0,
+        "academy": 0
+      },
+      "whole_game_complete": false
+    }
+  ],
+  "excluded": [
+    {
+      "path": "/home/sohegi/projects/gaia/gaia-rl/runs/state-evaluation-ab-20260917/manifest.json",
+      "reason": "native build differs; cannot certify index replay"
+    },
+    {
+      "path": "/home/sohegi/projects/gaia/gaia-rl/runs/teacher-ab-smoke-20260917/manifest.json",
+      "reason": "native build differs; cannot certify index replay"
+    },
+    {
+      "path": "/home/sohegi/projects/gaia/gaia-rl/runs/teacher-ab-smoke2-20260917/manifest.json",
+      "reason": "native build differs; cannot certify index replay"
+    }
+  ],
+  "baseline_fingerprint": "8f269f027e69352cbe48ee61cf730c8f90c13eaa7f3503a53182acc3b964353e",
+  "engine_build_id": "5e48344693966b28c1a091da3e276a77735b399fe3ef65354e759276dfd31935",
+  "games_run": 0,
+  "scope": "A seats only; matching frozen A and native build; recorded R1 fully replayed"
+}

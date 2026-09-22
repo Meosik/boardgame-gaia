@@ -1,0 +1,1 @@
+{'counts': {'B⁗': {'pass': 696, 'exception': 12}, 'B⁗+e': {'pass': 696, 'exception': 12}, 'B⁗+f': {'pass': 696, 'exception': 12}, 'B⁗+e+f': {'pass': 696, 'exception': 12}}, 'token_sign_failures': 0, 'corrected_step_passes': 90, 'corrected_breadth_passes': 4, 'games_run': 0}

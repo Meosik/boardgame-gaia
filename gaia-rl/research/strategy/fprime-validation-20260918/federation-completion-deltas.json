@@ -1,0 +1,68 @@
+[
+  {
+    "source_step": 127,
+    "faction": "Terrans",
+    "round": 1,
+    "native_vp_gain": 17,
+    "satellites": 5,
+    "delta_vp": {
+      "B-lite+k+n": 2.5923,
+      "B-lite+k+n+f-prime": 2.5923
+    }
+  },
+  {
+    "source_step": 127,
+    "faction": "Terrans",
+    "round": 3,
+    "native_vp_gain": 12,
+    "satellites": 5,
+    "delta_vp": {
+      "B-lite+k+n": -1.416,
+      "B-lite+k+n+f-prime": -1.416
+    }
+  },
+  {
+    "source_step": 127,
+    "faction": "Terrans",
+    "round": 5,
+    "native_vp_gain": 12,
+    "satellites": 5,
+    "delta_vp": {
+      "B-lite+k+n": 2.34,
+      "B-lite+k+n+f-prime": 2.34
+    }
+  },
+  {
+    "source_step": 130,
+    "faction": "Taklons",
+    "round": 1,
+    "native_vp_gain": 17,
+    "satellites": 6,
+    "delta_vp": {
+      "B-lite+k+n": 6.076,
+      "B-lite+k+n+f-prime": 6.076
+    }
+  },
+  {
+    "source_step": 130,
+    "faction": "Taklons",
+    "round": 3,
+    "native_vp_gain": 12,
+    "satellites": 6,
+    "delta_vp": {
+      "B-lite+k+n": 1.988,
+      "B-lite+k+n+f-prime": 1.988
+    }
+  },
+  {
+    "source_step": 130,
+    "faction": "Taklons",
+    "round": 5,
+    "native_vp_gain": 12,
+    "satellites": 6,
+    "delta_vp": {
+      "B-lite+k+n": 4.544,
+      "B-lite+k+n+f-prime": 4.544
+    }
+  }
+]

@@ -1,0 +1,205 @@
+[
+  {
+    "step": 22,
+    "round": 1,
+    "faction": "Taklons",
+    "pass_delta": 4.7477,
+    "conversion_delta": -1.87,
+    "best": {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    "best_delta": 4.7477,
+    "best_pass_or_build": "Pass",
+    "best_pb_delta": 4.7477,
+    "old_best": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "old_best_delta": -1.87
+  },
+  {
+    "step": 23,
+    "round": 1,
+    "faction": "Taklons",
+    "pass_delta": 4.7477,
+    "conversion_delta": -1.87,
+    "best": {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    "best_delta": 4.7477,
+    "best_pass_or_build": "Pass",
+    "best_pb_delta": 4.7477,
+    "old_best": {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    "old_best_delta": -1.87
+  },
+  {
+    "step": 49,
+    "round": 3,
+    "faction": "Terrans",
+    "pass_delta": -18.689,
+    "conversion_delta": -1.87,
+    "best": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "best_delta": -1.87,
+    "best_pass_or_build": "Build",
+    "best_pb_delta": -6.2754,
+    "old_best": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "old_best_delta": -1.87
+  },
+  {
+    "step": 50,
+    "round": 3,
+    "faction": "Terrans",
+    "pass_delta": -19.315,
+    "conversion_delta": -1.87,
+    "best": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "best_delta": -1.87,
+    "best_pass_or_build": "Build",
+    "best_pb_delta": -6.2754,
+    "old_best": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "old_best_delta": -1.87
+  },
+  {
+    "step": 51,
+    "round": 3,
+    "faction": "Terrans",
+    "pass_delta": -18.941,
+    "conversion_delta": -1.87,
+    "best": {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    "best_delta": -1.87,
+    "best_pass_or_build": "Build",
+    "best_pb_delta": -6.2754,
+    "old_best": {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    "old_best_delta": -1.87
+  },
+  {
+    "step": 65,
+    "round": 3,
+    "faction": "Taklons",
+    "pass_delta": -7.091,
+    "conversion_delta": -1.87,
+    "best": {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    "best_delta": -1.87,
+    "best_pass_or_build": "Pass",
+    "best_pb_delta": -7.091,
+    "old_best": {
+      "type": "Pass",
+      "booster_id": 7
+    },
+    "old_best_delta": 2.0
+  },
+  {
+    "step": 71,
+    "round": 4,
+    "faction": "Taklons",
+    "pass_delta": -18.537,
+    "conversion_delta": -1.496,
+    "best": {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    "best_delta": -1.496,
+    "best_pass_or_build": "Build",
+    "best_pb_delta": -14.1916,
+    "old_best": {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    "old_best_delta": 0.0
+  },
+  {
+    "step": 72,
+    "round": 4,
+    "faction": "Taklons",
+    "pass_delta": -16.561,
+    "conversion_delta": -1.496,
+    "best": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "best_delta": -1.496,
+    "best_pass_or_build": "Build",
+    "best_pb_delta": -14.1916,
+    "old_best": {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    "old_best_delta": 0.0
+  },
+  {
+    "step": 94,
+    "round": 5,
+    "faction": "Terrans",
+    "pass_delta": -19.3543,
+    "conversion_delta": -1.122,
+    "best": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "best_delta": -1.122,
+    "best_pass_or_build": "Build",
+    "best_pb_delta": -6.6308,
+    "old_best": {
+      "type": "Pass",
+      "booster_id": 13
+    },
+    "old_best_delta": 0.369
+  },
+  {
+    "step": 95,
+    "round": 5,
+    "faction": "Terrans",
+    "pass_delta": -18.967,
+    "conversion_delta": -1.122,
+    "best": {
+      "type": "FreeAction",
+      "kind": "KnowledgeToCredit",
+      "count": 1
+    },
+    "best_delta": -1.122,
+    "best_pass_or_build": "Build",
+    "best_pb_delta": -6.6308,
+    "old_best": {
+      "type": "Pass",
+      "booster_id": 13
+    },
+    "old_best_delta": 0.369
+  }
+]

@@ -202,3 +202,9 @@ CPU/미니PC 분산이나 상대 차례 사전 계산은 사용자의 질문만�
 실행: `bgg_openings/fixed.py` → `Policies.rank`/timeout reserve, `TimedPreparationTeacher(fixed_openings=True)`. 실제 비용을 낸 후보 중 코어 진전·부족 자원 확보를 우선하고 무관한 QIC 확장을 보류한다. 최종 코어 기술 선택에서는 남은 광산 비용까지 지불 가능한 변형을 우선한다. R1 종료 시 미달은 교사 utility 3.0 손실(미보정 초깃값, 게임 VP 차감 아님)로 기록/예측한다. 자원 조달이 모두 해결되는 완전 탐색이라고 주장하지 않는다.
 
 소각은 새로 가능해진 파워 소비 행동과 최소 소각량을 확인하며, 이후 그 소비를 수행하도록 목적을 유지한다. 소각→파워 자원 변환→최소 QIC→유료 코어의 짧은 실제 조달 경로도 검증하며 무관한 소각/확장을 막는다. 최종 라운드 자원 정리의 기존 예외는 유지한다. 목표 달성/소각 검증 및 `fixtures/coached-r1.json`, `fixtures/last-mine-budget.json`의 실제 native 회귀는 `bgg_openings/test_fixed.py`에 있다. 한 셋업의 목표 달성은 전반적인 실력 또는 편향 해소의 증거가 아니다.
+
+### A/B 종료 후 처리할 항목 — 2026-09-17
+
+- BGG 목표의 채택·전환·포기 및 `local-baseline` fallback 사유를 판별 가능한 로그로 남긴다. 현재 기록만으로 탐색 미완료·불가능·시간 초과·평가 열세를 구별하지 못한다.
+- LF2-14: 연구소 건설과 2테라 무료 광산 기술이 연쇄될 때 인접 충전 선언 순서를 수정한다. `gaia-engine/tests/lost_fleet_order_regression.rs`의 보류 테스트를 먼저 재실행한다.
+- LF3-10: 기본판 12VP 연방 토큰과 Lost Fleet 12VP 토큰의 뒤집기 가능 여부를 구별한다. 같은 보류 테스트로 확인한다.

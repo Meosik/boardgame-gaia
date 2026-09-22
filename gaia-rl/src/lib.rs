@@ -75,6 +75,27 @@ mod python {
     fn sum_ints(values: Vec<i64>) -> i64 {
         values.iter().sum()
     }
+    #[pyfunction]
+    fn evaluation_facts_json(state_json: &str, player_id: u8) -> PyResult<String> {
+        let state: gaia_engine::GameState = serde_json::from_str(state_json).map_err(error)?;
+        let facts = gaia_engine::rules::engine::evaluation_data::facts(&state, player_id).map_err(error)?;
+        serde_json::to_string(&facts).map_err(error)
+    }
+    #[pyfunction]
+    fn evaluation_successor_json(state_json: &str, player_id: u8, action_json: &str) -> PyResult<String> {
+        let mut state = serde_json::from_str(state_json).map_err(error)?;
+        let action = serde_json::from_str(action_json).map_err(error)?;
+        gaia_engine::RuleEngine::apply_action(&mut state, player_id, action).map_err(error)?;
+        serde_json::to_string(&state).map_err(error)
+    }
+    #[pyfunction]
+    fn evaluation_pass_next_round_json(state_json: &str, player_id: u8) -> PyResult<String> {
+        let state = serde_json::from_str(state_json).map_err(error)?;
+        let projected = gaia_engine::rules::engine::evaluation_data::passed_next_round(&state, player_id)
+            .map_err(error)?;
+        serde_json::to_string(&projected).map_err(error)
+    }
+
     #[pymodule]
     fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_class::<PyEnvironment>()?;
@@ -84,6 +105,9 @@ mod python {
         m.add("SOURCE_MANIFEST", SOURCE_MANIFEST)?;
         m.add_function(wrap_pyfunction!(ping, m)?)?;
         m.add_function(wrap_pyfunction!(sum_ints, m)?)?;
+        m.add_function(wrap_pyfunction!(evaluation_facts_json, m)?)?;
+        m.add_function(wrap_pyfunction!(evaluation_successor_json, m)?)?;
+        m.add_function(wrap_pyfunction!(evaluation_pass_next_round_json, m)?)?;
         Ok(())
     }
 }

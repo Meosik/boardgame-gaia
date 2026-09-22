@@ -1,0 +1,22 @@
+--- gaia-rl/experiments/state_evaluation_bprime.py
++++ gaia-rl/experiments/state_evaluation_bdoubleprime.py
+@@ -415,13 +415,15 @@
+ 
+ 
+ def power_value(power: dict, return_bowl: str | None, *, future: bool = True) -> float:
+-    # TODO(tune): three power in Area III can buy one knowledge; earlier bowls discounted.
+-    result = sum(power[key] * weight for key, weight in (('bowl1', 1/9), ('bowl2', 2/9), ('bowl3', 1/3)))
++    # TODO(tune): user-specified Bdoubleprime bowl prices; Brainstone is worth three tokens.
++    result = sum(power[key] * weight for key, weight in (('bowl1', 0.0), ('bowl2', 0.6), ('bowl3', 1.2)))
+     stone = power.get('brainstone')
+-    bowls = {'Area1': 1/3, 'Area2': 2/3, 'Area3': 1.0}
++    bowls = {'Area1': 0.0, 'Area2': 1.8, 'Area3': 3.6}
+     result += bowls.get(stone, 0)
+     if stone == 'Gaia' and future:
+-        result += GAIA_RETURN_DISCOUNT * bowls.get(return_bowl, 0)
++        # Keep Bprime's Gaia-area valuation unchanged, independently of active bowls.
++        gaia_return_values = {'Area1': 1/3, 'Area2': 2/3, 'Area3': 1.0}
++        result += GAIA_RETURN_DISCOUNT * gaia_return_values.get(return_bowl, 0)
+     return result
+ 
+ 

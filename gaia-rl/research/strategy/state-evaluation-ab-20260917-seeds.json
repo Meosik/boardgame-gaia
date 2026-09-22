@@ -1,0 +1,106 @@
+{
+  "selection": "first ten native-confirmed quartet matches; no board/score quality filtering",
+  "prefix": "state-evaluation-ab-20260917",
+  "setups": [
+    {
+      "factions": [
+        "Terrans",
+        "HadschHallas",
+        "Taklons",
+        "Xenos"
+      ],
+      "seed": "state-evaluation-ab-20260917-1580",
+      "board_sha256": "da527e4f2b8415b18043e92a2e4ddc2daf6ba0b6dddf4bc2f3a4ca00e73b67d1"
+    },
+    {
+      "factions": [
+        "Terrans",
+        "Taklons",
+        "Xenos",
+        "HadschHallas"
+      ],
+      "seed": "state-evaluation-ab-20260917-5140",
+      "board_sha256": "ffbdbf1fe0deef68ea9647c79a539c7027fca52abcf12b9cda9c06cdf20cac58"
+    },
+    {
+      "factions": [
+        "Terrans",
+        "Taklons",
+        "Xenos",
+        "HadschHallas"
+      ],
+      "seed": "state-evaluation-ab-20260917-11285",
+      "board_sha256": "ee9742faac14eac7ecd6462a31871b55b3411deaa973a9abf971ab49022109e8"
+    },
+    {
+      "factions": [
+        "Terrans",
+        "Taklons",
+        "HadschHallas",
+        "Xenos"
+      ],
+      "seed": "state-evaluation-ab-20260917-13589",
+      "board_sha256": "13e6a5dd376cf260000d22ae94922a70a4c687cc9e4e3b721b9869b2b6b12ccf"
+    },
+    {
+      "factions": [
+        "Xenos",
+        "HadschHallas",
+        "Taklons",
+        "Terrans"
+      ],
+      "seed": "state-evaluation-ab-20260917-14499",
+      "board_sha256": "e8878ef21c8f99c9caea595264f55128fd09a0229101ea2da3039f0336662e0b"
+    },
+    {
+      "factions": [
+        "Xenos",
+        "Terrans",
+        "Taklons",
+        "HadschHallas"
+      ],
+      "seed": "state-evaluation-ab-20260917-19075",
+      "board_sha256": "b5772d8e5d004821842611c77270c55036685ebce85676ee95e2ac3994f8d87c"
+    },
+    {
+      "factions": [
+        "Terrans",
+        "Xenos",
+        "Taklons",
+        "HadschHallas"
+      ],
+      "seed": "state-evaluation-ab-20260917-21914",
+      "board_sha256": "dffcc4e83ab9ad5dc1d9ef5ee955fe63291fc1f3b8507f1e60257726d0712d41"
+    },
+    {
+      "factions": [
+        "HadschHallas",
+        "Terrans",
+        "Taklons",
+        "Xenos"
+      ],
+      "seed": "state-evaluation-ab-20260917-22536",
+      "board_sha256": "784336ce118b93425881913ff4f64ca3f8d3aa5af7320c481a40135fe8e5ed03"
+    },
+    {
+      "factions": [
+        "Terrans",
+        "Xenos",
+        "Taklons",
+        "HadschHallas"
+      ],
+      "seed": "state-evaluation-ab-20260917-29995",
+      "board_sha256": "923cb5cc34feb35dd948f25cbe5f001505b8214165b3f12a4272a522c6a0fa09"
+    },
+    {
+      "factions": [
+        "Xenos",
+        "HadschHallas",
+        "Taklons",
+        "Terrans"
+      ],
+      "seed": "state-evaluation-ab-20260917-30948",
+      "board_sha256": "37de7e21d33e9a8f92f7b8acaf165bf771bb9bbb6085261cf813a3bbe4d6bcb5"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+--- gaia-rl/experiments/state_evaluation_bdoubleprime.py
++++ gaia-rl/experiments/state_evaluation_btripleprime.py
+@@ -32,6 +32,10 @@
+ INCOME_DISCOUNT = 0.5
+ # TODO(tune): delayed return retains half the destination bowl value.
+ GAIA_RETURN_DISCOUNT = 0.5
++# TODO(tune): user-approved LF01 retained-planet prices; no round-zero value.
++SECURED_PLANET_VP = (0.0, 4.0, 4.0, 4.0, 4.0, 3.0, 2.0)
++# TODO(tune): user-approved B02/LF01 missing-token penalty in VP.
++TOKEN_SHORTFALL_VP = 2.13
+ 
+ 
+ @dataclass(frozen=True)
+@@ -44,6 +48,7 @@
+     vp: float = 0.0
+     federation: dict | None = None
+     brainstone_return: str | None = None
++    token_target: int = 5  # TODO(tune): base active-token target, not a rule limit.
+ 
+ 
+ @dataclass(frozen=True)
+@@ -107,6 +112,7 @@
+         navigation_research=faction != 'BalTaks' or institute,
+         federation=facts['federation'] if facts is not None else None,
+         brainstone_return=facts['brainstone_return'] if facts is not None else None,
++        token_target=4 if faction == 'Taklons' else 5,  # TODO(tune): B10; stone counts once.
+     )
+ 
+ 
+@@ -455,7 +461,22 @@
+     return tuple(rows)
+ 
+ 
+-def evaluate_state(state: dict, actor: int, *, top_n: int = TOP_N, conserve_resources: bool = True) -> Evaluation:
++def secured_planet_coords(state: dict, actor: int) -> frozenset[str]:
++    """Built colonies, including native Lost Planet ownership; not reserved projects.
++
++    Coordinates are unique across structures. Empty-space stations and satellites
++    have no planet value. Native cohabiting mines occupy a built colony too.
++    """
++    return frozenset(coord for coord, cell in state['board']['hexes'].items()
++                     if cell['planet'] is not None and (
++                         any(s['owner'] == actor and s['kind'] != 'Satellite'
++                             for s in cell['structures'])
++                         or (cell['planet']['planet_type'] == 'LostPlanet'
++                             and cell['planet']['owner'] == actor)))
++
++
++def evaluate_state(state: dict, actor: int, *, top_n: int = TOP_N, conserve_resources: bool = True,
++                   secured_planets: bool = False, token_shortfall: bool = False) -> Evaluation:
+     """Evaluate one player's current state; no candidate action is an input."""
+     if type(top_n) is not int or top_n < 0:
+         raise ValueError('top_n must be a nonnegative integer')
+@@ -502,4 +523,8 @@
+     breakdown['round_scoring'] = round_scoring_value(state, player, expected)
+     breakdown['final_scoring_rank'] = final_rank_value(facts, actor)
+     breakdown['faction_modifier'] = modifier.vp
++    breakdown['secured_planets'] = (len(secured_planet_coords(state, actor)) * SECURED_PLANET_VP[state['round']]
++                                     if secured_planets else 0.0)
++    breakdown['token_shortfall'] = (-TOKEN_SHORTFALL_VP * max(0, modifier.token_target-facts['active_power_tokens'])
++                                   if token_shortfall else 0.0)
+     return Evaluation(sum(breakdown.values()), breakdown, options, tiles, ships)

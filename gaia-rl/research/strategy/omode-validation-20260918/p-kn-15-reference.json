@@ -1,0 +1,167 @@
+[
+  {
+    "step": 106,
+    "faction": "Xenos",
+    "full_candidates": 66,
+    "p_candidates": 5,
+    "p_best_delta": 5.0306,
+    "full_best_delta": 5.0306,
+    "gap": 0.0,
+    "full_best_rank": 2,
+    "full_best_retained": true
+  },
+  {
+    "step": 113,
+    "faction": "Xenos",
+    "full_candidates": 66,
+    "p_candidates": 5,
+    "p_best_delta": 4.0706,
+    "full_best_delta": 4.0706,
+    "gap": 0.0,
+    "full_best_rank": 3,
+    "full_best_retained": true
+  },
+  {
+    "step": 118,
+    "faction": "Terrans",
+    "full_candidates": 126,
+    "p_candidates": 5,
+    "p_best_delta": 5.3008,
+    "full_best_delta": 5.3008,
+    "gap": 0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  },
+  {
+    "step": 124,
+    "faction": "Xenos",
+    "full_candidates": 180,
+    "p_candidates": 5,
+    "p_best_delta": 3.9451,
+    "full_best_delta": 3.9451,
+    "gap": -0.0,
+    "full_best_rank": 22,
+    "full_best_retained": true
+  },
+  {
+    "step": 127,
+    "faction": "Terrans",
+    "full_candidates": 174,
+    "p_candidates": 5,
+    "p_best_delta": 4.218,
+    "full_best_delta": 4.218,
+    "gap": -0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  },
+  {
+    "step": 128,
+    "faction": "HadschHallas",
+    "full_candidates": 24,
+    "p_candidates": 5,
+    "p_best_delta": 3.8326,
+    "full_best_delta": 3.8326,
+    "gap": 0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  },
+  {
+    "step": 129,
+    "faction": "Xenos",
+    "full_candidates": 306,
+    "p_candidates": 5,
+    "p_best_delta": 3.4388,
+    "full_best_delta": 3.4388,
+    "gap": 0.0,
+    "full_best_rank": 4,
+    "full_best_retained": true
+  },
+  {
+    "step": 130,
+    "faction": "Taklons",
+    "full_candidates": 48,
+    "p_candidates": 5,
+    "p_best_delta": 5.822,
+    "full_best_delta": 5.822,
+    "gap": -0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  },
+  {
+    "step": 136,
+    "faction": "Xenos",
+    "full_candidates": 306,
+    "p_candidates": 5,
+    "p_best_delta": 3.4388,
+    "full_best_delta": 3.4388,
+    "gap": 0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  },
+  {
+    "step": 144,
+    "faction": "Xenos",
+    "full_candidates": 306,
+    "p_candidates": 5,
+    "p_best_delta": 5.3588,
+    "full_best_delta": 5.3588,
+    "gap": 0.0,
+    "full_best_rank": 24,
+    "full_best_retained": true
+  },
+  {
+    "step": 146,
+    "faction": "Xenos",
+    "full_candidates": 306,
+    "p_candidates": 5,
+    "p_best_delta": 5.3588,
+    "full_best_delta": 5.3588,
+    "gap": 0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  },
+  {
+    "step": 148,
+    "faction": "Xenos",
+    "full_candidates": 438,
+    "p_candidates": 5,
+    "p_best_delta": 6.5124,
+    "full_best_delta": 6.5124,
+    "gap": -0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  },
+  {
+    "step": 149,
+    "faction": "Xenos",
+    "full_candidates": 511,
+    "p_candidates": 5,
+    "p_best_delta": 6.5124,
+    "full_best_delta": 6.5124,
+    "gap": -0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  },
+  {
+    "step": 150,
+    "faction": "Xenos",
+    "full_candidates": 584,
+    "p_candidates": 5,
+    "p_best_delta": 6.5124,
+    "full_best_delta": 6.5124,
+    "gap": -0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  },
+  {
+    "step": 151,
+    "faction": "Xenos",
+    "full_candidates": 657,
+    "p_candidates": 5,
+    "p_best_delta": 6.5124,
+    "full_best_delta": 6.5124,
+    "gap": -0.0,
+    "full_best_rank": 1,
+    "full_best_retained": true
+  }
+]

@@ -1,0 +1,180 @@
+[
+  {
+    "source_step": 127,
+    "faction": "Terrans",
+    "round": 1,
+    "native_vp_gain": 17,
+    "satellites": 5,
+    "values": {
+      "base": {
+        "delta_vp": 2.5923,
+        "ratio": 0.1525,
+        "breakdown_delta": {
+          "federation_readiness": -5.026,
+          "current_vp": 17.0,
+          "round_scoring": -0.9917,
+          "power_stock": -3.0,
+          "token_shortfall": -6.39,
+          "federation_green_tokens": 1.0
+        }
+      },
+      "o": {
+        "delta_vp": 8.9823,
+        "ratio": 0.5284,
+        "breakdown_delta": {
+          "federation_readiness": -5.026,
+          "current_vp": 17.0,
+          "round_scoring": -0.9917,
+          "power_stock": -3.0,
+          "federation_green_tokens": 1.0
+        }
+      }
+    }
+  },
+  {
+    "source_step": 127,
+    "faction": "Terrans",
+    "round": 3,
+    "native_vp_gain": 12,
+    "satellites": 5,
+    "values": {
+      "base": {
+        "delta_vp": -1.416,
+        "ratio": -0.118,
+        "breakdown_delta": {
+          "federation_readiness": -5.026,
+          "current_vp": 12.0,
+          "power_stock": -3.0,
+          "token_shortfall": -6.39,
+          "federation_green_tokens": 1.0
+        }
+      },
+      "o": {
+        "delta_vp": 4.974,
+        "ratio": 0.4145,
+        "breakdown_delta": {
+          "federation_readiness": -5.026,
+          "current_vp": 12.0,
+          "power_stock": -3.0,
+          "federation_green_tokens": 1.0
+        }
+      }
+    }
+  },
+  {
+    "source_step": 127,
+    "faction": "Terrans",
+    "round": 5,
+    "native_vp_gain": 12,
+    "satellites": 5,
+    "values": {
+      "base": {
+        "delta_vp": 2.34,
+        "ratio": 0.195,
+        "breakdown_delta": {
+          "federation_readiness": -5.026,
+          "current_vp": 12.0,
+          "power_stock": -1.8,
+          "token_shortfall": -3.834,
+          "federation_green_tokens": 1.0
+        }
+      },
+      "o": {
+        "delta_vp": 6.174,
+        "ratio": 0.5145,
+        "breakdown_delta": {
+          "federation_readiness": -5.026,
+          "current_vp": 12.0,
+          "power_stock": -1.8,
+          "federation_green_tokens": 1.0
+        }
+      }
+    }
+  },
+  {
+    "source_step": 130,
+    "faction": "Taklons",
+    "round": 1,
+    "native_vp_gain": 17,
+    "satellites": 6,
+    "values": {
+      "base": {
+        "delta_vp": 6.076,
+        "ratio": 0.3574,
+        "breakdown_delta": {
+          "federation_readiness": -4.622,
+          "current_vp": 17.0,
+          "round_scoring": -0.912,
+          "token_shortfall": -6.39,
+          "federation_green_tokens": 1.0
+        }
+      },
+      "o": {
+        "delta_vp": 12.466,
+        "ratio": 0.7333,
+        "breakdown_delta": {
+          "federation_readiness": -4.622,
+          "current_vp": 17.0,
+          "round_scoring": -0.912,
+          "federation_green_tokens": 1.0
+        }
+      }
+    }
+  },
+  {
+    "source_step": 130,
+    "faction": "Taklons",
+    "round": 3,
+    "native_vp_gain": 12,
+    "satellites": 6,
+    "values": {
+      "base": {
+        "delta_vp": 1.988,
+        "ratio": 0.1657,
+        "breakdown_delta": {
+          "federation_readiness": -4.622,
+          "current_vp": 12.0,
+          "token_shortfall": -6.39,
+          "federation_green_tokens": 1.0
+        }
+      },
+      "o": {
+        "delta_vp": 8.378,
+        "ratio": 0.6982,
+        "breakdown_delta": {
+          "federation_readiness": -4.622,
+          "current_vp": 12.0,
+          "federation_green_tokens": 1.0
+        }
+      }
+    }
+  },
+  {
+    "source_step": 130,
+    "faction": "Taklons",
+    "round": 5,
+    "native_vp_gain": 12,
+    "satellites": 6,
+    "values": {
+      "base": {
+        "delta_vp": 4.544,
+        "ratio": 0.3787,
+        "breakdown_delta": {
+          "federation_readiness": -4.622,
+          "current_vp": 12.0,
+          "token_shortfall": -3.834,
+          "federation_green_tokens": 1.0
+        }
+      },
+      "o": {
+        "delta_vp": 8.378,
+        "ratio": 0.6982,
+        "breakdown_delta": {
+          "federation_readiness": -4.622,
+          "current_vp": 12.0,
+          "federation_green_tokens": 1.0
+        }
+      }
+    }
+  }
+]

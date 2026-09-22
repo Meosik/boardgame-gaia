@@ -1,0 +1,163 @@
+[
+  {
+    "step": 22,
+    "round": 1,
+    "selected_conversion_delta": -1.869,
+    "pass_delta": 13.2917,
+    "best_action": {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    "best_delta": 13.2917,
+    "best_pass_or_build_delta": 13.2917,
+    "best_pass_or_build_action": {
+      "type": "Pass",
+      "booster_id": 3
+    }
+  },
+  {
+    "step": 23,
+    "round": 1,
+    "selected_conversion_delta": -1.869,
+    "pass_delta": 13.2917,
+    "best_action": {
+      "type": "Pass",
+      "booster_id": 3
+    },
+    "best_delta": 13.2917,
+    "best_pass_or_build_delta": 13.2917,
+    "best_pass_or_build_action": {
+      "type": "Pass",
+      "booster_id": 3
+    }
+  },
+  {
+    "step": 49,
+    "round": 3,
+    "selected_conversion_delta": -1.61,
+    "pass_delta": -15.07,
+    "best_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    },
+    "best_delta": 3.1626,
+    "best_pass_or_build_delta": 3.1626,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    }
+  },
+  {
+    "step": 50,
+    "round": 3,
+    "selected_conversion_delta": -1.61,
+    "pass_delta": -15.65,
+    "best_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    },
+    "best_delta": 3.1626,
+    "best_pass_or_build_delta": 3.1626,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    }
+  },
+  {
+    "step": 51,
+    "round": 3,
+    "selected_conversion_delta": -1.61,
+    "pass_delta": -15.23,
+    "best_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    },
+    "best_delta": 3.1626,
+    "best_pass_or_build_delta": 3.1626,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "-5,-4"
+    }
+  },
+  {
+    "step": 65,
+    "round": 3,
+    "selected_conversion_delta": -1.61,
+    "pass_delta": -3.67,
+    "best_action": {
+      "type": "FreeAction",
+      "kind": "OreToCredit",
+      "count": 1
+    },
+    "best_delta": -1.61,
+    "best_pass_or_build_delta": -3.67,
+    "best_pass_or_build_action": {
+      "type": "Pass",
+      "booster_id": 5
+    }
+  },
+  {
+    "step": 71,
+    "round": 4,
+    "selected_conversion_delta": -1.19,
+    "pass_delta": -16.81,
+    "best_action": {
+      "type": "Build",
+      "coord": "2,0"
+    },
+    "best_delta": -0.9646,
+    "best_pass_or_build_delta": -0.9646,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "2,0"
+    }
+  },
+  {
+    "step": 72,
+    "round": 4,
+    "selected_conversion_delta": -1.19,
+    "pass_delta": -15.32,
+    "best_action": {
+      "type": "Build",
+      "coord": "2,0"
+    },
+    "best_delta": -0.9646,
+    "best_pass_or_build_delta": -0.9646,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "2,0"
+    }
+  },
+  {
+    "step": 94,
+    "round": 5,
+    "selected_conversion_delta": -0.7,
+    "pass_delta": -18.707,
+    "best_action": {
+      "type": "Build",
+      "coord": "-3,-6"
+    },
+    "best_delta": 7.7993,
+    "best_pass_or_build_delta": 7.7993,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "-3,-6"
+    }
+  },
+  {
+    "step": 95,
+    "round": 5,
+    "selected_conversion_delta": -0.7,
+    "pass_delta": -18.287,
+    "best_action": {
+      "type": "Build",
+      "coord": "-3,-6"
+    },
+    "best_delta": 7.7993,
+    "best_pass_or_build_delta": 7.7993,
+    "best_pass_or_build_action": {
+      "type": "Build",
+      "coord": "-3,-6"
+    }
+  }
+]

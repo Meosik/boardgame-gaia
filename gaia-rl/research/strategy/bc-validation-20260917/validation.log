@@ -1,0 +1,1 @@
+{"counts": {"B″": {"pass": 684, "exception": 12}, "B″+c": {"pass": 682, "exception": 12, "fail": 2}, "B″+b": {"pass": 684, "exception": 12}, "B″+b+c": {"pass": 680, "exception": 12, "fail": 4}}, "sign_failures": 38, "games_run": 0}

@@ -1,0 +1,74 @@
+[
+  {
+    "round": 1,
+    "action": "\ubaa8\ud589\uc131 \uad11\uc0b0",
+    "delta_vp": {
+      "B-lite+k": 3.944831,
+      "B-lite+k+n": 7.944831
+    }
+  },
+  {
+    "round": 1,
+    "action": "1\ud14c\ub77c+\uad11\uc0b0",
+    "delta_vp": {
+      "B-lite+k": 1.260448,
+      "B-lite+k+n": 5.260448
+    }
+  },
+  {
+    "round": 1,
+    "action": "\uad50\uc5ed\uc18c\u2192\uc5f0\uad6c\uc18c+std-03",
+    "delta_vp": {
+      "B-lite+k": 1.619929,
+      "B-lite+k+n": 1.619929
+    }
+  },
+  {
+    "round": 3,
+    "action": "\ubaa8\ud589\uc131 \uad11\uc0b0",
+    "delta_vp": {
+      "B-lite+k": 0.206831,
+      "B-lite+k+n": 7.944831
+    }
+  },
+  {
+    "round": 3,
+    "action": "1\ud14c\ub77c+\uad11\uc0b0",
+    "delta_vp": {
+      "B-lite+k": -2.477552,
+      "B-lite+k+n": 5.260448
+    }
+  },
+  {
+    "round": 3,
+    "action": "\uad50\uc5ed\uc18c\u2192\uc5f0\uad6c\uc18c+std-03",
+    "delta_vp": {
+      "B-lite+k": -1.238071,
+      "B-lite+k+n": 3.619929
+    }
+  },
+  {
+    "round": 5,
+    "action": "\ubaa8\ud589\uc131 \uad11\uc0b0",
+    "delta_vp": {
+      "B-lite+k": -0.823169,
+      "B-lite+k+n": 8.652831
+    }
+  },
+  {
+    "round": 5,
+    "action": "1\ud14c\ub77c+\uad11\uc0b0",
+    "delta_vp": {
+      "B-lite+k": -2.067552,
+      "B-lite+k+n": 7.408448
+    }
+  },
+  {
+    "round": 5,
+    "action": "\uad50\uc5ed\uc18c\u2192\uc5f0\uad6c\uc18c+std-03",
+    "delta_vp": {
+      "B-lite+k": -3.292071,
+      "B-lite+k+n": 6.423929
+    }
+  }
+]

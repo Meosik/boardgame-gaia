@@ -1,0 +1,92 @@
+[
+  {
+    "step": 87,
+    "round": 5,
+    "faction": "Xenos",
+    "full": 48,
+    "p": 48,
+    "full_seconds": 0.0006250339938560501,
+    "p_seconds": 0.0005387540004448965,
+    "original_action": "ResearchAdvance"
+  },
+  {
+    "step": 88,
+    "round": 5,
+    "faction": "Terrans",
+    "full": 36,
+    "p": 36,
+    "full_seconds": 0.0006118290039012209,
+    "p_seconds": 0.0004732609959319234,
+    "original_action": "Upgrade"
+  },
+  {
+    "step": 92,
+    "round": 5,
+    "faction": "HadschHallas",
+    "full": 6,
+    "p": 6,
+    "full_seconds": 0.00045265399967320263,
+    "p_seconds": 0.00042898900574073195,
+    "original_action": "Upgrade"
+  },
+  {
+    "step": 94,
+    "round": 5,
+    "faction": "Xenos",
+    "full": 48,
+    "p": 48,
+    "full_seconds": 0.0006799160037189722,
+    "p_seconds": 0.0005647819998557679,
+    "original_action": "ResearchAdvance"
+  },
+  {
+    "step": 95,
+    "round": 5,
+    "faction": "Terrans",
+    "full": 36,
+    "p": 36,
+    "full_seconds": 0.0004831100013689138,
+    "p_seconds": 0.0004582640031003393,
+    "original_action": "ResearchAdvance"
+  },
+  {
+    "step": 105,
+    "round": 5,
+    "faction": "HadschHallas",
+    "full": 6,
+    "p": 6,
+    "full_seconds": 0.00040346199966734275,
+    "p_seconds": 0.00038708099600626156,
+    "original_action": "Upgrade"
+  },
+  {
+    "step": 106,
+    "round": 5,
+    "faction": "Xenos",
+    "full": 48,
+    "p": 48,
+    "full_seconds": 0.000536068000656087,
+    "p_seconds": 0.0004922969965264201,
+    "original_action": "FormFederation"
+  },
+  {
+    "step": 107,
+    "round": 5,
+    "faction": "Terrans",
+    "full": 36,
+    "p": 36,
+    "full_seconds": 0.0005188170034671202,
+    "p_seconds": 0.00046602899965364486,
+    "original_action": "FormFederation"
+  },
+  {
+    "step": 108,
+    "round": 5,
+    "faction": "HadschHallas",
+    "full": 18,
+    "p": 18,
+    "full_seconds": 0.00043839600402861834,
+    "p_seconds": 0.00042287800170015544,
+    "original_action": "FormFederation"
+  }
+]

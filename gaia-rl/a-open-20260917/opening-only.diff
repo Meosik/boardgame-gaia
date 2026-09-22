@@ -1,0 +1,12 @@
+--- A/bgg_openings/catalog.py
++++ A-open/bgg_openings/catalog.py
+@@ -84,4 +84,8 @@
+             rows.append(opening)
+     if set(catalog) != BASE_FACTIONS:
+         raise ValueError('Missing or unexpected source faction')
+-    return {f: tuple(rows) for f, rows in catalog.items()}
++    # User-approved A-open candidates; preserve source order and provenance.
++    allowed = {'Terrans': ('1AC+1M', '1RL+2M', '1RL+4M'), 'HadschHallas': ('1RL+4M', '1RL+1TS+2M'), 'Xenos': ('1RL+5M', '1RL+4M', '1RL+1TS+2M'), 'Taklons': ('1RL+5M', '1RL+4M')}
++    return {f: tuple(row for row in rows
++                     if f not in allowed or row.label in allowed[f])
++            for f, rows in catalog.items()}

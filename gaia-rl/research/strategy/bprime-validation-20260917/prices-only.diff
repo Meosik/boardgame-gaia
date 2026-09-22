@@ -1,0 +1,11 @@
+--- gaia-rl/experiments/state_evaluation.py
++++ gaia-rl/experiments/state_evaluation_bprime.py
+@@ -20,7 +20,7 @@
+              'ai': 'ArtificialIntelligence', 'gaia': 'GaiaProject',
+              'economy': 'Economy', 'science': 'Science'}
+ # TODO(tune): provisional VP prices above the 1/3 VP salvage floor.
+-PRICES = {'ore': 1.0, 'credits': 0.5, 'knowledge': 2.0, 'qic': 1.0}
++PRICES = {'ore': 2.67, 'credits': 0.8, 'knowledge': 2.67, 'qic': 4.67}
+ # TODO(tune): number of near-term colony options, not a native game limit.
+ TOP_N = 3
+ # TODO(tune): option ceiling and cost attenuation scale, both expressed in VP.

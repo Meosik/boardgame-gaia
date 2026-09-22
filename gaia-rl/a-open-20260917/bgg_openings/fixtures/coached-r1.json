@@ -1,0 +1,635 @@
+{
+  "seed": "quartet-pilot-20260913-27703",
+  "actions": [
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "PlaceStartingStructure",
+        "coord": "-3,-3"
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "PlaceStartingStructure",
+        "coord": "-8,4"
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "PlaceStartingStructure",
+        "coord": "-7,2"
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "PlaceStartingStructure",
+        "coord": "-8,5"
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "PlaceStartingStructure",
+        "coord": "5,-3"
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "PlaceStartingStructure",
+        "coord": "2,-2"
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "PlaceStartingStructure",
+        "coord": "2,-4"
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "PlaceStartingStructure",
+        "coord": "-1,0"
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "PlaceStartingStructure",
+        "coord": "-1,-5"
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "SelectStartingBooster",
+        "booster_id": 12
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "SelectStartingBooster",
+        "booster_id": 9
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "SelectStartingBooster",
+        "booster_id": 3
+      }
+    },
+    {
+      "phase": "Setup",
+      "action": {
+        "type": "SelectStartingBooster",
+        "booster_id": 7
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "-3,-3",
+        "to": "TradingStation",
+        "tech_tile_choice": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "-8,4",
+        "to": "TradingStation",
+        "tech_tile_choice": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "-7,2",
+        "to": "TradingStation",
+        "tech_tile_choice": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "RoundBoosterTerraformBuild",
+        "coord": "4,-3"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "-3,-3",
+        "to": "ResearchLab",
+        "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 10,
+          "advance_track": null,
+          "bonus_build_coord": null
+        }
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "-8,4",
+        "to": "ResearchLab",
+        "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 10,
+          "advance_track": null,
+          "bonus_build_coord": null
+        }
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "-7,2",
+        "to": "ResearchLab",
+        "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 10,
+          "advance_track": null,
+          "bonus_build_coord": null
+        }
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "4,-3",
+        "to": "TradingStation",
+        "tech_tile_choice": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ResearchAdvance",
+        "track": "Navigation"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Build",
+        "coord": "-7,3"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ResearchAdvance",
+        "track": "Navigation"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "4,-3",
+        "to": "ResearchLab",
+        "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 10,
+          "advance_track": null,
+          "bonus_build_coord": null
+        }
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Build",
+        "coord": "-1,-3"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ExploreSpaceship",
+        "ship": "Rebellion"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Build",
+        "coord": "-5,0"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "TechTileSpecialAction",
+        "tile": {
+          "pool": "Standard",
+          "tile": 10
+        }
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "TechTileSpecialAction",
+        "tile": {
+          "pool": "Standard",
+          "tile": 10
+        }
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "RebellionGainTechTile",
+        "tile": 4,
+        "track": "ArtificialIntelligence",
+        "bonus_build_coord": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ExploreSpaceship",
+        "ship": "TFMars"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "PowerAction",
+        "id": 4,
+        "coord": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ExploreSpaceship",
+        "ship": "Eclipse"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "PowerAction",
+        "id": 6,
+        "coord": "-5,4"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "TFMarsGaiaFormation",
+        "coord": "-3,-1"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ExploreSpaceship",
+        "ship": "TFMars"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "EclipseAsteroidMine",
+        "coord": "-3,-5"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "-7,3",
+        "to": "TradingStation",
+        "tech_tile_choice": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": false
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "TechTileSpecialAction",
+        "tile": {
+          "pool": "Standard",
+          "tile": 10
+        }
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "PowerAction",
+        "id": 3,
+        "coord": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "FreeAction",
+        "kind": "PowerToCredit",
+        "count": 1
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "FreeAction",
+        "kind": "PowerToCredit",
+        "count": 1
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "-1,-3",
+        "to": "TradingStation",
+        "tech_tile_choice": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "TechTileSpecialAction",
+        "tile": {
+          "pool": "Standard",
+          "tile": 10
+        }
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Build",
+        "coord": "-3,-1"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ResearchAdvance",
+        "track": "Terraforming"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ExploreSpaceship",
+        "ship": "Twilight"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "PowerAction",
+        "id": 5,
+        "coord": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "PowerAction",
+        "id": 7,
+        "coord": null
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "FreeAction",
+        "kind": "QicToOre",
+        "count": 2
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Upgrade",
+        "coord": "4,-3",
+        "to": {
+          "Academy": "Science"
+        },
+        "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 3,
+          "advance_track": null,
+          "bonus_build_coord": null
+        }
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ChargePower",
+        "accept": true
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Pass",
+        "booster_id": 1
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "ResearchAdvance",
+        "track": "ArtificialIntelligence"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "GaiaFormation",
+        "coord": "-8,1"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "SpaceshipCreditTerraform",
+        "coord": "5,-2"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "RebellionCreditsAndQic"
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Pass",
+        "booster_id": 5
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Pass",
+        "booster_id": 9
+      }
+    },
+    {
+      "phase": "Game",
+      "action": {
+        "type": "Pass",
+        "booster_id": 7
+      }
+    }
+  ]
+}
