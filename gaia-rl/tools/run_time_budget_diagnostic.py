@@ -63,6 +63,7 @@ def _nested_counts(rows: list[dict], *, path_key: str) -> dict:
 def run(output: Path, seed: str, target_seconds: float, maximum_seconds: float) -> dict:
     if os.environ.get('GAIA_DENSITY_BONUS') != '0':
         raise RuntimeError('This diagnostic requires GAIA_DENSITY_BONUS=0')
+    token_ore_price = os.environ.get('GAIA_TOKEN_ORE_PRICE') == '1'
     output.mkdir(parents=True, exist_ok=False)
     env = Environment(seed, 2000)
     teacher = StateTeacher(
@@ -120,6 +121,7 @@ def run(output: Path, seed: str, target_seconds: float, maximum_seconds: float) 
             'federations': (len(player['federation_tokens'])
                             + len(player.get('gray_federation_tokens', []))),
             'score': scores[player['player_id']],
+            'research_tracks': dict(player['research_tracks']),
         }
         for player in final_state['players']
     }
@@ -132,8 +134,10 @@ def run(output: Path, seed: str, target_seconds: float, maximum_seconds: float) 
     result = {
         'seed': seed,
         'games': 1,
-        'mode': 'B-lite+k+n+f-prime+g+h+o+p',
+        'mode': ('B-lite+k+n+f-prime+g+h+o+p'
+                 + ('+b-prime' if token_ore_price else '')),
         'density_bonus': False,
+        'token_ore_price': token_ore_price,
         'target_seconds': target_seconds,
         'maximum_seconds': maximum_seconds,
         'complete': env.is_terminal(),

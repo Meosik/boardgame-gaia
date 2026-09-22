@@ -67,7 +67,8 @@ def _evaluate_stock(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
                    fast_expansion: bool = False, fixed_income_and_planets: bool = False,
                    direct_stock_prices: bool = False,
                    federation_satellite_tokens: bool = False,
-                   density_bonus: bool = False) -> base.base.Evaluation:
+                   density_bonus: bool = False,
+                   token_ore_price: bool = False) -> base.base.Evaluation:
     result = base.evaluate_state(state, actor, top_n=top_n, conserve_resources=conserve_resources,
         secured_planets=secured_planets or fixed_income_and_planets, token_shortfall=token_shortfall,
         remaining_income=remaining_income, distributed_research=distributed_research,
@@ -75,7 +76,7 @@ def _evaluate_stock(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
         density_bonus=density_bonus)
     if 'ore_stock' not in result.breakdown or not (
             round_resource_prices or booster_one_income or gaia_token_return or fixed_income_and_planets
-            or direct_stock_prices):
+            or direct_stock_prices or token_ore_price):
         return result
     player = next(p for p in state['players'] if p['player_id'] == actor)
     resources = player['resources']
@@ -121,6 +122,17 @@ def _evaluate_stock(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
         original_active = base.base.power_value(power, None, future=False)
         breakdown['power_stock'] += active-original_active
         breakdown['token_shortfall'] *= ROUND_MULTIPLIERS[state['round']]
+    if token_ore_price and token_shortfall:
+        target = base.base.faction_modifier(state, player).token_target
+        returning = (power['gaia_forming'] + power['gaia_bowl']
+                     + int(power.get('brainstone') == 'Gaia') if gaia_token_return else 0)
+        satellites = (sum(cell.get('satellites', []).count(actor)
+                          for cell in state['board']['hexes'].values())
+                      if federation_satellite_tokens else 0)
+        structural = base.base.active_token_count(power) + returning + satellites
+        # TODO(tune): LF01 prices a new token at 3.2 charge versus 4 charge per ore.
+        token_price = F_PRIME_ORE_KNOWLEDGE[state['round']] * 0.8
+        breakdown['token_shortfall'] = -token_price * max(0, target-structural)
     return replace(result, total_vp=sum(breakdown.values()), breakdown=breakdown)
 
 # TODO(tune): user-approved diminishing weights on three independent colony options.
@@ -384,7 +396,8 @@ def evaluate_state(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
                    fixed_income_and_planets: bool = False,
                    direct_stock_prices: bool = False,
                    federation_satellite_tokens: bool = False,
-                   density_bonus: bool = False) -> base.base.Evaluation:
+                   density_bonus: bool = False,
+                   token_ore_price: bool = False) -> base.base.Evaluation:
     options = dict(top_n=top_n, conserve_resources=conserve_resources, secured_planets=secured_planets,
         token_shortfall=token_shortfall, remaining_income=remaining_income,
         distributed_research=distributed_research, round_resource_prices=round_resource_prices,
@@ -392,7 +405,7 @@ def evaluate_state(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
         fast_expansion=fast_expansion, fixed_income_and_planets=fixed_income_and_planets,
         direct_stock_prices=direct_stock_prices,
         federation_satellite_tokens=federation_satellite_tokens,
-        density_bonus=density_bonus)
+        density_bonus=density_bonus, token_ore_price=token_ore_price)
     result = _evaluate_stock(state, actor, **options)
     if not (expansion_rescale or discounted_expansion) or 'expansion_opportunity' not in result.breakdown:
         return result

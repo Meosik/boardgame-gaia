@@ -38,13 +38,6 @@ MODELS = {
 }
 
 
-def _approve_late_ore_to_power(row):
-    if not row['passed'] and row['action'] == 'OreToPower' and row['round'] in (5, 6):
-        row['passed'] = True
-        row['status'] = 'exception'
-        row['exception'] = 'approved R5-6 OreToPower: late satellite token demand'
-
-
 def _cases():
     yield from invariants()
     for scenario, state, actor in fixtures():
@@ -74,7 +67,6 @@ def run(output: Path) -> bool:
                     row = compare(before, after, actor, label, scenario,
                                   conserve, model=model)
                     row['suite'] = suite
-                    _approve_late_ore_to_power(row)
                     results[name].append(row)
 
     for token in token_rows():
@@ -84,7 +76,6 @@ def run(output: Path) -> bool:
             row = compare(before, after, actor, 'OreToPower',
                           f'tokens:{token["active_tokens"]}', token['conservation'], model=model)
             row['suite'] = 'token-shortfall'
-            _approve_late_ore_to_power(row)
             results[name].append(row)
 
     for count in (3, 7):
@@ -95,7 +86,6 @@ def run(output: Path) -> bool:
                 row = compare(before, after, actor, 'OreToPower', f'tokens:{count}',
                               conserve, model=model)
                 row['suite'] = 'token-shortfall'
-                _approve_late_ore_to_power(row)
                 results[name].append(row)
 
     counts = {name: dict(Counter(row['status'] for row in rows))
@@ -126,7 +116,7 @@ def run(output: Path) -> bool:
                      f'{row["scenario"]} {row["conservation"]} | {row["delta"]:+.6f} | {parts} |')
     (output/'failures.md').write_text('\n'.join(lines)+'\n')
     summary = {'counts': counts, 'unapproved_failures': len(failures),
-               'approved_exception': 'R5-6 OreToPower', 'games_run': 0}
+               'approved_exception': None, 'games_run': 0}
     write_json(output/'summary.json', summary)
     print(summary)
     return bool(failures)
