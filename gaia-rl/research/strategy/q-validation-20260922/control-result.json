@@ -1,0 +1,112 @@
+{
+  "seed": "state-evaluation-ab-20260917-1580",
+  "mode": "B-lite+k+n+f-prime+g+h+o+p",
+  "complete": true,
+  "decisions": 221,
+  "elapsed_seconds": 618.6,
+  "fallback_timeouts": 75,
+  "fallback_ratio": 0.3393665158371041,
+  "decision_seconds_mean": 2.7410190045248872,
+  "decision_seconds_max": 2.9099,
+  "free_action_conversions": {
+    "BurnPower": 22,
+    "OreToPower": 79,
+    "OreToPowerBowl3": 16,
+    "PowerToCredit": 21,
+    "PowerToQic": 4,
+    "PowerToOre": 2
+  },
+  "free_action_conversion_count": 144,
+  "round_max_adjacent_group_power": {
+    "1": {
+      "Terrans": 1,
+      "HadschHallas": 2,
+      "Taklons": 1,
+      "Xenos": 2
+    },
+    "2": {
+      "Terrans": 1,
+      "HadschHallas": 3,
+      "Taklons": 1,
+      "Xenos": 2
+    },
+    "3": {
+      "Terrans": 3,
+      "HadschHallas": 3,
+      "Taklons": 2,
+      "Xenos": 2
+    },
+    "4": {
+      "Terrans": 4,
+      "HadschHallas": 3,
+      "Taklons": 2,
+      "Xenos": 2
+    },
+    "5": {
+      "Terrans": 4,
+      "HadschHallas": 3,
+      "Taklons": 2,
+      "Xenos": 2
+    },
+    "6": {
+      "Terrans": 1,
+      "HadschHallas": 3,
+      "Taklons": 2,
+      "Xenos": 2
+    }
+  },
+  "federation_declarations": [
+    {
+      "step": 156,
+      "round": 5,
+      "faction": "Terrans",
+      "satellites": 10,
+      "token": {
+        "source": "Supply",
+        "kind": 1
+      }
+    },
+    {
+      "step": 188,
+      "round": 6,
+      "faction": "Xenos",
+      "satellites": 10,
+      "token": {
+        "source": "Supply",
+        "kind": 1
+      }
+    },
+    {
+      "step": 215,
+      "round": 6,
+      "faction": "HadschHallas",
+      "satellites": 13,
+      "token": {
+        "source": "Supply",
+        "kind": 1
+      }
+    }
+  ],
+  "factions": {
+    "Terrans": {
+      "buildings": 8,
+      "federations": 1,
+      "score": 96
+    },
+    "HadschHallas": {
+      "buildings": 7,
+      "federations": 1,
+      "score": 66
+    },
+    "Taklons": {
+      "buildings": 6,
+      "federations": 0,
+      "score": 40
+    },
+    "Xenos": {
+      "buildings": 8,
+      "federations": 1,
+      "score": 61
+    }
+  }
+}

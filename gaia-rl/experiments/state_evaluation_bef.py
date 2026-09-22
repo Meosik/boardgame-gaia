@@ -66,11 +66,13 @@ def _evaluate_stock(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
                    booster_one_income: bool = False, gaia_token_return: bool = False,
                    fast_expansion: bool = False, fixed_income_and_planets: bool = False,
                    direct_stock_prices: bool = False,
-                   federation_satellite_tokens: bool = False) -> base.base.Evaluation:
+                   federation_satellite_tokens: bool = False,
+                   density_bonus: bool = False) -> base.base.Evaluation:
     result = base.evaluate_state(state, actor, top_n=top_n, conserve_resources=conserve_resources,
         secured_planets=secured_planets or fixed_income_and_planets, token_shortfall=token_shortfall,
         remaining_income=remaining_income, distributed_research=distributed_research,
-        income_horizon=N_INCOME_HORIZON if fixed_income_and_planets else None)
+        income_horizon=N_INCOME_HORIZON if fixed_income_and_planets else None,
+        density_bonus=density_bonus)
     if 'ore_stock' not in result.breakdown or not (
             round_resource_prices or booster_one_income or gaia_token_return or fixed_income_and_planets
             or direct_stock_prices):
@@ -381,14 +383,16 @@ def evaluate_state(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
                    cached_expansion: bool = False,
                    fixed_income_and_planets: bool = False,
                    direct_stock_prices: bool = False,
-                   federation_satellite_tokens: bool = False) -> base.base.Evaluation:
+                   federation_satellite_tokens: bool = False,
+                   density_bonus: bool = False) -> base.base.Evaluation:
     options = dict(top_n=top_n, conserve_resources=conserve_resources, secured_planets=secured_planets,
         token_shortfall=token_shortfall, remaining_income=remaining_income,
         distributed_research=distributed_research, round_resource_prices=round_resource_prices,
         booster_one_income=booster_one_income, gaia_token_return=gaia_token_return,
         fast_expansion=fast_expansion, fixed_income_and_planets=fixed_income_and_planets,
         direct_stock_prices=direct_stock_prices,
-        federation_satellite_tokens=federation_satellite_tokens)
+        federation_satellite_tokens=federation_satellite_tokens,
+        density_bonus=density_bonus)
     result = _evaluate_stock(state, actor, **options)
     if not (expansion_rescale or discounted_expansion) or 'expansion_opportunity' not in result.breakdown:
         return result

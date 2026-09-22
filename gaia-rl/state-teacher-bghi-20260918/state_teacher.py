@@ -19,7 +19,8 @@ class StateTeacher(TimedPreparationTeacher):
         os.environ['GAIA_STATE_EVALUATION'] = '0' if 'Setup' in snapshot['state']['phase'] else '1'
         os.environ['GAIA_CONSERVATION_OFF'] = '0' if self.conserve_resources else '1'
         result = super().choose(snapshot)
-        suffix = '+o' if os.environ.get('GAIA_FEDERATION_VALUE') == '1' else ''
+        suffix = ('+o' if os.environ.get('GAIA_FEDERATION_VALUE') == '1' else '')
+        suffix += '+q' if os.environ.get('GAIA_DENSITY_BONUS') == '1' else ''
         self.last_audit['evaluation_arm'] = (('state-B-lite+k+n+f-prime'+suffix) if os.environ.get('GAIA_EXPANSION_MODE') == 'lite'
                                              and os.environ.get('GAIA_PASS_TIMING') == '1'
                                              and os.environ.get('GAIA_FIXED_INCOME_PLANETS') == '1'

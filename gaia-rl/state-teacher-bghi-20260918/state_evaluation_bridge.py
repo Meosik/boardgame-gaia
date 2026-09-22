@@ -17,7 +17,7 @@ def conservation_off():
 
 @lru_cache(maxsize=256)
 def _evaluation(state_json, actor, conserve, expansion_mode, pass_timing, fixed_income_and_planets,
-                direct_stock_prices, federation_satellite_tokens):
+                direct_stock_prices, federation_satellite_tokens, density_bonus):
     state = json.loads(state_json)
     if pass_timing and 1 <= state['round'] <= 6 and next(
             p for p in state['players'] if p['player_id'] == actor)['passed']:
@@ -30,7 +30,8 @@ def _evaluation(state_json, actor, conserve, expansion_mode, pass_timing, fixed_
                           cached_expansion=expansion_mode == 'i_prime',
                           fixed_income_and_planets=fixed_income_and_planets,
                           direct_stock_prices=direct_stock_prices,
-                          federation_satellite_tokens=federation_satellite_tokens)
+                          federation_satellite_tokens=federation_satellite_tokens,
+                          density_bonus=density_bonus)
 
 
 def evaluation(state, actor):
@@ -39,7 +40,8 @@ def evaluation(state, actor):
                        os.environ.get('GAIA_PASS_TIMING') == '1',
                        os.environ.get('GAIA_FIXED_INCOME_PLANETS') == '1',
                        os.environ.get('GAIA_DIRECT_STOCK_PRICES') == '1',
-                       os.environ.get('GAIA_FEDERATION_VALUE') == '1')
+                       os.environ.get('GAIA_FEDERATION_VALUE') == '1',
+                       os.environ.get('GAIA_DENSITY_BONUS') == '1')
 
 
 def value(state, actor):

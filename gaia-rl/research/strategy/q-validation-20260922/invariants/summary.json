@@ -1,0 +1,15 @@
+{
+  "counts": {
+    "B-lite+k+n+f-prime+g+h+o+p": {
+      "pass": 920,
+      "exception": 24
+    },
+    "B-lite+k+n+f-prime+g+h+o+p+q": {
+      "pass": 920,
+      "exception": 24
+    }
+  },
+  "unapproved_failures": 0,
+  "approved_exception": "R5-6 OreToPower",
+  "games_run": 0
+}

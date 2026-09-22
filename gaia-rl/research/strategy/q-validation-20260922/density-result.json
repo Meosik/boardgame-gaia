@@ -1,0 +1,102 @@
+{
+  "seed": "state-evaluation-ab-20260917-1580",
+  "mode": "B-lite+k+n+f-prime+g+h+o+p+q",
+  "complete": true,
+  "decisions": 205,
+  "elapsed_seconds": 573.93,
+  "fallback_timeouts": 67,
+  "fallback_ratio": 0.32682926829268294,
+  "decision_seconds_mean": 2.751000487804878,
+  "decision_seconds_max": 2.9095,
+  "free_action_conversions": {
+    "BurnPower": 16,
+    "OreToPower": 77,
+    "OreToPowerBowl3": 15,
+    "PowerToCredit": 17,
+    "PowerToQic": 1,
+    "PowerToOre": 1
+  },
+  "free_action_conversion_count": 127,
+  "round_max_adjacent_group_power": {
+    "1": {
+      "Terrans": 1,
+      "HadschHallas": 3,
+      "Taklons": 1,
+      "Xenos": 2
+    },
+    "2": {
+      "Terrans": 1,
+      "HadschHallas": 3,
+      "Taklons": 1,
+      "Xenos": 2
+    },
+    "3": {
+      "Terrans": 3,
+      "HadschHallas": 3,
+      "Taklons": 4,
+      "Xenos": 2
+    },
+    "4": {
+      "Terrans": 3,
+      "HadschHallas": 3,
+      "Taklons": 4,
+      "Xenos": 2
+    },
+    "5": {
+      "Terrans": 3,
+      "HadschHallas": 3,
+      "Taklons": 4,
+      "Xenos": 2
+    },
+    "6": {
+      "Terrans": 3,
+      "HadschHallas": 0,
+      "Taklons": 4,
+      "Xenos": 2
+    }
+  },
+  "federation_declarations": [
+    {
+      "step": 153,
+      "round": 5,
+      "faction": "HadschHallas",
+      "satellites": 10,
+      "token": {
+        "source": "Supply",
+        "kind": 1
+      }
+    },
+    {
+      "step": 203,
+      "round": 6,
+      "faction": "Xenos",
+      "satellites": 9,
+      "token": {
+        "source": "Supply",
+        "kind": 1
+      }
+    }
+  ],
+  "factions": {
+    "Terrans": {
+      "buildings": 5,
+      "federations": 0,
+      "score": 58
+    },
+    "HadschHallas": {
+      "buildings": 7,
+      "federations": 1,
+      "score": 53
+    },
+    "Taklons": {
+      "buildings": 6,
+      "federations": 0,
+      "score": 49
+    },
+    "Xenos": {
+      "buildings": 8,
+      "federations": 1,
+      "score": 87
+    }
+  }
+}

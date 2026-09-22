@@ -47,7 +47,9 @@ fn income(state: &GameState, player_id: PlayerId) -> Value {
 pub fn passed_next_round(state: &GameState, player_id: PlayerId) -> Result<GameState, RuleError> {
     let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
     if !player.passed {
-        return Err(RuleError::ActionNotAllowed("evaluation projection requires a passed player".into()));
+        return Err(RuleError::ActionNotAllowed(
+            "evaluation projection requires a passed player".into(),
+        ));
     }
     let mut projected = state.clone();
     if state.round == 6 {
@@ -56,7 +58,12 @@ pub fn passed_next_round(state: &GameState, player_id: PlayerId) -> Result<GameS
         return Ok(projected);
     }
 
-    let opponents: Vec<_> = state.players.iter().filter(|p| p.player_id != player_id).cloned().collect();
+    let opponents: Vec<_> = state
+        .players
+        .iter()
+        .filter(|p| p.player_id != player_id)
+        .cloned()
+        .collect();
     let board = state.board.clone();
     let turn_order = state.turn_order.clone();
     let pass_order = state.pass_order.clone();
@@ -77,7 +84,11 @@ pub fn passed_next_round(state: &GameState, player_id: PlayerId) -> Result<GameS
     }
     finish_round_transition(&mut projected, state.round);
     for opponent in opponents {
-        if let Some(slot) = projected.players.iter_mut().find(|p| p.player_id == opponent.player_id) {
+        if let Some(slot) = projected
+            .players
+            .iter_mut()
+            .find(|p| p.player_id == opponent.player_id)
+        {
             *slot = opponent;
         }
     }
@@ -284,6 +295,22 @@ pub fn facts(state: &GameState, player_id: PlayerId) -> Result<Value, RuleError>
     let buildings: Vec<_> = player.structures.iter().filter(|s| growth || !player.federated_hexes.contains(&s.hex))
         .map(|s| json!({"coord":s.hex,"power":faction_structure_power_value(state, player_id, s.hex, s.kind)}))
         .collect();
+    let mine_power: serde_json::Map<_, _> = state
+        .board
+        .hexes
+        .keys()
+        .map(|coord| {
+            (
+                format!("{},{}", coord.q, coord.r),
+                json!(faction_structure_power_value(
+                    state,
+                    player_id,
+                    *coord,
+                    StructureType::Mine,
+                )),
+            )
+        })
+        .collect();
     let mut token_rewards = serde_json::Map::new();
     for token in &state.research_board.federation_tokens {
         let mut copy = state.clone();
@@ -340,7 +367,8 @@ pub fn facts(state: &GameState, player_id: PlayerId) -> Result<Value, RuleError>
         "colonized_types":colonized_planet_types(state,player_id),
         "tiles":tiles,"final_tiles":final_tiles,
         "federation":{"minimum_power":federation_minimum_power(player,growth),
-                      "buildings":buildings,"growth":growth,"token_rewards":token_rewards},
+                      "buildings":buildings,"mine_power":mine_power,
+                      "growth":growth,"token_rewards":token_rewards},
     }))
 }
 

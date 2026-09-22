@@ -68,10 +68,11 @@ def evaluate_state(state: dict, actor: int, *, top_n: int = base.TOP_N,
                    conserve_resources: bool = True, secured_planets: bool = False,
                    token_shortfall: bool = False, remaining_income: bool = False,
                    distributed_research: bool = False,
-                   income_horizon: float | None = None) -> base.Evaluation:
+                   income_horizon: float | None = None,
+                   density_bonus: bool = False) -> base.Evaluation:
     result = base.evaluate_state(state, actor, top_n=top_n, conserve_resources=conserve_resources,
         secured_planets=secured_planets, token_shortfall=token_shortfall, remaining_income=remaining_income,
-        income_horizon=income_horizon)
+        income_horizon=income_horizon, density_bonus=density_bonus)
     if not distributed_research or 'research_progress' not in result.breakdown:
         return result
     player = next(p for p in state['players'] if p['player_id'] == actor)

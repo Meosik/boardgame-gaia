@@ -39,6 +39,10 @@ TOKEN_SHORTFALL_VP = 2.13
 # TODO(tune): approved remaining-income discount and linear charge price.
 REMAINING_INCOME_DISCOUNT = 0.7
 INCOME_CHARGE_VP = 0.6
+# TODO(tune): user-approved federation-density target and distance weights.
+DENSITY_TARGET_POWER = 7
+DENSITY_ADJACENT_VP = 1.0
+DENSITY_DISTANCE_TWO_VP = 0.5
 
 
 @dataclass(frozen=True)
@@ -215,7 +219,58 @@ def planet_opportunities(state: dict, player: dict, *, facts: dict | None = None
     return tuple(options)
 
 
-def _select_opportunities(state: dict, player: dict, top_n: int, facts: dict, *, conserve_resources: bool = True) -> tuple[PlanetOpportunity, ...]:
+def _hex_distance(left: str, right: str) -> int:
+    lq, lr = map(int, left.split(','))
+    rq, rr = map(int, right.split(','))
+    dq, dr = lq-rq, lr-rr
+    return max(abs(dq), abs(dr), abs(dq+dr))
+
+
+def _federation_components(buildings: list[dict]) -> tuple[tuple[frozenset[str], int], ...]:
+    powers = {row['coord']: int(row['power']) for row in buildings}
+    remaining = set(powers)
+    components = []
+    while remaining:
+        origin = remaining.pop()
+        coords = {origin}
+        pending = [origin]
+        while pending:
+            coord = pending.pop()
+            adjacent = {other for other in remaining if _hex_distance(coord, other) == 1}
+            remaining -= adjacent
+            coords.update(adjacent)
+            pending.extend(adjacent)
+        components.append((frozenset(coords), sum(powers[coord] for coord in coords)))
+    return tuple(components)
+
+
+def _density_bonus(facts: dict, coord: str) -> float:
+    """Reward a mine that reduces the remaining power-seven connectivity deficit."""
+    federation = facts['federation']
+    components = _federation_components(federation['buildings'])
+    current_power = max((power for _, power in components), default=0)
+    deficit = max(0, DENSITY_TARGET_POWER-current_power)
+    if not deficit:
+        return 0.0
+    adjacent = [component for component in components
+                if any(_hex_distance(coord, existing) == 1 for existing in component[0])]
+    if adjacent:
+        connected, weight = adjacent, DENSITY_ADJACENT_VP
+    else:
+        distance_two = [component for component in components
+                        if any(_hex_distance(coord, existing) == 2 for existing in component[0])]
+        if not distance_two:
+            return 0.0
+        connected, weight = distance_two, DENSITY_DISTANCE_TWO_VP
+    mine_power = int(federation['mine_power'][coord])
+    resulting_power = mine_power + sum(power for _, power in connected)
+    remaining = max(0, DENSITY_TARGET_POWER-max(current_power, resulting_power))
+    return (deficit-remaining)*weight
+
+
+def _select_opportunities(state: dict, player: dict, top_n: int, facts: dict, *,
+                          conserve_resources: bool = True,
+                          density_bonus: bool = False) -> tuple[PlanetOpportunity, ...]:
     # One shared budget across categories: never promise the same mine/former twice.
     pool = {key: player['resources'][key] for key in ('ore', 'credits', 'qic')}
     pool['formers'] = _free_formers(player)
@@ -226,7 +281,13 @@ def _select_opportunities(state: dict, player: dict, top_n: int, facts: dict, *,
     if not top_n or (state['round'] == 6 and player['passed']):
         return ()
     # Greedy top-N affordable options, not an optimal multi-colony route search.
-    for option in sorted(planet_opportunities(state, player, facts=facts), key=lambda o: (-o.value_vp, o.coord)):
+    def score(option: PlanetOpportunity) -> float:
+        bonus = (_density_bonus(facts, option.coord)
+                 if density_bonus and not option.delayed else 0.0)
+        return option.value_vp+bonus
+
+    for option in sorted(planet_opportunities(state, player, facts=facts),
+                         key=lambda o: (-score(o), o.coord)):
         if len(selected) >= min(top_n, supply):
             break
         if all(getattr(option, key) <= amount for key, amount in pool.items()):
@@ -511,7 +572,8 @@ def secured_planet_coords(state: dict, actor: int) -> frozenset[str]:
 
 def evaluate_state(state: dict, actor: int, *, top_n: int = TOP_N, conserve_resources: bool = True,
                    secured_planets: bool = False, token_shortfall: bool = False,
-                   remaining_income: bool = False, income_horizon: float | None = None) -> Evaluation:
+                   remaining_income: bool = False, income_horizon: float | None = None,
+                   density_bonus: bool = False) -> Evaluation:
     """Evaluate one player's current state; no candidate action is an input."""
     if type(top_n) is not int or top_n < 0:
         raise ValueError('top_n must be a nonnegative integer')
@@ -537,9 +599,13 @@ def evaluate_state(state: dict, actor: int, *, top_n: int = TOP_N, conserve_reso
     facts = engine_facts(state, player)
     breakdown['research_final_vp'] = float(sum(facts['final_track_vp'][level]
                                               for level in player['research_tracks'].values()))
-    options = _select_opportunities(state, player, top_n, facts, conserve_resources=conserve_resources)
+    options = _select_opportunities(state, player, top_n, facts,
+                                    conserve_resources=conserve_resources,
+                                    density_bonus=density_bonus)
     breakdown['expansion_opportunity'] = sum(o.value_vp for o in options if o.category == 'expansion')
     breakdown['gaia_opportunity'] = sum(o.value_vp for o in options if o.category == 'gaia')
+    breakdown['density_bonus'] = (sum(_density_bonus(facts, option.coord) for option in options
+                                      if not option.delayed) if density_bonus else 0.0)
     breakdown['research_progress'] = research_progress(state, player, facts)
     modifier = faction_modifier(state, player, facts=facts)
     federation = federation_values(state, player, modifier)

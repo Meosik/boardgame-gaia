@@ -1,0 +1,11 @@
+{
+  "verified_decisions": 205,
+  "terminal": true,
+  "scores": {
+    "Terrans": 58,
+    "HadschHallas": 53,
+    "Taklons": 49,
+    "Xenos": 87
+  },
+  "trace_sha256": "dd22b093e5ece523c1f7794f41a5514e97830f87e80174ee27281ffab12a9a17"
+}
