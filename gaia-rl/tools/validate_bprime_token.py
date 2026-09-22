@@ -4,6 +4,7 @@ from collections import Counter
 import copy
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 
 from diagnose_research_bc import token_rows
@@ -145,7 +146,9 @@ def validate(output: Path, *, reachable_planets: bool = False) -> bool:
                                 if row['exception'] is not None})
     summary = {
         'flag': {'GAIA_TOKEN_ORE_PRICE': '1',
-                 'GAIA_REACHABLE_PLANETS': '1' if reachable_planets else '0'},
+                 'GAIA_REACHABLE_PLANETS': '1' if reachable_planets else '0',
+                 'GAIA_FEDERATION_FALLBACK_STABLE': os.environ.get(
+                     'GAIA_FEDERATION_FALLBACK_STABLE', '0')},
         'formula': 'shortfall * (f-prime round ore price * 0.8)',
         'ore_to_token': {
             'cases': len(ore_to_token), 'failures': sum(not row['passed'] for row in ore_to_token),

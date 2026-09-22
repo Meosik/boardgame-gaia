@@ -12,6 +12,14 @@ from four_factions.value import placement
 from state_evaluation_bridge import potential
 
 
+def prioritize_federations(ordered, candidates, *, stable):
+    """Move federation actions first without changing unrelated order when requested."""
+    if stable:
+        ordered.sort(key=lambda i: candidates[i]['action']['type'] != 'FormFederation')
+    else:
+        ordered.sort(key=lambda i: (candidates[i]['action']['type'] != 'FormFederation', i))
+
+
 def fallback(env, snapshot, memory, *, deadline, fixed_openings=False):
     from faction_teachers.profiles import profiles
     from four_factions.preparation import interleave_families
@@ -57,7 +65,11 @@ def fallback(env, snapshot, memory, *, deadline, fixed_openings=False):
         ordered.sort(key=lambda i: (candidates[i]['action']['type'] != 'Upgrade',
                                    candidates[i]['action'].get('kind') == 'BurnPower'))
     if federation_five:
-        ordered.sort(key=lambda i: (candidates[i]['action']['type'] != 'FormFederation', i))
+        # The opt-in branch keeps every existing priority tie/order intact and
+        # is a no-op when no federation candidate exists.
+        prioritize_federations(
+            ordered, candidates,
+            stable=os.environ.get('GAIA_FEDERATION_FALLBACK_STABLE') == '1')
     mandatory = {i for i in ordered if federation_five and candidates[i]['action']['type'] == 'FormFederation'}
     for i in ordered:
         if evaluated and time.monotonic() >= deadline and not mandatory:

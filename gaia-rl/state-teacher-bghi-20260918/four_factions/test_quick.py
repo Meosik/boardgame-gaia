@@ -15,6 +15,25 @@ from four_factions.test_preparation import PREFIX, SEED, root
 
 
 class QuickTests(unittest.TestCase):
+    def test_stable_federation_priority_preserves_the_existing_order(self):
+        from four_factions.quick import prioritize_federations
+        candidates = [
+            {'action': {'type': action_type}}
+            for action_type in ('FreeAction', 'Pass', 'FormFederation', 'ResearchAdvance',
+                                'FormFederation', 'Build')
+        ]
+        without_federation = [1, 5, 3, 0]
+        prioritize_federations(without_federation, candidates, stable=True)
+        self.assertEqual(without_federation, [1, 5, 3, 0])
+
+        with_federation = [1, 4, 5, 2, 3, 0]
+        prioritize_federations(with_federation, candidates, stable=True)
+        self.assertEqual(with_federation, [4, 2, 1, 5, 3, 0])
+
+        legacy = [1, 4, 5, 2, 3, 0]
+        prioritize_federations(legacy, candidates, stable=False)
+        self.assertEqual(legacy, [2, 4, 0, 1, 3, 5])
+
     def test_all_eighteen_native_factions_have_a_paid_fallback(self):
         from faction_learning import FACTIONS
         from four_factions.quick import fallback

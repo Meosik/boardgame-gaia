@@ -65,6 +65,7 @@ def run(output: Path, seed: str, target_seconds: float, maximum_seconds: float) 
         raise RuntimeError('This diagnostic requires GAIA_DENSITY_BONUS=0')
     token_ore_price = os.environ.get('GAIA_TOKEN_ORE_PRICE') == '1'
     reachable_planets = os.environ.get('GAIA_REACHABLE_PLANETS') == '1'
+    federation_fallback_stable = os.environ.get('GAIA_FEDERATION_FALLBACK_STABLE') == '1'
     output.mkdir(parents=True, exist_ok=False)
     env = Environment(seed, 2000)
     teacher = StateTeacher(
@@ -137,10 +138,12 @@ def run(output: Path, seed: str, target_seconds: float, maximum_seconds: float) 
         'games': 1,
         'mode': ('B-lite+k+n+f-prime+g+h+o+p'
                  + ('+b-prime' if token_ore_price else '')
-                 + ('+r' if reachable_planets else '')),
+                 + ('+r' if reachable_planets else '')
+                 + ('+p-fix' if federation_fallback_stable else '')),
         'density_bonus': False,
         'token_ore_price': token_ore_price,
         'reachable_planets': reachable_planets,
+        'federation_fallback_stable': federation_fallback_stable,
         'target_seconds': target_seconds,
         'maximum_seconds': maximum_seconds,
         'complete': env.is_terminal(),

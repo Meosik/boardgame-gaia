@@ -1,0 +1,14 @@
+{
+  "flag": "GAIA_FEDERATION_FALLBACK_STABLE=1",
+  "quick_fallback_tests": {"run": 10, "failures": 0},
+  "full_invariants": {"cases": 944, "pass": 928, "approved_exceptions": 16, "failures": 0},
+  "ore_to_token": {"cases": 264, "failures": 0},
+  "three_step_cycle": {"cases": 216, "failures": 0},
+  "rust": {"passed": 531, "ignored": 3, "failures": 0, "check": "pass", "clippy_D_warnings": "pass"},
+  "python_discover": {
+    "run": 362,
+    "passed": 361,
+    "errors": 1,
+    "pre_existing_error": "ModuleNotFoundError: faction_teachers.guidance"
+  }
+}
