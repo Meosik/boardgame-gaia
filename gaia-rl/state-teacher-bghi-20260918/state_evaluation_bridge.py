@@ -18,10 +18,12 @@ def conservation_off():
 @lru_cache(maxsize=256)
 def _evaluation(state_json, actor, conserve, expansion_mode, pass_timing, fixed_income_and_planets,
                 direct_stock_prices, federation_satellite_tokens, density_bonus, token_ore_price,
-                reachable_planets):
+                reachable_planets, pass_realized_income):
     state = json.loads(state_json)
+    realized_income = False
     if pass_timing and 1 <= state['round'] <= 6 and next(
             p for p in state['players'] if p['player_id'] == actor)['passed']:
+        realized_income = pass_realized_income and state['round'] < 6
         state = json.loads(evaluation_pass_next_round_json(state_json, actor))
     return evaluate_state(state, actor, conserve_resources=conserve,
                           token_shortfall=True, remaining_income=True,
@@ -34,6 +36,7 @@ def _evaluation(state_json, actor, conserve, expansion_mode, pass_timing, fixed_
                           federation_satellite_tokens=federation_satellite_tokens,
                           density_bonus=density_bonus,
                           token_ore_price=token_ore_price,
+                          pass_realized_income=realized_income,
                           reachable_planets=reachable_planets)
 
 
@@ -46,7 +49,8 @@ def evaluation(state, actor):
                        os.environ.get('GAIA_FEDERATION_VALUE') == '1',
                        os.environ.get('GAIA_DENSITY_BONUS') == '1',
                        os.environ.get('GAIA_TOKEN_ORE_PRICE') == '1',
-                       os.environ.get('GAIA_REACHABLE_PLANETS') == '1')
+                       os.environ.get('GAIA_REACHABLE_PLANETS') == '1',
+                       os.environ.get('GAIA_PASS_REALIZED_INCOME') == '1')
 
 
 def value(state, actor):

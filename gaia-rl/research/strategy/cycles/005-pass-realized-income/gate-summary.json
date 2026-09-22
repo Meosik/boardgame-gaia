@@ -1,0 +1,23 @@
+{
+  "flags": {
+    "GAIA_FEDERATION_FALLBACK_STABLE": "1",
+    "GAIA_PASS_REALIZED_INCOME": "1"
+  },
+  "targeted_python": {"run": 20, "failures": 0},
+  "pass_recheck": {
+    "cases": 17,
+    "build_beats_pass": 13,
+    "income_related_residual_mean_absolute_vp": 0.20017361111111812,
+    "r6_unchanged": true
+  },
+  "full_invariants": {"cases": 944, "pass": 928, "approved_exceptions": 16, "failures": 0},
+  "ore_to_token": {"cases": 264, "failures": 0},
+  "three_step_cycle": {"cases": 216, "failures": 0},
+  "rust": {"passed": 531, "ignored": 3, "failures": 0, "check": "pass", "clippy_D_warnings": "pass"},
+  "python_discover": {
+    "run": 363,
+    "passed": 362,
+    "errors": 1,
+    "pre_existing_error": "ModuleNotFoundError: faction_teachers.guidance"
+  }
+}

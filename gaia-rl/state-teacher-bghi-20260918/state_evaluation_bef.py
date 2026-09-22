@@ -21,6 +21,7 @@ STONE_BOWLS = {'Area1': 'bowl1', 'Area2': 'bowl2', 'Area3': 'bowl3'}
 # TODO(tune): discounted value of normal power tokens returning after the Gaia phase.
 GAIA_TOKEN_RETURN_DISCOUNT = 0.8
 N_INCOME_HORIZON = 3.5  # TODO(tune): one next income, independent of the live round.
+PASS_REALIZED_INCOME_HORIZON = N_INCOME_HORIZON - 1
 N_SECURED_PLANET_VP = (0.0, 4.0, 4.0, 4.0, 3.0, 2.0, 1.0)  # TODO(tune)
 # TODO(tune): B18-03/B19-06; prioritize at most four currently fundable colonies.
 R_REACHABLE_WEIGHTS = (1.0, 0.6, 0.4, 0.2)
@@ -105,11 +106,15 @@ def _evaluate_stock(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
                    federation_satellite_tokens: bool = False,
                    density_bonus: bool = False,
                    token_ore_price: bool = False,
+                   pass_realized_income: bool = False,
                    reachable_planets: bool = False) -> base.base.Evaluation:
+    income_horizon = (PASS_REALIZED_INCOME_HORIZON
+                      if fixed_income_and_planets and pass_realized_income
+                      else N_INCOME_HORIZON)
     result = base.evaluate_state(state, actor, top_n=top_n, conserve_resources=conserve_resources,
         secured_planets=secured_planets or fixed_income_and_planets, token_shortfall=token_shortfall,
         remaining_income=remaining_income, distributed_research=distributed_research,
-        income_horizon=N_INCOME_HORIZON if fixed_income_and_planets else None,
+        income_horizon=income_horizon if fixed_income_and_planets else None,
         density_bonus=density_bonus)
     if 'ore_stock' not in result.breakdown or not (
             round_resource_prices or booster_one_income or gaia_token_return or fixed_income_and_planets
@@ -121,7 +126,7 @@ def _evaluate_stock(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
     power = resources['power']
     if booster_one_income and remaining_income and (state['round'] < 6 or fixed_income_and_planets):
         # A held booster is guaranteed for the next income, not every later round.
-        surplus_horizon = (N_INCOME_HORIZON-(1 if state['round'] < 6 else 0) if fixed_income_and_planets
+        surplus_horizon = (income_horizon-(1 if state['round'] < 6 else 0) if fixed_income_and_planets
                            else (5-state['round']) * base.base.REMAINING_INCOME_DISCOUNT)
         breakdown['future_income'] -= (surplus_horizon
                                        * _booster_income_vp(player))
@@ -437,6 +442,7 @@ def evaluate_state(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
                    federation_satellite_tokens: bool = False,
                    density_bonus: bool = False,
                    token_ore_price: bool = False,
+                   pass_realized_income: bool = False,
                    reachable_planets: bool = False) -> base.base.Evaluation:
     options = dict(top_n=top_n, conserve_resources=conserve_resources, secured_planets=secured_planets,
         token_shortfall=token_shortfall, remaining_income=remaining_income,
@@ -446,6 +452,7 @@ def evaluate_state(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
         direct_stock_prices=direct_stock_prices,
         federation_satellite_tokens=federation_satellite_tokens,
         density_bonus=density_bonus, token_ore_price=token_ore_price,
+        pass_realized_income=pass_realized_income,
         reachable_planets=reachable_planets)
     result = _evaluate_stock(state, actor, **options)
     if not (expansion_rescale or discounted_expansion) or 'expansion_opportunity' not in result.breakdown:

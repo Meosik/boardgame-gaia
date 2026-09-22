@@ -24,6 +24,7 @@ class StateTeacher(TimedPreparationTeacher):
         suffix += '+b-prime' if os.environ.get('GAIA_TOKEN_ORE_PRICE') == '1' else ''
         suffix += '+r' if os.environ.get('GAIA_REACHABLE_PLANETS') == '1' else ''
         suffix += '+p-fix' if os.environ.get('GAIA_FEDERATION_FALLBACK_STABLE') == '1' else ''
+        suffix += '+k-income' if os.environ.get('GAIA_PASS_REALIZED_INCOME') == '1' else ''
         self.last_audit['evaluation_arm'] = (('state-B-lite+k+n+f-prime'+suffix) if os.environ.get('GAIA_EXPANSION_MODE') == 'lite'
                                              and os.environ.get('GAIA_PASS_TIMING') == '1'
                                              and os.environ.get('GAIA_FIXED_INCOME_PLANETS') == '1'

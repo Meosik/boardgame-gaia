@@ -1,0 +1,61 @@
+{
+  "control": {
+    "games": 4,
+    "mean": {
+      "buildings": 26.0,
+      "federations": 2.5,
+      "score": 224.75,
+      "conversions": 62.25,
+      "decisions": 157.25,
+      "fallback_ratio": 0.206103076108413,
+      "navigation": 0.25
+    },
+    "conversion_units_by_type_mean": {
+      "BurnPower": 11.0,
+      "OreToPower": 33.25,
+      "OreToPowerBowl3": 4.25,
+      "PowerToCredit": 12.25,
+      "PowerToKnowledge": 0.25,
+      "PowerToOre": 0.75,
+      "PowerToQic": 0.5
+    },
+    "conversion_units_by_path_mean": {
+      "fallback": 3.75,
+      "normal": 58.5
+    }
+  },
+  "variant": {
+    "games": 4,
+    "mean": {
+      "buildings": 26.0,
+      "federations": 2.0,
+      "score": 195.5,
+      "conversions": 72.75,
+      "decisions": 170.25,
+      "fallback_ratio": 0.25947289926953604,
+      "navigation": 0.0
+    },
+    "conversion_units_by_type_mean": {
+      "BurnPower": 15.0,
+      "CreditsToQic": 0.5,
+      "OreToPower": 37.25,
+      "OreToPowerBowl3": 4.5,
+      "PowerToCredit": 13.25,
+      "PowerToOre": 1.25,
+      "PowerToQic": 1.0
+    },
+    "conversion_units_by_path_mean": {
+      "fallback": 7.0,
+      "normal": 65.75
+    }
+  },
+  "change": {
+    "buildings": 0.0,
+    "federations": -0.5,
+    "score": -29.25,
+    "conversions": 10.5,
+    "decisions": 13.0,
+    "navigation": -0.25,
+    "fallback_percentage_points": 5.336982316112304
+  }
+}

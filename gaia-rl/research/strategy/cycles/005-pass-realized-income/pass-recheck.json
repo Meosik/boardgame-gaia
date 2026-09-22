@@ -1,0 +1,1207 @@
+{
+  "summary": {
+    "normal_passes": 61,
+    "build_recheck": {
+      "cases": 17,
+      "build_beats_pass": 13,
+      "ratio": 0.7647058823529411
+    },
+    "income_related_residual": {
+      "mean_absolute_vp": 0.20017361111111812,
+      "max_absolute_vp": 2.6699999999999946
+    },
+    "r6_unchanged": true,
+    "by_round": {
+      "1": {
+        "normal_passes": 8,
+        "old_pass_delta_vp_mean": 13.389946323056282,
+        "new_pass_delta_vp_mean": 2.3761963230562824,
+        "build_available": 7,
+        "build_beats_new_pass": 6,
+        "decomposition_mean": {
+          "booster_replacement_delta_vp": -1.1679710823192373,
+          "round_price_delta_vp": 0.0,
+          "projected_nonbooster_income_vp": 10.68,
+          "future_income_horizon_adjustment_vp": -11.01375,
+          "income_related_residual_vp": -0.3337500000000002
+        }
+      },
+      "2": {
+        "normal_passes": 8,
+        "old_pass_delta_vp_mean": 8.89797182919116,
+        "new_pass_delta_vp_mean": -2.1157781708088415,
+        "build_available": 7,
+        "build_beats_new_pass": 4,
+        "decomposition_mean": {
+          "booster_replacement_delta_vp": 2.3150488177648594,
+          "round_price_delta_vp": -10.309125000000002,
+          "projected_nonbooster_income_vp": 10.68,
+          "future_income_horizon_adjustment_vp": -11.013750000000002,
+          "income_related_residual_vp": -0.333750000000002
+        }
+      },
+      "3": {
+        "normal_passes": 10,
+        "old_pass_delta_vp_mean": 3.1978243480352746,
+        "new_pass_delta_vp_mean": -16.225675651964732,
+        "build_available": 2,
+        "build_beats_new_pass": 2,
+        "decomposition_mean": {
+          "booster_replacement_delta_vp": -0.6130254794869018,
+          "round_price_delta_vp": -12.686999999999996,
+          "projected_nonbooster_income_vp": 19.236666666666665,
+          "future_income_horizon_adjustment_vp": -19.423500000000008,
+          "income_related_residual_vp": -0.18683333333334087
+        }
+      },
+      "4": {
+        "normal_passes": 12,
+        "old_pass_delta_vp_mean": -0.23946610480804983,
+        "new_pass_delta_vp_mean": -24.112799438141387,
+        "build_available": 1,
+        "build_beats_new_pass": 1,
+        "decomposition_mean": {
+          "booster_replacement_delta_vp": 0.08118223422865019,
+          "round_price_delta_vp": -13.678749999999999,
+          "projected_nonbooster_income_vp": 23.784444444444443,
+          "future_income_horizon_adjustment_vp": -23.87333333333334,
+          "income_related_residual_vp": -0.0888888888888942
+        }
+      },
+      "5": {
+        "normal_passes": 10,
+        "old_pass_delta_vp_mean": -5.520156122569086,
+        "new_pass_delta_vp_mean": -35.08215612256908,
+        "build_available": 0,
+        "build_beats_new_pass": 0,
+        "decomposition_mean": {
+          "booster_replacement_delta_vp": 0.24505114250964938,
+          "round_price_delta_vp": -10.671,
+          "projected_nonbooster_income_vp": 29.428666666666665,
+          "future_income_horizon_adjustment_vp": -29.561999999999998,
+          "income_related_residual_vp": -0.1333333333333318
+        }
+      },
+      "6": {
+        "normal_passes": 13,
+        "old_pass_delta_vp_mean": -114.74955586080587,
+        "new_pass_delta_vp_mean": -114.74955586080587,
+        "build_available": 0,
+        "build_beats_new_pass": 0,
+        "decomposition_mean": {
+          "booster_replacement_delta_vp": 0.0,
+          "round_price_delta_vp": 0.0,
+          "projected_nonbooster_income_vp": 30.337179487179487,
+          "future_income_horizon_adjustment_vp": 0.0,
+          "income_related_residual_vp": 0.0
+        }
+      }
+    },
+    "checks": {
+      "income_related_mean_absolute_vp_at_most_0_25": true,
+      "r6_unchanged": true,
+      "build_recheck_complete": true
+    },
+    "passed": true
+  },
+  "passes": [
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 13,
+      "round": 1,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 13.247959183673458,
+      "new_pass_delta_vp": 2.5679591836734517,
+      "best_build_delta_vp": 7.6905448475686455,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 15,
+      "round": 1,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 10.592536443148703,
+      "new_pass_delta_vp": -0.08746355685130425,
+      "best_build_delta_vp": 0.7790014401630003,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": -5.340000000000003,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 19,
+      "round": 2,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 4.527500000000003,
+      "new_pass_delta_vp": -6.152500000000003,
+      "best_build_delta_vp": 0.6696719940988487,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": -10.822500000000002,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 21,
+      "round": 2,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 9.635084711303875,
+      "new_pass_delta_vp": -1.0449152886961315,
+      "best_build_delta_vp": -5.561195352839917,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": -10.452500000000002,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 42,
+      "round": 3,
+      "faction": "Xenos",
+      "old_pass_delta_vp": 10.192409638554238,
+      "new_pass_delta_vp": -9.832590361445767,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 4.3700000000000045,
+        "round_price_delta_vp": -12.779999999999996,
+        "projected_nonbooster_income_vp": 18.689999999999998,
+        "future_income_horizon_adjustment_vp": -20.025000000000006,
+        "income_related_residual_vp": -1.335000000000008
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 44,
+      "round": 3,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 4.840000000000003,
+      "new_pass_delta_vp": -11.180000000000007,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": -13.259999999999996,
+        "projected_nonbooster_income_vp": 16.02,
+        "future_income_horizon_adjustment_vp": -16.02000000000001,
+        "income_related_residual_vp": -1.0658141036401503e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 46,
+      "round": 3,
+      "faction": "HadschHallas",
+      "old_pass_delta_vp": 2.9499999999999886,
+      "new_pass_delta_vp": -18.54000000000002,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 1.7499999999999716,
+        "round_price_delta_vp": -14.099999999999994,
+        "projected_nonbooster_income_vp": 20.956666666666667,
+        "future_income_horizon_adjustment_vp": -21.49000000000001,
+        "income_related_residual_vp": -0.5333333333333421
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 49,
+      "round": 3,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 4.329999999999984,
+      "new_pass_delta_vp": -19.700000000000045,
+      "best_build_delta_vp": -0.7056824512534945,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": -1.0000000000000284,
+        "round_price_delta_vp": -11.669999999999996,
+        "projected_nonbooster_income_vp": 24.03,
+        "future_income_horizon_adjustment_vp": -24.03000000000003,
+        "income_related_residual_vp": -2.842170943040401e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 68,
+      "round": 4,
+      "faction": "HadschHallas",
+      "old_pass_delta_vp": -0.789999999999992,
+      "new_pass_delta_vp": -24.950000000000017,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 1.0,
+        "round_price_delta_vp": -18.07,
+        "projected_nonbooster_income_vp": 23.62666666666667,
+        "future_income_horizon_adjustment_vp": -24.160000000000025,
+        "income_related_residual_vp": -0.5333333333333563
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 70,
+      "round": 4,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -1.18683359013869,
+      "new_pass_delta_vp": -27.88683359013868,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": -13.195,
+        "projected_nonbooster_income_vp": 26.699999999999996,
+        "future_income_horizon_adjustment_vp": -26.69999999999999,
+        "income_related_residual_vp": 7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 77,
+      "round": 4,
+      "faction": "Xenos",
+      "old_pass_delta_vp": -1.4075903614458127,
+      "new_pass_delta_vp": -28.1075903614458,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -3.6699999999999875,
+        "round_price_delta_vp": -11.04,
+        "projected_nonbooster_income_vp": 26.699999999999996,
+        "future_income_horizon_adjustment_vp": -26.69999999999999,
+        "income_related_residual_vp": 7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 78,
+      "round": 4,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 4.053037542662111,
+      "new_pass_delta_vp": -19.97696245733789,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 3.670000000000016,
+        "round_price_delta_vp": -15.59,
+        "projected_nonbooster_income_vp": 24.03,
+        "future_income_horizon_adjustment_vp": -24.03,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 110,
+      "round": 5,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -0.9900000000000091,
+      "new_pass_delta_vp": -33.03,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.07999999999998408,
+        "round_price_delta_vp": -11.04,
+        "projected_nonbooster_income_vp": 32.04,
+        "future_income_horizon_adjustment_vp": -32.03999999999999,
+        "income_related_residual_vp": 7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 127,
+      "round": 5,
+      "faction": "Xenos",
+      "old_pass_delta_vp": -7.150000000000006,
+      "new_pass_delta_vp": -39.19,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": -10.44,
+        "projected_nonbooster_income_vp": 32.04,
+        "future_income_horizon_adjustment_vp": -32.03999999999999,
+        "income_related_residual_vp": 7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 129,
+      "round": 5,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -9.28000000000003,
+      "new_pass_delta_vp": -41.32000000000002,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -0.4000000000000057,
+        "round_price_delta_vp": -8.94,
+        "projected_nonbooster_income_vp": 32.04,
+        "future_income_horizon_adjustment_vp": -32.03999999999999,
+        "income_related_residual_vp": 7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 136,
+      "round": 5,
+      "faction": "HadschHallas",
+      "old_pass_delta_vp": -7.230000000000018,
+      "new_pass_delta_vp": -34.06,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.4000000000000057,
+        "round_price_delta_vp": -12.24,
+        "projected_nonbooster_income_vp": 26.296666666666667,
+        "future_income_horizon_adjustment_vp": -26.829999999999984,
+        "income_related_residual_vp": -0.5333333333333172
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 152,
+      "round": 6,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -130.82761904761907,
+      "new_pass_delta_vp": -130.82761904761907,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 34.71,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 164,
+      "round": 6,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -122.245,
+      "new_pass_delta_vp": -122.245,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 34.71,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 167,
+      "round": 6,
+      "faction": "HadschHallas",
+      "old_pass_delta_vp": -110.37190476190477,
+      "new_pass_delta_vp": -110.37190476190477,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 28.966666666666665,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "step": 172,
+      "round": 6,
+      "faction": "Xenos",
+      "old_pass_delta_vp": -145.89541666666668,
+      "new_pass_delta_vp": -145.89541666666668,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 38.04333333333334,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 13,
+      "round": 1,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 13.520996726335596,
+      "new_pass_delta_vp": 2.8409967263355895,
+      "best_build_delta_vp": 7.535748929201304,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 14,
+      "round": 1,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 15.747959183673458,
+      "new_pass_delta_vp": 5.06795918367348,
+      "best_build_delta_vp": 0.8895699532825176,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.679999999999978,
+        "income_related_residual_vp": 2.1316282072803006e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 18,
+      "round": 2,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 2.897500000000008,
+      "new_pass_delta_vp": -7.782499999999999,
+      "best_build_delta_vp": 0.762018932874355,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": -0.5,
+        "round_price_delta_vp": -10.415500000000002,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 22,
+      "round": 2,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 8.51893858049661,
+      "new_pass_delta_vp": -2.1610614195033975,
+      "best_build_delta_vp": -3.2775315801868032,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": -10.452500000000002,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 51,
+      "round": 3,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 4.139999999999986,
+      "new_pass_delta_vp": -17.75,
+      "best_build_delta_vp": -11.887111022682063,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.4399999999999977,
+        "round_price_delta_vp": -13.289999999999997,
+        "projected_nonbooster_income_vp": 21.89,
+        "future_income_horizon_adjustment_vp": -21.889999999999986,
+        "income_related_residual_vp": 1.4210854715202004e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 58,
+      "round": 3,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -0.47999999999998977,
+      "new_pass_delta_vp": -21.840000000000003,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -0.4399999999999977,
+        "round_price_delta_vp": -13.679999999999996,
+        "projected_nonbooster_income_vp": 21.36,
+        "future_income_horizon_adjustment_vp": -21.360000000000014,
+        "income_related_residual_vp": -1.4210854715202004e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 82,
+      "round": 4,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -1.1899999999999977,
+      "new_pass_delta_vp": -22.549999999999997,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.37000000000000455,
+        "round_price_delta_vp": -11.76,
+        "projected_nonbooster_income_vp": 21.36,
+        "future_income_horizon_adjustment_vp": -21.36,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 95,
+      "round": 4,
+      "faction": "Xenos",
+      "old_pass_delta_vp": -0.5200000000000102,
+      "new_pass_delta_vp": -24.55000000000001,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -1.0999999999999943,
+        "round_price_delta_vp": -11.55,
+        "projected_nonbooster_income_vp": 24.03,
+        "future_income_horizon_adjustment_vp": -24.03,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 97,
+      "round": 4,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 4.610682451253467,
+      "new_pass_delta_vp": -25.28931754874654,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.7299999999999898,
+        "round_price_delta_vp": -16.445,
+        "projected_nonbooster_income_vp": 29.9,
+        "future_income_horizon_adjustment_vp": -29.900000000000006,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 100,
+      "round": 4,
+      "faction": "HadschHallas",
+      "old_pass_delta_vp": -2.4000000000000057,
+      "new_pass_delta_vp": -26.56000000000003,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": -13.680000000000001,
+        "projected_nonbooster_income_vp": 23.626666666666665,
+        "future_income_horizon_adjustment_vp": -24.160000000000025,
+        "income_related_residual_vp": -0.5333333333333599
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 114,
+      "round": 5,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -8.569999999999993,
+      "new_pass_delta_vp": -32.599999999999994,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0799999999999983,
+        "round_price_delta_vp": -10.62,
+        "projected_nonbooster_income_vp": 24.03,
+        "future_income_horizon_adjustment_vp": -24.03,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 131,
+      "round": 5,
+      "faction": "Xenos",
+      "old_pass_delta_vp": -8.679999999999978,
+      "new_pass_delta_vp": -38.04999999999998,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.040000000000020464,
+        "round_price_delta_vp": -11.28,
+        "projected_nonbooster_income_vp": 29.369999999999997,
+        "future_income_horizon_adjustment_vp": -29.370000000000005,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 138,
+      "round": 5,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -1.0800000000000125,
+      "new_pass_delta_vp": -42.390000000000015,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -0.0800000000000125,
+        "round_price_delta_vp": -12.48,
+        "projected_nonbooster_income_vp": 40.51,
+        "future_income_horizon_adjustment_vp": -41.31,
+        "income_related_residual_vp": -0.8000000000000043
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 151,
+      "round": 6,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -99.61547619047619,
+      "new_pass_delta_vp": -99.61547619047619,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 26.7,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 172,
+      "round": 6,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -154.90333333333334,
+      "new_pass_delta_vp": -154.90333333333334,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 43.18,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 176,
+      "round": 6,
+      "faction": "HadschHallas",
+      "old_pass_delta_vp": -120.63261904761907,
+      "new_pass_delta_vp": -120.63261904761907,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 32.166666666666664,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 14,
+      "round": 1,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 12.683333333333337,
+      "new_pass_delta_vp": 2.0033333333333445,
+      "best_build_delta_vp": 8.246246120175087,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": -0.6666666666666572,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.679999999999993,
+        "income_related_residual_vp": 7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 17,
+      "round": 1,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 18.597499999999968,
+      "new_pass_delta_vp": 5.247499999999974,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 5.340000000000003,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -13.349999999999994,
+        "income_related_residual_vp": -2.6699999999999946
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 18,
+      "round": 2,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 7.170537542662117,
+      "new_pass_delta_vp": -3.5094624573378894,
+      "best_build_delta_vp": 5.246246120175101,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": 2.299999999999997,
+        "round_price_delta_vp": -10.452500000000002,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 21,
+      "round": 2,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 11.726959004197738,
+      "new_pass_delta_vp": 1.0469590041977312,
+      "best_build_delta_vp": -11.81101328273246,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 3.8869214615356213,
+        "round_price_delta_vp": -10.082500000000001,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 40,
+      "round": 3,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -1.760295790671222,
+      "new_pass_delta_vp": -15.110295790671216,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.6666666666666856,
+        "round_price_delta_vp": -13.499999999999996,
+        "projected_nonbooster_income_vp": 13.35,
+        "future_income_horizon_adjustment_vp": -13.349999999999994,
+        "income_related_residual_vp": 5.329070518200751e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 42,
+      "round": 3,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 0.7130375426621072,
+      "new_pass_delta_vp": -20.646962457337906,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -7.546921461535646,
+        "round_price_delta_vp": -12.659999999999998,
+        "projected_nonbooster_income_vp": 21.36,
+        "future_income_horizon_adjustment_vp": -21.360000000000014,
+        "income_related_residual_vp": -1.4210854715202004e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 54,
+      "round": 4,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -0.08397773540181674,
+      "new_pass_delta_vp": -21.44397773540183,
+      "best_build_delta_vp": -1.9480375426621208,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": 6.395682451253492,
+        "round_price_delta_vp": -19.584999999999997,
+        "projected_nonbooster_income_vp": 21.36,
+        "future_income_horizon_adjustment_vp": -21.360000000000014,
+        "income_related_residual_vp": -1.4210854715202004e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 57,
+      "round": 4,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -1.1589115646258392,
+      "new_pass_delta_vp": -19.84891156462585,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -0.6666666666666714,
+        "round_price_delta_vp": -9.73,
+        "projected_nonbooster_income_vp": 18.689999999999998,
+        "future_income_horizon_adjustment_vp": -18.690000000000012,
+        "income_related_residual_vp": -1.4210854715202004e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 69,
+      "round": 5,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -2.162072650787337,
+      "new_pass_delta_vp": -20.852072650787335,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.9856824512534814,
+        "round_price_delta_vp": -9.149999999999999,
+        "projected_nonbooster_income_vp": 18.689999999999998,
+        "future_income_horizon_adjustment_vp": -18.689999999999998,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 106,
+      "round": 6,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -95.57499999999999,
+      "new_pass_delta_vp": -95.57499999999999,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 24.29,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 118,
+      "round": 6,
+      "faction": "Xenos",
+      "old_pass_delta_vp": -92.9292857142857,
+      "new_pass_delta_vp": -92.9292857142857,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 23.759999999999998,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-11285",
+      "step": 121,
+      "round": 6,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -142.41833333333335,
+      "new_pass_delta_vp": -142.41833333333335,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 36.376666666666665,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 13,
+      "round": 1,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 11.683333333333366,
+      "new_pass_delta_vp": 1.0033333333333587,
+      "best_build_delta_vp": 4.0500071098929595,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": -0.6666666666666572,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 14,
+      "round": 1,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 11.045952380952372,
+      "new_pass_delta_vp": 0.3659523809523648,
+      "best_build_delta_vp": 4.381088689648152,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": -8.010435325220584,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -10.680000000000007,
+        "income_related_residual_vp": -7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 22,
+      "round": 2,
+      "faction": "Terrans",
+      "old_pass_delta_vp": 17.13142146153561,
+      "new_pass_delta_vp": 5.116421461535623,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 8.65942146153563,
+        "round_price_delta_vp": -9.712500000000002,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -12.014999999999986,
+        "income_related_residual_vp": -1.3349999999999866
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 23,
+      "round": 2,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 9.575833333333321,
+      "new_pass_delta_vp": -2.439166666666665,
+      "best_build_delta_vp": 1.0811617900172052,
+      "build_beats_new_pass": true,
+      "decomposition": {
+        "booster_replacement_delta_vp": 4.174047619047627,
+        "round_price_delta_vp": -10.082500000000001,
+        "projected_nonbooster_income_vp": 10.68,
+        "future_income_horizon_adjustment_vp": -12.014999999999986,
+        "income_related_residual_vp": -1.3349999999999866
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 46,
+      "round": 3,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -1.7600000000000193,
+      "new_pass_delta_vp": -17.78000000000003,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -7.340682451253485,
+        "round_price_delta_vp": -10.259999999999998,
+        "projected_nonbooster_income_vp": 16.02,
+        "future_income_horizon_adjustment_vp": -16.02000000000001,
+        "income_related_residual_vp": -1.0658141036401503e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 50,
+      "round": 3,
+      "faction": "Taklons",
+      "old_pass_delta_vp": 8.813092089807668,
+      "new_pass_delta_vp": -9.87690791019233,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 2.970682451253481,
+        "round_price_delta_vp": -11.669999999999996,
+        "projected_nonbooster_income_vp": 18.689999999999998,
+        "future_income_horizon_adjustment_vp": -18.689999999999998,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 58,
+      "round": 4,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -1.6899999999999977,
+      "new_pass_delta_vp": -20.379999999999995,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": -12.79,
+        "projected_nonbooster_income_vp": 18.689999999999998,
+        "future_income_horizon_adjustment_vp": -18.689999999999998,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 68,
+      "round": 4,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -1.1100000000000136,
+      "new_pass_delta_vp": -27.810000000000002,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -5.754828973843047,
+        "round_price_delta_vp": -10.709999999999999,
+        "projected_nonbooster_income_vp": 26.699999999999996,
+        "future_income_horizon_adjustment_vp": -26.69999999999999,
+        "income_related_residual_vp": 7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 90,
+      "round": 5,
+      "faction": "Taklons",
+      "old_pass_delta_vp": -5.365171026156958,
+      "new_pass_delta_vp": -34.46517102615695,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 1.3448289738430503,
+        "round_price_delta_vp": -9.749999999999998,
+        "projected_nonbooster_income_vp": 29.1,
+        "future_income_horizon_adjustment_vp": -29.099999999999994,
+        "income_related_residual_vp": 7.105427357601002e-15
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 96,
+      "round": 5,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -4.694317548746511,
+      "new_pass_delta_vp": -34.86431754874653,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": -2.842170943040401e-14,
+        "round_price_delta_vp": -10.77,
+        "projected_nonbooster_income_vp": 30.169999999999998,
+        "future_income_horizon_adjustment_vp": -30.170000000000016,
+        "income_related_residual_vp": -1.7763568394002505e-14
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 144,
+      "round": 6,
+      "faction": "Terrans",
+      "old_pass_delta_vp": -137.03428571428572,
+      "new_pass_delta_vp": -137.03428571428572,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 35.10666666666666,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 150,
+      "round": 6,
+      "faction": "HadschHallas",
+      "old_pass_delta_vp": -70.37714285714286,
+      "new_pass_delta_vp": -70.37714285714286,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 17.683333333333334,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    },
+    {
+      "seed": "state-evaluation-ab-20260917-13589",
+      "step": 156,
+      "round": 6,
+      "faction": "Xenos",
+      "old_pass_delta_vp": -68.91880952380951,
+      "new_pass_delta_vp": -68.91880952380951,
+      "best_build_delta_vp": null,
+      "build_beats_new_pass": false,
+      "decomposition": {
+        "booster_replacement_delta_vp": 0.0,
+        "round_price_delta_vp": 0.0,
+        "projected_nonbooster_income_vp": 18.689999999999998,
+        "future_income_horizon_adjustment_vp": 0.0,
+        "income_related_residual_vp": 0.0
+      },
+      "r6_unchanged": true
+    }
+  ]
+}
