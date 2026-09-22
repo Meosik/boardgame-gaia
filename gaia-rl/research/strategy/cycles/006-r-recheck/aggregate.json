@@ -1,0 +1,168 @@
+{
+  "control": {
+    "games": 4,
+    "mean": {
+      "buildings": 26,
+      "federations": 2,
+      "score": 195.5,
+      "conversions": 72.75,
+      "decisions": 170.25,
+      "fallback_ratio": 0.25947289926953604,
+      "navigation": 0
+    },
+    "conversion_units_by_type_mean": {
+      "BurnPower": 15.0,
+      "CreditsToQic": 0.5,
+      "OreToPower": 37.25,
+      "OreToPowerBowl3": 4.5,
+      "PowerToCredit": 13.25,
+      "PowerToOre": 1.25,
+      "PowerToQic": 1.0
+    },
+    "conversion_units_by_path_mean": {
+      "fallback": 7.0,
+      "normal": 65.75
+    },
+    "research_track_sum_mean": {
+      "ai": 3.75,
+      "economy": 3.5,
+      "gaia": 1.25,
+      "navigation": 0.0,
+      "science": 8.75,
+      "terraforming": 0.0
+    },
+    "per_seed": [
+      {
+        "seed": "state-evaluation-ab-20260917-1580",
+        "buildings": 35,
+        "federations": 5,
+        "score": 255,
+        "conversions": 112,
+        "decisions": 245,
+        "fallback_ratio": 0.1346938775510204,
+        "navigation": 0
+      },
+      {
+        "seed": "state-evaluation-ab-20260917-5140",
+        "buildings": 23,
+        "federations": 1,
+        "score": 206,
+        "conversions": 117,
+        "decisions": 196,
+        "fallback_ratio": 0.16326530612244897,
+        "navigation": 0
+      },
+      {
+        "seed": "state-evaluation-ab-20260917-11285",
+        "buildings": 23,
+        "federations": 2,
+        "score": 174,
+        "conversions": 16,
+        "decisions": 106,
+        "fallback_ratio": 0.4339622641509434,
+        "navigation": 0
+      },
+      {
+        "seed": "state-evaluation-ab-20260917-13589",
+        "buildings": 23,
+        "federations": 0,
+        "score": 147,
+        "conversions": 46,
+        "decisions": 134,
+        "fallback_ratio": 0.30597014925373134,
+        "navigation": 0
+      }
+    ]
+  },
+  "variant": {
+    "games": 4,
+    "mean": {
+      "buildings": 25.75,
+      "federations": 1.75,
+      "score": 214.75,
+      "conversions": 35.5,
+      "decisions": 134.5,
+      "fallback_ratio": 0.35535271269459034,
+      "navigation": 0.25
+    },
+    "conversion_units_by_type_mean": {
+      "BurnPower": 9.75,
+      "OreToPower": 15.0,
+      "OreToPowerBowl3": 1.5,
+      "PowerToCredit": 8.5,
+      "PowerToOre": 0.25,
+      "PowerToQic": 0.5
+    },
+    "conversion_units_by_path_mean": {
+      "normal": 35.5
+    },
+    "research_track_sum_mean": {
+      "ai": 5.5,
+      "economy": 4.5,
+      "gaia": 1.0,
+      "navigation": 0.25,
+      "science": 7.75,
+      "terraforming": 0.5
+    },
+    "per_seed": [
+      {
+        "seed": "state-evaluation-ab-20260917-1580",
+        "buildings": 36,
+        "federations": 4,
+        "score": 291,
+        "conversions": 73,
+        "decisions": 203,
+        "fallback_ratio": 0.16748768472906403,
+        "navigation": 0
+      },
+      {
+        "seed": "state-evaluation-ab-20260917-5140",
+        "buildings": 28,
+        "federations": 2,
+        "score": 250,
+        "conversions": 62,
+        "decisions": 191,
+        "fallback_ratio": 0.15706806282722513,
+        "navigation": 1
+      },
+      {
+        "seed": "state-evaluation-ab-20260917-11285",
+        "buildings": 20,
+        "federations": 0,
+        "score": 164,
+        "conversions": 2,
+        "decisions": 71,
+        "fallback_ratio": 0.5352112676056338,
+        "navigation": 0
+      },
+      {
+        "seed": "state-evaluation-ab-20260917-13589",
+        "buildings": 19,
+        "federations": 1,
+        "score": 154,
+        "conversions": 5,
+        "decisions": 73,
+        "fallback_ratio": 0.5616438356164384,
+        "navigation": 0
+      }
+    ]
+  },
+  "change": {
+    "buildings": -0.25,
+    "federations": -0.25,
+    "score": 19.25,
+    "conversions": -37.25,
+    "decisions": -35.75,
+    "navigation": 0.25,
+    "fallback_percentage_points": 9.587981342505431
+  },
+  "judgment": {
+    "core_improvements": [
+      "score",
+      "conversions"
+    ],
+    "score_declined": false,
+    "adopted": true,
+    "consecutive_passes": 1
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "flag": {
+    "GAIA_TOKEN_ORE_PRICE": "1",
+    "GAIA_REACHABLE_PLANETS": "1",
+    "GAIA_FEDERATION_FALLBACK_STABLE": "1",
+    "GAIA_PASS_REALIZED_INCOME": "1"
+  },
+  "formula": "shortfall * (f-prime round ore price * 0.8)",
+  "ore_to_token": {
+    "cases": 264,
+    "failures": 0,
+    "delta_vp_min": -2.670000000000016,
+    "delta_vp_max": -0.0799999999999983
+  },
+  "three_step_cycle": {
+    "actions": [
+      "OreToPower",
+      "BurnPower",
+      "PowerToCredit"
+    ],
+    "cases": 216,
+    "failures": 0,
+    "delta_vp_min": -3.069000000000017,
+    "delta_vp_max": -0.7599999999999909
+  },
+  "full_invariants": {
+    "cases": 944,
+    "counts": {
+      "pass": 928,
+      "exception": 16
+    },
+    "failures": 0
+  },
+  "rounds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "active_token_states": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "factions": [
+    "Terrans",
+    "HadschHallas",
+    "Taklons",
+    "Xenos"
+  ],
+  "approved_exceptions": [
+    "Taklons: one normal II token discarded, Brainstone II -> III"
+  ],
+  "r5_r6_ore_to_power_exceptions": 0
+}

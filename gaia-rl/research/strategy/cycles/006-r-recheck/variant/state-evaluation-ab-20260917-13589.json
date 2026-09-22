@@ -1,0 +1,97 @@
+{
+  "seed": "state-evaluation-ab-20260917-13589",
+  "games": 1,
+  "mode": "B-lite+k+n+f-prime+g+h+o+p+b-prime+r+p-fix+k-income",
+  "density_bonus": false,
+  "token_ore_price": true,
+  "reachable_planets": true,
+  "federation_fallback_stable": true,
+  "pass_realized_income": true,
+  "target_seconds": 10.0,
+  "maximum_seconds": 20.0,
+  "complete": true,
+  "decisions": 73,
+  "elapsed_seconds": 646.32,
+  "fallback_timeouts": 41,
+  "fallback_ratio": 0.5616438356164384,
+  "decision_seconds_mean": 8.845743835616437,
+  "decision_seconds_max": 9.9202,
+  "candidate_means_per_decision": {
+    "legal_candidates": 37.12328767123287,
+    "completed_comparisons": 0.3013698630136986,
+    "unique_compared_candidates": 0.1780821917808219,
+    "legal_mine_candidates": 6.191780821917808,
+    "evaluated_mine_candidates": 0.3150684931506849
+  },
+  "candidate_metric_definition": {
+    "completed_comparisons": "number of completed deep-search plan rows; fallback has zero",
+    "evaluated_mine_candidates": "native-legal Build candidates scored by the normal root ranking, or explicitly scored by the quick fallback"
+  },
+  "free_action_conversions": {
+    "BurnPower": 3,
+    "PowerToCredit": 2
+  },
+  "free_action_conversion_count": 5,
+  "free_action_by_round_path_type": {
+    "6": {
+      "normal": {
+        "BurnPower": 3,
+        "PowerToCredit": 2
+      }
+    }
+  },
+  "factions": {
+    "Terrans": {
+      "buildings": 4,
+      "federations": 1,
+      "score": 55,
+      "research_tracks": {
+        "terraforming": 0,
+        "navigation": 0,
+        "ai": 0,
+        "gaia": 1,
+        "economy": 0,
+        "science": 0
+      }
+    },
+    "Taklons": {
+      "buildings": 5,
+      "federations": 0,
+      "score": 22,
+      "research_tracks": {
+        "terraforming": 0,
+        "navigation": 0,
+        "ai": 0,
+        "gaia": 0,
+        "economy": 0,
+        "science": 2
+      }
+    },
+    "HadschHallas": {
+      "buildings": 5,
+      "federations": 0,
+      "score": 35,
+      "research_tracks": {
+        "terraforming": 0,
+        "navigation": 0,
+        "ai": 2,
+        "gaia": 0,
+        "economy": 1,
+        "science": 0
+      }
+    },
+    "Xenos": {
+      "buildings": 5,
+      "federations": 0,
+      "score": 42,
+      "research_tracks": {
+        "terraforming": 0,
+        "navigation": 0,
+        "ai": 3,
+        "gaia": 0,
+        "economy": 0,
+        "science": 0
+      }
+    }
+  }
+}
