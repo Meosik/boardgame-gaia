@@ -22,6 +22,8 @@ STONE_BOWLS = {'Area1': 'bowl1', 'Area2': 'bowl2', 'Area3': 'bowl3'}
 GAIA_TOKEN_RETURN_DISCOUNT = 0.8
 N_INCOME_HORIZON = 3.5  # TODO(tune): one next income, independent of the live round.
 N_SECURED_PLANET_VP = (0.0, 4.0, 4.0, 4.0, 3.0, 2.0, 1.0)  # TODO(tune)
+# TODO(tune): B18-03/B19-06; prioritize at most four currently fundable colonies.
+R_REACHABLE_WEIGHTS = (1.0, 0.6, 0.4, 0.2)
 # TODO(tune): one low-cost route per planet class and terraforming-step group.
 FAST_EXPANSION_PER_GROUP = 1
 I_PRIME_SCAN_LIMIT = 5
@@ -30,6 +32,40 @@ _i_prime_cache: OrderedDict[tuple, tuple[str, tuple[dict, ...]]] = OrderedDict()
 INCOME_FIELDS = ('ore', 'credits', 'knowledge', 'qic', 'power_charge', 'power_tokens', 'vp')
 BOOSTER_INCOME = json.loads((Path(__file__).resolve().parents[2] /
     'gaia-frontend/src/data/income.json').read_text())['boosters']
+
+
+@lru_cache(maxsize=4096)
+def _reachable_planets(state_json: str, actor: int) -> tuple[float, tuple[str, ...]]:
+    state = json.loads(state_json)
+    if not state['round'] or 'Ended' in state['phase']:
+        return 0.0, ()
+    player = next(p for p in state['players'] if p['player_id'] == actor)
+    if player['passed'] or sum(s['kind'] == 'Mine' for s in player['structures']) >= 8:
+        return 0.0, ()
+    facts = base.base.engine_facts(state, player)
+    reach = base.base._reach(player, facts)
+    resources = player['resources']
+    candidates = []
+    for option in base.base.planet_opportunities(state, player, facts=facts):
+        planet = state['board']['hexes'][option.coord]['planet']
+        kind = planet['planet_type']
+        if kind == 'Transdim' and not planet['is_gaia_formed']:
+            continue
+        suitable = (option.category == 'gaia'
+                    or kind in base.base.RING and option.terraform_steps <= 1)
+        range_qic = max(0, (option.distance-reach+1)//2)
+        if (not suitable or range_qic > 1 or option.ore > resources['ore']
+                or option.credits > resources['credits'] or option.qic > resources['qic']):
+            continue
+        candidates.append(option.coord)
+    coords = tuple(sorted(candidates)[:len(R_REACHABLE_WEIGHTS)])
+    mine_value = N_SECURED_PLANET_VP[state['round']]
+    return mine_value * sum(R_REACHABLE_WEIGHTS[:len(coords)]), coords
+
+
+def reachable_planet_value(state: dict, actor: int) -> tuple[float, tuple[str, ...]]:
+    """Fundable home/one-step/Gaia colonies within native range plus one QIC jump."""
+    return _reachable_planets(json.dumps(state, sort_keys=True), actor)
 
 
 def _booster_income_vp(player: dict) -> float:
@@ -68,7 +104,8 @@ def _evaluate_stock(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
                    direct_stock_prices: bool = False,
                    federation_satellite_tokens: bool = False,
                    density_bonus: bool = False,
-                   token_ore_price: bool = False) -> base.base.Evaluation:
+                   token_ore_price: bool = False,
+                   reachable_planets: bool = False) -> base.base.Evaluation:
     result = base.evaluate_state(state, actor, top_n=top_n, conserve_resources=conserve_resources,
         secured_planets=secured_planets or fixed_income_and_planets, token_shortfall=token_shortfall,
         remaining_income=remaining_income, distributed_research=distributed_research,
@@ -76,7 +113,7 @@ def _evaluate_stock(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
         density_bonus=density_bonus)
     if 'ore_stock' not in result.breakdown or not (
             round_resource_prices or booster_one_income or gaia_token_return or fixed_income_and_planets
-            or direct_stock_prices or token_ore_price):
+            or direct_stock_prices or token_ore_price or reachable_planets):
         return result
     player = next(p for p in state['players'] if p['player_id'] == actor)
     resources = player['resources']
@@ -133,6 +170,8 @@ def _evaluate_stock(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
         # TODO(tune): LF01 prices a new token at 3.2 charge versus 4 charge per ore.
         token_price = F_PRIME_ORE_KNOWLEDGE[state['round']] * 0.8
         breakdown['token_shortfall'] = -token_price * max(0, target-structural)
+    if reachable_planets:
+        breakdown['reachable_planets'] = reachable_planet_value(state, actor)[0]
     return replace(result, total_vp=sum(breakdown.values()), breakdown=breakdown)
 
 # TODO(tune): user-approved diminishing weights on three independent colony options.
@@ -397,7 +436,8 @@ def evaluate_state(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
                    direct_stock_prices: bool = False,
                    federation_satellite_tokens: bool = False,
                    density_bonus: bool = False,
-                   token_ore_price: bool = False) -> base.base.Evaluation:
+                   token_ore_price: bool = False,
+                   reachable_planets: bool = False) -> base.base.Evaluation:
     options = dict(top_n=top_n, conserve_resources=conserve_resources, secured_planets=secured_planets,
         token_shortfall=token_shortfall, remaining_income=remaining_income,
         distributed_research=distributed_research, round_resource_prices=round_resource_prices,
@@ -405,7 +445,8 @@ def evaluate_state(state: dict, actor: int, *, top_n: int = base.base.TOP_N,
         fast_expansion=fast_expansion, fixed_income_and_planets=fixed_income_and_planets,
         direct_stock_prices=direct_stock_prices,
         federation_satellite_tokens=federation_satellite_tokens,
-        density_bonus=density_bonus, token_ore_price=token_ore_price)
+        density_bonus=density_bonus, token_ore_price=token_ore_price,
+        reachable_planets=reachable_planets)
     result = _evaluate_stock(state, actor, **options)
     if not (expansion_rescale or discounted_expansion) or 'expansion_opportunity' not in result.breakdown:
         return result

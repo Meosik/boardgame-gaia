@@ -1,0 +1,8 @@
+{
+  "fixture": "state-evaluation-ab-20260917-1580 initial state, Terrans",
+  "target_seconds": 0.05,
+  "cold_seconds": 0.0007393689993477892,
+  "warm_mean_seconds": 0.00034732606012767065,
+  "warm_max_seconds": 0.0005568249998759711,
+  "cache": "LRU state JSON + actor, max 4096"
+}

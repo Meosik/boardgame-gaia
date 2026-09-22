@@ -22,9 +22,12 @@ OPTIONS = dict(token_shortfall=True, remaining_income=True, distributed_research
 
 @dataclass(frozen=True)
 class Configured:
+    reachable_planets: bool = False
+
     def evaluate_state(self, state: dict, actor: int, **kwargs):
         return variant.evaluate_state(
-            state, actor, token_ore_price=True, **OPTIONS, **kwargs)
+            state, actor, token_ore_price=True,
+            reachable_planets=self.reachable_planets, **OPTIONS, **kwargs)
 
 
 MODEL = Configured()
@@ -53,8 +56,9 @@ def _state(round_number: int, faction: str, *, bowl1: int, bowl2: int = 0) -> tu
     return state, actor
 
 
-def validate(output: Path) -> bool:
+def validate(output: Path, *, reachable_planets: bool = False) -> bool:
     output.mkdir(parents=True, exist_ok=True)
+    model = Configured(reachable_planets=reachable_planets)
     full_invariants = []
     cases = list(invariants())
     for scenario, state, actor in fixtures():
@@ -76,14 +80,14 @@ def validate(output: Path) -> bool:
                 else:
                     after = successor(before, actor, action)
                 row = compare(before, after, actor, label, scenario,
-                              conserve, model=MODEL)
+                              conserve, model=model)
                 row['suite'] = suite
                 full_invariants.append(row)
     for token in token_rows():
         before, after = token['before_state'], token['after_state']
         actor = next(p['player_id'] for p in before['players'] if p['faction'] == 'Xenos')
         row = compare(before, after, actor, 'OreToPower',
-                      f'tokens:{token["active_tokens"]}', token['conservation'], model=MODEL)
+                      f'tokens:{token["active_tokens"]}', token['conservation'], model=model)
         row['suite'] = 'token-shortfall'
         full_invariants.append(row)
     for count in (3, 7):
@@ -92,7 +96,7 @@ def validate(output: Path) -> bool:
             'type': 'FreeAction', 'kind': 'OreToPower', 'count': 1})
         for conserve in (True, False):
             row = compare(before, after, actor, 'OreToPower', f'tokens:{count}',
-                          conserve, model=MODEL)
+                          conserve, model=model)
             row['suite'] = 'token-shortfall'
             full_invariants.append(row)
     ore_to_token = []
@@ -103,7 +107,12 @@ def validate(output: Path) -> bool:
                 before, actor = _state(round_number, faction, bowl1=tokens)
                 after = successor(before, actor, {
                     'type': 'FreeAction', 'kind': 'OreToPower', 'count': 1})
-                delta, changes = _delta(before, after, actor)
+                left = model.evaluate_state(before, actor)
+                right = model.evaluate_state(after, actor)
+                delta = right.total_vp-left.total_vp
+                changes = {key: right.breakdown[key]-left.breakdown[key]
+                           for key in left.breakdown
+                           if abs(right.breakdown[key]-left.breakdown[key]) > EPSILON}
                 ore_to_token.append({
                     'faction': faction, 'round': round_number,
                     'active_tokens': tokens, 'delta_vp': delta,
@@ -118,7 +127,12 @@ def validate(output: Path) -> bool:
                     'type': 'FreeAction', 'kind': 'BurnPower', 'count': 1})
                 credited = successor(burned, actor, {
                     'type': 'FreeAction', 'kind': 'PowerToCredit', 'count': 1})
-                delta, changes = _delta(before, credited, actor)
+                left = model.evaluate_state(before, actor)
+                right = model.evaluate_state(credited, actor)
+                delta = right.total_vp-left.total_vp
+                changes = {key: right.breakdown[key]-left.breakdown[key]
+                           for key in left.breakdown
+                           if abs(right.breakdown[key]-left.breakdown[key]) > EPSILON}
                 cycles.append({
                     'faction': faction, 'round': round_number,
                     'active_tokens': tokens, 'delta_vp': delta,
@@ -130,7 +144,8 @@ def validate(output: Path) -> bool:
     exception_reasons = sorted({row['exception'] for row in full_invariants
                                 if row['exception'] is not None})
     summary = {
-        'flag': {'GAIA_TOKEN_ORE_PRICE': '1'},
+        'flag': {'GAIA_TOKEN_ORE_PRICE': '1',
+                 'GAIA_REACHABLE_PLANETS': '1' if reachable_planets else '0'},
         'formula': 'shortfall * (f-prime round ore price * 0.8)',
         'ore_to_token': {
             'cases': len(ore_to_token), 'failures': sum(not row['passed'] for row in ore_to_token),
@@ -166,4 +181,6 @@ def validate(output: Path) -> bool:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
-    raise SystemExit(int(validate(parser.parse_args().output)))
+    parser.add_argument('--reachable-planets', action='store_true')
+    args = parser.parse_args()
+    raise SystemExit(int(validate(args.output, reachable_planets=args.reachable_planets)))
