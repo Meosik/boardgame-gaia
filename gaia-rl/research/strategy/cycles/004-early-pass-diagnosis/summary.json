@@ -1,0 +1,239 @@
+{
+  "passes": 96,
+  "by_path": {
+    "normal": 61,
+    "fallback": 35
+  },
+  "fallback": {
+    "evaluated_count_distribution": {
+      "min": 1,
+      "median": 2,
+      "max": 11,
+      "mean": 2.7714285714285714,
+      "counts": {
+        "1": 11,
+        "2": 12,
+        "3": 4,
+        "4": 2,
+        "5": 2,
+        "6": 2,
+        "9": 1,
+        "11": 1
+      }
+    },
+    "reconstruction_matches_recorded": 28,
+    "pass_was_evaluated": 30,
+    "had_evaluated_candidate_higher_than_pass": 2,
+    "had_unevaluated_build": 28,
+    "had_unevaluated_research": 32,
+    "unevaluated_build_total": 528,
+    "unevaluated_research_total": 189
+  },
+  "normal": {
+    "pass_beats_best_alternative": 37,
+    "pass_beats_best_build_when_available": 17,
+    "build_available": 17,
+    "pass_delta_vp_mean": -21.959635934025105,
+    "best_alternative_delta_vp_mean": -0.017594072401815302,
+    "projection_mean": {
+      "total_delta_vp": -21.959635934025105,
+      "immediate_pass_delta_vp": 0.7067403097070155,
+      "k_projection_delta_vp": -22.66637624373212,
+      "booster_immediate_delta_vp": 0.0677595628415248,
+      "booster_projected_delta_vp": 0.1279682840087898,
+      "projection_residual_vp": -27.266441817502614,
+      "stock_quantity_at_old_prices_mean": 12.472163934426229,
+      "stock_round_repricing_mean": -7.8720983606557375
+    },
+    "by_round": {
+      "1": {
+        "passes": 8,
+        "pass_delta_vp_mean": 13.389946323056282,
+        "best_alternative_available": 8,
+        "best_alternative_delta_vp_mean": 5.2088864525699545,
+        "pass_beats_best_alternative": 8,
+        "build_available": 7,
+        "pass_beats_best_build": 7,
+        "best_build_delta_vp_mean": 4.796029584275952,
+        "immediate_pass_delta_vp_mean": -1.4997190840621943,
+        "k_projection_delta_vp_mean": 14.889665407118477,
+        "stock_quantity_at_old_prices_mean": 13.68375,
+        "stock_round_repricing_mean": 0.0,
+        "future_income_breakdown_change_mean": 0.0
+      },
+      "2": {
+        "passes": 8,
+        "pass_delta_vp_mean": 8.89797182919116,
+        "best_alternative_available": 8,
+        "best_alternative_delta_vp_mean": 1.5247206879790198,
+        "pass_beats_best_alternative": 8,
+        "build_available": 7,
+        "pass_beats_best_build": 7,
+        "best_build_delta_vp_mean": -1.841520196941953,
+        "immediate_pass_delta_vp_mean": 1.2890625,
+        "k_projection_delta_vp_mean": 7.60890932919116,
+        "stock_quantity_at_old_prices_mean": 15.4515,
+        "stock_round_repricing_mean": -10.309125000000002,
+        "future_income_breakdown_change_mean": 0.0
+      },
+      "3": {
+        "passes": 10,
+        "pass_delta_vp_mean": 3.1978243480352746,
+        "best_alternative_available": 10,
+        "best_alternative_delta_vp_mean": 0.010412707255599684,
+        "pass_beats_best_alternative": 8,
+        "build_available": 2,
+        "pass_beats_best_build": 2,
+        "best_build_delta_vp_mean": -6.296396736967779,
+        "immediate_pass_delta_vp_mean": -0.1565833333333444,
+        "k_projection_delta_vp_mean": 3.354407681368619,
+        "stock_quantity_at_old_prices_mean": 19.4515,
+        "stock_round_repricing_mean": -12.686999999999996,
+        "future_income_breakdown_change_mean": 0.0
+      },
+      "4": {
+        "passes": 12,
+        "pass_delta_vp_mean": -0.23946610480804983,
+        "best_alternative_available": 12,
+        "best_alternative_delta_vp_mean": -1.3277380952380942,
+        "pass_beats_best_alternative": 9,
+        "build_available": 1,
+        "pass_beats_best_build": 1,
+        "best_build_delta_vp_mean": -1.9480375426621208,
+        "immediate_pass_delta_vp_mean": 1.1111111111111047,
+        "k_projection_delta_vp_mean": -1.3505772159191547,
+        "stock_quantity_at_old_prices_mean": 17.37875,
+        "stock_round_repricing_mean": -13.678749999999999,
+        "future_income_breakdown_change_mean": 0.0
+      },
+      "5": {
+        "passes": 10,
+        "pass_delta_vp_mean": -5.520156122569086,
+        "best_alternative_available": 6,
+        "best_alternative_delta_vp_mean": -0.7000000000000028,
+        "pass_beats_best_alternative": 4,
+        "build_available": 0,
+        "pass_beats_best_build": 0,
+        "best_build_delta_vp_mean": null,
+        "immediate_pass_delta_vp_mean": 1.7028911564625786,
+        "k_projection_delta_vp_mean": -7.223047279031664,
+        "stock_quantity_at_old_prices_mean": 12.466000000000001,
+        "stock_round_repricing_mean": -10.671,
+        "future_income_breakdown_change_mean": -3.429666666666667
+      },
+      "6": {
+        "passes": 13,
+        "pass_delta_vp_mean": -114.74955586080587,
+        "best_alternative_available": 13,
+        "best_alternative_delta_vp_mean": -0.49909188034187824,
+        "pass_beats_best_alternative": 0,
+        "build_available": 0,
+        "pass_beats_best_build": 0,
+        "best_build_delta_vp_mean": null,
+        "immediate_pass_delta_vp_mean": 1.230769230769223,
+        "k_projection_delta_vp_mean": -115.98032509157508,
+        "stock_quantity_at_old_prices_mean": 0.0,
+        "stock_round_repricing_mean": 0.0,
+        "future_income_breakdown_change_mean": -107.4724358974359
+      }
+    }
+  },
+  "by_round": {
+    "1": {
+      "passes": 16,
+      "normal": 8,
+      "fallback": 8,
+      "remaining_resources_mean": {
+        "ore": 7.375,
+        "credits": 16.25,
+        "knowledge": 4.375,
+        "qic": 1.3125,
+        "bowl1": 2.5,
+        "bowl2": 4.25,
+        "bowl3": 0
+      },
+      "legal_build_candidates_mean": 11,
+      "legal_build_candidates_total": 176
+    },
+    "2": {
+      "passes": 16,
+      "normal": 8,
+      "fallback": 8,
+      "remaining_resources_mean": {
+        "ore": 10.3125,
+        "credits": 16.8125,
+        "knowledge": 5.6875,
+        "qic": 1.125,
+        "bowl1": 1.875,
+        "bowl2": 4.125,
+        "bowl3": 0.125
+      },
+      "legal_build_candidates_mean": 12.125,
+      "legal_build_candidates_total": 194
+    },
+    "3": {
+      "passes": 16,
+      "normal": 10,
+      "fallback": 6,
+      "remaining_resources_mean": {
+        "ore": 7.375,
+        "credits": 15.0625,
+        "knowledge": 3.9375,
+        "qic": 0.6875,
+        "bowl1": 3.25,
+        "bowl2": 3.1875,
+        "bowl3": 0.6875
+      },
+      "legal_build_candidates_mean": 6.5,
+      "legal_build_candidates_total": 104
+    },
+    "4": {
+      "passes": 16,
+      "normal": 12,
+      "fallback": 4,
+      "remaining_resources_mean": {
+        "ore": 6.1875,
+        "credits": 16.25,
+        "knowledge": 3.1875,
+        "qic": 0.6875,
+        "bowl1": 6.0625,
+        "bowl2": 1.8125,
+        "bowl3": 0.375
+      },
+      "legal_build_candidates_mean": 6.0625,
+      "legal_build_candidates_total": 97
+    },
+    "5": {
+      "passes": 16,
+      "normal": 10,
+      "fallback": 6,
+      "remaining_resources_mean": {
+        "ore": 5,
+        "credits": 15.5625,
+        "knowledge": 3.875,
+        "qic": 0.6875,
+        "bowl1": 5.5,
+        "bowl2": 2.0625,
+        "bowl3": 0.5625
+      },
+      "legal_build_candidates_mean": 6.375,
+      "legal_build_candidates_total": 102
+    },
+    "6": {
+      "passes": 16,
+      "normal": 13,
+      "fallback": 3,
+      "remaining_resources_mean": {
+        "ore": 0.125,
+        "credits": 13.4375,
+        "knowledge": 2.375,
+        "qic": 0.125,
+        "bowl1": 6.1875,
+        "bowl2": 0.375,
+        "bowl3": 0.375
+      },
+      "legal_build_candidates_mean": 0,
+      "legal_build_candidates_total": 0
+    }
+  }
+}

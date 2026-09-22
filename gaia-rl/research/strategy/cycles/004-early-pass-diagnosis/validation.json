@@ -1,0 +1,12 @@
+{
+  "checks": {
+    "four_traces": true,
+    "pass_count_96": true,
+    "trace_path_counts_match": true,
+    "sixteen_passes_per_round": true,
+    "normal_projection_identity": true,
+    "normal_build_cases_all_prefer_pass": true
+  },
+  "passed": true,
+  "fallback_reconstruction_match_rate": 0.8
+}
