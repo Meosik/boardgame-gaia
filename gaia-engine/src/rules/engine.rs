@@ -3935,7 +3935,12 @@ fn research_level_5_taken_by_another_player(
 
 /// The green-token-flip cost shared by "advance to level 5" and "take an Advanced Tech tile."
 fn validate_has_a_green_federation_token(player: &PlayerState) -> Result<(), RuleError> {
-    if player.federation_tokens.is_empty() {
+    let has_flippable = if experimental_engine_fixes_enabled() {
+        player.federation_tokens.iter().any(|token| token.0 != 1)
+    } else {
+        !player.federation_tokens.is_empty()
+    };
+    if !has_flippable {
         return Err(RuleError::ActionNotAllowed(
             "requires flipping a Federation token from green to gray, but none are owned"
                 .to_string(),
@@ -3951,7 +3956,16 @@ fn validate_advanced_tech_research_token_cost(
     let reaches_level_five =
         advance_track.is_some_and(|track| player.research_tracks.get(track) == 4);
     let required_tokens = if reaches_level_five { 2 } else { 1 };
-    if player.federation_tokens.len() < required_tokens {
+    let available_tokens = if experimental_engine_fixes_enabled() {
+        player
+            .federation_tokens
+            .iter()
+            .filter(|token| token.0 != 1)
+            .count()
+    } else {
+        player.federation_tokens.len()
+    };
+    if available_tokens < required_tokens {
         return Err(RuleError::ActionNotAllowed(
             "taking the Advanced Tech tile and advancing to research level 5 require two green Federation tokens"
                 .to_string(),
@@ -3961,7 +3975,16 @@ fn validate_advanced_tech_research_token_cost(
 }
 
 fn flip_a_federation_token(player: &mut PlayerState) {
-    if let Some(token) = player.federation_tokens.pop() {
+    let token = if experimental_engine_fixes_enabled() {
+        player
+            .federation_tokens
+            .iter()
+            .rposition(|token| token.0 != 1)
+            .map(|index| player.federation_tokens.remove(index))
+    } else {
+        player.federation_tokens.pop()
+    };
+    if let Some(token) = token {
         player.gray_federation_tokens.push(token);
     }
 }
@@ -8269,14 +8292,29 @@ fn next_active_player_index(state: &GameState, current: usize) -> Option<usize> 
 // ── Charge Power (Passive Action, rulebook p.16-17) ─────────────────────────
 
 /// Opponents (in clockwise turn order from `builder`) with at least one
-/// structure within range 2 of `coord`, each paired with their single
-/// highest-power-value qualifying structure's power value. An opponent who
-/// has already passed is still eligible (rulebook: "An opponent that has
-/// passed can still charge power").
+/// structure within range 2 of `coord`. The experimental fix offers the power
+/// value of the structure just built or upgraded; legacy behavior offers the
+/// opponent's highest nearby structure value. An opponent who has already
+/// passed is still eligible (rulebook: "An opponent that has passed can still
+/// charge power").
 fn eligible_chargers(state: &GameState, builder: PlayerId, coord: HexCoord) -> Vec<PendingCharge> {
     let n = state.turn_order.len();
     let Some(start) = state.turn_order.iter().position(|&p| p == builder) else {
         return vec![];
+    };
+
+    let fixes_enabled = experimental_engine_fixes_enabled();
+    let source_power = if fixes_enabled {
+        state.board.hexes.get(&coord).and_then(|hex| {
+            hex.structures
+                .iter()
+                .find(|structure| structure.owner == builder)
+                .map(|structure| {
+                    faction_structure_power_value(state, builder, coord, structure.kind)
+                })
+        })
+    } else {
+        None
     };
 
     let mut chargers = Vec::new();
@@ -8295,7 +8333,12 @@ fn eligible_chargers(state: &GameState, builder: PlayerId, coord: HexCoord) -> V
                 faction_structure_power_value(state, pid, hex.coord, structure.kind)
             })
             .max();
-        if let Some(power) = max_power {
+        let offered_power = if fixes_enabled {
+            max_power.and(source_power)
+        } else {
+            max_power
+        };
+        if let Some(power) = offered_power {
             if power > 0 {
                 chargers.push(PendingCharge {
                     player: pid,
@@ -8321,6 +8364,12 @@ fn maybe_enter_charge_power_phase(
     if queue.is_empty() {
         return false;
     }
+    if experimental_engine_fixes_enabled() {
+        if let GamePhase::ChargePowerPending { queue: pending, .. } = &mut state.phase {
+            pending.splice(0..0, queue);
+            return true;
+        }
+    }
     let current = match &state.phase {
         GamePhase::ActionPhase { active_player } => *active_player,
         _ => return false,
@@ -8331,6 +8380,10 @@ fn maybe_enter_charge_power_phase(
         resume_active_player,
     };
     true
+}
+
+fn experimental_engine_fixes_enabled() -> bool {
+    std::env::var_os("GAIA_ENGINE_FIXES_2").is_some_and(|value| value == "1")
 }
 
 /// Returns a copy of the queue-front entry if `player_id` is next up to decide during either

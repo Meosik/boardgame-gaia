@@ -1,0 +1,39 @@
+{
+  "branch": "eval-rework-20260918",
+  "flags_default_off": [
+    "GAIA_A_P_FIX",
+    "GAIA_A_RESOURCE_PRICES",
+    "GAIA_ENGINE_FIXES_2"
+  ],
+  "frozen_a": {
+    "fingerprint": "8f269f027e69352cbe48ee61cf730c8f90c13eaa7f3503a53182acc3b964353e",
+    "problems": 0
+  },
+  "invariants": {
+    "cases": 944,
+    "pass": 928,
+    "approved_exceptions": 16,
+    "failures": 0,
+    "ore_to_token_cases": 264,
+    "ore_to_token_failures": 0,
+    "three_step_cycle_cases": 216,
+    "three_step_cycle_failures": 0
+  },
+  "tests": {
+    "cargo_test_workspace": "pass",
+    "engine_flagged_xfail_regressions": {"passed": 2, "failed": 0},
+    "python_teacher_registry": {"passed": 12, "failed": 0},
+    "python_a_component_source": {"passed": 17, "failed": 0},
+    "python_builder_compile": "pass",
+    "clippy_workspace_lib_tests_D_warnings": "pass",
+    "clippy_workspace_all_targets_D_warnings": {
+      "status": "pre-existing example-only failure",
+      "detail": "gaia-engine/examples/import_uiqoo_setup.rs manual_repeat_n"
+    },
+    "git_diff_check": "pass"
+  },
+  "evidence": {
+    "committed": "reports, aggregate, 12 per-seed result JSON files, implementation flags and tests",
+    "excluded": "gaia-rl/runs raw decisions/logs (gitignored); unrelated untracked gaia-frontend replay directories"
+  }
+}

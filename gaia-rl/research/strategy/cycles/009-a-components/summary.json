@@ -1,0 +1,176 @@
+{
+  "settings": {
+    "seeds": 4,
+    "players": 4,
+    "target_seconds": 10,
+    "maximum_seconds": 20
+  },
+  "metrics": {
+    "A": {
+      "score": 316.25,
+      "federations": 5.5,
+      "buildings": 34.5,
+      "fallback_ratio": 0.03518555794567355,
+      "per_seed": [
+        {
+          "seed": "state-evaluation-ab-20260917-11285",
+          "score": 375,
+          "federations": 9,
+          "buildings": 41,
+          "fallback_ratio": 0.006756756756756757
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-13589",
+          "score": 282,
+          "federations": 4,
+          "buildings": 35,
+          "fallback_ratio": 0.0
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-1580",
+          "score": 340,
+          "federations": 5,
+          "buildings": 34,
+          "fallback_ratio": 0.1282051282051282
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-5140",
+          "score": 268,
+          "federations": 4,
+          "buildings": 28,
+          "fallback_ratio": 0.005780346820809248
+        }
+      ]
+    },
+    "p-fix": {
+      "score": 297.75,
+      "federations": 5.25,
+      "buildings": 34.75,
+      "fallback_ratio": 0.03100357454940032,
+      "delta_vs_A": {
+        "score": -18.5,
+        "federations": -0.25,
+        "buildings": 0.25,
+        "fallback_ratio": -0.004181983396273233
+      },
+      "judgment": "rejected",
+      "per_seed": [
+        {
+          "seed": "state-evaluation-ab-20260917-11285",
+          "score": 316,
+          "federations": 7,
+          "buildings": 40,
+          "fallback_ratio": 0.0
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-13589",
+          "score": 260,
+          "federations": 5,
+          "buildings": 33,
+          "fallback_ratio": 0.01293103448275862
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-1580",
+          "score": 329,
+          "federations": 5,
+          "buildings": 34,
+          "fallback_ratio": 0.10582010582010581
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-5140",
+          "score": 286,
+          "federations": 4,
+          "buildings": 32,
+          "fallback_ratio": 0.005263157894736842
+        }
+      ]
+    },
+    "resource-prices": {
+      "score": 264.75,
+      "federations": 4.5,
+      "buildings": 33.5,
+      "fallback_ratio": 0.015676836492890995,
+      "delta_vs_A": {
+        "score": -51.5,
+        "federations": -1.0,
+        "buildings": -1.0,
+        "fallback_ratio": -0.019508721452782558
+      },
+      "judgment": "rejected",
+      "per_seed": [
+        {
+          "seed": "state-evaluation-ab-20260917-11285",
+          "score": 289,
+          "federations": 7,
+          "buildings": 36,
+          "fallback_ratio": 0.0
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-13589",
+          "score": 189,
+          "federations": 2,
+          "buildings": 30,
+          "fallback_ratio": 0.04375
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-1580",
+          "score": 326,
+          "federations": 5,
+          "buildings": 34,
+          "fallback_ratio": 0.0
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-5140",
+          "score": 255,
+          "federations": 4,
+          "buildings": 34,
+          "fallback_ratio": 0.018957345971563982
+        }
+      ]
+    },
+    "engine-fixes-2": {
+      "score": 308.0,
+      "federations": 5.5,
+      "buildings": 35.0,
+      "fallback_ratio": 0.016592920353982302,
+      "delta_vs_A": {
+        "score": -8.25,
+        "federations": 0.0,
+        "buildings": 0.5,
+        "fallback_ratio": -0.01859263759169125
+      },
+      "judgment": "rejected",
+      "per_seed": [
+        {
+          "seed": "state-evaluation-ab-20260917-11285",
+          "score": 353,
+          "federations": 8,
+          "buildings": 40,
+          "fallback_ratio": 0.0
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-13589",
+          "score": 268,
+          "federations": 6,
+          "buildings": 34,
+          "fallback_ratio": 0.06637168141592921
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-1580",
+          "score": 340,
+          "federations": 4,
+          "buildings": 33,
+          "fallback_ratio": 0.0
+        },
+        {
+          "seed": "state-evaluation-ab-20260917-5140",
+          "score": 271,
+          "federations": 4,
+          "buildings": 33,
+          "fallback_ratio": 0.0
+        }
+      ]
+    }
+  },
+  "judgment_rule": "reject immediately when any required outcome is worse than A"
+}

@@ -77,7 +77,7 @@ fn charge_order_state() -> gaia_engine::game_state::GameState {
 #[ignore = "known LF2-14 charge-order defect; enable after the A/B run and engine fix"]
 fn lab_charge_precedes_lost_fleet_free_mine_charge() {
     let mut state = charge_order_state();
-    RuleEngine::apply_action(
+    let upgrade = RuleEngine::apply_action(
         &mut state,
         0,
         GameAction::Upgrade {
@@ -89,8 +89,11 @@ fn lab_charge_precedes_lost_fleet_free_mine_charge() {
                 bonus_build_coord: Some(HexCoord::new(1, 0)),
             }),
         },
-    )
-    .expect("lab upgrade and free mine must be legal");
+    );
+    assert!(
+        upgrade.is_ok(),
+        "lab upgrade and free mine must be legal: {upgrade:?}"
+    );
     assert_eq!(state.players[0].research_tracks.navigation, 1);
     match &state.phase {
         GamePhase::ChargePowerPending { queue, .. } => {
@@ -103,8 +106,12 @@ fn lab_charge_precedes_lost_fleet_free_mine_charge() {
         }
         other => panic!("expected lab charge, got {other:?}"),
     }
-    RuleEngine::apply_action(&mut state, 1, GameAction::ChargePower { accept: false })
-        .expect("opponent should be able to decline the lab charge");
+    let decline =
+        RuleEngine::apply_action(&mut state, 1, GameAction::ChargePower { accept: false });
+    assert!(
+        decline.is_ok(),
+        "opponent should be able to decline the lab charge: {decline:?}"
+    );
     match &state.phase {
         GamePhase::ChargePowerPending { queue, .. } => {
             assert_eq!(queue[0].hex, HexCoord::new(1, 0), "mine charge must follow");
@@ -129,14 +136,17 @@ fn level_five_state(token: u8) -> gaia_engine::game_state::GameState {
 #[test]
 fn lost_fleet_twelve_vp_token_can_be_flipped_for_level_five() {
     let mut state = level_five_state(9);
-    RuleEngine::apply_action(
+    let advance = RuleEngine::apply_action(
         &mut state,
         0,
         GameAction::ResearchAdvance {
             track: ResearchTrack::Terraforming,
         },
-    )
-    .expect("Lost Fleet 12-VP token has a green side");
+    );
+    assert!(
+        advance.is_ok(),
+        "Lost Fleet 12-VP token has a green side: {advance:?}"
+    );
     assert_eq!(state.players[0].research_tracks.terraforming, 5);
     assert!(state.players[0].federation_tokens.is_empty());
     assert_eq!(
