@@ -1,0 +1,136 @@
+{
+  "score_unit": "sum of four faction final scores per game",
+  "A": {
+    "metrics_mean": {
+      "buildings": 34.5,
+      "federations": 5.5,
+      "score": 316.25,
+      "conversions": 34,
+      "decisions": 224.75,
+      "fallback_ratio": 0.03518555794567355,
+      "navigation": 6.5
+    },
+    "score_sampling": {
+      "n": 4,
+      "mean": 316.25,
+      "sample_standard_deviation": 50.055802194484244,
+      "ci95": [
+        236.60004862407575,
+        395.8999513759243
+      ],
+      "ci95_half_width": 79.64995137592425
+    }
+  },
+  "current": {
+    "metrics_mean": {
+      "buildings": 25.75,
+      "federations": 1.75,
+      "score": 214.75,
+      "conversions": 35.5,
+      "decisions": 134.5,
+      "fallback_ratio": 0.35535271269459034,
+      "navigation": 0.25
+    },
+    "score_sampling": {
+      "n": 4,
+      "mean": 214.75,
+      "sample_standard_deviation": 66.64020308092306,
+      "ci95": [
+        108.71056596088023,
+        320.7894340391198
+      ],
+      "ci95_half_width": 106.03943403911977
+    }
+  },
+  "paired_current_minus_A": {
+    "n": 4,
+    "mean": -101.5,
+    "sample_standard_deviation": 86.45037111931137,
+    "ci95": [
+      -239.06183207952893,
+      36.061832079528926
+    ],
+    "ci95_half_width": 137.56183207952893,
+    "rows": [
+      {
+        "seed": "state-evaluation-ab-20260917-11285",
+        "A": 375,
+        "current": 164,
+        "current_minus_A": -211
+      },
+      {
+        "seed": "state-evaluation-ab-20260917-13589",
+        "A": 282,
+        "current": 154,
+        "current_minus_A": -128
+      },
+      {
+        "seed": "state-evaluation-ab-20260917-1580",
+        "A": 340,
+        "current": 291,
+        "current_minus_A": -49
+      },
+      {
+        "seed": "state-evaluation-ab-20260917-5140",
+        "A": 268,
+        "current": 250,
+        "current_minus_A": -18
+      }
+    ],
+    "minimum_distinguishable_absolute_mean_difference_four_seeds": 137.56183207952893,
+    "definition": "observed paired-noise 95% CI half-width; zero-exclusion threshold, not an 80% power MDE"
+  },
+  "determinism": {
+    "A": {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "same_seed": true,
+      "same_action_sequence": false,
+      "same_search_path_sequence": false,
+      "same_final_outcome": false,
+      "first": {
+        "buildings": 34,
+        "federations": 5,
+        "score": 340,
+        "conversions": 41,
+        "decisions": 195,
+        "fallback_ratio": 0.1282051282051282,
+        "navigation": 6
+      },
+      "repeat": {
+        "buildings": 34,
+        "federations": 5,
+        "score": 332,
+        "conversions": 42,
+        "decisions": 195,
+        "fallback_ratio": 0.12307692307692308,
+        "navigation": 6
+      }
+    },
+    "current": {
+      "seed": "state-evaluation-ab-20260917-1580",
+      "same_seed": true,
+      "same_action_sequence": false,
+      "same_search_path_sequence": false,
+      "same_final_outcome": false,
+      "first": {
+        "buildings": 36,
+        "federations": 4,
+        "score": 291,
+        "conversions": 73,
+        "decisions": 203,
+        "fallback_ratio": 0.16748768472906403,
+        "navigation": 0
+      },
+      "repeat": {
+        "buildings": 36,
+        "federations": 4,
+        "score": 315,
+        "conversions": 57,
+        "decisions": 211,
+        "fallback_ratio": 0.16113744075829384,
+        "navigation": 0
+      }
+    }
+  },
+  "deterministic_in_observed_repeats": false
+}

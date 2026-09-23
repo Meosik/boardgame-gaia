@@ -9,7 +9,31 @@ import time
 
 from gaia_rl import Environment
 from faction_teachers.clock import AdaptiveClock
-from state_teacher import StateTeacher
+
+
+def _teacher(seed: str, target_seconds: float, maximum_seconds: float):
+    clock = AdaptiveClock(
+        target_seconds=target_seconds,
+        long_seconds=maximum_seconds,
+        uses=0,
+    )
+    if os.environ.get('GAIA_DIAGNOSTIC_BASELINE_A') == '1':
+        from four_factions.timed import TimedPreparationTeacher
+        return TimedPreparationTeacher(
+            seed,
+            target_seconds=target_seconds,
+            maximum_seconds=maximum_seconds,
+            adaptive_clock=clock,
+            bgg_openings=True,
+            shared_factions=True,
+        )
+    from state_teacher import StateTeacher
+    return StateTeacher(
+        seed,
+        target_seconds=target_seconds,
+        maximum_seconds=maximum_seconds,
+        adaptive_clock=clock,
+    )
 
 
 def _fallback(audit: dict) -> bool:
@@ -69,16 +93,8 @@ def run(output: Path, seed: str, target_seconds: float, maximum_seconds: float) 
     pass_realized_income = os.environ.get('GAIA_PASS_REALIZED_INCOME') == '1'
     output.mkdir(parents=True, exist_ok=False)
     env = Environment(seed, 2000)
-    teacher = StateTeacher(
-        seed,
-        target_seconds=target_seconds,
-        maximum_seconds=maximum_seconds,
-        adaptive_clock=AdaptiveClock(
-            target_seconds=target_seconds,
-            long_seconds=maximum_seconds,
-            uses=0,
-        ),
-    ).bind(env)
+    baseline_a = os.environ.get('GAIA_DIAGNOSTIC_BASELINE_A') == '1'
+    teacher = _teacher(seed, target_seconds, maximum_seconds).bind(env)
     conversions = Counter()
     rows = []
     started = time.monotonic()
@@ -137,11 +153,12 @@ def run(output: Path, seed: str, target_seconds: float, maximum_seconds: float) 
     result = {
         'seed': seed,
         'games': 1,
-        'mode': ('B-lite+k+n+f-prime+g+h+o+p'
+        'mode': ('A' if baseline_a else ('B-lite+k+n+f-prime+g+h+o+p'
                  + ('+b-prime' if token_ore_price else '')
                  + ('+r' if reachable_planets else '')
                  + ('+p-fix' if federation_fallback_stable else '')
-                 + ('+k-income' if pass_realized_income else '')),
+                 + ('+k-income' if pass_realized_income else ''))),
+        'diagnostic_baseline_a': baseline_a,
         'density_bonus': False,
         'token_ore_price': token_ore_price,
         'reachable_planets': reachable_planets,

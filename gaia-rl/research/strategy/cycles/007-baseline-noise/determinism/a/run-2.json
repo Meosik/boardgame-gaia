@@ -1,0 +1,129 @@
+{
+  "seed": "state-evaluation-ab-20260917-1580",
+  "games": 1,
+  "mode": "A",
+  "diagnostic_baseline_a": true,
+  "density_bonus": false,
+  "token_ore_price": false,
+  "reachable_planets": false,
+  "federation_fallback_stable": false,
+  "pass_realized_income": false,
+  "target_seconds": 10.0,
+  "maximum_seconds": 20.0,
+  "complete": true,
+  "decisions": 195,
+  "elapsed_seconds": 1574.01,
+  "fallback_timeouts": 24,
+  "fallback_ratio": 0.12307692307692308,
+  "decision_seconds_mean": 8.030890256410256,
+  "decision_seconds_max": 9.934,
+  "candidate_means_per_decision": {
+    "legal_candidates": 55.52307692307692,
+    "completed_comparisons": 1.3282051282051281,
+    "unique_compared_candidates": 0.49743589743589745,
+    "legal_mine_candidates": 1.3641025641025641,
+    "evaluated_mine_candidates": 1.2256410256410257
+  },
+  "candidate_metric_definition": {
+    "completed_comparisons": "number of completed deep-search plan rows; fallback has zero",
+    "evaluated_mine_candidates": "native-legal Build candidates scored by the normal root ranking, or explicitly scored by the quick fallback"
+  },
+  "free_action_conversions": {
+    "BurnPower": 12,
+    "CreditsToKnowledge": 1,
+    "CreditsToOre": 5,
+    "CreditsToQic": 1,
+    "OreToPower": 14,
+    "OreToPowerBowl3": 8,
+    "QicToOre": 1
+  },
+  "free_action_conversion_count": 42,
+  "free_action_by_round_path_type": {
+    "1": {
+      "normal": {
+        "BurnPower": 1,
+        "QicToOre": 1
+      }
+    },
+    "2": {
+      "normal": {
+        "BurnPower": 6
+      }
+    },
+    "3": {
+      "normal": {
+        "BurnPower": 3,
+        "OreToPowerBowl3": 3
+      }
+    },
+    "5": {
+      "fallback": {
+        "OreToPower": 10
+      }
+    },
+    "6": {
+      "normal": {
+        "BurnPower": 2,
+        "CreditsToKnowledge": 1,
+        "CreditsToOre": 5,
+        "CreditsToQic": 1,
+        "OreToPower": 4,
+        "OreToPowerBowl3": 5
+      }
+    }
+  },
+  "factions": {
+    "Terrans": {
+      "buildings": 8,
+      "federations": 1,
+      "score": 84,
+      "research_tracks": {
+        "terraforming": 0,
+        "navigation": 0,
+        "ai": 0,
+        "gaia": 1,
+        "economy": 1,
+        "science": 0
+      }
+    },
+    "HadschHallas": {
+      "buildings": 11,
+      "federations": 2,
+      "score": 97,
+      "research_tracks": {
+        "terraforming": 1,
+        "navigation": 1,
+        "ai": 5,
+        "gaia": 0,
+        "economy": 5,
+        "science": 0
+      }
+    },
+    "Taklons": {
+      "buildings": 4,
+      "federations": 0,
+      "score": 63,
+      "research_tracks": {
+        "terraforming": 0,
+        "navigation": 0,
+        "ai": 1,
+        "gaia": 1,
+        "economy": 1,
+        "science": 0
+      }
+    },
+    "Xenos": {
+      "buildings": 11,
+      "federations": 2,
+      "score": 88,
+      "research_tracks": {
+        "terraforming": 0,
+        "navigation": 5,
+        "ai": 2,
+        "gaia": 0,
+        "economy": 3,
+        "science": 0
+      }
+    }
+  }
+}
