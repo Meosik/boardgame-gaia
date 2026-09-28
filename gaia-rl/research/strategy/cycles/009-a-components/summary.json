@@ -53,7 +53,7 @@
         "buildings": 0.25,
         "fallback_ratio": -0.004181983396273233
       },
-      "judgment": "rejected",
+      "judgment": "deferred",
       "per_seed": [
         {
           "seed": "state-evaluation-ab-20260917-11285",
@@ -83,7 +83,9 @@
           "buildings": 32,
           "fallback_ratio": 0.005263157894736842
         }
-      ]
+      ],
+      "historical_judgment": "rejected",
+      "minimum_remeasurement_seeds": 12
     },
     "resource-prices": {
       "score": 264.75,
@@ -96,7 +98,7 @@
         "buildings": -1.0,
         "fallback_ratio": -0.019508721452782558
       },
-      "judgment": "rejected",
+      "judgment": "deferred",
       "per_seed": [
         {
           "seed": "state-evaluation-ab-20260917-11285",
@@ -126,7 +128,9 @@
           "buildings": 34,
           "fallback_ratio": 0.018957345971563982
         }
-      ]
+      ],
+      "historical_judgment": "rejected",
+      "minimum_remeasurement_seeds": 12
     },
     "engine-fixes-2": {
       "score": 308.0,
@@ -139,7 +143,7 @@
         "buildings": 0.5,
         "fallback_ratio": -0.01859263759169125
       },
-      "judgment": "rejected",
+      "judgment": "accepted_correctness",
       "per_seed": [
         {
           "seed": "state-evaluation-ab-20260917-11285",
@@ -169,8 +173,11 @@
           "buildings": 33,
           "fallback_ratio": 0.0
         }
-      ]
+      ],
+      "historical_judgment": "rejected",
+      "measurement_caveat": "Historical arm included erroneous builder-based charge amount; corrected default-ON engine not remeasured."
     }
   },
-  "judgment_rule": "reject immediately when any required outcome is worse than A"
+  "judgment_rule": "Correctness fixes accepted after gates; noisy evaluation changes deferred for approved remeasurement with >=12 seeds.",
+  "historical_judgment_rule": "reject immediately when any required outcome is worse than A"
 }

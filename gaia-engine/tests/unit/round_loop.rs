@@ -747,7 +747,7 @@ fn itars_can_gain_advanced_then_standard_technology_without_ending_gaia_phase() 
 
     state.players[0].research_tracks.terraforming = 4;
     state.players[0].tech_tiles = vec![TechTile(3)];
-    state.players[0].federation_tokens = vec![FederationToken(1)];
+    state.players[0].federation_tokens = vec![FederationToken(4)];
     state.research_board.advanced_tech_tiles[0] = Some(AdvancedTechTile(20));
     let advanced = GameAction::ItarsGaiaTechChoice { choice: TechTileChoice::Advanced {
         track: ResearchTrack::Terraforming, covered_tile: TechTile(3), advance_track: Some(ResearchTrack::Science),
@@ -766,7 +766,7 @@ fn itars_can_gain_advanced_then_standard_technology_without_ending_gaia_phase() 
     assert_eq!(state.players[0].resources.power.gaia_forming, 4);
     assert_eq!(state.players[0].covered_tech_tiles, vec![TechTile(3)]);
     assert_eq!(state.players[0].advanced_tech_tiles, vec![AdvancedTechTile(20)]);
-    assert_eq!(state.players[0].gray_federation_tokens, vec![FederationToken(1)]);
+    assert_eq!(state.players[0].gray_federation_tokens, vec![FederationToken(4)]);
     assert_eq!(state.players[0].research_tracks.science, 1);
     assert_eq!(state.players[0].research_tracks.terraforming, 4);
     RuleEngine::apply_action(&mut state, 0, GameAction::ItarsGaiaTechChoice { choice: TechTileChoice::Standard {
@@ -785,7 +785,7 @@ fn itars_gaia_window_opens_when_only_advanced_technology_is_available() {
         player.resources.power.gaia_forming = 4;
         player.research_tracks.terraforming = 4;
         player.tech_tiles = vec![TechTile(3)];
-        player.federation_tokens = vec![FederationToken(1)];
+        player.federation_tokens = vec![FederationToken(4)];
     }).with_phase(GamePhase::RoundScoring { round: 1 }).build();
     state.research_board.tech_tiles.clear();
     state.research_board.tech_tile_slots = vec![None; 9];

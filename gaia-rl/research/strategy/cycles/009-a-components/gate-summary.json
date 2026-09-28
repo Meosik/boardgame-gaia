@@ -21,9 +21,18 @@
   },
   "tests": {
     "cargo_test_workspace": "pass",
-    "engine_flagged_xfail_regressions": {"passed": 2, "failed": 0},
-    "python_teacher_registry": {"passed": 12, "failed": 0},
-    "python_a_component_source": {"passed": 17, "failed": 0},
+    "engine_flagged_xfail_regressions": {
+      "passed": 2,
+      "failed": 0
+    },
+    "python_teacher_registry": {
+      "passed": 12,
+      "failed": 0
+    },
+    "python_a_component_source": {
+      "passed": 17,
+      "failed": 0
+    },
     "python_builder_compile": "pass",
     "clippy_workspace_lib_tests_D_warnings": "pass",
     "clippy_workspace_all_targets_D_warnings": {
@@ -35,5 +44,6 @@
   "evidence": {
     "committed": "reports, aggregate, 12 per-seed result JSON files, implementation flags and tests",
     "excluded": "gaia-rl/runs raw decisions/logs (gitignored); unrelated untracked gaia-frontend replay directories"
-  }
+  },
+  "historical_record": "Pre-correction default-OFF gate at 2258985; not the current engine gate. See corrected-engine-validation.json."
 }

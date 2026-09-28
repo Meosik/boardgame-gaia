@@ -35,7 +35,7 @@ def check_time(deadline: float) -> None:
 class Policies:
     """Per-faction proof maps; `_plans` are proposals, never legality commitments."""
     def __init__(self, memory=None, *, cache: PolicyCache | None = None, shared_factions=False,
-                 delta_factions=(), fixed_openings=False):
+                 delta_factions=(), fixed_openings=False, faction_tech_plans=False):
         if set(delta_factions) - set(FACTIONS):
             raise ValueError('State-delta experiment is limited to the approved quartet')
         self.memory = deepcopy(memory or {})
@@ -44,10 +44,12 @@ class Policies:
         self.delta_factions = tuple(sorted(set(delta_factions)))
         self.fixed_openings = fixed_openings
         self.fixed_audit = None
+        self.faction_tech_plans = bool(shared_factions and faction_tech_plans)
 
     def clone(self):
         return Policies(self.memory, cache=self.cache, shared_factions=self.shared_factions,
-                        delta_factions=self.delta_factions, fixed_openings=self.fixed_openings)
+                        delta_factions=self.delta_factions, fixed_openings=self.fixed_openings,
+                        faction_tech_plans=self.faction_tech_plans)
 
     def rank(self, env, snapshot):
         actor = snapshot['player']
@@ -66,6 +68,8 @@ class Policies:
             # Both scores AND resulting commitments depend on the exact incoming
             # proof map. A snapshot-only cache could silently bypass QIC purpose.
             cache_key = identity((snapshot, saved, self.delta_factions))
+            if self.faction_tech_plans:
+                cache_key = identity((cache_key, 'faction-tech-pilot'))
             cached = self.cache.get(cache_key)
             if cached is not None:
                 scores, self.memory[str(actor)] = cached
@@ -113,6 +117,8 @@ def goal_from_dict(value):
 
 def advance_goal(snapshot, actor, goal, action, *, before=None):
     """Keep only unfinished work, based on this actor's actual paid action/state."""
+    if 'faction-tech-pilot' in goal.sources and before is not None and not viable(before, actor, goal):
+        return replace(goal, first=None, payoff='cancelled')
     if goal.family == 'ordered':
         steps = list(goal.steps)
         while steps and achieved(before if before is not None else snapshot, actor, steps[0]):
@@ -134,6 +140,10 @@ def advance_goal(snapshot, actor, goal, action, *, before=None):
 
 
 def viable(snapshot, actor, goal):
+    if 'faction-tech-pilot' in goal.sources:
+        from faction_teachers.guidance import pilot_viable
+        if not pilot_viable(snapshot, actor, goal):
+            return False
     if goal.family == 'bgg-opening':
         from bgg_openings.catalog import parse_buildings
         from bgg_openings.inventory import building_counts
@@ -144,6 +154,13 @@ def viable(snapshot, actor, goal):
     if achieved(snapshot, actor, goal):
         return True
     player = snapshot['state']['players'][actor]
+    if goal.family == 'technology':
+        from faction_teachers.guidance import available_technology
+        return available_technology(snapshot, goal.tile, actor)
+    if goal.family == 'faction-action' and goal.target == 'AmbasSwapPlanetaryInstitute' and goal.coord:
+        return owned(player, goal.coord) == 'Mine' and goal.coord not in player['federated_hexes']
+    if goal.family == 'federation-race' and goal.coord:
+        return goal.coord not in player['federated_hexes'] and owned(player, goal.coord) is not None
     if goal.family == 'ordered':
         if 'B19' in goal.sources and any(not viable(snapshot, actor, step) for step in goal.steps):
             return False  # Do not keep researching for a colony an opponent took.
@@ -195,18 +212,20 @@ def achieved(snapshot, actor, goal):
         return goal.level == 1
     if goal.family == 'research':
         return player['research_tracks'][TRACK_KEYS[goal.target]] >= goal.level
+    if goal.family == 'technology':
+        return goal.tile in player['tech_tiles'] and goal.tile not in player['covered_tech_tiles']
     if goal.family == 'colony':
         return owned(player, goal.coord) is not None
     if goal.family == 'federations':
         return formations(player) >= 3
     if goal.family == 'federation-race':
-        return formations(player) >= goal.level
+        return formations(player) >= goal.level and (goal.coord is None or goal.coord in player['federated_hexes'])
     if goal.family in ('advanced', 'lost-fleet'):
         return goal.tile in player['advanced_tech_tiles']
     return False
 
 
-def goals_for(snapshot, *, shared_factions=False, guide_tracks=False, observed=False):
+def goals_for(snapshot, *, shared_factions=False, guide_tracks=False, observed=False, faction_tech_plans=False):
     """No nearest-two colony filter or one-shape-per-token filter in this lane."""
     state, actor = snapshot['state'], snapshot['player']
     player = state['players'][actor]
@@ -254,6 +273,9 @@ def goals_for(snapshot, *, shared_factions=False, guide_tracks=False, observed=F
     if shared_factions:
         from faction_teachers.paths import goals as faction_goals
         goals = faction_goals(snapshot)+goals
+        if faction_tech_plans:
+            from faction_teachers.guidance import advice_goals
+            goals = advice_goals(snapshot)+goals
     goals.extend(expansion_goals(snapshot))
     if guide_tracks:
         from four_factions.track_guidance import guide_goals
@@ -264,7 +286,7 @@ def goals_for(snapshot, *, shared_factions=False, guide_tracks=False, observed=F
     return [goal for goal in goals if viable(snapshot, actor, goal) and not achieved(snapshot, actor, goal)]
 
 
-def scoring_pairs(snapshot, scores, goals):
+def scoring_pairs(snapshot, scores, goals, *, nested=True):
     """Compare a currently legal scoring-tile acquisition with its intended work.
 
     This proposes comparisons, not a scoring-tile bonus. Ordinary native VP in
@@ -276,7 +298,7 @@ def scoring_pairs(snapshot, scores, goals):
         if blocked(scores[i]):
             continue
         action = candidate['action']
-        choice = action.get('tech_tile_choice') or {}
+        choice = action.get('tech_tile_choice') or (action.get('choice') if nested else None) or {}
         families = set()
         standard = (choice.get('tile') if choice.get('kind') == 'Standard' else
                     action.get('tile') if action['type'] == 'RebellionGainTechTile' else None)
@@ -288,11 +310,25 @@ def scoring_pairs(snapshot, scores, goals):
             families.update({'mines': {'colony'}, 'research': {'research'},
                              'ts': {'upgrade'}, 'federations': {'federations'}}.get(counter, set()))
         for goal in goals:
-            work = goal.steps if goal.family == 'sequence' else (goal,)
+            work = goal_leaves(goal) if nested else goal.steps if goal.family == 'sequence' else (goal,)
             if any(step.family in families or (step.family == 'expansion' and 'colony' in families)
                    for step in work):
                 pairs.append(replace(goal, name=f'tile-action-{i}-then-{goal.name}', first=i))
     return pairs
+
+
+def goal_leaves(goal):
+    if goal.family in ('ordered', 'sequence'):
+        return tuple(leaf for step in goal.steps for leaf in goal_leaves(step))
+    return (goal,)
+
+
+def reserved_pilot_sites(goal):
+    if 'faction-tech-pilot' not in goal.sources:
+        return set()
+    return {leaf.coord for leaf in goal_leaves(goal) if (
+        leaf.family == 'upgrade' and leaf.target == 'PlanetaryInstitute' or
+        leaf.family == 'faction-action' and leaf.target == 'AmbasSwapPlanetaryInstitute')}
 
 
 def predicate_for(snapshot, goal):
@@ -302,7 +338,27 @@ def predicate_for(snapshot, goal):
         pending = list(goal.steps)
         while pending and achieved(snapshot, actor, pending[0]):
             pending.pop(0)
-        return predicate_for(snapshot, pending[0]) if pending else lambda a: False
+        if not pending:
+            return lambda a: False
+        matches = predicate_for(snapshot, pending[0])
+        if any(leaf.family == 'technology' for leaf in goal_leaves(pending[0])):
+            from faction_teachers.guidance import technology_choice
+            reserved = reserved_pilot_sites(goal)
+            if reserved:
+                base_matches = matches
+                matches = lambda a: base_matches(a) and not (a['type'] == 'Upgrade' and a.get('coord') in reserved)
+            research = next((leaf for step in pending[1:] for leaf in goal_leaves(step)
+                             if leaf.family == 'research' and not achieved(snapshot, actor, leaf)), None)
+            if research is not None:
+                def aligned(action):
+                    choice = technology_choice(state, action)
+                    return matches(action) and choice is not None and choice[1] == research.target
+                if any(aligned(c['action']) for c in snapshot['candidates']):
+                    return aligned
+        return matches
+    if goal.family == 'technology':
+        from faction_teachers.guidance import technology_choice
+        return lambda a: (choice := technology_choice(state, a)) is not None and choice[0] == goal.tile
     if goal.family == 'faction-action':
         from faction_teachers.paths import action_matches
         return lambda a: action_matches(goal, a)
@@ -323,6 +379,11 @@ def predicate_for(snapshot, goal):
         def upgrade(a):
             if a.get('coord') != goal.coord:
                 return False
+            if goal.tile is not None and target != 'TradingStation':
+                from faction_teachers.guidance import technology_choice
+                choice = technology_choice(state, a)
+                if choice is None or choice[0] != goal.tile:
+                    return False
             return ((a['type'] == 'Upgrade' and a['to'] == target) or
                     (target == 'TradingStation' and a['type'] == 'RebellionFreeTradingStation') or
                     (target == 'ResearchLab' and a['type'] == 'TwilightFreeResearchLab'))
@@ -349,7 +410,7 @@ def predicate_for(snapshot, goal):
         if goal.family == 'explore':
             return lambda a: False
         payoff = goal.payoff or SHIP_PAYOFFS[goal.target][0]
-        return lambda a: a['type'] == payoff
+        return lambda a: a['type'] == payoff and (goal.tile is None or a.get('tile') == goal.tile)
     if goal.family == 'lost-fleet':
         board = state['research_board']
         if board.get('lost_fleet_advanced_tech_tile') != goal.tile:
@@ -387,7 +448,7 @@ def predicate_for(snapshot, goal):
     if goal.family == 'federation-race':
         # Contrast immediate tech access with the separate-core plan; don't
         # forbid a two-large-building federation in all source proposals.
-        return lambda a: a['type'] == 'FormFederation'
+        return lambda a: a['type'] == 'FormFederation' and (goal.coord is None or goal.coord in a['hexes'])
     return lambda a: False
 
 
@@ -438,21 +499,96 @@ def funding_need(snapshot, goal):
     return {}
 
 
-def select_goal(env, snapshot, scores, goal, policies, deadline):
+def select_goal(env, snapshot, scores, goal, policies, deadline, *, allow_fallback=True):
+    from faction_teachers.guidance import preserves_plan
+    actor = snapshot['player']
+    if (not policies.faction_tech_plans or not preserves_plan(goal)
+            or achieved(snapshot, actor, goal) or not viable(snapshot, actor, goal)):
+        return _select_goal(env, snapshot, scores, goal, policies, deadline,
+                            allow_fallback=allow_fallback)
+    # Restrict only this hypothetical continuation, never the native legal set,
+    # ordinary route, cached ranks, or other players' choices.
+    from current_actions.conservation import PREFIX
+    eligible = list(scores)
+    swap_sites = {step.coord for step in goal_leaves(goal)
+                  if step.family == 'faction-action' and step.target == 'AmbasSwapPlanetaryInstitute'
+                  and step.coord is not None and not achieved(snapshot, actor, step)}
+    federation_sites = {step.coord for step in goal_leaves(goal)
+                        if step.family == 'federation-race' and step.coord is not None}
+    for i, candidate in enumerate(snapshot['candidates']):
+        action = candidate['action']
+        # pilot_viable requires an unfederated swap mine. Reject all equivalent
+        # token/satellite variants at once rather than repeating funding search.
+        if action['type'] == 'FormFederation' and swap_sites.intersection(action['hexes']):
+            eligible[i] = (scores[i][0], PREFIX + 'federates the reserved swap mine')
+        elif action['type'] == 'FormFederation' and any(
+                site not in action['hexes'] and any(distance(site, coord) == 1
+                    for coord in (*action['hexes'], *action['satellite_hexes']))
+                for site in federation_sites):
+            eligible[i] = (scores[i][0], PREFIX + 'makes the target adjacent to an old federation')
+    while True:
+        check_time(deadline)
+        index = _select_goal(env, snapshot, eligible, goal, policies, deadline,
+                             allow_fallback=allow_fallback)
+        if index is None or keeps_plan(env, snapshot, index, goal, deadline):
+            return index
+        eligible[index] = (scores[index][0], PREFIX + 'invalidates this preservation comparison')
+
+
+def keeps_plan(env, snapshot, index, goal, deadline):
+    """Check actual paid effects against unfinished prerequisites, not intentions."""
+    actor = snapshot['player']
+    if achieved(snapshot, actor, goal) or not viable(snapshot, actor, goal):
+        return True  # Completed/external-invalidated plans use the existing fallback.
+    check_time(deadline)
+    after = json.loads(env.fork(snapshot['decision_id'], index).snapshot_json())
+    action = snapshot['candidates'][index]['action']
+    remaining = advance_goal(after, actor, goal, action, before=snapshot)
+    check_time(deadline)
+    return viable(after, actor, remaining)
+
+
+def _select_goal(env, snapshot, scores, goal, policies, deadline, *, allow_fallback=True):
     if goal.family == 'bgg-opening':
         from bgg_openings.catalog import parse_buildings
         from bgg_openings.planning import select_action
         return select_action(env, snapshot, scores, parse_buildings(goal.target), policies, deadline)
-    fallback = best_index(scores, range(len(scores)))
+    fallback = best_index(scores, range(len(scores))) if allow_fallback else None
     if achieved(snapshot, snapshot['player'], goal) or not viable(snapshot, snapshot['player'], goal):
         return fallback
     phase = snapshot['state']['phase']
-    if (not isinstance(phase, dict) or 'ActionPhase' not in phase) and goal.family not in ('ordered', 'faction-action'):
+    if (not isinstance(phase, dict) or 'ActionPhase' not in phase) and goal.family not in ('ordered', 'faction-action', 'technology'):
         return fallback
     predicate = predicate_for(snapshot, goal)
     direct = best_index(scores, [i for i, c in enumerate(snapshot['candidates']) if predicate(c['action'])])
     if direct is not None:
         return direct
+    pending = goal
+    while pending.family in ('ordered', 'sequence'):
+        pending = next((step for step in pending.steps if not achieved(snapshot, snapshot['player'], step)), None)
+        if pending is None:
+            return fallback
+    if (policies.faction_tech_plans and pending.family == 'federation-race'
+            and pending.coord is not None and goal.target == 'Ambas'):
+        from faction_teachers.guidance import preserves_plan
+        if preserves_plan(goal):
+            from faction_teachers.federation_preparation import needs_power, select_preparation
+            if needs_power(snapshot):
+                prepared = select_preparation(env, snapshot, scores, goal, policies, deadline)
+                return prepared if prepared is not None else fallback
+    if pending.family == 'technology':
+        from faction_teachers.guidance import technology_preparations
+        candidates = []
+        for route in technology_preparations(snapshot, pending.tile):
+            check_time(deadline)
+            # Do not dismantle this proposal's future PI site or swap mine just
+            # to obtain its prerequisite tile. Ordinary roots remain available.
+            if route.family == 'upgrade' and route.coord in reserved_pilot_sites(goal):
+                continue
+            index = select_goal(env, snapshot, scores, route, policies, deadline, allow_fallback=False)
+            if index is not None:
+                candidates.append(index)
+        return best_index(scores, candidates) if candidates else fallback
     if goal.family in ('current', 'root'):
         return fallback
     before_resources = snapshot['state']['players'][snapshot['player']]['resources']
@@ -498,7 +634,17 @@ def leaf_value(snapshot, actor, root_player, *, guide_tracks=False):
     return potential(state, actor, guide_tracks=guide_tracks)
 
 
-def rollout(env, snapshot, first, goal, policies, deadline, limit=192, *, capture_r1=False):
+def rollout(env, snapshot, first, goal, policies, deadline, limit=192, *, capture_r1=False,
+            decision_depth=None):
+    if decision_depth is not None and not 1 <= decision_depth <= limit:
+        raise ValueError('Decision depth must be within the existing rollout limit')
+    from faction_teachers.guidance import preserves_plan
+    preserving = policies.faction_tech_plans and preserves_plan(goal)
+    # Fixed-first scoring-tile alternatives must satisfy the same guard too.
+    if preserving and not keeps_plan(env, snapshot, first, goal, deadline):
+        return {'complete': False, 'value': None, 'actions': [],
+                'remaining_goal': asdict(goal),
+                'reason': 'fixed first action invalidates preservation; no comparable horizon'}
     actor = snapshot['player']
     root_player = snapshot['state']['players'][actor]
     target_round = snapshot['state']['round'] + 2
@@ -532,7 +678,8 @@ def rollout(env, snapshot, first, goal, policies, deadline, limit=192, *, captur
                             'resources_before': p['resources'], 'resources_after': q['resources'],
                             'vp_before': p['vp'], 'vp_after': q['vp']})
             remaining = advance_goal(current, actor, remaining, action, before=before)
-        if reached_horizon(current['state'], target_round):
+        full_horizon = reached_horizon(current['state'], target_round)
+        if full_horizon or (decision_depth is not None and step >= decision_depth):
             goal_acquired = achieved(current, actor, remaining)
             if goal.family == 'bgg-opening':
                 from bgg_openings.catalog import parse_buildings
@@ -544,7 +691,8 @@ def rollout(env, snapshot, first, goal, policies, deadline, limit=192, *, captur
                     'remaining_goal': asdict(remaining),
                     'end_round': current['state']['round'], 'decisions': step,
                     'end_player': current['state']['players'][actor],
-                    **({'r1_buildings': r1_buildings} if capture_r1 else {})}
+                    **({'r1_buildings': r1_buildings} if capture_r1 else {}),
+                    **({'full_horizon_reached': full_horizon} if decision_depth is not None else {})}
         check_time(deadline)
         scores = policies.rank(branch, current)
         # Every simulated seat is purposeful, but uses a cheaper continuation,
@@ -552,6 +700,10 @@ def rollout(env, snapshot, first, goal, policies, deadline, limit=192, *, captur
         index = (select_goal(branch, current, scores, remaining, policies, deadline)
                  if current['player'] == actor else best_index(scores, range(len(scores))))
         if index is None:
+            if preserving and current['player'] == actor:
+                return {'complete': False, 'value': None, 'actions': actions,
+                        'remaining_goal': asdict(remaining),
+                        'reason': 'no policy-eligible preserving continuation; unknown, not inferior'}
             raise ValueError('No eligible continuation; do not silently pass')
     return {'complete': False, 'value': None, 'actions': actions,
             'reason': '192-decision horizon cap; unknown, not inferior'}
@@ -567,10 +719,11 @@ def interleave_families(items, family):
 
 def search(env, snapshot, memory, publish, *, soft_deadline, hard_deadline, bgg_openings=False,
            shared_factions=False, adaptive=False, allocation=None, delta_factions=(), fixed_openings=False,
-           observed_factions=()):
+           observed_factions=(), faction_tech_plans=False):
     cache = PolicyCache()
     policies = Policies(memory, cache=cache, shared_factions=shared_factions,
-                        delta_factions=delta_factions, fixed_openings=fixed_openings)
+                        delta_factions=delta_factions, fixed_openings=fixed_openings,
+                        faction_tech_plans=faction_tech_plans)
     check_time(hard_deadline)
     scores = policies.rank(env, snapshot)
     control_first = best_index(scores, range(len(scores)))
@@ -578,6 +731,7 @@ def search(env, snapshot, memory, publish, *, soft_deadline, hard_deadline, bgg_
         raise ValueError('No eligible root action')
     opening_rows, opening_goals, remembered = (), [], None
     actor_key = str(snapshot.get('player'))
+    tech_plans = policies.faction_tech_plans and snapshot['state']['players'][snapshot['player']]['faction'] in ('Terrans', 'Ambas')
     if fixed_openings:
         from bgg_openings.fixed import TARGETS
         if snapshot['state']['players'][snapshot['player']]['faction'] in TARGETS:
@@ -599,10 +753,12 @@ def search(env, snapshot, memory, publish, *, soft_deadline, hard_deadline, bgg_
               'selected': 'local-baseline', 'opponents': 'purposeful faction-aware continuation',
               'horizon_incomes': 2, 'coverage_complete': False}
     result['delta_factions'] = list(policies.delta_factions)
+    if policies.faction_tech_plans:
+        result['faction_tech_plans'] = True
     if fixed_openings:
         result['fixed_opening'] = policies.fixed_audit
     normal_index, normal_selected = control_first, 'local-baseline'
-    def publish_current():
+    def publish_current(*, remember_plan=False):
         result.update(index=normal_index, selected=normal_selected)
         if opening_rows:
             from bgg_openings.planning import select_forecast
@@ -621,8 +777,18 @@ def search(env, snapshot, memory, publish, *, soft_deadline, hard_deadline, bgg_
                     'note': 'No completed matching forecast yet; unsearched is not impossible'}
         elif bgg_openings:
             result['bgg_opening'] = {'status': 'outside-r1-or-source-scope', 'target': None}
+        selected_plan = None
+        if remember_plan:
+            selected_name = result['selected'].split(' via ', 1)[-1]
+            matches = [p for p in result['plans'] if p['complete'] and
+                       p['first'] == result['index'] and p['goal'] == selected_name]
+            selected_plan = max(matches, key=lambda p: p['value'])
+            selected_goal = goal_from_dict(selected_plan['goal_spec'])
+            if selected_goal.family not in ('current', 'root'):
+                policies.memory.setdefault('_plans', {})[actor_key] = asdict(replace(selected_goal, first=None))
         result['policy_cache'] = cache.stats()
         publish(result)
+        return selected_plan
 
     publish_current()
     if adaptive:
@@ -647,16 +813,17 @@ def search(env, snapshot, memory, publish, *, soft_deadline, hard_deadline, bgg_
     observed = bool(observed_factions) and (
         snapshot['state']['players'][snapshot['player']]['faction'] in observed_factions)
     proposals = goals_for(snapshot, shared_factions=shared_factions, guide_tracks=guide_tracks,
-                          observed=observed)
+                          observed=observed, faction_tech_plans=tech_plans)
     goals = interleave_families(proposals, lambda goal: goal.family)
     saved = policies.memory.get('_plans', {}).get(str(snapshot.get('player')))
     if saved:
         previous = goal_from_dict(saved)
-        if viable(snapshot, snapshot['player'], previous) and not achieved(snapshot, snapshot['player'], previous):
+        enabled_plan = tech_plans or 'faction-tech-pilot' not in previous.sources
+        if enabled_plan and viable(snapshot, snapshot['player'], previous) and not achieved(snapshot, snapshot['player'], previous):
             goals.insert(0, previous)
         else:
             del policies.memory['_plans'][str(snapshot['player'])]
-    paired = scoring_pairs(snapshot, scores, goals)
+    paired = scoring_pairs(snapshot, scores, goals, nested=tech_plans)
     roots = [Goal(f'root-{i}', 'root', first=i)
              for i in sorted(range(len(scores)), key=lambda i: (-scores[i][0], i))
              if not blocked(scores[i]) and i != control_first]
@@ -676,6 +843,21 @@ def search(env, snapshot, memory, publish, *, soft_deadline, hard_deadline, bgg_
             tasks.append(interleaved[i])
         if i < len(paired):
             tasks.append(paired[i])
+    if tech_plans:
+        from faction_teachers.guidance import comparison_variants
+        tasks = [variant for goal in tasks for variant in comparison_variants(goal)]
+        from faction_teachers.progressive import progressive_search
+        def publish_depth(rows, depth):
+            nonlocal normal_index, normal_selected
+            winner = max((row for row in rows if row['complete'] and row['family'] != 'bgg-opening'),
+                         key=lambda row: row['value'])
+            normal_index, normal_selected = winner['first'], winner['goal']
+            result.update(plans=rows, comparison_depth=depth)
+            return publish_current(remember_plan=True)
+        return progressive_search(env, snapshot, scores, tasks, control, policies, result,
+                                  publish_depth, publish_current, soft_deadline=soft_deadline,
+                                  hard_deadline=hard_deadline, allocation=allocation,
+                                  capture_r1=bool(opening_rows))
     best_value = None
     result['extended_reason'] = None
     result['extension_policy'] = 'finish-current-comparison-only'
@@ -689,8 +871,13 @@ def search(env, snapshot, memory, publish, *, soft_deadline, hard_deadline, bgg_
                 break
             check_time(hard_deadline)
             first = goal.first if goal.first is not None else select_goal(env, snapshot, scores, goal, policies, hard_deadline)
-            comparison = (rollout(env, snapshot, first, goal, policies, hard_deadline, capture_r1=True)
-                          if opening_rows else rollout(env, snapshot, first, goal, policies, hard_deadline))
+            if first is None:
+                comparison = {'complete': False, 'value': None, 'actions': [],
+                              'remaining_goal': asdict(goal),
+                              'reason': 'no policy-eligible preserving first action; unknown, not inferior'}
+            else:
+                comparison = (rollout(env, snapshot, first, goal, policies, hard_deadline, capture_r1=True)
+                              if opening_rows else rollout(env, snapshot, first, goal, policies, hard_deadline))
             if time.monotonic() >= soft_deadline:
                 result['extended_reason'] = 'finish comparison started before soft deadline'
             result['plans'].append({'goal': goal.name, 'goal_spec': asdict(goal),

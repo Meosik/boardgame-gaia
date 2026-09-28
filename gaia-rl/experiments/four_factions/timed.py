@@ -32,7 +32,7 @@ def stop(process):
 class TimedPreparationTeacher(QuartetTeacher):
     def __init__(self, seed, *, target_seconds=60.0, maximum_seconds=300.0, prefix=(), bgg_openings=False,
                  shared_factions=False, adaptive_clock=None, delta_factions=(), fixed_openings=False,
-                 observed_factions=()):
+                 observed_factions=(), faction_tech_plans=False):
         super().__init__()
         if not (0 < target_seconds <= maximum_seconds and math.isfinite(maximum_seconds)):
             raise ValueError('Positive finite target <= maximum required')
@@ -43,6 +43,7 @@ class TimedPreparationTeacher(QuartetTeacher):
         self.bgg_openings = bgg_openings
         self.fixed_openings = fixed_openings
         self.shared_factions = shared_factions
+        self.faction_tech_plans = bool(shared_factions and faction_tech_plans)
         self.adaptive_clock = adaptive_clock
         from four_factions.preparation import Policies
         self.delta_factions = Policies(delta_factions=delta_factions).delta_factions
@@ -120,6 +121,7 @@ class TimedPreparationTeacher(QuartetTeacher):
                        'bgg_openings': self.bgg_openings,
                        'fixed_openings': self.fixed_openings,
                        'shared_factions': self.shared_factions,
+                       'faction_tech_plans': self.faction_tech_plans,
                        'delta_factions': self.delta_factions,
                        'observed_factions': self.observed_factions,
                        'adaptive': clock is not None,
@@ -197,6 +199,7 @@ class TimedPreparationTeacher(QuartetTeacher):
         self.last_scores[index] = (selected_value, f'preparation path={latest["selected"]}; '
                                    'paid native forecast, not observed future or guaranteed optimum')
         self.last_audit = {**{k: v for k, v in latest.items() if k != 'memory'}, 'selected_index': index,
+                           'faction_tech_plans': self.faction_tech_plans,
                            'delta_factions': list(self.delta_factions),
                            'value_model': ('shared-quick-fallback' if used_reserve else
                                'B19-expansion-v1' if snapshot['state']['players'][snapshot['player']]['faction']
@@ -253,6 +256,7 @@ def worker(request_path):
                bgg_openings=request.get('bgg_openings', False),
                fixed_openings=request.get('fixed_openings', False),
                shared_factions=request.get('shared_factions', False),
+               faction_tech_plans=request.get('faction_tech_plans', False),
                delta_factions=request.get('delta_factions', ()),
                observed_factions=tuple(request.get('observed_factions', ())),
                adaptive=request.get('adaptive', False),

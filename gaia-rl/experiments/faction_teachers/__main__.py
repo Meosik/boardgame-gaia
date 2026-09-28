@@ -20,6 +20,8 @@ from four_factions.timed import atomic_json
 def collect(destination, seed, *, adaptive=False, resume_checkpoint=None):
     destination = Path(destination)
     continuation = load_continuation(resume_checkpoint, seed) if resume_checkpoint is not None else None
+    from .guidance import enabled
+    tech_plans = (continuation['saved'].get('faction_tech_plans', False) if continuation else enabled())
     saved_clock = continuation['saved']['memory'].get('_clock') if continuation else None
     if saved_clock is not None and not adaptive:
         raise ValueError('An adaptive-clock game cannot silently reset to a legacy clock')
@@ -32,7 +34,7 @@ def collect(destination, seed, *, adaptive=False, resume_checkpoint=None):
     manifest = {'versions': runtime_versions(), 'source_hashes': hashes()}
     verify(manifest)
     spec = {'name': 'shared-native-bgg-r1-adaptive-v2' if adaptive else 'shared-native-bgg-r1-v1',
-            **manifest, 'bgg_openings': True,
+            **manifest, 'bgg_openings': True, 'faction_tech_plans': tech_plans,
             'quality': 'unreviewed; native replay does not prove expert quality',
             'profiles': {p['faction']: {k: v for k, v in asdict(profiles()[p['faction']]).items()
                                        if k != 'openings'} for p in before['state']['players']}}
@@ -43,7 +45,7 @@ def collect(destination, seed, *, adaptive=False, resume_checkpoint=None):
     if continuation:
         spec['continuation'] = continuation['provenance']
     recorder = NativeRecorder(destination, seed, teacher_seats=range(4), teacher_spec=spec)
-    policy = SharedTeacher(seed, adaptive_clock=clock).bind(env)
+    policy = SharedTeacher(seed, adaptive_clock=clock, faction_tech_plans=tech_plans).bind(env)
     try:
         if recorder.current != before:
             raise ValueError('Recorder and teacher native initial states differ')

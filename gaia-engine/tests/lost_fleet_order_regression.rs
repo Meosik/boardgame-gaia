@@ -74,7 +74,6 @@ fn charge_order_state() -> gaia_engine::game_state::GameState {
 
 // LF2-14: upgrading the lab should offer its charge first, then the free mine's charge.
 #[test]
-#[ignore = "known LF2-14 charge-order defect; enable after the A/B run and engine fix"]
 fn lab_charge_precedes_lost_fleet_free_mine_charge() {
     let mut state = charge_order_state();
     let upgrade = RuleEngine::apply_action(
@@ -102,10 +101,13 @@ fn lab_charge_precedes_lost_fleet_free_mine_charge() {
                 HexCoord::new(0, 0),
                 "lab charge must be first"
             );
-            assert_eq!(queue[0].max_power, 2);
+            // The charging opponent owns a Mine: both offers are one power.
+            assert_eq!(queue[0].max_power, 1);
         }
         other => panic!("expected lab charge, got {other:?}"),
     }
+    let saved = serde_json::to_string(&state).unwrap_or_else(|error| panic!("{error}"));
+    state = serde_json::from_str(&saved).unwrap_or_else(|error| panic!("{error}"));
     let decline =
         RuleEngine::apply_action(&mut state, 1, GameAction::ChargePower { accept: false });
     assert!(
@@ -157,7 +159,6 @@ fn lost_fleet_twelve_vp_token_can_be_flipped_for_level_five() {
 
 // LF3-10: the base-game 12-VP token has no green side, unlike the Lost Fleet token.
 #[test]
-#[ignore = "known base-vs-Lost-Fleet 12-VP token distinction defect; fix after A/B"]
 fn base_twelve_vp_token_cannot_be_flipped_for_level_five() {
     let mut state = level_five_state(1);
     let result = RuleEngine::apply_action(
@@ -171,4 +172,37 @@ fn base_twelve_vp_token_cannot_be_flipped_for_level_five() {
         result.is_err(),
         "base 12-VP token must not satisfy the green-token cost"
     );
+}
+
+#[test]
+fn flipping_a_green_token_preserves_a_base_twelve_vp_token_on_top() {
+    let mut state = level_five_state(9);
+    state.players[0].federation_tokens.push(FederationToken(1));
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::ResearchAdvance {
+            track: ResearchTrack::Terraforming,
+        },
+    )
+    .unwrap_or_else(|error| panic!("green Lost Fleet token must be usable: {error}"));
+    assert_eq!(state.players[0].federation_tokens, vec![FederationToken(1)]);
+    assert_eq!(state.players[0].gray_federation_tokens, vec![FederationToken(9)]);
+}
+
+#[test]
+fn saved_base_twelve_vp_token_does_not_become_green_after_reload() {
+    let state = level_five_state(1);
+    let saved = serde_json::to_string(&state).unwrap_or_else(|error| panic!("{error}"));
+    let mut loaded = serde_json::from_str(&saved).unwrap_or_else(|error| panic!("{error}"));
+    let result = RuleEngine::apply_action(
+        &mut loaded,
+        0,
+        GameAction::ResearchAdvance {
+            track: ResearchTrack::Terraforming,
+        },
+    );
+    assert!(result.is_err());
+    assert_eq!(loaded.players[0].federation_tokens, vec![FederationToken(1)]);
+    assert_eq!(loaded.players[0].research_tracks.terraforming, 4);
 }

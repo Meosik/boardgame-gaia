@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "games": [
+    {
+      "id": "eval-55091eed07c46dcd-0",
+      "file": "eval-55091eed07c46dcd-0.json.gz",
+      "policy": "EconomyFirstTeacher",
+      "faction": "HadschHallas",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-hadsch-1",
+      "vp": 129,
+      "steps": 137
+    },
+    {
+      "id": "eval-fe6aa475a9ec0563-0",
+      "file": "eval-fe6aa475a9ec0563-0.json.gz",
+      "policy": "OpeningPlanTeacher",
+      "faction": "HadschHallas",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-hadsch-1",
+      "vp": 113,
+      "steps": 160
+    },
+    {
+      "id": "eval-76ca613452e7c1d2-0",
+      "file": "eval-76ca613452e7c1d2-0.json.gz",
+      "policy": "PaiaReplanTeacher",
+      "faction": "HadschHallas",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-hadsch-1",
+      "vp": 150,
+      "steps": 170
+    },
+    {
+      "id": "eval-dd27fdab557b1f61-0",
+      "file": "eval-dd27fdab557b1f61-0.json.gz",
+      "policy": "PaiaPlanTeacher",
+      "faction": "HadschHallas",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-hadsch-1",
+      "vp": 128,
+      "steps": 165
+    },
+    {
+      "id": "eval-4afeb9e9654d407d-0",
+      "file": "eval-4afeb9e9654d407d-0.json.gz",
+      "policy": "ResearchPlanTeacher",
+      "faction": "HadschHallas",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-hadsch-1",
+      "vp": 139,
+      "steps": 171
+    },
+    {
+      "id": "eval-d636925b44d0e448-0",
+      "file": "eval-d636925b44d0e448-0.json.gz",
+      "policy": "ResourcePlanTeacher",
+      "faction": "Xenos",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-xenos-1",
+      "vp": 140,
+      "steps": 189
+    },
+    {
+      "id": "eval-44fa9ae29e6a0c97-0",
+      "file": "eval-44fa9ae29e6a0c97-0.json.gz",
+      "policy": "CurrentActionTeacher",
+      "faction": "Xenos",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-xenos-1",
+      "vp": 75,
+      "steps": 174
+    },
+    {
+      "id": "eval-44fa9ae29e6a0c97-1",
+      "file": "eval-44fa9ae29e6a0c97-1.json.gz",
+      "policy": "ResourcePlanTeacher",
+      "faction": "Xenos",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-xenos-1",
+      "vp": 126,
+      "steps": 186
+    },
+    {
+      "id": "eval-44fa9ae29e6a0c97-2",
+      "file": "eval-44fa9ae29e6a0c97-2.json.gz",
+      "policy": "CurrentActionTeacher",
+      "faction": "Xenos",
+      "seed": "xenos-resources-20260912T101506Z-48i8she9-4",
+      "vp": 87,
+      "steps": 202
+    },
+    {
+      "id": "eval-969fe18779854603-0",
+      "file": "eval-969fe18779854603-0.json.gz",
+      "policy": "ResearchPlanTeacher",
+      "faction": "HadschHallas",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-hadsch-1",
+      "vp": 130,
+      "steps": 173
+    },
+    {
+      "id": "eval-da8ae8f7ea590f7a-0",
+      "file": "eval-da8ae8f7ea590f7a-0.json.gz",
+      "policy": "CurrentActionTeacher",
+      "faction": "Xenos",
+      "seed": "teacher-fresh-20260912T084459Z-j4eq65nz-xenos-1",
+      "vp": 75,
+      "steps": 174
+    },
+    {
+      "id": "eval-3d3fad9ddba52bf4-0",
+      "file": "eval-3d3fad9ddba52bf4-0.json.gz",
+      "policy": "CurrentActionTeacher",
+      "faction": "HadschHallas",
+      "seed": "booster12-teacher-20260912-5",
+      "vp": 90,
+      "steps": 182
+    },
+    {
+      "id": "eval-3d3fad9ddba52bf4-1",
+      "file": "eval-3d3fad9ddba52bf4-1.json.gz",
+      "policy": "ResearchPlanTeacher",
+      "faction": "HadschHallas",
+      "seed": "booster12-teacher-20260912-5",
+      "vp": 135,
+      "steps": 203
+    },
+    {
+      "id": "eval-3d3fad9ddba52bf4-2",
+      "file": "eval-3d3fad9ddba52bf4-2.json.gz",
+      "policy": "CurrentActionTeacher",
+      "faction": "HadschHallas",
+      "seed": "hadsch-research-plans-20260912-1",
+      "vp": 92,
+      "steps": 166
+    },
+    {
+      "id": "eval-3d3fad9ddba52bf4-3",
+      "file": "eval-3d3fad9ddba52bf4-3.json.gz",
+      "policy": "ResearchPlanTeacher",
+      "faction": "HadschHallas",
+      "seed": "hadsch-research-plans-20260912-1",
+      "vp": 106,
+      "steps": 163
+    },
+    {
+      "id": "eval-854ca251a4486a11-0",
+      "file": "eval-854ca251a4486a11-0.json.gz",
+      "policy": "CurrentActionTeacher",
+      "faction": "Xenos",
+      "seed": "booster12-teacher-20260912-1",
+      "vp": 72,
+      "steps": 167
+    },
+    {
+      "id": "eval-854ca251a4486a11-1",
+      "file": "eval-854ca251a4486a11-1.json.gz",
+      "policy": "CurrentActionTeacher",
+      "faction": "HadschHallas",
+      "seed": "booster12-teacher-20260912-5",
+      "vp": 90,
+      "steps": 182
+    },
+    {
+      "id": "teacher-0",
+      "file": "teacher-0.json.gz",
+      "policy": "teacher",
+      "faction": "Xenos",
+      "seed": "strategy-19-heldout-192",
+      "vp": 95,
+      "steps": 183
+    },
+    {
+      "id": "teacher-1",
+      "file": "teacher-1.json.gz",
+      "policy": "teacher",
+      "faction": "HadschHallas",
+      "seed": "strategy-19-heldout-192",
+      "vp": 65,
+      "steps": 187
+    },
+    {
+      "id": "teacher-2",
+      "file": "teacher-2.json.gz",
+      "policy": "teacher",
+      "faction": "Xenos",
+      "seed": "strategy-19-heldout-249",
+      "vp": 55,
+      "steps": 205
+    },
+    {
+      "id": "teacher-3",
+      "file": "teacher-3.json.gz",
+      "policy": "teacher",
+      "faction": "HadschHallas",
+      "seed": "strategy-19-heldout-249",
+      "vp": 86,
+      "steps": 164
+    },
+    {
+      "id": "teacher-4",
+      "file": "teacher-4.json.gz",
+      "policy": "teacher",
+      "faction": "Xenos",
+      "seed": "strategy-19-heldout-497",
+      "vp": 83,
+      "steps": 153
+    },
+    {
+      "id": "teacher-5",
+      "file": "teacher-5.json.gz",
+      "policy": "teacher",
+      "faction": "HadschHallas",
+      "seed": "strategy-19-heldout-497",
+      "vp": 80,
+      "steps": 161
+    },
+    {
+      "id": "teacher-6",
+      "file": "teacher-6.json.gz",
+      "policy": "teacher",
+      "faction": "Xenos",
+      "seed": "strategy-19-heldout-900",
+      "vp": 73,
+      "steps": 189
+    }
+  ]
+}

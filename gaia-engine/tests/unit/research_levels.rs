@@ -81,7 +81,7 @@ fn advancing_to_level_five_requires_a_green_federation_token() {
     );
     assert!(result.is_err());
 
-    state.players[0].federation_tokens.push(FederationToken(1));
+    state.players[0].federation_tokens.push(FederationToken(2));
     RuleEngine::apply_action(
         &mut state,
         0,
@@ -95,7 +95,7 @@ fn advancing_to_level_five_requires_a_green_federation_token() {
     assert!(state.players[0].federation_tokens.is_empty());
     assert_eq!(
         state.players[0].gray_federation_tokens,
-        vec![FederationToken(1)]
+        vec![FederationToken(2)]
     );
 }
 
@@ -113,7 +113,7 @@ fn level_five_is_exclusive_to_one_player() {
 
     state.players[1].research_tracks.terraforming = 4;
     state.players[1].resources.knowledge = 20;
-    state.players[1].federation_tokens.push(FederationToken(1));
+    state.players[1].federation_tokens.push(FederationToken(2));
     state.phase = GamePhase::ActionPhase { active_player: 1 };
 
     let result = RuleEngine::apply_action(
@@ -167,7 +167,7 @@ fn economy_and_science_level_five_rewards_are_immediate() {
     economy.players[0].research_tracks.economy = 4;
     economy.players[0]
         .federation_tokens
-        .push(FederationToken(1));
+        .push(FederationToken(2));
     economy.players[0].resources.power.bowl1 = 6;
     economy.players[0].resources.power.bowl2 = 0;
     let ore_before = economy.players[0].resources.ore;
@@ -182,7 +182,7 @@ fn economy_and_science_level_five_rewards_are_immediate() {
     science.players[0].research_tracks.science = 4;
     science.players[0]
         .federation_tokens
-        .push(FederationToken(1));
+        .push(FederationToken(2));
     // `research_state`'s default knowledge (20) already exceeds the real 15-knowledge cap
     // (`Resources::gain_knowledge`) — no legal game state could ever reach it. Lower it here so
     // the level-5 reward's delta assertion below isn't clipped by that cap.
@@ -200,7 +200,7 @@ fn terraforming_level_five_awards_the_reserved_token_as_a_federation() {
     let mut state = research_state();
     state.round_tiles[0] = RoundTile::from_id(5);
     state.players[0].research_tracks.terraforming = 4;
-    state.players[0].federation_tokens.push(FederationToken(1));
+    state.players[0].federation_tokens.push(FederationToken(2));
     state.research_board.terraforming_level_5_token = Some(FederationToken(4));
     let vp_before = state.players[0].vp;
     let ore_before = state.players[0].resources.ore;
@@ -211,7 +211,7 @@ fn terraforming_level_five_awards_the_reserved_token_as_a_federation() {
     assert_eq!(state.players[0].federation_tokens, vec![FederationToken(4)]);
     assert_eq!(
         state.players[0].gray_federation_tokens,
-        vec![FederationToken(1)]
+        vec![FederationToken(2)]
     );
     assert_eq!(state.players[0].resources.ore, ore_before + 2);
     // Token 4 grants 7 VP; the current round's federation condition grants 5 VP.

@@ -1,0 +1,1759 @@
+{
+  "date": "2026-09-28",
+  "scope": "Default-OFF frozen-A derivative; saved-state functional verification only",
+  "source_files": [
+    {
+      "path": "gaia-rl/tools/a02_round_investment.py",
+      "sha256": "682692b0598899c06cabf7ba5669d79e0a5798b431d34e98de5bfc02f6ea9cf9"
+    },
+    {
+      "path": "gaia-rl/tools/build_a02_source.py",
+      "sha256": "f13e56c7c5e2d4ac9e34e2e9bc55d58df644eff70df80b025ec0975c6b674392"
+    },
+    {
+      "path": "gaia-rl/tools/probe_a02_round.py",
+      "sha256": "606267cba028b7dc7a97f61a963517fd89a0d8a20c3304634d54d1e808d07e6d"
+    },
+    {
+      "path": "gaia-rl/tools/test_a02_round_investment.py",
+      "sha256": "3fc6b1d85b2c5322a7bb4f6dd539b8a2847329e261d780122377a2c06909011d"
+    }
+  ],
+  "source_manifest": {
+    "path": "gaia-rl/runs/a02-source-20260928-v2/A02_DERIVATION.json",
+    "sha256": "de3db059209c319dc5391fef43d5e9669252607cfad5cfc389e969d5722641c0"
+  },
+  "frozen_a": {
+    "files": 200,
+    "hash_mismatches": 0
+  },
+  "derived_python": {
+    "files": 167,
+    "hash_mismatches": 0
+  },
+  "approvals": {
+    "no_investment_count_quota": true,
+    "no_forced_spending": true,
+    "existing_evaluation_prices_engine_time_unchanged": true
+  },
+  "tests": {
+    "targeted": {
+      "path": "gaia-rl/runs/a02-probes-20260928/checks/targeted.log",
+      "sha256": "1828d7be9f71984654638e91f25a074ce3d1aefcbc0b4a6e2f8fceb9ac386b77",
+      "ran": 16,
+      "passed": 16,
+      "failures": 0
+    },
+    "python_core": {
+      "path": "gaia-rl/runs/a02-probes-20260928/checks/python-core.log",
+      "sha256": "90dc34dae9ad63e4f782ae8f379b475abdda2818abb297849c23f262d332e6d0",
+      "ran": 19,
+      "passed": 19,
+      "failures": 0
+    },
+    "python_experiments": {
+      "path": "gaia-rl/runs/a02-probes-20260928/checks/python-experiments.log",
+      "sha256": "56f0d61c44229c10de08e218410992d6b70ad8be85ff2051ec1b9ac40ab27b2e",
+      "ran": 424,
+      "passed": 423,
+      "failures": 1,
+      "pre_existing_failure": "faction_teachers.test_guidance: test_every_original_faction_has_technology_or_track_advice (Nevlas); unchanged test"
+    },
+    "derived_targeted": {
+      "path": "gaia-rl/runs/a02-probes-20260928/checks/python-derived-targeted.log",
+      "sha256": "5c5aef27a1b6654542544ded9080546c60479cadfd0712a99a4e5194329e8045",
+      "ran": 36,
+      "passed": 36,
+      "failures": 0
+    },
+    "derived_full_discovery": {
+      "path": "gaia-rl/runs/a02-probes-20260928/checks/python-derived.log",
+      "sha256": "bc49bf6b534492e9c0bed98e6dfe51668a86f0c4f2e154f2cebfd41d93d101c9",
+      "status": "collection failed; no full-suite pass claimed",
+      "reason": "observed_games.test_ob01 imported from experiments rather than derivative during discovery; scoped preparation/cache/BGG suite used separately"
+    },
+    "rust_workspace": {
+      "path": "gaia-rl/runs/a02-probes-20260928/checks/cargo-workspace.log",
+      "sha256": "14f10e5fe15970e246e0849ffec16bbdc096a1b190f5333aa53963f2bc9b8046",
+      "command": "cargo test --workspace",
+      "passed": 596,
+      "failed": 0,
+      "ignored": 28
+    },
+    "rust_rl": {
+      "path": "gaia-rl/runs/a02-probes-20260928/checks/cargo-rl.log",
+      "sha256": "7595b38965be72d4ca064fed76469c98d6201c193e75e51249442326a8316575",
+      "command": "cargo test --manifest-path gaia-rl/Cargo.toml",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    "clippy": {
+      "path": "gaia-rl/runs/a02-probes-20260928/checks/clippy.log",
+      "sha256": "61faf0fb2df2036d5d58bd436791a097441b66e5eb99ff1e803b12f0e6783238",
+      "status": "passed",
+      "command": "cargo clippy --workspace --lib --tests -- -D warnings",
+      "all_targets": "not run"
+    },
+    "invariants": {
+      "path": "gaia-rl/runs/a02-probes-20260928/invariants/summary.json",
+      "sha256": "014caaf3ebda5b1695a95c1eb18eda2e0d71afb19c74d480fe5ec8fdbb792a17",
+      "result": {
+        "flag": {
+          "GAIA_TOKEN_ORE_PRICE": "1",
+          "GAIA_REACHABLE_PLANETS": "1",
+          "GAIA_FEDERATION_FALLBACK_STABLE": "1",
+          "GAIA_PASS_REALIZED_INCOME": "1"
+        },
+        "formula": "shortfall * (f-prime round ore price * 0.8)",
+        "ore_to_token": {
+          "cases": 264,
+          "failures": 0,
+          "delta_vp_min": -2.670000000000016,
+          "delta_vp_max": -0.0799999999999983
+        },
+        "three_step_cycle": {
+          "actions": [
+            "OreToPower",
+            "BurnPower",
+            "PowerToCredit"
+          ],
+          "cases": 216,
+          "failures": 0,
+          "delta_vp_min": -3.069000000000017,
+          "delta_vp_max": -0.7599999999999909
+        },
+        "full_invariants": {
+          "cases": 944,
+          "counts": {
+            "pass": 928,
+            "exception": 16
+          },
+          "failures": 0
+        },
+        "rounds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "active_token_states": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "factions": [
+          "Terrans",
+          "HadschHallas",
+          "Taklons",
+          "Xenos"
+        ],
+        "approved_exceptions": [
+          "Taklons: one normal II token discarded, Brainstone II -> III"
+        ],
+        "r5_r6_ore_to_power_exceptions": 0
+      },
+      "scope": "Existing current evaluation regression gate, not evidence that A02 improves strength"
+    },
+    "static": {
+      "four_new_python_files_ast": "pass",
+      "four_new_python_files_trailing_whitespace": "pass",
+      "git_diff_check": "pass"
+    }
+  },
+  "probes": [
+    {
+      "path": "gaia-rl/runs/a02-probes-20260928/v2-off-5140-28.json",
+      "sha256": "6841eced6306c4a88eb28c844bf263c76aeb1c7a0c13fbbac3c792fd27c2ceef",
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 28,
+      "flag": "0",
+      "engine_build_id": "cf4a759359c6a222c3667c78424537615bffcfcbb2e38f7085108726366dd32b",
+      "engine_fixes_2": true,
+      "root_sha256": "014a11a79c565e92573ef2603ebdf8df9a7f130ed892a1b78ea1cc12edb10ea7",
+      "faction": "Terrans",
+      "root_resources": {
+        "ore": 7,
+        "credits": 15,
+        "knowledge": 1,
+        "qic": 1,
+        "power": {
+          "bowl1": 0,
+          "bowl2": 0,
+          "bowl3": 2,
+          "gaia_bowl": 0,
+          "gaia_forming": 6,
+          "brainstone": null
+        },
+        "spent_gaia_formers": 0
+      },
+      "chosen_action": {
+        "type": "Pass",
+        "booster_id": 10
+      },
+      "seconds": 9.908956684000259,
+      "selected": "local-baseline",
+      "maximum_investments_completed": null,
+      "coverage_complete": false,
+      "replayed_paths": 0,
+      "memory": "Fresh isolated controller; no claim of historical full-memory reproduction",
+      "original_unchanged": true,
+      "plans": []
+    },
+    {
+      "path": "gaia-rl/runs/a02-probes-20260928/v2-on-5140-106.json",
+      "sha256": "954cd39a6dc49a71fe639d12456c58ff41a3f715b0ac52088394e14a2cb81eaa",
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 106,
+      "flag": "1",
+      "engine_build_id": "cf4a759359c6a222c3667c78424537615bffcfcbb2e38f7085108726366dd32b",
+      "engine_fixes_2": true,
+      "root_sha256": "b97070dfd30645abae3dda5b9070ef64952ab03e44fb0bb970cbd6b68fbd7b4c",
+      "faction": "Taklons",
+      "root_resources": {
+        "ore": 6,
+        "credits": 25,
+        "knowledge": 11,
+        "qic": 1,
+        "power": {
+          "bowl1": 0,
+          "bowl2": 3,
+          "bowl3": 0,
+          "gaia_bowl": 0,
+          "gaia_forming": 0,
+          "brainstone": "Area3"
+        },
+        "spent_gaia_formers": 0
+      },
+      "chosen_action": {
+        "type": "Pass",
+        "booster_id": 10
+      },
+      "seconds": 9.904649669000719,
+      "selected": "a02-route-0",
+      "maximum_investments_completed": 0,
+      "coverage_complete": false,
+      "replayed_paths": 1,
+      "memory": "Fresh isolated controller; no claim of historical full-memory reproduction",
+      "original_unchanged": true,
+      "plans": [
+        {
+          "goal": "a02-route-0",
+          "value": 117.06777777777776,
+          "investments": [],
+          "end_round": 5,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 10,
+              "credits": 30,
+              "knowledge": 15,
+              "qic": 1,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 0,
+                "bowl3": 3,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": "Area3"
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              6,
+              4,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-9,4",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-3,4",
+                "kind": {
+                  "Academy": "Science"
+                }
+              },
+              {
+                "hex": "-9,5",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 1,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 0,
+              "economy": 1,
+              "science": 1
+            },
+            "next_actor": 1,
+            "next_legal_builds": 6,
+            "next_legal_upgrades": 2,
+            "next_legal_research": 6
+          }
+        }
+      ]
+    },
+    {
+      "path": "gaia-rl/runs/a02-probes-20260928/v2-on-5140-28.json",
+      "sha256": "be7d8699685354a76a035ea23d3cd65de17253d50d24f1fb32376aaae4d8a4de",
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 28,
+      "flag": "1",
+      "engine_build_id": "cf4a759359c6a222c3667c78424537615bffcfcbb2e38f7085108726366dd32b",
+      "engine_fixes_2": true,
+      "root_sha256": "014a11a79c565e92573ef2603ebdf8df9a7f130ed892a1b78ea1cc12edb10ea7",
+      "faction": "Terrans",
+      "root_resources": {
+        "ore": 7,
+        "credits": 15,
+        "knowledge": 1,
+        "qic": 1,
+        "power": {
+          "bowl1": 0,
+          "bowl2": 0,
+          "bowl3": 2,
+          "gaia_bowl": 0,
+          "gaia_forming": 6,
+          "brainstone": null
+        },
+        "spent_gaia_formers": 0
+      },
+      "chosen_action": {
+        "type": "Upgrade",
+        "coord": "-4,6",
+        "to": "TradingStation",
+        "tech_tile_choice": null
+      },
+      "seconds": 9.909657818999221,
+      "selected": "BGG-R1-1RL+2M via a02-route-15",
+      "maximum_investments_completed": 3,
+      "coverage_complete": false,
+      "replayed_paths": 17,
+      "memory": "Fresh isolated controller; no claim of historical full-memory reproduction",
+      "original_unchanged": true,
+      "plans": [
+        {
+          "goal": "a02-route-0",
+          "value": 139.60333333333332,
+          "investments": [],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 11,
+              "credits": 17,
+              "knowledge": 2,
+              "qic": 1,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              2,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 0,
+            "next_legal_builds": 8,
+            "next_legal_upgrades": 2,
+            "next_legal_research": 0
+          }
+        },
+        {
+          "goal": "a02-route-1",
+          "value": 144.07,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 7,
+              "credits": 15,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              2,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 0,
+            "next_legal_builds": 2,
+            "next_legal_upgrades": 3,
+            "next_legal_research": 0
+          }
+        },
+        {
+          "goal": "a02-route-2",
+          "value": 153.82,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Build",
+              "coord": "-8,0"
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 6,
+              "credits": 16,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              4,
+              2,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-8,0",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-3",
+          "value": 152.15,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 5,
+              "credits": 15,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "TradingStation"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 0,
+            "next_legal_builds": 2,
+            "next_legal_upgrades": 31,
+            "next_legal_research": 0
+          }
+        },
+        {
+          "goal": "a02-route-4",
+          "value": 150.2,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-6,0",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 4,
+              "credits": 18,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "TradingStation"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-5",
+          "value": 150.2,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-9,1",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 4,
+              "credits": 18,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "TradingStation"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-6",
+          "value": 148.5,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Build",
+              "coord": "-8,0"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 3,
+              "credits": 16,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "TradingStation"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-8,0",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-7",
+          "value": 148.5,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Build",
+              "coord": "-8,0"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-6,0",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 3,
+              "credits": 16,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "TradingStation"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-8,0",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-8",
+          "value": 148.5,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Build",
+              "coord": "-8,0"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-8,0",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 3,
+              "credits": 16,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-8,0",
+                "kind": "TradingStation"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-9",
+          "value": 148.5,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Build",
+              "coord": "-8,0"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-9,1",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 3,
+              "credits": 16,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "TradingStation"
+              },
+              {
+                "hex": "-8,0",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-10",
+          "value": 148.5,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            },
+            {
+              "type": "Build",
+              "coord": "-8,0"
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 3,
+              "credits": 16,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "TradingStation"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-8,0",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-11",
+          "value": 148.5,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-6,0",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            },
+            {
+              "type": "Build",
+              "coord": "-8,0"
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 3,
+              "credits": 16,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "TradingStation"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-8,0",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-12",
+          "value": 148.5,
+          "investments": [
+            {
+              "type": "Build",
+              "coord": "-9,1"
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-9,1",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            },
+            {
+              "type": "Build",
+              "coord": "-8,0"
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 3,
+              "credits": 16,
+              "knowledge": 2,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-9,1",
+                "kind": "TradingStation"
+              },
+              {
+                "hex": "-8,0",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-13",
+          "value": 135.28333333333333,
+          "investments": [
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 8,
+              "credits": 17,
+              "knowledge": 2,
+              "qic": 1,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              2,
+              5,
+              1,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "TradingStation"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 0
+            },
+            "next_actor": 0,
+            "next_legal_builds": 5,
+            "next_legal_upgrades": 30,
+            "next_legal_research": 0
+          }
+        },
+        {
+          "goal": "a02-route-14",
+          "value": 162.44333333333333,
+          "investments": [
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "ResearchLab",
+              "tech_tile_choice": {
+                "kind": "Standard",
+                "tile": 3,
+                "advance_track": null,
+                "bonus_build_coord": null
+              }
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 5,
+              "credits": 13,
+              "knowledge": 4,
+              "qic": 1,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              2,
+              6,
+              3,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "ResearchLab"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 1
+            },
+            "next_actor": 0,
+            "next_legal_builds": 4,
+            "next_legal_upgrades": 1,
+            "next_legal_research": 6
+          }
+        },
+        {
+          "goal": "a02-route-15",
+          "value": 167.16,
+          "investments": [
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "ResearchLab",
+              "tech_tile_choice": {
+                "kind": "Standard",
+                "tile": 3,
+                "advance_track": null,
+                "bonus_build_coord": null
+              }
+            },
+            {
+              "type": "Build",
+              "coord": "-8,0"
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 4,
+              "credits": 14,
+              "knowledge": 4,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              6,
+              3,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "ResearchLab"
+              },
+              {
+                "hex": "-8,0",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 1
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        },
+        {
+          "goal": "a02-route-16",
+          "value": 166.35999999999999,
+          "investments": [
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "TradingStation",
+              "tech_tile_choice": null
+            },
+            {
+              "type": "Upgrade",
+              "coord": "-4,6",
+              "to": "ResearchLab",
+              "tech_tile_choice": {
+                "kind": "Standard",
+                "tile": 3,
+                "advance_track": null,
+                "bonus_build_coord": null
+              }
+            },
+            {
+              "type": "Build",
+              "coord": "-3,-2"
+            }
+          ],
+          "end_round": 2,
+          "end_phase": {
+            "ActionPhase": {
+              "active_player": 0
+            }
+          },
+          "outcome": {
+            "resources": {
+              "ore": 4,
+              "credits": 14,
+              "knowledge": 4,
+              "qic": 0,
+              "power": {
+                "bowl1": 0,
+                "bowl2": 6,
+                "bowl3": 2,
+                "gaia_bowl": 0,
+                "gaia_forming": 0,
+                "brainstone": null
+              },
+              "spent_gaia_formers": 0
+            },
+            "income": [
+              3,
+              6,
+              3,
+              0,
+              1,
+              0,
+              0
+            ],
+            "structures": [
+              {
+                "hex": "-6,0",
+                "kind": "Mine"
+              },
+              {
+                "hex": "-4,6",
+                "kind": "ResearchLab"
+              },
+              {
+                "hex": "-3,-2",
+                "kind": "Mine"
+              }
+            ],
+            "research_tracks": {
+              "terraforming": 0,
+              "navigation": 0,
+              "ai": 0,
+              "gaia": 1,
+              "economy": 1,
+              "science": 1
+            },
+            "next_actor": 1,
+            "next_legal_builds": null,
+            "next_legal_upgrades": null,
+            "next_legal_research": null
+          }
+        }
+      ]
+    },
+    {
+      "path": "gaia-rl/runs/a02-probes-20260928/v2-on-5140-86.json",
+      "sha256": "2a732870cc778209f1661243b2e895cd3395e0069e93cfd4c1e99cba1089b57d",
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 86,
+      "flag": "1",
+      "engine_build_id": "cf4a759359c6a222c3667c78424537615bffcfcbb2e38f7085108726366dd32b",
+      "engine_fixes_2": true,
+      "root_sha256": "6c67e4a01e62cdaeede8cfc63acb7646d456511c0bb5c882aca969eec2826e7a",
+      "faction": "Taklons",
+      "root_resources": {
+        "ore": 3,
+        "credits": 15,
+        "knowledge": 7,
+        "qic": 1,
+        "power": {
+          "bowl1": 1,
+          "bowl2": 2,
+          "bowl3": 0,
+          "gaia_bowl": 0,
+          "gaia_forming": 0,
+          "brainstone": "Area3"
+        },
+        "spent_gaia_formers": 0
+      },
+      "chosen_action": {
+        "type": "Pass",
+        "booster_id": 11
+      },
+      "seconds": 9.90864142800001,
+      "selected": "local-baseline",
+      "maximum_investments_completed": 0,
+      "coverage_complete": false,
+      "replayed_paths": 0,
+      "memory": "Fresh isolated controller; no claim of historical full-memory reproduction",
+      "original_unchanged": true,
+      "plans": []
+    },
+    {
+      "path": "gaia-rl/runs/a02-probes-20260928/v2-on-5140-91.json",
+      "sha256": "f3e6bdc571d3fee4f9d3e15919dd5ba482c94238f0f0d0505de442290946dfab",
+      "seed": "state-evaluation-ab-20260917-5140",
+      "step": 91,
+      "flag": "1",
+      "engine_build_id": "cf4a759359c6a222c3667c78424537615bffcfcbb2e38f7085108726366dd32b",
+      "engine_fixes_2": true,
+      "root_sha256": "e5e939b0a8e8d5f27dd8a9f48b1788796bd47e14a1897df2728cb82584fb3cc2",
+      "faction": "Terrans",
+      "root_resources": {
+        "ore": 7,
+        "credits": 13,
+        "knowledge": 3,
+        "qic": 0,
+        "power": {
+          "bowl1": 5,
+          "bowl2": 3,
+          "bowl3": 0,
+          "gaia_bowl": 0,
+          "gaia_forming": 0,
+          "brainstone": null
+        },
+        "spent_gaia_formers": 0
+      },
+      "chosen_action": {
+        "type": "Pass",
+        "booster_id": 14
+      },
+      "seconds": 9.904919812999651,
+      "selected": "local-baseline",
+      "maximum_investments_completed": 0,
+      "coverage_complete": false,
+      "replayed_paths": 0,
+      "memory": "Fresh isolated controller; no claim of historical full-memory reproduction",
+      "original_unchanged": true,
+      "plans": []
+    }
+  ],
+  "games_run": 0,
+  "training_run": false,
+  "promotion": false,
+  "limitations": [
+    "One root choice and hypothetical continuations, not full-game execution or score gain.",
+    "Same-boundary complete paths only; unfinished paths are unknown.",
+    "R3 steps 86 and 91 completed no paths; step106 completed only the pass control; resource-balance concern unresolved.",
+    "Build/Upgrade only, no funding-action or other-faction expansion.",
+    "Predicted next own legal candidates are null when another player acts first at the boundary.",
+    "Wall-clock-dependent path coverage; no optimality claim.",
+    "Default OFF; no deployment, training, new full game, or A/B run."
+  ]
+}

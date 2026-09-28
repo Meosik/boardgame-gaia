@@ -28,6 +28,87 @@ remain unchanged; the existing teacher conservation constraints still apply.
 
 ## Guide-to-code crosswalk
 
+### Opt-in technology-plan preservation
+
+With `GAIA_FACTION_TECH_PLANS=1` (default **OFF**), Terrans/Ambas technology
+proposals have two continuations: the existing fallback route, followed by a
+`preserve-plan:` alternative. Only the latter rejects its own actions that destroy
+unfinished prerequisites, checked through native successors. Equivalent federations
+that consume an Ambas swap mine are filtered together. Other legal alternatives,
+prices and total time limits are unchanged; an incomplete comparison gets no
+invented score. The pilot search uses matched progressive horizons described below. External invalidation still uses cancellation/fallback.
+The `faction-tech-preserve` source marker is internal mode metadata, not a new guide.
+
+The higher comparable value can win; plans are not globally mandatory. A saved
+Ambas branch reaches PI construction and relocation under preservation, but its
+target-site federation is still unfinished at the same horizon. This is a local
+functional result, **not** a win-rate or expert-strength result.
+
+From `gaia-rl/`, reproduce the bounded comparison (not a whole game):
+
+```sh
+PYTHONPATH=python:experiments .venv/bin/python tools/compare_plan_preservation.py \
+  experiments/faction_teachers/fixtures/ambas-plan-cancellation.json --seconds 60
+PYTHONPATH=python:experiments .venv/bin/python -m unittest faction_teachers.test_plan_preservation -v
+```
+
+Receipt: `research/strategy/cycles/011-plan-preservation-comparison-verified.json`.
+
+### Native-valid federation preparation (2026-09-25)
+
+In an Ambas preservation continuation, a pending target federation can now prepare
+construction when its eligible building power is insufficient. Existing legal
+formation actions still take precedence. The helper previews real native-paid
+builds/upgrades, excludes conservation-blocked actions, and uses unchanged rankings.
+If no direct construction is ready, at most 32 existing funding-action previews
+can prove a same-actor follow-up construction. Opponent turns and missing resources
+are never invented; this is not exhaustive multistep financing.
+
+The saved failure also exposed an omitted legality prerequisite: a new Ambas
+federation cannot contain a location touching its own old federation. Such pilot
+goals now use the existing cancellation/fallback behavior, and preservation rejects
+an own formation that would make its future target forbidden. Power preparation
+counts neither old-federation buildings nor buildings adjacent to that federation.
+Reaching seven power still does **not** complete a goal; the engine must actually
+accept a formation including the target. These changes are confined to the pilot;
+no engine rule, value bonus, total time budget or default OFF setting changes.
+
+The earlier R5 target at `3,-2` touches old federation nodes `2,-2` and `3,-3`.
+Its raw unfederated power was six, but only two could enter a separate federation.
+The initial 6→8 construction result is retained as a diagnostic, not proof of a
+usable target or strength improvement. See cycle014 receipts and STATUS.
+
+### Matched-depth pilot search
+
+The enabled Terrans/Ambas pilot now compares native-transition cutoffs
+1, 2, 4, 8, 16, 32, 64, 128, then the original two-income horizon (192-transition
+maximum). Game end or the original income boundary can finish a route earlier.
+The first stage compares control and pilot legacy/preserved paths first; later
+stages evaluate the previous incumbent and control before promising alternatives.
+No candidate is discarded as inferior merely because time ran out.
+
+A deeper stage replaces the published selection only after both anchors complete
+at that depth. Selection, BGG opening arbitration and clock gaps use only that
+stage's `plans`; `comparison_stages` retains the separate audit history. An
+incomplete anchor retains the last valid shallower result. This pilot does not
+apply the legacy three-comparison convergence shortcut between these stages;
+fast verified reactions, full-horizon completion and the existing clock still stop
+work. First-action resolution and completed full-horizon routes are reused without
+reusing a shallow value as a deeper result. OFF and other factions keep the old search.
+
+In the saved Ambas branch with no long thoughts left, the same 10-second budget
+completed 115 routes each at depths 1 and 2, then three at depth 4. The previously
+starved preservation routes were evaluated, but the chosen action stayed the same.
+This establishes comparison coverage, not improved strength or a completed target
+federation. See `research/strategy/cycles/013-progressive-search-probe.json`.
+
+```sh
+PYTHONPATH=python:experiments .venv/bin/python tools/probe_progressive_search.py \
+  experiments/faction_teachers/fixtures/ambas-plan-cancellation.json \
+  runs/tech-plan-pilot-20260924-shared-38/policy-checkpoint.json
+PYTHONPATH=python:experiments .venv/bin/python -m unittest faction_teachers.test_progressive -v
+```
+
 These are conditional comparisons, not mandatory sequences or guide-completeness
 claims. Original unavailable PDFs have **not** been reconstructed: this uses the
 retained source summaries and supplied BGG PDFs. See

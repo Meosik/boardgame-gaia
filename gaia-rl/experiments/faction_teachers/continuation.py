@@ -20,6 +20,8 @@ def load_continuation(path, seed):
             state_hash(saved['snapshot']) != saved['snapshot_sha256']):
         raise ValueError('Continuation checkpoint/seed/recording checksum mismatch')
     header = json.loads((source/'recording.json').read_text())
+    if saved.get('faction_tech_plans', False) != header['teacher_spec'].get('faction_tech_plans', False):
+        raise ValueError('Continuation technology-plan configuration mismatch')
     require_compatible_versions(header['versions'])
     if (header['seed'] != seed or header.get('teacher_seats') != [0, 1, 2, 3] or
             header['max_steps'] != 2000 or header['human_seats'] or
@@ -70,6 +72,7 @@ def restore_continuation(continuation, env, recorder, policy, audit):
         audit.write(json.dumps({**old_audit, 'imported_from_original_teacher': True}, allow_nan=False)+'\n')
     audit.flush()
     saved = continuation['saved']
+    policy.faction_tech_plans = saved.get('faction_tech_plans', False)
     before = json.loads(env.snapshot_json())
     if before != saved['snapshot']:
         raise ValueError('Restored native position differs from checkpoint')
@@ -85,6 +88,7 @@ def save_checkpoint(recorder, policy, manifest):
     atomic_json(recorder.path/'policy-checkpoint.json', {
         'schema': 1, 'seed': recorder.header['seed'], 'source': str(recorder.path.resolve()),
         'prefix': policy.prefix, 'memory': policy.memory, 'times': policy.times,
+        'faction_tech_plans': policy.faction_tech_plans,
         'snapshot': current, 'snapshot_sha256': state_hash(current),
         'header_sha256': digest(recorder.path/'recording.json'),
         'trace_sha256': digest(recorder.path/'decisions.jsonl'), 'source_manifest': manifest})

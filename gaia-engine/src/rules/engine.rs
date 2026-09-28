@@ -8292,29 +8292,13 @@ fn next_active_player_index(state: &GameState, current: usize) -> Option<usize> 
 // ── Charge Power (Passive Action, rulebook p.16-17) ─────────────────────────
 
 /// Opponents (in clockwise turn order from `builder`) with at least one
-/// structure within range 2 of `coord`. The experimental fix offers the power
-/// value of the structure just built or upgraded; legacy behavior offers the
-/// opponent's highest nearby structure value. An opponent who has already
-/// passed is still eligible (rulebook: "An opponent that has passed can still
-/// charge power").
+/// structure within range 2 of `coord`, paired with that opponent's highest
+/// nearby structure power value (not the builder's). A passed opponent is
+/// still eligible (rulebook p. 16–17).
 fn eligible_chargers(state: &GameState, builder: PlayerId, coord: HexCoord) -> Vec<PendingCharge> {
     let n = state.turn_order.len();
     let Some(start) = state.turn_order.iter().position(|&p| p == builder) else {
         return vec![];
-    };
-
-    let fixes_enabled = experimental_engine_fixes_enabled();
-    let source_power = if fixes_enabled {
-        state.board.hexes.get(&coord).and_then(|hex| {
-            hex.structures
-                .iter()
-                .find(|structure| structure.owner == builder)
-                .map(|structure| {
-                    faction_structure_power_value(state, builder, coord, structure.kind)
-                })
-        })
-    } else {
-        None
     };
 
     let mut chargers = Vec::new();
@@ -8333,12 +8317,7 @@ fn eligible_chargers(state: &GameState, builder: PlayerId, coord: HexCoord) -> V
                 faction_structure_power_value(state, pid, hex.coord, structure.kind)
             })
             .max();
-        let offered_power = if fixes_enabled {
-            max_power.and(source_power)
-        } else {
-            max_power
-        };
-        if let Some(power) = offered_power {
+        if let Some(power) = max_power {
             if power > 0 {
                 chargers.push(PendingCharge {
                     player: pid,
@@ -8383,7 +8362,8 @@ fn maybe_enter_charge_power_phase(
 }
 
 fn experimental_engine_fixes_enabled() -> bool {
-    std::env::var_os("GAIA_ENGINE_FIXES_2").is_some_and(|value| value == "1")
+    // Correctness fixes are the default; explicit 0 is for legacy diagnosis only.
+    std::env::var_os("GAIA_ENGINE_FIXES_2").is_none_or(|value| value != "0")
 }
 
 /// Returns a copy of the queue-front entry if `player_id` is next up to decide during either

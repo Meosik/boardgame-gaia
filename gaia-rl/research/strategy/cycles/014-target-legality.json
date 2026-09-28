@@ -1,0 +1,21 @@
+{
+  "scope": "Native saved R5 state; read-only legality diagnosis",
+  "fixture_sha256": "753b506215e78eb44a4a08b9f4377c27d9b67d26453f5f19ecafd84bb0da489e",
+  "root_sha256": "377646d0abe2383baf48f1e6bd7af1454e07e205ad6a3cc80d875c690e55c4f1",
+  "target": "3,-2",
+  "adjacent_existing_federation": [
+    "2,-2",
+    "3,-3"
+  ],
+  "total_unfederated_power": 6,
+  "power_eligible_for_separate_federation": 2,
+  "target_allowed": false,
+  "plan_viable": false,
+  "legal_target_federations": 0,
+  "sources": [
+    "gaia-engine/src/rules/ai_federation.rs::Graph::new",
+    "gaia-engine/src/rules/engine.rs::federation_touches_an_existing_federation"
+  ],
+  "interpretation": "Target touches old own federation and is excluded from a new Ambas federation. Power gain alone cannot fix this location.",
+  "initial_comparison": "014-federation-preparation-initial-comparison.json: pre-legality-fix attempt, not final code evidence"
+}

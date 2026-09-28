@@ -1,0 +1,134 @@
+{
+  "date": "2026-09-24",
+  "scope": "Approved matched-depth search in opt-in Terrans/Ambas technology pilot; no new game",
+  "status": "implemented and scoped verification passed; existing unsupported-faction failure remains",
+  "configuration": {
+    "flag": "GAIA_FACTION_TECH_PLANS",
+    "default": "OFF",
+    "depths": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64,
+      128,
+      "two-incomes"
+    ],
+    "native_transition_limit": 192,
+    "prices": "unchanged",
+    "total_time_and_long_allowance": "unchanged"
+  },
+  "decision": {
+    "chosen": "Matched-depth iterative search, incumbent/control anchors before publishing deeper results",
+    "rejected": "Full two-income control first: consumed the saved state budget without starting alternatives",
+    "tradeoff": "Shallow forecasts expose more alternatives but may miss delayed gains; no strength improvement claimed"
+  },
+  "native_probe": {
+    "receipt": "013-progressive-search-probe.json",
+    "sha256": "4c93bebf6fa6ad3cef0b6abd5b44144069ec381588828e2a33b0f7951ee85eca",
+    "same_root": "c696f5e1b3f5a01d0ece36d8b5cc57eff8b9d02c73be19f0a3608e87c80c6ac4",
+    "completed_per_stage": [
+      {
+        "depth": 1,
+        "count": 115
+      },
+      {
+        "depth": 2,
+        "count": 115
+      },
+      {
+        "depth": 4,
+        "count": 3
+      }
+    ],
+    "last_published_depth": 4,
+    "elapsed_seconds": 9.91910955500498,
+    "long_remaining_before": 0,
+    "long_remaining_after": 0,
+    "quick_fallback": false,
+    "chosen_action_changed": false,
+    "root_unchanged": true,
+    "note": "Same hypothetical branch and inherited ancestor clock as cycle012, not exact historical controller memory"
+  },
+  "verification": {
+    "targeted": {
+      "run": 55,
+      "passed": 55,
+      "new_progressive_tests": 15
+    },
+    "experiments": {
+      "run": 411,
+      "passed": 410,
+      "failed": 1,
+      "errors": 0,
+      "seconds": 273.147,
+      "known_failure": "faction_teachers.test_guidance.GuidanceTests.test_every_original_faction_has_technology_or_track_advice"
+    },
+    "python_core": {
+      "run": 19,
+      "passed": 19
+    },
+    "additional_bgg_checks": {
+      "synthetic_cases": 2,
+      "passed": 2
+    },
+    "py_compile": "pass",
+    "git_diff_check": "pass",
+    "frozen_A": {
+      "files": 200,
+      "mismatches": 0
+    },
+    "probe_sources_match_current": 251,
+    "raw_game_audit": "SHA-256 unchanged",
+    "not_rerun": [
+      "Rust workspace",
+      "Clippy",
+      "944 evaluation invariants"
+    ]
+  },
+  "commands": {
+    "targeted": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python -m unittest faction_teachers.test_progressive faction_teachers.test_clock faction_teachers.test_plan_preservation faction_teachers.test_tech_pilot -q",
+    "experiments": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python -m unittest discover -s experiments -p 'test_*.py'",
+    "python_core": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python -m unittest discover -s python/tests -v",
+    "native_probe": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python tools/probe_progressive_search.py experiments/faction_teachers/fixtures/ambas-plan-cancellation.json runs/tech-plan-pilot-20260924-shared-38/policy-checkpoint.json"
+  },
+  "logs": {
+    "targeted": {
+      "path": "handoff/logs/20260924-progressive-targeted.log",
+      "sha256": "53f274e7fb17e100579f383420a080ef476807106eeb837c19f1df23d9f6e321"
+    },
+    "experiments": {
+      "path": "handoff/logs/20260924-progressive-experiments.log",
+      "sha256": "e344648def310723bc7b3d49ee8dfe19f1fed328b9726ae706159ea1d31f6495"
+    },
+    "python_core": {
+      "path": "handoff/logs/20260924-progressive-python.log",
+      "sha256": "2ddb96c65cb17ff337ad5b376787a24ed0fba27986941462733cc2ec7bb1d9c8"
+    },
+    "bgg_controller_checks": {
+      "path": "handoff/logs/20260924-progressive-bgg-check.log",
+      "sha256": "1c193f05ec31acc4c93c56c6e1a76cb71552d41495bc4ce6d511174b51b86fc4"
+    }
+  },
+  "changed_files": [
+    "gaia-rl/experiments/four_factions/preparation.py",
+    "gaia-rl/experiments/faction_teachers/clock.py",
+    "gaia-rl/experiments/faction_teachers/progressive.py",
+    "gaia-rl/experiments/faction_teachers/test_progressive.py",
+    "gaia-rl/experiments/faction_teachers/test_plan_preservation.py",
+    "gaia-rl/experiments/faction_teachers/README.md",
+    "gaia-rl/tools/probe_progressive_search.py",
+    "gaia-rl/research/strategy/teacher-application.md",
+    "gaia-rl/research/strategy/STATUS.md",
+    "gaia-rl/research/strategy/cycles/013-progressive-search-probe.json",
+    "gaia-rl/research/strategy/cycles/013-progressive-search-validation.json"
+  ],
+  "limitations": [
+    "Only one saved state probed; search coverage is not observed game strength",
+    "Target federation power-building preparation remains unimplemented",
+    "Stage depths count native transitions, not just own main actions; different stage values are not comparable",
+    "No full game, external AI, training, deployment, A/B, commit, flag enablement or extra faction guidance"
+  ]
+}

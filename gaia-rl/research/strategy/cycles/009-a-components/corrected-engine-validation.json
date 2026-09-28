@@ -1,0 +1,147 @@
+{
+  "date": "2026-09-23",
+  "branch": "eval-rework-20260918",
+  "scope": "Corrected default-ON engine, replay compatibility audit, Astra implementation / Sol verification handoff foundation. No new score experiment.",
+  "engine_default": "GAIA_ENGINE_FIXES_2=1; explicit 0 for legacy diagnosis only",
+  "removed_unapproved_behavior": "Passive charge amount used builder power; restored charging opponent highest nearby structure power.",
+  "runtime": {
+    "dependencies": "numpy=2.5.3;gymnasium=1.2.2;pettingzoo=1.27.0;ray=2.58.0;torch=2.14.0",
+    "engine_build_id": "cf4a759359c6a222c3667c78424537615bffcfcbb2e38f7085108726366dd32b",
+    "environment_schema": 1,
+    "python_build_id": "adb84cd3a218d9209447500bd969b7cbe15f2ead7f407c5a3244fcdeab2bba5c"
+  },
+  "frozen_a": {
+    "fingerprint": "8f269f027e69352cbe48ee61cf730c8f90c13eaa7f3503a53182acc3b964353e",
+    "problems": 0
+  },
+  "tests": {
+    "cargo_test_workspace": {
+      "passed": 596,
+      "failed": 0,
+      "ignored": 28,
+      "command": "cargo test --workspace"
+    },
+    "cargo_test_rl": {
+      "passed": 8,
+      "failed": 0,
+      "command": "cargo test --manifest-path gaia-rl/Cargo.toml"
+    },
+    "clippy": {
+      "status": "pass",
+      "command": "cargo clippy --workspace --lib --tests -- -D warnings",
+      "all_targets": "not rerun; historical example manual_repeat_n failure recorded separately"
+    },
+    "python_core": {
+      "passed": 19,
+      "failed": 0
+    },
+    "python_experiments": {
+      "passed": 362,
+      "errors": 1,
+      "command": "PYTHONPATH=python:experiments .venv/bin/python -m unittest discover -s experiments -v",
+      "pre_existing_error": "ModuleNotFoundError: faction_teachers.guidance; module absent from HEAD as well as working tree; no experiment files changed"
+    },
+    "python_replay_tools": {
+      "passed": 10,
+      "failed": 0
+    },
+    "frontend_replay_parser_readonly": {
+      "passed": 6,
+      "failed": 0
+    },
+    "handoff_fake_cli": {
+      "passed": 13,
+      "failed": 0,
+      "command": "python3 -m unittest discover -s scripts -p 'test_handoff_loop.py' -v",
+      "live_paid_model_calls": 0
+    },
+    "shell_syntax": "pass",
+    "native_release_build": "pass",
+    "git_diff_check": "pass"
+  },
+  "invariants": {
+    "flag": {
+      "GAIA_TOKEN_ORE_PRICE": "1",
+      "GAIA_REACHABLE_PLANETS": "1",
+      "GAIA_FEDERATION_FALLBACK_STABLE": "1",
+      "GAIA_PASS_REALIZED_INCOME": "1"
+    },
+    "formula": "shortfall * (f-prime round ore price * 0.8)",
+    "ore_to_token": {
+      "cases": 264,
+      "failures": 0,
+      "delta_vp_min": -2.670000000000016,
+      "delta_vp_max": -0.0799999999999983
+    },
+    "three_step_cycle": {
+      "actions": [
+        "OreToPower",
+        "BurnPower",
+        "PowerToCredit"
+      ],
+      "cases": 216,
+      "failures": 0,
+      "delta_vp_min": -3.069000000000017,
+      "delta_vp_max": -0.7599999999999909
+    },
+    "full_invariants": {
+      "cases": 944,
+      "counts": {
+        "pass": 928,
+        "exception": 16
+      },
+      "failures": 0
+    },
+    "rounds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "active_token_states": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "factions": [
+      "Terrans",
+      "HadschHallas",
+      "Taklons",
+      "Xenos"
+    ],
+    "approved_exceptions": [
+      "Taklons: one normal II token discarded, Brainstone II -> III"
+    ],
+    "r5_r6_ore_to_power_exceptions": 0
+  },
+  "replay_audit": {
+    "artifact": "corrected-engine-replay-audit.json",
+    "files": 85,
+    "frames": 14789,
+    "file_mutations": 0,
+    "selected_actions": 44,
+    "changed_actions": 11,
+    "changes": {
+      "charge_queue": 9,
+      "illegal_base_token_flip": 2
+    },
+    "rejected_in_both_engines": 3,
+    "full_game_resimulation": false
+  },
+  "limits": [
+    "Extended experiment suite has one pre-existing import error; full suite not green.",
+    "Historical 308 score included wrong charge amount and is not a corrected-engine measurement.",
+    "Real Astra/Sol remote calls not run; supervisor verified using fake CLI and background human wait.",
+    "No deployment or replay migration."
+  ]
+}

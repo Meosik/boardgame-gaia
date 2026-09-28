@@ -1966,7 +1966,7 @@ fn space_giants_pi_can_bundle_advanced_technology_with_another_research_track() 
             }];
             p.research_tracks.terraforming = 4;
             p.tech_tiles = vec![TechTile(3)];
-            p.federation_tokens = vec![FederationToken(1)];
+            p.federation_tokens = vec![FederationToken(4)];
         })
         .with_player(1)
         .with_board(board_with_faction_structures(&structures, &[]))
@@ -1994,7 +1994,7 @@ fn space_giants_pi_can_bundle_advanced_technology_with_another_research_track() 
     assert_eq!(state.players[0].covered_tech_tiles, vec![TechTile(3)]);
     assert_eq!(
         state.players[0].gray_federation_tokens,
-        vec![FederationToken(1)]
+        vec![FederationToken(4)]
     );
     assert_eq!(state.players[0].research_tracks.terraforming, 4);
     assert_eq!(state.players[0].research_tracks.science, 1);

@@ -1,0 +1,108 @@
+{
+  "date": "2026-09-24",
+  "scope": "Approved Terrans/Ambas pilot: compare legacy fallback and plan-preserving continuations; no full game or training.",
+  "status": "implemented; scoped verification passed; pre-existing all-factions suite failure remains",
+  "configuration": {
+    "flag": "GAIA_FACTION_TECH_PLANS",
+    "default": "OFF",
+    "prices": "unchanged",
+    "horizon_incomes": 2,
+    "decision_limit": 192,
+    "production_time_limits": "unchanged",
+    "diagnostic_seconds_per_branch": 60
+  },
+  "native_comparison": {
+    "receipt": "011-plan-preservation-comparison-verified.json",
+    "same_root": "c696f5e1b3f5a01d0ece36d8b5cc57eff8b9d02c73be19f0a3608e87c80c6ac4",
+    "same_end_round": 5,
+    "existing_value": 135.17333333333335,
+    "preserved_value": 142.55,
+    "value_difference": 7.376666666666665,
+    "existing_cancelled": true,
+    "preserved_cancelled": false,
+    "preserved_pi_built": true,
+    "preserved_pi_swap": true,
+    "whole_goal_acquired": false,
+    "root_unchanged": true
+  },
+  "verification": {
+    "new_regression_tests": {
+      "run": 12,
+      "passed": 12
+    },
+    "related_tests": {
+      "run": 58,
+      "passed": 58,
+      "note": "Includes earlier 11 new tests; not additive to full experiments total."
+    },
+    "experiments": {
+      "run": 396,
+      "passed": 395,
+      "failed": 1,
+      "errors": 0,
+      "known_failure": "faction_teachers.test_guidance.GuidanceTests.test_every_original_faction_has_technology_or_track_advice",
+      "note": "Pre-existing unsupported-faction coverage requirement; test unchanged."
+    },
+    "python_core": {
+      "run": 19,
+      "passed": 19
+    },
+    "saved_audit_tests": {
+      "run": 5,
+      "passed": 5
+    },
+    "py_compile": "pass",
+    "git_diff_check": "pass",
+    "frozen_A": {
+      "files": 200,
+      "mismatches": 0
+    },
+    "raw_game_audit": "SHA-256 unchanged",
+    "not_rerun": [
+      "Rust workspace",
+      "Clippy",
+      "944 evaluation invariants"
+    ]
+  },
+  "commands": {
+    "new_tests": "cd gaia-rl && PYTHONPATH=python:experiments .venv/bin/python -m unittest faction_teachers.test_plan_preservation -v",
+    "native_comparison": "cd gaia-rl && PYTHONPATH=python:experiments .venv/bin/python tools/compare_plan_preservation.py experiments/faction_teachers/fixtures/ambas-plan-cancellation.json --seconds 60",
+    "experiments": "cd gaia-rl && PYTHONPATH=python:experiments .venv/bin/python -m unittest discover -s experiments -v",
+    "python_core": "cd gaia-rl && PYTHONPATH=python:experiments .venv/bin/python -m unittest discover -s python/tests -v"
+  },
+  "logs": {
+    "targeted": {
+      "path": "handoff/logs/20260924-plan-preservation-targeted.log",
+      "sha256": "109b78537da9fadabd528d951b451c98417b461308e67fdde3b5cbb227c712c3"
+    },
+    "new_tests": {
+      "path": "handoff/logs/20260924-plan-preservation-final-targeted.log",
+      "sha256": "c45eb9cf11a6db995b239a646589b24b26584eb64e607a0748162236a4f403b1"
+    },
+    "experiments": {
+      "path": "handoff/logs/20260924-plan-preservation-experiments.log",
+      "sha256": "3fbe3d07eb2ed99c7b953cfc75ed468eb574c5be90196f4d6f35a9bdf466ecc6"
+    },
+    "python": {
+      "path": "handoff/logs/20260924-plan-preservation-python.log",
+      "sha256": "d5ae43afeb97d98fa08393dc78750f603a233c6ae42f0a892f7a077ecec187b7"
+    }
+  },
+  "changed_files": [
+    "gaia-rl/experiments/faction_teachers/guidance.py",
+    "gaia-rl/experiments/four_factions/preparation.py",
+    "gaia-rl/experiments/faction_teachers/test_plan_preservation.py",
+    "gaia-rl/experiments/faction_teachers/fixtures/ambas-plan-cancellation.json",
+    "gaia-rl/tools/compare_plan_preservation.py",
+    "gaia-rl/experiments/faction_teachers/README.md",
+    "gaia-rl/research/strategy/teacher-application.md",
+    "gaia-rl/research/strategy/STATUS.md",
+    "gaia-rl/research/strategy/cycles/011-plan-preservation-*.json"
+  ],
+  "limitations": [
+    "One native state and hypothetical continuations, not actual match improvement.",
+    "Preserved path reached PI construction and relocation, but target-site federation is unfinished.",
+    "More comparisons may leave more candidates unsearched within the unchanged budget.",
+    "Initial timeout attempt retained separately; use the verified receipt for final source-pinned results."
+  ]
+}

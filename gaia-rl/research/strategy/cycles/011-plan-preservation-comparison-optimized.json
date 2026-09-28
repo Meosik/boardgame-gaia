@@ -1,0 +1,1423 @@
+{
+  "scope": "One pinned state, two native horizon comparisons; not a strength benchmark",
+  "seed": "shared-teacher-base-38",
+  "decision_id": 77,
+  "root_sha256": "c696f5e1b3f5a01d0ece36d8b5cc57eff8b9d02c73be19f0a3608e87c80c6ac4",
+  "seconds_per_comparison": 60.0,
+  "horizon_incomes": 2,
+  "decision_limit": 192,
+  "versions": {
+    "dependencies": "numpy=2.5.3;gymnasium=1.2.2;pettingzoo=1.27.0;ray=2.58.0;torch=2.14.0",
+    "engine_build_id": "cf4a759359c6a222c3667c78424537615bffcfcbb2e38f7085108726366dd32b",
+    "environment_schema": 1,
+    "python_build_id": "adb84cd3a218d9209447500bd969b7cbe15f2ead7f407c5a3244fcdeab2bba5c"
+  },
+  "source_hashes": {
+    "gaia-rl/experiments/action_purpose/costs.py": "f28a8bfad789ebfc6c46f099fe7651bad1e6e878c7c41b79c0e84c66997e7c0b",
+    "gaia-rl/experiments/action_purpose/evaluate.py": "6f39df79947adb3aa9d0aad58e9cd146ed7f57848a86fad872a8afe0a70cb625",
+    "gaia-rl/experiments/action_purpose/teacher.py": "7ced5f965146a34114307676f36174b78fa132dc66094764c9a6c3ebba930db4",
+    "gaia-rl/experiments/action_purpose/test_teacher.py": "1a7bf73960bdcc288838aea746ac6ad640e0b25536eec5f72bd184900f7022df",
+    "gaia-rl/experiments/bgg_openings/__init__.py": "49de6b506e9e1c03524c0bd5eae0b6382fd0384402b07bbc2841a4bd04b50d5a",
+    "gaia-rl/experiments/bgg_openings/catalog.py": "79734b563081474138c9029e7ef5353ff08b8ffb7add53b4ad9ba6f52aa39db9",
+    "gaia-rl/experiments/bgg_openings/fixed.py": "1836559e55cfa9933acd478e634977a2274a4ba2b66d5528b682f71e9002a3b5",
+    "gaia-rl/experiments/bgg_openings/inventory.py": "0a6a0ab66c93220cc11477882cdfdf216a39a226eb455eb833c4a8b945f5b7ad",
+    "gaia-rl/experiments/bgg_openings/planning.py": "1e9542361054eaf813638d6e4451698c5158f94a0116a70970d9d763752d54a1",
+    "gaia-rl/experiments/bgg_openings/test_catalog.py": "6ab5b97893ded40f400c87ae94f8d8fc9cbcc2b4ac9f02311a481cdc30cc7f4e",
+    "gaia-rl/experiments/bgg_openings/test_controller.py": "b4e2b3485168aafc590d857b39d7c70f5706d904b6a302bd7ca0943964603896",
+    "gaia-rl/experiments/bgg_openings/test_fixed.py": "6b2820ccd49fdcb63a08788fa51a257cde45d9074a201e9aa08e253514c6adfa",
+    "gaia-rl/experiments/bgg_openings/test_inventory.py": "852cabe69ddb68c4eb4c156b2c7e9f5c6033833c58b3ea8f3365a9cf0180e9c0",
+    "gaia-rl/experiments/bgg_openings/test_native.py": "1bd747f1bedafe1aeb186da9d1e080b60d7a64b95c3eddc2bd6a4d03426d5623",
+    "gaia-rl/experiments/bgg_openings/test_planning.py": "43d9d1708ca189ebc507a2f926f169d1e6e0d3e679a700c67db4987410c3a08e",
+    "gaia-rl/experiments/bgs_records/__init__.py": "d287bab6009933c222b1fe388ba4e591fcfa9e02e87c978630161ffe8754904a",
+    "gaia-rl/experiments/bgs_records/__main__.py": "bf7d06fe8b6a7bd1b92c483faf2a635896d72282a5efe89125ca18debb4b9b66",
+    "gaia-rl/experiments/bgs_records/catalog.py": "fa9d947a0e157056552fc73ef71b3850eee7bb29c1663b5913d0766e3deb58e5",
+    "gaia-rl/experiments/bgs_records/census.py": "d4693ca84ea12593aa99eefe5879a1855341a4130f6ecd6814954a0e71b32d96",
+    "gaia-rl/experiments/bgs_records/corpus.py": "a9dc2146f75f9b97326319a23f500a831a2d90ef881bcc5312e9a014820e78bd",
+    "gaia-rl/experiments/bgs_records/dataset.py": "af357c439d03c847e46580174a6f6a5d2627a9edf107a146c8c37662a354fc8f",
+    "gaia-rl/experiments/bgs_records/fixture.py": "b1005b4524587412d5d3992e7aeed3c47b0c6128b86218cbf68e96f597120489",
+    "gaia-rl/experiments/bgs_records/notation.py": "ad9c923b9019cbbeba0b3b0a9df33b0d4214eabbd93aa0e746afea6dd3e2dc47",
+    "gaia-rl/experiments/bgs_records/selection.py": "7b0bbc0ce4578e8838832d0358e27f2fbab0d9766500cd036fab40552e216743",
+    "gaia-rl/experiments/bgs_records/source.py": "26fbb5992f38ea8ad2187eae2e831e2d59164b5afa0c7987b45a88ce692ae7fc",
+    "gaia-rl/experiments/bgs_records/state.py": "63a5cd440b22af6951178bc4ddc18742e206f50bf8c54041d56c75abac6b21e2",
+    "gaia-rl/experiments/bgs_records/test_catalog.py": "71d79bd2b6f800af6569a57dfade044f78706cc6a51e82f933f724d90b515541",
+    "gaia-rl/experiments/bgs_records/test_census.py": "123cffb727c455c015e7fd1ed048b348b753200a8aa9a09490510adf97125eb2",
+    "gaia-rl/experiments/bgs_records/test_corpus.py": "ea4fad295e11776d6f5a12bb5bc0ac1fed135ac8dea1a1db8279a65827680dca",
+    "gaia-rl/experiments/bgs_records/test_dataset.py": "fdb0684a27aecabee93fa91ae9a73718b90729f9264d3b7781b3acab7c848c78",
+    "gaia-rl/experiments/bgs_records/test_mirror.py": "0c829a7a8208f751071941bba6ef8fcaece893caf7fee1e175ad21c8fd8694d1",
+    "gaia-rl/experiments/bgs_records/test_notation.py": "602eed8ce3d0ea43728004f11e64546ecaa1ccac56f665599148b74608fb7f7c",
+    "gaia-rl/experiments/bgs_records/test_selection.py": "0b81aade7f3668f5a21779b9b95690d7bc98487661ecb9afc4b5f23a83b459f5",
+    "gaia-rl/experiments/bgs_records/test_state.py": "e2aeaaa5143fa110deb49f2300537b6488da095ae3b94a8a66dc263520038011",
+    "gaia-rl/experiments/bgs_records/test_timeline.py": "f4c20bc1fc07a921f88022d7a9ed39d7d666d9e0539de057599f1e92a7529477",
+    "gaia-rl/experiments/bgs_records/timeline.py": "526e4de0a21c483e531d3e335cd5914ef0b82cd8a24f706ea706108f679f84b6",
+    "gaia-rl/experiments/coaching/__init__.py": "a73589fff2d56cc1286af3127b3268aaf8ba2bc121e91ed3c5220b0dcc7c642b",
+    "gaia-rl/experiments/coaching/branch.py": "7d4d3b12c3190be2a1b57da9dd41168044ea779eb565ba93db00bb2eb479f931",
+    "gaia-rl/experiments/coaching/launch.py": "da8d19bbf39a11f2689131d20a18958441cbfbcf91f435ee86cce52d19910ceb",
+    "gaia-rl/experiments/coaching/server.py": "907772e4e9ec21911e68e0a5be683f5876016d7a617ce583c70267a5a5d0aaa5",
+    "gaia-rl/experiments/coaching/session.py": "59b61ffbd42fd6be32521d82726c78abadd2b4cdd981038a178b64d040adc725",
+    "gaia-rl/experiments/coaching/test_clock.py": "fa628012b4aa5951df837c6371031928435a056173e18105293cc2b113dd6c9c",
+    "gaia-rl/experiments/coaching/test_server.py": "533d8de4485ac98276f4b4657f03bb94352d0d3fb941501df50848201aae3f77",
+    "gaia-rl/experiments/coaching/test_session.py": "10217962d96df52e25b43269e5ea537a808b920fd1dc54cc15f4977122b02ce6",
+    "gaia-rl/experiments/conditional_plans/economy_first.py": "ef0122a2f61365479c7f5858953012f30f298a545651bf7e4084f4883a56b1ec",
+    "gaia-rl/experiments/conditional_plans/evaluate.py": "074368425d1e30e9be35cceb256c20c03a428b78666473a50bd3efc847b2d33c",
+    "gaia-rl/experiments/conditional_plans/forecast.py": "2f60bbf661102cf4234bcf72b9bb8baa7864f72d504231739bdc2293fc97b4da",
+    "gaia-rl/experiments/conditional_plans/opening.py": "74ad6d4e63d6957edd9bac7677535329bc4a8a79d2c10db304acb383ae530c37",
+    "gaia-rl/experiments/conditional_plans/routes.py": "e1c0709e7fe07e87b31606d4166dba3865b3feacaf893bb7c01631cee1844972",
+    "gaia-rl/experiments/conditional_plans/teacher.py": "529336c38e903e585095b22f28642d013b212eb4951791248887ac54f5655da1",
+    "gaia-rl/experiments/conditional_plans/test_economy_first.py": "c23b6aee2b6b9d046816408f7309152f3de585b834e093b8016b9a1321255dca",
+    "gaia-rl/experiments/conditional_plans/test_economy_first_native.py": "36a494991892b356938c91ab9bc19e37cb322849972d3ccc2bc23fa942c93ad8",
+    "gaia-rl/experiments/conditional_plans/test_evaluate.py": "c2f532a39cd997d6d69c34def9a7cd42f88a2c3028f58f63faeb7aef03cd2099",
+    "gaia-rl/experiments/conditional_plans/test_forecast.py": "4ca9cc3968800947d89f19b79cdd9b90e1e7ee022af1631eac0dc09742c02708",
+    "gaia-rl/experiments/conditional_plans/test_native.py": "989a2bc26b229c8c15d489f708201c8dc2ffb71321b980bcf9a26f27e94b22cf",
+    "gaia-rl/experiments/conditional_plans/test_opening.py": "9e39d5c93d3ae5a8261b50ec3364f0dbff6768c67bec1de928f8f7988c1a03ec",
+    "gaia-rl/experiments/conditional_plans/test_paia.py": "f06261cd57fedd6fe562eac229de0f24f9bd45891745eb36954482f5dd98071e",
+    "gaia-rl/experiments/conditional_plans/test_teacher.py": "00593c4d0aa93654162e13cc6aaefdab7691fcddc66e562aa230df5ad3f85d3f",
+    "gaia-rl/experiments/current_actions/ab_match.py": "eb5c67b84c01217301344981e8d2aabf28c37dd8a64f580424a889dcd83a761b",
+    "gaia-rl/experiments/current_actions/conservation.py": "2667ee6e8bf7575939b80a88ccb31b64259ffd7e7cb3c429b05343a8e1d1fbd2",
+    "gaia-rl/experiments/current_actions/evaluate.py": "f0a44d761376fb474b300d5ee76b697cdbc0f6ac589d508d7071d2078f853cb3",
+    "gaia-rl/experiments/current_actions/state_delta.py": "63281ad0ef0f4c04cbfff9bf38e54f146c98377cda9d023b9b5f9c11b51d07fd",
+    "gaia-rl/experiments/current_actions/teacher.py": "c86914fed91ec988f06f9ccb8bf31654436e046bb13fbd0b306c63a650ea7a80",
+    "gaia-rl/experiments/current_actions/test_ab_match.py": "02e83d1d95c17122e9e812a31756af5867990b0b174e1cdac2e3c7e127014124",
+    "gaia-rl/experiments/current_actions/test_cache.py": "5c1a0e49aaabb06033f27839c286c2052da9b592d17c50132bdd3f7c9dfee29b",
+    "gaia-rl/experiments/current_actions/test_conservation.py": "db6c65dc08b51addd682e0fda55cb4c0b7af3a9f67f3e42ed182e293bbf8b451",
+    "gaia-rl/experiments/current_actions/test_conservation_native.py": "02796f68bc305d1d4e60b6cbb7af6f7a9eeaba659a890d40eeff74e9ffc8a5de",
+    "gaia-rl/experiments/current_actions/test_evaluate.py": "0ee07f584c98214fa5aad23fa192339442b873b298e0edebcce1e8430e83c23a",
+    "gaia-rl/experiments/current_actions/test_route_scoring.py": "056e56f4493196c8ddd42e118026a0e8ae9958713abbb603abf34381c95999d2",
+    "gaia-rl/experiments/current_actions/test_state_delta.py": "644020e63af2b174b20082152c17b69c3d18134360ca4c907e4e4cfd0e51a1b0",
+    "gaia-rl/experiments/current_actions/test_teacher.py": "63f2f44ba8dfcd0aa03347697cd42186a984a0f284704d794c9d7d21c6b2ab88",
+    "gaia-rl/experiments/economy/evaluate.py": "575e756c00a9cbece7a45632ab218494db994185623fc4a175816313a309bbac",
+    "gaia-rl/experiments/economy/teacher.py": "e6ac9d0d9dd3f9669723a1f917cbb5cd79ecf3448f798514179835359acc78d4",
+    "gaia-rl/experiments/economy/test_teacher.py": "8ce09456fd0f58122343252fd7ede363d1a2430248dffc1349f7ce74edec0bc0",
+    "gaia-rl/experiments/economy_learning/test_train.py": "ffe3bdcaf9b522eb23aa603473ede0111227aa45b4a21ee7b3eefd2786f82872",
+    "gaia-rl/experiments/economy_learning/train.py": "80087a8380e00dab6d18f9c49af17fa4ee7fc9efe2aa293566697d5c2af76e4e",
+    "gaia-rl/experiments/faction_learning/__init__.py": "bef0c843280ce4d4946f2715b531757bc8cb6c8faa80321feea6d7cf6a739574",
+    "gaia-rl/experiments/faction_learning/__main__.py": "23078a29decfd093577f749fe1f3890d95adcc8f0f0c1140661001b6a70aafb6",
+    "gaia-rl/experiments/faction_learning/behavior.py": "3f7bb152c00a67e2cf5085d0abe1ef09644dd5a1036a396e3e8e0098d0f85fc4",
+    "gaia-rl/experiments/faction_learning/inference.py": "940e39a13212024fbb05dcd847e2cbff9d008711a00a6fa6b6fad46d1f191ea7",
+    "gaia-rl/experiments/faction_learning/models.py": "ff3466a3510450c29001988f28553412e56e0b117e159d73ad52dc6a7be5dcbc",
+    "gaia-rl/experiments/faction_learning/records.py": "f00481c0a38f0462cd3484323db94d2344de84d0f2117c84b705d62f82370db0",
+    "gaia-rl/experiments/faction_learning/test_teacher_bc.py": "e670f528abd3d7f88e526be428fa2105cbf34e6fc2b4dc0c6684a3dd8144cd4c",
+    "gaia-rl/experiments/faction_learning/test_teacher_records.py": "a0aded7ea39018ef6fc5c4891c17a1d514d44af9eab1ed0d2414688ce8d0795e",
+    "gaia-rl/experiments/faction_teachers/__init__.py": "025d26dae897a36ab791a6a292121bffb80b90bb2b433ad51ba11f80b28ef31e",
+    "gaia-rl/experiments/faction_teachers/__main__.py": "f35074a51d185ef3f2ca42de069950edc1590dd21e6ab440aa79f50d896d6369",
+    "gaia-rl/experiments/faction_teachers/clock.py": "6189d852e433739815e612766e10dde15af64698c08e852cb37b2cda5417514b",
+    "gaia-rl/experiments/faction_teachers/continuation.py": "e9cfd95a2932c085a873e681b2c0e06ab3947f5a828463b67c2cfd98976a02d0",
+    "gaia-rl/experiments/faction_teachers/diagnostics.py": "111db61fe71aeb0d109d38df1cc3665dc46727e8c7af431df7aa746710ea6cc2",
+    "gaia-rl/experiments/faction_teachers/guidance.py": "dd90fc937dae2b06d1548ccd7d01a8f0b7a65dedbe7e2e9c6ad7ada00face2ca",
+    "gaia-rl/experiments/faction_teachers/paths.py": "a85f655f5feb070e3ca0dbb69919897745e126cdf04617f6f0a2cd35446876a0",
+    "gaia-rl/experiments/faction_teachers/profiles.py": "d818b63e02971e8d8b0e5a769373bbbe71debd7d3209722b0acf26288c54b922",
+    "gaia-rl/experiments/faction_teachers/teacher.py": "a32d89e0760231fb8f5a58fadbba33b032045880ca9c16d88fc1c45ebaf29d06",
+    "gaia-rl/experiments/faction_teachers/test_clock.py": "4cb95faa27a4f64092220fedccaa5998baf31386e76ffb0f937e3ca83b3018f2",
+    "gaia-rl/experiments/faction_teachers/test_continuation.py": "377d70d9c09cb3c471087a120a30d25e703e13e338c2742ae205b234d93dac42",
+    "gaia-rl/experiments/faction_teachers/test_diagnostics.py": "96255a9bb7ad63e35c7f8cf075dfeab2ead1a479ee3efa9e7ee19e62ae583de6",
+    "gaia-rl/experiments/faction_teachers/test_guidance.py": "6df3a06ce21ea9057f15cc12b45479e53a9b1db4747496afdfa26042b9dcdb98",
+    "gaia-rl/experiments/faction_teachers/test_paths.py": "5869a2224bd992e93d29ca27a011f321f50266b2d92c4506c75bc03247641024",
+    "gaia-rl/experiments/faction_teachers/test_plan_preservation.py": "8595939fbe99d0aed6c636e85f550f970213684f42e3ab71de20513422fb26a0",
+    "gaia-rl/experiments/faction_teachers/test_shared.py": "bb177bc6450173554608ffde29c6268b3c01d713282bf1e3e6c604db7173cad5",
+    "gaia-rl/experiments/faction_teachers/test_tech_pilot.py": "0cd171cbc61b36d46a8ea15ca45745fde28945c95a1bd71d7727f9b4b6100a51",
+    "gaia-rl/experiments/federation/evaluate.py": "77602ba182615ae8e0b0fd504331423b2e1ed0802361dd80860a997eeef8e14d",
+    "gaia-rl/experiments/federation/teacher.py": "bbc7ba20ce72d2004ae3d3532082b1028e3cc0547f6cbf14f16aff957fef5996",
+    "gaia-rl/experiments/federation/test_teacher.py": "77b570ae40c2b28443ac905630da68ffdbe6c57b2c5076404737df925027a186",
+    "gaia-rl/experiments/four_factions/__init__.py": "21f33311518f67760afa7e1641cacc174e84446b029d9bf19c5c345c1676fca3",
+    "gaia-rl/experiments/four_factions/audit.py": "4f8e20ca81eebaa20171ddaa8d05112fca97adedd60e4d18948b82eb83f16a41",
+    "gaia-rl/experiments/four_factions/compete.py": "e7aa1b2ffb4c9653fb4f73497a044dba171e04c3d3fbd96a1ca96f4b34250749",
+    "gaia-rl/experiments/four_factions/coverage.py": "6dd0cc47e07686cc3783c120eb3793d8920561edef3965ac6488b7a6cbd6fa86",
+    "gaia-rl/experiments/four_factions/games.py": "65d52eb36ce420eb7591bcfbcdb0e16657be613048b0153751b48969d181357e",
+    "gaia-rl/experiments/four_factions/outcomes.py": "8d9b17f67deb71d5f2774cc7ef1169d040ea30a0ca6096e41951b50032d92cb3",
+    "gaia-rl/experiments/four_factions/preparation.py": "b2f8e1444346ac631d349681b7da2db56afedb4bdb049c93033e5f0b0fc48de6",
+    "gaia-rl/experiments/four_factions/preparation_cache.py": "8bc9e1322c7a0b879f54bd43aaf15363254f5afcbe0d0cbd7b8e7b430c911679",
+    "gaia-rl/experiments/four_factions/provenance.py": "0df26fc49d46bcda43dc0073a8129bf8c86a42892750243d6b6714f2e53728fe",
+    "gaia-rl/experiments/four_factions/quick.py": "c93eec583f53780d18dedee9c3fd2c4a031e61ffc88b5fba80253f14333322e3",
+    "gaia-rl/experiments/four_factions/setup.py": "8d3030c8b527c23f09ff69d8d5fbf9b1ea4e0a4a7c35ee4e9adadb69c3c6bfed",
+    "gaia-rl/experiments/four_factions/source_paths.py": "578e36766b130c9b638362129a2d0fd5867c85b15c10a1a8992351080c7c5bf3",
+    "gaia-rl/experiments/four_factions/teacher.py": "25602a15531145562c8d01ec57b0d1dd459e601a73a2e61212da7749f5e91262",
+    "gaia-rl/experiments/four_factions/test_audit.py": "77661b6535ae94a45b6ffba2480fc8b6dfc67585ecab73fa3b41527b5e0bca1f",
+    "gaia-rl/experiments/four_factions/test_outcomes.py": "b00f88f29af29afbb30eacc380e30b47fffd27ac8143b0ed76e87d868af4fc93",
+    "gaia-rl/experiments/four_factions/test_preparation.py": "910d8c3c01e97dcf6323198ee0eb34c1a28722a282fdfc63e7e03e04aa8ec49c",
+    "gaia-rl/experiments/four_factions/test_preparation_cache.py": "2d5d2204646fe4f040b0e0f382f64bb624db72462a8a0c8774013bbb9b0ea041",
+    "gaia-rl/experiments/four_factions/test_provenance.py": "7f89c9f239feedec8cd9321c7a18cd27d41284e8aae183649d8f96b3aec88d3a",
+    "gaia-rl/experiments/four_factions/test_quick.py": "79ce137659ffb87a494fe4780ad34c2487bd0791a58faff5dcf82ff503b0f57c",
+    "gaia-rl/experiments/four_factions/test_source_paths.py": "98ebf90d2d858a8cfe363bce21a0804db673ba6ef617ec60b3c6158ec3f7d14b",
+    "gaia-rl/experiments/four_factions/test_teacher.py": "7112f7725c7a3b47dccc6ce4df3e9e4ddb8ae3267a35770ca2d396b1f0545ddc",
+    "gaia-rl/experiments/four_factions/test_track_guidance.py": "c4e6b10b16b64eef1d8593c8a2cc3177bce7e5402ba7b412ffb59f72d28b0b25",
+    "gaia-rl/experiments/four_factions/test_training.py": "5d6ca4ccebf36c0f6d69d725f8997f1570c588b7cf8c6ce56541a437f7ebcb1b",
+    "gaia-rl/experiments/four_factions/timed.py": "497a245fdea56556441ca7200d1a8cf8bd321c98f08bee6f25dc1b0fe90ddb99",
+    "gaia-rl/experiments/four_factions/track_guidance.py": "9f133d880c65f78c01ef31fa7634308e72f3ed89766eefd833f01efd87830c89",
+    "gaia-rl/experiments/four_factions/train.py": "c339b525c945304b1c5ed507eed241a1844dfd46b94d2cd45130b62281906932",
+    "gaia-rl/experiments/four_factions/value.py": "ddd1de182ef39b9c4e7744f519bebb16f09903d36487189726a699a2a80967e8",
+    "gaia-rl/experiments/integrated/boosters.py": "2298f2252f82c1959c5dbdb23629fdd95c493191947c614909334fa446a5f737",
+    "gaia-rl/experiments/integrated/evaluate.py": "861d2e04e5dacdbad82bff80498addc2f59705c47dd79203ba73e34c8994ad17",
+    "gaia-rl/experiments/integrated/features.py": "2306d99c53a18da52498e154e5cf424fc181489f28867dcc273775db050d2c9e",
+    "gaia-rl/experiments/integrated/teacher.py": "f3a3be1c4017ea6b931d3e6fa24b9926fcf8518008d9ea2b7d9c1a24fdaad78e",
+    "gaia-rl/experiments/integrated/test_boosters.py": "cbc753bd4087fa4b7f34d69bbf9ad03bee83e66c4590a7b451bba283924ce387",
+    "gaia-rl/experiments/integrated/test_teacher.py": "192ca572c5dc75ddd9552e017a4906d078f5e0a9da78cf1035eb08ed9341205d",
+    "gaia-rl/experiments/observed_games/__init__.py": "8573bc830a64e52f8246dfb2f64ce79f5f3d394ac2c8cdab16b4508366aeaffe",
+    "gaia-rl/experiments/observed_games/ab_match.py": "d1ef7e19dda8319e3372503a08a859bbf45d4cb5ec292b87aee2dfa8e9e87de6",
+    "gaia-rl/experiments/observed_games/ob01.py": "134147cb5490c88c5b86dcf3d3ab4e7bd560288201e8075f915464e75c759b14",
+    "gaia-rl/experiments/observed_games/test_ob01.py": "42abdc63c2097d07c79c5bf9dff94ce9cfbb59e058a3ecaea1e9a146a31d2474",
+    "gaia-rl/experiments/power_purpose/evaluate.py": "a91fd91a9803f3c79eb9e1771ee23a11c782b1baa231d66243e173ac0342dc3e",
+    "gaia-rl/experiments/power_purpose/teacher.py": "e492afce613db322febbf44874b583457486ca24108bac87a2570a882e1704e6",
+    "gaia-rl/experiments/power_purpose/test_teacher.py": "c5f3bd70e42c5d5ffd93f506876eb432dac98ed0074f21b55ada1e2227cdba28",
+    "gaia-rl/experiments/research_context/evaluate.py": "456fd9c9382ae7405a0a0e5495e2a3241008cbc181267b3fbe2a584b07d5e188",
+    "gaia-rl/experiments/research_context/teacher.py": "ee9de6ff820b809e9ea9bf0596cf6906de43d71c6637256cdad0cb6b867dfe1c",
+    "gaia-rl/experiments/research_context/test_teacher.py": "502e0160b2190627692554f60f5e5d6c401dfb0fb65c2b0fd53b00af79ecb0e2",
+    "gaia-rl/experiments/research_plans/evaluate.py": "bb3fed9959991fa9a3ad3f55761328d0aedd295f427b5bc9723f0a586dad1ce2",
+    "gaia-rl/experiments/research_plans/teacher.py": "958417ce7ab8b07250966f6ff6763e04e7d8da9906b7a54dd83f554ba3fd8324",
+    "gaia-rl/experiments/research_plans/test_evaluate.py": "31db2c3b702b151f819f3d39b6c45ce6126e77377df5e7e87bd340d7424bdb56",
+    "gaia-rl/experiments/research_plans/test_native.py": "5a08b3dc36a5df793409c8086c8ef41b329160d9b650086ca389b0c2f0414140",
+    "gaia-rl/experiments/research_plans/test_teacher.py": "683bef6f7f67757a890e429fa5645c998f5aa8aa5129144602aaba1129552793",
+    "gaia-rl/experiments/research_plans/value.py": "8eaf8b6f64c5d4f661585ebcdaf4de9bd0e8ea5216da682381598ae01542ac33",
+    "gaia-rl/experiments/resource_plans/evaluate.py": "135fce5692be8036f3630562a4cf51d74fac2ae910d67ea22b48480320ab6294",
+    "gaia-rl/experiments/resource_plans/funding.py": "7d8ac02dfa36745f0dc8b68d6869270c10fe3843e1e9232b7abee657f4ec19bd",
+    "gaia-rl/experiments/resource_plans/routes.py": "007c54597597f58a3b1f0cc10d3f43baec49d3a2fbc6e99a0a9ec832e8319c92",
+    "gaia-rl/experiments/resource_plans/teacher.py": "36497642cc616a026d1873cc8ceef09218a4170252643d431c52ea643474d06c",
+    "gaia-rl/experiments/resource_plans/test_evaluate.py": "5b538fdb62b2389d48b95a8e77364bc1ab076e868af42e8222c60c2b0d280be8",
+    "gaia-rl/experiments/resource_plans/test_native.py": "5ae5e745daba59d67576514233a0305bd5f41ac45571051ce26d8c225b40cd06",
+    "gaia-rl/experiments/resource_plans/test_teacher.py": "bee74debfa79d82e1035f552ffe42afea9d05823aed5ec310e9ae74817940265",
+    "gaia-rl/experiments/scoring_cache.py": "14669ff1f39610a315546ac5b54aaf5212a9b3d1b78b0eb301db03223d37c02d",
+    "gaia-rl/experiments/source_routes/audit.py": "739adc45bb21939d58b0299e4924dfddac91728595d168389e75104693b5deaf",
+    "gaia-rl/experiments/source_routes/evaluate.py": "68e207bbb402a31b0b20c27dc6b8ffa784bac23560939aaa1627918fc5a4cc7e",
+    "gaia-rl/experiments/source_routes/planning.py": "4a7ea24aeec591c4079505c7bdf0a3e574297353e9cd718bff02627755af11e0",
+    "gaia-rl/experiments/source_routes/teacher.py": "407125651af96ebfcce3cf20b23ec7eb07f4262f2126fbec2e0b03d2a6ebee66",
+    "gaia-rl/experiments/source_routes/test_teacher.py": "74d8488494238e51ee601694bad7caa5c510a45431f05127fabdfa38aa31b879",
+    "gaia-rl/experiments/state_evaluation.py": "1cbd4a4a3124998b43a7e245dbb39905c200a18c74b6aab52ce734e6db0898ca",
+    "gaia-rl/experiments/state_evaluation_bdoubleprime.py": "0a64f7781ed895bc943e3b1c2cb9a6f268301047dc4bf42a9478223ffb8da250",
+    "gaia-rl/experiments/state_evaluation_bef.py": "dd559cb45bacc017f7d9e335ca7ae00468980117c7a9ff5c929e2d87651f6e42",
+    "gaia-rl/experiments/state_evaluation_bprime.py": "638eb5f2464cf39e77bd31cc2608c4a2104181a3bf63192f304d13cc8e8182f9",
+    "gaia-rl/experiments/state_evaluation_bquadrupleprime.py": "71b775bd12a0f449e2ab785d6f499e462c8d3e52095aeebd9909e6d5fed1c657",
+    "gaia-rl/experiments/state_evaluation_bridge.py": "cac5b460a06b63bdaf93a28b52517dc2fbb58e12c230a1ffdc9de6cabd2d2f14",
+    "gaia-rl/experiments/state_evaluation_btripleprime.py": "f3274411788adedd65ffcc58e261609107a51b481e54cb0767884a8dea59cb91",
+    "gaia-rl/experiments/state_teacher.py": "e6e583ff40cfc4e7e1e1dee56266a1836eb1d842eaee4939759cbb0fd0bcff88",
+    "gaia-rl/experiments/strategy_pilot.py": "9e191da3bcc8719e52d4958936acbcf9adefa874a95309e9347c5364b4b4db2a",
+    "gaia-rl/experiments/strategy_teacher.py": "ab3bd12b8b018473423529a6b26f1adf5b5d45335d75a0018612880f5b0625a2",
+    "gaia-rl/experiments/test_state_evaluation.py": "3694dfb2e4cda7fd67379b2ffb986156ac2bf9326fbfe2fd76c32ff284ee5db5",
+    "gaia-rl/experiments/test_state_evaluation_bprime_token.py": "29105de4fa6ccfa48cd410d1e96a74b1049fa788fa940a3c1284ee3288d41dab",
+    "gaia-rl/experiments/test_state_evaluation_fprime.py": "314e636e61a831a91637ebf23ea2ab6e81466ac52e251e22cf5c18a887588348",
+    "gaia-rl/experiments/test_state_evaluation_ghi.py": "a0861b977dfc1cf96db1ce3573d4380b1e7f46d3287e02e4a392aa11f23a834d",
+    "gaia-rl/experiments/test_state_evaluation_k.py": "0a5b86614392a7a16f650eb135aead0f0b6b8883685bd7b3002600d331da7269",
+    "gaia-rl/experiments/test_state_evaluation_n.py": "f3a7460d79f5b606c2e59e5e7886ae3619bd86b27b74c4b2f42263c577616a13",
+    "gaia-rl/experiments/test_state_evaluation_o.py": "2e00aac60c0b50e893563795413f205750dee4fef8ccd9363a12c36114f0e18e",
+    "gaia-rl/experiments/test_state_evaluation_q.py": "7e2085c4038f8f6ffd822934c4e25cb6ea1b2fe5efbbbcdf801e881ced35512e",
+    "gaia-rl/experiments/test_state_evaluation_r.py": "169281c0b9d361cc8177d08fa4880d8de32a71f9d597eda2a20bf7c0cf8e28e3",
+    "gaia-rl/experiments/test_state_evaluation_v2.py": "d9fd1319f5b4c00bf07665eb5439b007348d67c0bb9d20bfc42307d8cf941f93",
+    "gaia-rl/experiments/test_state_teacher.py": "bc1bd4e697129b0d33cb871597d250e74d73fa9f5919d791dff51a687039a2df",
+    "gaia-rl/experiments/test_strategy_teacher.py": "ec4b5bae305f9efc7763ca98def4ccfe1c0e4bcc0c63a873a7e98dae8f248975",
+    "gaia-rl/tools/simulate.py": "e0896fe12e2b16f990547bd89be3de4eb7fc182e9b2d9bc0201e5877683ef57c",
+    "gaia-rl/tools/replay_log.py": "60b5345e799e6647da095ffdb7f5a25f342eebfd168756132e55fc072fde77c2",
+    "gaia-rl/tools/replay_income.py": "f059567d74ea0208cbbf31e19097b75073f8617e1d992c1f6e80f795f5d54575",
+    "gaia-rl/tools/evaluation_replays.py": "22210e83114271fe241c2ee98edea5c68b74e4b79dc01a8b27addc6ec390500d",
+    "gaia-engine/Cargo.toml": "6544ef78b7ef755ea42f8d29d21045ac60a2d8cf5232e1d02c1c88b284ae87f4",
+    "gaia-engine/data/factions.toml": "011d334827fd580d09e153790a08b74ef9bf6ba382c2c65fcbcbb21174d8d630",
+    "gaia-engine/data/research_tracks.toml": "8624d4968608d11b1630fcc7189bdb39268f3867be8bd11e772abbc090352dd1",
+    "gaia-engine/data/sectors.toml": "02a7af9d9d1e85402d93cac3c45eabfb6519836ac0709c842e1a61f1e03f1dd5",
+    "gaia-engine/src/bidding.rs": "cb7bb9fb7c17729604ac19c3f429826b4c7821a6bbe61e0a199aeef8f2e01f00",
+    "gaia-engine/src/data/factions.rs": "ca9c46456b9e21c39e9f5ac7c7cf43a0fb1b13f9102767d93864242d96f1652e",
+    "gaia-engine/src/data/mod.rs": "8f765fed3760497c1160c28735ba43a135ee6d181ec18ad038736de9639a8984",
+    "gaia-engine/src/data/research_tracks.rs": "e1f2470eeb58bd13646f963289a23eb87ecb689266fdefa9591152e7f8d01431",
+    "gaia-engine/src/data/sectors.rs": "8ec68963af79dd0c501381c6d8e3e0bf0c866ff2c70dde37950eb9ced85ebc9d",
+    "gaia-engine/src/error.rs": "54894063648d830b6992276a774ce623bd774fa21e8fcab281c0320575da00c5",
+    "gaia-engine/src/faction/ability.rs": "3d56ee5cdcdf8c145cfe4ad1c294e377c4db8eb065cf8e347ecf6fe766997df1",
+    "gaia-engine/src/faction/impls/darkanians.rs": "1b93d60ab1a9b86a468ec68bca05fe617eaca09b6d4a9250108eac150f2754cd",
+    "gaia-engine/src/faction/impls/default.rs": "e4d9c0e8de6eb6cfe2bb62050f6f18578e241441a00baaaa1a7316a901861583",
+    "gaia-engine/src/faction/impls/lantids.rs": "241f57cb999edc5f36c5e030d9eae81de1a48faae94ffbd8eac652224af2cada",
+    "gaia-engine/src/faction/impls/mod.rs": "8cbf8d1204d1f75413409a292c81148c9b5c25ba6d5b4378bda229ee0166b90e",
+    "gaia-engine/src/faction/impls/space_giants.rs": "66545a20b6ca377f94e8fe671cac6bc8160687968fad6138e9c40cd5e0919d1e",
+    "gaia-engine/src/faction/impls/terrans.rs": "5a5ddba6f8d56709d54989571f8c8c885e4b6a64b8d3f4d163b6007c84a47073",
+    "gaia-engine/src/faction/impls/xenos.rs": "0ffee8276172d1eb91574494244f4c9974e63da9f0568ed938711e34aba8926f",
+    "gaia-engine/src/faction/mod.rs": "fa4edbfd74807586a79fe2445277617f352faaadbcbdf36c638eaa0118f165ea",
+    "gaia-engine/src/faction/registry.rs": "0d44b6d6dce18aeec02aeaf8b2fd7776714836d43454c9e9d22d659a77fd779c",
+    "gaia-engine/src/game_state.rs": "eee66a0c44363bb7e623da9268e412c3c7bbbdd677e2181061207b599561895c",
+    "gaia-engine/src/lib.rs": "3f6a503d06b59bab13f40142a91bacbc7c4bdccc1fa1d6442ff5e0395480befc",
+    "gaia-engine/src/map/engine.rs": "fcfe076d0a76ae84264d6778c47617867de05c6540bd048629939d76abb6b79e",
+    "gaia-engine/src/map/hex.rs": "e9ae2e88959235212b27defd37ea325da5c69652df54b5eee50bf5b897f8b623",
+    "gaia-engine/src/map/mod.rs": "f017ef8d3e07b550507c53139efe7be725e4572172bc71f069b64045a484f7e4",
+    "gaia-engine/src/randomizer.rs": "5e7f35f8b95c07bbe63e61786ad7abfd9b6133bead9c5b4d3d6458727843b12d",
+    "gaia-engine/src/rules/actions.rs": "0bf6ed1a96d1b3f0ccaad603dee10ff6d594d3df8d0008feb480b535cbf0708a",
+    "gaia-engine/src/rules/ai.rs": "0f7b26ebe309d0299677fd3a2e1b86477970a5cb18ac659abd1f40e4539e49da",
+    "gaia-engine/src/rules/ai_federation.rs": "4468f6d8a12e17f74aeb78938199204f644351cc88d6511346749250cade48b4",
+    "gaia-engine/src/rules/engine/evaluation_data.rs": "0a62e738d6f690fe8c5fc2bf10f1d9477ee12e1e177cbb01757721afc64a740a",
+    "gaia-engine/src/rules/engine.rs": "3145301e1d059742c4d0f3a4921f36f3a9ac3906e8c5d94401b8ac761ff6366f",
+    "gaia-engine/src/rules/mod.rs": "8fbcf75b279f8744f593f4fef6793e9394cc727deb57f3e5a99e1c4d1cf2da31",
+    "gaia-engine/src/rules/tech_tile_audit_tests.rs": "36e274a7dc57e7368c2be2ae3c5beb23e3cbfa166587a7bb2b0e3d235f8c83fd",
+    "gaia-engine/src/rules/terraforming.rs": "fa6d210cd23dcfefcfd4c14d619e321e4de7762d52fd8f87fe3eac2fcdbb7756",
+    "gaia-engine/src/scoring.rs": "5f5d5d9d65102dc8747db1fe0e1c47e29c94e293a8e280eb057b09781b5f9d12",
+    "gaia-engine/src/setup_policy.rs": "5dbb5aab210ff3d52bb9784e51ecd6d1c277bce734bbfba8c75ef4e1cd6dbb4e",
+    "gaia-engine/src/test_utils/builders.rs": "67a8176f7196b0f9b7629e0f03f8939cee7d53af82d30cb80f9b0e80076e8686",
+    "gaia-engine/src/test_utils/mod.rs": "714abc75a222c5c72f5e0e3aec7cd01584371ac9a026b4c666bb2a03c1486261",
+    "gaia-engine/src/test_utils/strategies.rs": "5a8e0ee2009f9e159ebc095d973f722991a0255a8e0d25dd49a8110a2ff79faa",
+    "gaia-rl/Cargo.lock": "1a44891beb005e29879699ed899089a0cd9eb5778167ee7daa5b017e648c7563",
+    "gaia-rl/Cargo.toml": "7de6daa44749a0fa6b9dce492c0c026bb69e3eb29122de45c7519d95f7b8719a",
+    "gaia-rl/build.rs": "62a262267a6d136518654a86b6217ae6f9786cd6033aa7508a70b3ea8b438c38",
+    "gaia-rl/src/env.rs": "febc1524ea930281a519018cd8ad292de607c9580bcacba0bab136f052751944",
+    "gaia-rl/src/lib.rs": "38b1b3b545ac3d64fe63fd57590097fb8f14772fe8f288b24c1ea5511ca99c4c",
+    "rust-toolchain.toml": "24ef3b9d3edbd850aa386cb0a98e10450b0030991a4537cb359f54d49dbbb33a",
+    "gaia-rl/python/gaia_rl/versions.py": "e5a3f92d1539429a58b755f653b04c47ea5ed4b7526c6391d7a76a29fc785a16",
+    "gaia-rl/python/gaia_rl/encoding.py": "32ab9117bcc1885eb952d752840d5e93950ea14d321bc5c7cb87725060d5bec5",
+    "gaia-rl/python/gaia_rl/evaluation.py": "78d36a550fce7eeda6603451f9623076cf5d7c62fbc518ec237be6e4f8c5b39b",
+    "gaia-rl/python/gaia_rl/__init__.py": "8dd20457e3bce1c0fbb09070862f2a96f7cb4c16643d8c3a1003541fc615a116",
+    "gaia-rl/python/gaia_rl/training.py": "e294e83263e72128715e29aab1ddb3153e5a817343cbe89dbced7d635b4dcfa4",
+    "gaia-rl/python/gaia_rl/module.py": "6c0ad116b10fd5313fd211b02dc25a31b5638fb189b7c4149e251d2b4db2fb19",
+    "gaia-rl/python/gaia_rl/vocabulary.py": "2beae85272ed5f0d08d8d9b974a0e793eb40f223ed0190ffd7d39491555c219c",
+    "gaia-rl/python/gaia_rl/aec.py": "59b5347aac7a3dc95b33ff0cce3e40b0ba67fc41cccb898af9ecfd0117068047",
+    "gaia-frontend/src/data/income.json": "cef0dec10195a0161a3bff978d97f25f995cfdc11ebe5a4f0fde4a0f8d6d0742",
+    "gaia-engine/examples/income_projection_data.rs": "938c93e146219a2a888ad82809118fe85e66e792eb1b12f6cf516dc1085163df",
+    "gaia-rl/examples/faction_lineups.rs": "9624bba66f433f6f9df6b254f31a457eed419345419aac175e8ccb340e49f44b",
+    "gaia-rl/research/strategy/bgg-openings-part2.csv": "45d352674e261bc923425bcb0c3b70703a9a46d2c8ba88f2164ddf17d4d121ec"
+  },
+  "comparisons": [
+    {
+      "mode": "existing",
+      "goal_spec": {
+        "name": "Ambas-large-power@1,-1-relocate@3,-2-federate",
+        "family": "ordered",
+        "coord": null,
+        "target": "Ambas",
+        "level": 0,
+        "tile": null,
+        "first": null,
+        "payoff": null,
+        "steps": [
+          {
+            "name": "PI@1,-1",
+            "family": "upgrade",
+            "coord": "1,-1",
+            "target": "PlanetaryInstitute",
+            "level": 0,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          },
+          {
+            "name": "relocate@3,-2",
+            "family": "faction-action",
+            "coord": "3,-2",
+            "target": "AmbasSwapPlanetaryInstitute",
+            "level": 0,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          },
+          {
+            "name": "federate@3,-2",
+            "family": "federation-race",
+            "coord": "3,-2",
+            "target": null,
+            "level": 1,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          }
+        ],
+        "sources": [
+          "B06",
+          "B18",
+          "B19",
+          "A01",
+          "A02",
+          "faction-tech-pilot"
+        ]
+      },
+      "first": 3,
+      "first_action": {
+        "type": "FormFederation",
+        "hexes": [
+          "2,-5",
+          "3,-2",
+          "5,0"
+        ],
+        "satellite_hexes": [
+          "2,-4",
+          "2,-3",
+          "2,-2",
+          "4,-2",
+          "5,-2",
+          "5,-1"
+        ],
+        "token": {
+          "source": "Supply",
+          "kind": 4
+        },
+        "bonus_build_coord": null,
+        "bonus_tech_tile": null,
+        "bonus_research_track": null
+      },
+      "elapsed_seconds": 21.774443222995615,
+      "complete": true,
+      "value": 135.17333333333335,
+      "fixed_opening_utility_loss": 0.0,
+      "goal_acquired": false,
+      "actions": [
+        {
+          "round": 3,
+          "action": {
+            "type": "FormFederation",
+            "hexes": [
+              "2,-5",
+              "3,-2",
+              "5,0"
+            ],
+            "satellite_hexes": [
+              "2,-4",
+              "2,-3",
+              "2,-2",
+              "4,-2",
+              "5,-2",
+              "5,-1"
+            ],
+            "token": {
+              "source": "Supply",
+              "kind": 4
+            },
+            "bonus_build_coord": null,
+            "bonus_tech_tile": null,
+            "bonus_research_track": null
+          },
+          "resources_before": {
+            "ore": 0,
+            "credits": 12,
+            "knowledge": 8,
+            "qic": 0,
+            "power": {
+              "bowl1": 7,
+              "bowl2": 0,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 2,
+            "credits": 12,
+            "knowledge": 8,
+            "qic": 0,
+            "power": {
+              "bowl1": 1,
+              "bowl2": 0,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 12,
+          "vp_after": 19
+        },
+        {
+          "round": 3,
+          "action": {
+            "type": "Pass",
+            "booster_id": 11
+          },
+          "resources_before": {
+            "ore": 2,
+            "credits": 12,
+            "knowledge": 8,
+            "qic": 0,
+            "power": {
+              "bowl1": 1,
+              "bowl2": 0,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 6,
+            "credits": 22,
+            "knowledge": 13,
+            "qic": 0,
+            "power": {
+              "bowl1": 0,
+              "bowl2": 0,
+              "bowl3": 3,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 19,
+          "vp_after": 23
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "Pass",
+            "booster_id": 9
+          },
+          "resources_before": {
+            "ore": 6,
+            "credits": 22,
+            "knowledge": 13,
+            "qic": 0,
+            "power": {
+              "bowl1": 0,
+              "bowl2": 0,
+              "bowl3": 3,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 6,
+            "credits": 22,
+            "knowledge": 13,
+            "qic": 0,
+            "power": {
+              "bowl1": 0,
+              "bowl2": 0,
+              "bowl3": 3,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 23,
+          "vp_after": 23
+        }
+      ],
+      "remaining_goal": {
+        "name": "Ambas-large-power@1,-1-relocate@3,-2-federate",
+        "family": "ordered",
+        "coord": null,
+        "target": "Ambas",
+        "level": 0,
+        "tile": null,
+        "first": null,
+        "payoff": "cancelled",
+        "steps": [
+          {
+            "name": "PI@1,-1",
+            "family": "upgrade",
+            "coord": "1,-1",
+            "target": "PlanetaryInstitute",
+            "level": 0,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          },
+          {
+            "name": "relocate@3,-2",
+            "family": "faction-action",
+            "coord": "3,-2",
+            "target": "AmbasSwapPlanetaryInstitute",
+            "level": 0,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          },
+          {
+            "name": "federate@3,-2",
+            "family": "federation-race",
+            "coord": "3,-2",
+            "target": null,
+            "level": 1,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          }
+        ],
+        "sources": [
+          "B06",
+          "B18",
+          "B19",
+          "A01",
+          "A02",
+          "faction-tech-pilot"
+        ]
+      },
+      "end_round": 5,
+      "decisions": 23,
+      "end_player": {
+        "player_id": 3,
+        "nickname": "AI-3",
+        "faction": "Ambas",
+        "resources": {
+          "ore": 10,
+          "credits": 30,
+          "knowledge": 17,
+          "qic": 1,
+          "power": {
+            "bowl1": 0,
+            "bowl2": 0,
+            "bowl3": 3,
+            "gaia_bowl": 0,
+            "gaia_forming": 0,
+            "brainstone": null
+          },
+          "spent_gaia_formers": 1
+        },
+        "structures": [
+          {
+            "hex": "5,0",
+            "kind": "ResearchLab"
+          },
+          {
+            "hex": "2,-5",
+            "kind": {
+              "Academy": "Science"
+            }
+          },
+          {
+            "hex": "1,-1",
+            "kind": "Mine"
+          },
+          {
+            "hex": "3,-2",
+            "kind": "Mine"
+          }
+        ],
+        "artifact_mines": [],
+        "artifacts": [],
+        "research_tracks": {
+          "terraforming": 0,
+          "navigation": 1,
+          "ai": 0,
+          "gaia": 2,
+          "economy": 1,
+          "science": 1
+        },
+        "vp": 23,
+        "setup_bid_vp": 0,
+        "passed": false,
+        "booster": 9,
+        "federation_tokens": [
+          4
+        ],
+        "gray_federation_tokens": [],
+        "alliance_tiles": [],
+        "explored_ships": [],
+        "exploration_shuttles_available": 3,
+        "gaiaformers_total": 1,
+        "gaiaformers_deployed": 0,
+        "gaiaformers_in_gaia_area": 0,
+        "tech_tiles": [
+          3,
+          2,
+          6
+        ],
+        "advanced_tech_tiles": [],
+        "covered_tech_tiles": [],
+        "pi_ability_used": false,
+        "first_colonization_bonus_used": false,
+        "academy_qic_action_used_this_round": false,
+        "gleens_special_action_used_this_round": false,
+        "space_giants_special_action_used_this_round": false,
+        "round_booster_special_action_used_this_round": false,
+        "faction_special_action_used_this_round": false,
+        "geodens_rewarded_planet_types": [],
+        "federated_hexes": [
+          "2,-5",
+          "3,-2",
+          "5,0",
+          "2,-4",
+          "2,-3",
+          "2,-2",
+          "4,-2",
+          "5,-2",
+          "5,-1"
+        ],
+        "tinkeroids_tiles_used": [],
+        "tinkeroids_selected_tile": null,
+        "expensive_terraforming_planet_types": [],
+        "moweyds_power_ring_hexes": [],
+        "tech_tile_special_actions_used_this_round": [],
+        "advanced_tech_tile_special_actions_used_this_round": []
+      }
+    },
+    {
+      "mode": "preserve",
+      "goal_spec": {
+        "name": "preserve-plan: Ambas-large-power@1,-1-relocate@3,-2-federate",
+        "family": "ordered",
+        "coord": null,
+        "target": "Ambas",
+        "level": 0,
+        "tile": null,
+        "first": null,
+        "payoff": null,
+        "steps": [
+          {
+            "name": "PI@1,-1",
+            "family": "upgrade",
+            "coord": "1,-1",
+            "target": "PlanetaryInstitute",
+            "level": 0,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          },
+          {
+            "name": "relocate@3,-2",
+            "family": "faction-action",
+            "coord": "3,-2",
+            "target": "AmbasSwapPlanetaryInstitute",
+            "level": 0,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          },
+          {
+            "name": "federate@3,-2",
+            "family": "federation-race",
+            "coord": "3,-2",
+            "target": null,
+            "level": 1,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          }
+        ],
+        "sources": [
+          "B06",
+          "B18",
+          "B19",
+          "A01",
+          "A02",
+          "faction-tech-pilot",
+          "faction-tech-preserve"
+        ]
+      },
+      "first": 28,
+      "first_action": {
+        "type": "Pass",
+        "booster_id": 10
+      },
+      "elapsed_seconds": 31.347058307001134,
+      "complete": true,
+      "value": 142.55,
+      "fixed_opening_utility_loss": 0.0,
+      "goal_acquired": false,
+      "actions": [
+        {
+          "round": 3,
+          "action": {
+            "type": "Pass",
+            "booster_id": 10
+          },
+          "resources_before": {
+            "ore": 0,
+            "credits": 12,
+            "knowledge": 8,
+            "qic": 0,
+            "power": {
+              "bowl1": 7,
+              "bowl2": 0,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 0,
+            "credits": 12,
+            "knowledge": 8,
+            "qic": 0,
+            "power": {
+              "bowl1": 7,
+              "bowl2": 0,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 12,
+          "vp_after": 16
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "Upgrade",
+            "coord": "1,-1",
+            "to": "TradingStation",
+            "tech_tile_choice": null
+          },
+          "resources_before": {
+            "ore": 5,
+            "credits": 18,
+            "knowledge": 13,
+            "qic": 0,
+            "power": {
+              "bowl1": 5,
+              "bowl2": 2,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 3,
+            "credits": 15,
+            "knowledge": 13,
+            "qic": 0,
+            "power": {
+              "bowl1": 5,
+              "bowl2": 2,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 16,
+          "vp_after": 16
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "ResearchAdvance",
+            "track": "GaiaProject"
+          },
+          "resources_before": {
+            "ore": 3,
+            "credits": 15,
+            "knowledge": 13,
+            "qic": 0,
+            "power": {
+              "bowl1": 5,
+              "bowl2": 2,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 3,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 5,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 16,
+          "vp_after": 16
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "GaiaFormation",
+            "coord": "1,-4"
+          },
+          "resources_before": {
+            "ore": 3,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 5,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 3,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 0,
+              "bowl2": 3,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 16,
+          "vp_after": 16
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "FreeAction",
+            "kind": "OreToPower",
+            "count": 1
+          },
+          "resources_before": {
+            "ore": 3,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 0,
+              "bowl2": 3,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 2,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 1,
+              "bowl2": 3,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 16,
+          "vp_after": 16
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "FreeAction",
+            "kind": "BurnPower",
+            "count": 1
+          },
+          "resources_before": {
+            "ore": 2,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 1,
+              "bowl2": 3,
+              "bowl3": 2,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 2,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 1,
+              "bowl2": 1,
+              "bowl3": 3,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 16,
+          "vp_after": 16
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "FreeAction",
+            "kind": "OreToPower",
+            "count": 1
+          },
+          "resources_before": {
+            "ore": 2,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 1,
+              "bowl2": 1,
+              "bowl3": 3,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 1,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 3,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 16,
+          "vp_after": 16
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "PowerAction",
+            "id": 6,
+            "coord": "3,-5"
+          },
+          "resources_before": {
+            "ore": 1,
+            "credits": 15,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 3,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 0,
+            "credits": 13,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 5,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 16,
+          "vp_after": 18
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "FormFederation",
+            "hexes": [
+              "1,-1",
+              "2,-5",
+              "3,-5"
+            ],
+            "satellite_hexes": [
+              "2,-2",
+              "3,-4",
+              "3,-3"
+            ],
+            "token": {
+              "source": "Supply",
+              "kind": 4
+            },
+            "bonus_build_coord": null,
+            "bonus_tech_tile": null,
+            "bonus_research_track": null
+          },
+          "resources_before": {
+            "ore": 0,
+            "credits": 13,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 5,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 2,
+            "credits": 13,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 18,
+          "vp_after": 25
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "ResearchAdvance",
+            "track": "Terraforming"
+          },
+          "resources_before": {
+            "ore": 2,
+            "credits": 13,
+            "knowledge": 9,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 4,
+            "credits": 13,
+            "knowledge": 5,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 25,
+          "vp_after": 25
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "Upgrade",
+            "coord": "1,-1",
+            "to": "PlanetaryInstitute",
+            "tech_tile_choice": null
+          },
+          "resources_before": {
+            "ore": 4,
+            "credits": 13,
+            "knowledge": 5,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 0,
+            "credits": 7,
+            "knowledge": 5,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 25,
+          "vp_after": 25
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "AmbasSwapPlanetaryInstitute",
+            "mine_coord": "3,-2"
+          },
+          "resources_before": {
+            "ore": 0,
+            "credits": 7,
+            "knowledge": 5,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 0,
+            "credits": 7,
+            "knowledge": 5,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 25,
+          "vp_after": 25
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "Pass",
+            "booster_id": 4
+          },
+          "resources_before": {
+            "ore": 0,
+            "credits": 7,
+            "knowledge": 5,
+            "qic": 0,
+            "power": {
+              "bowl1": 2,
+              "bowl2": 1,
+              "bowl3": 0,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 4,
+            "credits": 13,
+            "knowledge": 10,
+            "qic": 0,
+            "power": {
+              "bowl1": 0,
+              "bowl2": 0,
+              "bowl3": 3,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 25,
+          "vp_after": 29
+        },
+        {
+          "round": 4,
+          "action": {
+            "type": "ChooseIncomeOrder",
+            "charge_first": false
+          },
+          "resources_before": {
+            "ore": 4,
+            "credits": 13,
+            "knowledge": 10,
+            "qic": 0,
+            "power": {
+              "bowl1": 0,
+              "bowl2": 0,
+              "bowl3": 3,
+              "gaia_bowl": 0,
+              "gaia_forming": 4,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "resources_after": {
+            "ore": 4,
+            "credits": 13,
+            "knowledge": 10,
+            "qic": 0,
+            "power": {
+              "bowl1": 4,
+              "bowl2": 0,
+              "bowl3": 5,
+              "gaia_bowl": 0,
+              "gaia_forming": 0,
+              "brainstone": null
+            },
+            "spent_gaia_formers": 1
+          },
+          "vp_before": 29,
+          "vp_after": 29
+        }
+      ],
+      "remaining_goal": {
+        "name": "preserve-plan: Ambas-large-power@1,-1-relocate@3,-2-federate",
+        "family": "ordered",
+        "coord": null,
+        "target": "Ambas",
+        "level": 0,
+        "tile": null,
+        "first": null,
+        "payoff": null,
+        "steps": [
+          {
+            "name": "federate@3,-2",
+            "family": "federation-race",
+            "coord": "3,-2",
+            "target": null,
+            "level": 1,
+            "tile": null,
+            "first": null,
+            "payoff": null,
+            "steps": [],
+            "sources": []
+          }
+        ],
+        "sources": [
+          "B06",
+          "B18",
+          "B19",
+          "A01",
+          "A02",
+          "faction-tech-pilot",
+          "faction-tech-preserve"
+        ]
+      },
+      "end_round": 5,
+      "decisions": 24,
+      "end_player": {
+        "player_id": 3,
+        "nickname": "AI-3",
+        "faction": "Ambas",
+        "resources": {
+          "ore": 4,
+          "credits": 13,
+          "knowledge": 10,
+          "qic": 0,
+          "power": {
+            "bowl1": 4,
+            "bowl2": 0,
+            "bowl3": 5,
+            "gaia_bowl": 0,
+            "gaia_forming": 0,
+            "brainstone": null
+          },
+          "spent_gaia_formers": 1
+        },
+        "structures": [
+          {
+            "hex": "5,0",
+            "kind": "ResearchLab"
+          },
+          {
+            "hex": "2,-5",
+            "kind": {
+              "Academy": "Science"
+            }
+          },
+          {
+            "hex": "1,-1",
+            "kind": "Mine"
+          },
+          {
+            "hex": "3,-2",
+            "kind": "PlanetaryInstitute"
+          },
+          {
+            "hex": "3,-5",
+            "kind": "Mine"
+          }
+        ],
+        "artifact_mines": [],
+        "artifacts": [],
+        "research_tracks": {
+          "terraforming": 1,
+          "navigation": 1,
+          "ai": 0,
+          "gaia": 3,
+          "economy": 1,
+          "science": 1
+        },
+        "vp": 29,
+        "setup_bid_vp": 0,
+        "passed": false,
+        "booster": 4,
+        "federation_tokens": [
+          4
+        ],
+        "gray_federation_tokens": [],
+        "alliance_tiles": [],
+        "explored_ships": [],
+        "exploration_shuttles_available": 3,
+        "gaiaformers_total": 2,
+        "gaiaformers_deployed": 1,
+        "gaiaformers_in_gaia_area": 0,
+        "tech_tiles": [
+          3,
+          2,
+          6
+        ],
+        "advanced_tech_tiles": [],
+        "covered_tech_tiles": [],
+        "pi_ability_used": false,
+        "first_colonization_bonus_used": false,
+        "academy_qic_action_used_this_round": false,
+        "gleens_special_action_used_this_round": false,
+        "space_giants_special_action_used_this_round": false,
+        "round_booster_special_action_used_this_round": false,
+        "faction_special_action_used_this_round": false,
+        "geodens_rewarded_planet_types": [],
+        "federated_hexes": [
+          "1,-1",
+          "2,-5",
+          "3,-5",
+          "2,-2",
+          "3,-4",
+          "3,-3"
+        ],
+        "tinkeroids_tiles_used": [],
+        "tinkeroids_selected_tile": null,
+        "expensive_terraforming_planet_types": [],
+        "moweyds_power_ring_hexes": [],
+        "tech_tile_special_actions_used_this_round": [],
+        "advanced_tech_tile_special_actions_used_this_round": []
+      }
+    }
+  ],
+  "root_unchanged": true
+}

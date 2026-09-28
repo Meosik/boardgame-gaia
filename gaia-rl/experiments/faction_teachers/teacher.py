@@ -6,12 +6,16 @@ from .profiles import profiles
 
 
 class SharedTeacher(TimedPreparationTeacher):
-    def __init__(self, seed, *, prefix=(), target_seconds=60, maximum_seconds=300, adaptive_clock=None):
+    def __init__(self, seed, *, prefix=(), target_seconds=60, maximum_seconds=300, adaptive_clock=None,
+                 faction_tech_plans=None):
+        if faction_tech_plans is None:
+            from .guidance import enabled
+            faction_tech_plans = enabled()
         if adaptive_clock is not None:
             target_seconds, maximum_seconds = adaptive_clock.target_seconds, adaptive_clock.long_seconds
         super().__init__(seed, prefix=prefix, target_seconds=target_seconds,
                          maximum_seconds=maximum_seconds, bgg_openings=True, shared_factions=True,
-                         adaptive_clock=adaptive_clock)
+                         adaptive_clock=adaptive_clock, faction_tech_plans=faction_tech_plans)
 
     def choose(self, snapshot):
         unsupported = {p['faction'] for p in snapshot['state']['players']} - profiles().keys()

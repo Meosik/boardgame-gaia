@@ -1,0 +1,597 @@
+{
+  "source": "gaia-rl/runs/tech-plan-pilot-20260924-shared-38/teacher-audit.jsonl",
+  "source_sha256": "81e75d82a4ecccdc344db7ffccb13492a6ddaf3c4b2eb6e1f034e925ad56481a",
+  "scope": "Exact field projection of 23 recorded comparisons, not a native replay fixture.",
+  "audit_rows": [
+    {
+      "decision_id": 1,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via current-choice",
+        "selected_index": 5,
+        "plans": [
+          {
+            "goal": "Terrans-charge-and-Gaia@-9,2",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 5,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          },
+          {
+            "goal": "Terrans-charge-and-Gaia@-3,7",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 5,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          },
+          {
+            "goal": "Terrans-charge-and-Gaia@1,-4",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 5,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 4,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via root-0",
+        "selected_index": 0,
+        "plans": [
+          {
+            "goal": "Terrans-charge-and-Gaia@-12,2",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 3,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          },
+          {
+            "goal": "Terrans-charge-and-Gaia@-9,2",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 3,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          },
+          {
+            "goal": "Terrans-charge-and-Gaia@-6,-1",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 3,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 7,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via BGG-R1-1RL+2M",
+        "selected_index": 2,
+        "plans": [
+          {
+            "goal": "Ambas-large-power@5,0-relocate@2,-5-federate",
+            "goal_spec": {
+              "target": "Ambas",
+              "sources": [
+                "B06",
+                "B18",
+                "B19",
+                "A01",
+                "A02",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 2,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 8,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via BGG-R1-1RL+2M",
+        "selected_index": 5,
+        "plans": [
+          {
+            "goal": "Terrans-charge-and-Gaia@-5,-3",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 5,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 14,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via Science@5,0",
+        "selected_index": 48,
+        "plans": [
+          {
+            "goal": "Ambas-large-power@5,0-relocate@2,-5-federate",
+            "goal_spec": {
+              "target": "Ambas",
+              "sources": [
+                "B06",
+                "B18",
+                "B19",
+                "A01",
+                "A02",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 3,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 18,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via Terrans-academy-Gaia@4,-1",
+        "selected_index": 37,
+        "plans": [
+          {
+            "goal": "Terrans-charge-and-Gaia@-3,7",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 37,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 33,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via BGG-R1-1RL+2M",
+        "selected_index": 29,
+        "plans": [
+          {
+            "goal": "Ambas-large-power@2,-5-relocate@1,-1-federate",
+            "goal_spec": {
+              "target": "Ambas",
+              "sources": [
+                "B06",
+                "B18",
+                "B19",
+                "A01",
+                "A02",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 21,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 38,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via Science@5,0",
+        "selected_index": 18,
+        "plans": [
+          {
+            "goal": "Ambas-large-power@2,-5-relocate@1,-1-federate",
+            "goal_spec": {
+              "target": "Ambas",
+              "sources": [
+                "B06",
+                "B18",
+                "B19",
+                "A01",
+                "A02",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 18,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 41,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via root-7",
+        "selected_index": 7,
+        "plans": [
+          {
+            "goal": "Terrans-charge-and-Gaia@0,6",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 5,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 42,
+      "audit": {
+        "selected": "BGG-R1-1RL+2M via Science@5,0",
+        "selected_index": 8,
+        "plans": [
+          {
+            "goal": "Ambas-large-power@2,-5-relocate@1,-1-federate",
+            "goal_spec": {
+              "target": "Ambas",
+              "sources": [
+                "B06",
+                "B18",
+                "B19",
+                "A01",
+                "A02",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 8,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 45,
+      "audit": {
+        "selected": "root-28",
+        "selected_index": 28,
+        "plans": [
+          {
+            "goal": "tile-action-51-then-Terrans-charge-and-Gaia@-8,5",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 51,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          },
+          {
+            "goal": "Terrans-charge-and-Gaia@-8,5",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 54,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          },
+          {
+            "goal": "tile-action-51-then-Terrans-charge-and-Gaia@-5,-3",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 51,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          },
+          {
+            "goal": "tile-action-51-then-Terrans-charge-and-Gaia@-1,6",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 51,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 46,
+      "audit": {
+        "selected": "Science@2,-5",
+        "selected_index": 33,
+        "plans": [
+          {
+            "goal": "Ambas-large-power@2,-5-relocate@1,-1-federate",
+            "goal_spec": {
+              "target": "Ambas",
+              "sources": [
+                "B06",
+                "B18",
+                "B19",
+                "A01",
+                "A02",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 22,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": "cancelled"
+            }
+          },
+          {
+            "goal": "Ambas-large-power@1,-1-relocate@2,-5-federate",
+            "goal_spec": {
+              "target": "Ambas",
+              "sources": [
+                "B06",
+                "B18",
+                "B19",
+                "A01",
+                "A02",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 22,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": "cancelled"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 64,
+      "audit": {
+        "selected": "root-77",
+        "selected_index": 77,
+        "plans": [
+          {
+            "goal": "tile-action-61-then-Terrans-charge-and-Gaia@1,-4",
+            "goal_spec": {
+              "target": "Terrans",
+              "sources": [
+                "B04",
+                "B4-01",
+                "B4-03",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 61,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 67,
+      "audit": {
+        "selected": "Science@2,-5",
+        "selected_index": 32,
+        "plans": [
+          {
+            "goal": "Ambas-large-power@1,-1-relocate@3,-2-federate",
+            "goal_spec": {
+              "target": "Ambas",
+              "sources": [
+                "B06",
+                "B18",
+                "B19",
+                "A01",
+                "A02",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 32,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": "cancelled"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "decision_id": 138,
+      "audit": {
+        "selected": "current-choice",
+        "selected_index": 10,
+        "plans": [
+          {
+            "goal": "Ambas-large-power@1,-1-relocate@-5,-3-federate",
+            "goal_spec": {
+              "target": "Ambas",
+              "sources": [
+                "B06",
+                "B18",
+                "B19",
+                "A01",
+                "A02",
+                "faction-tech-pilot"
+              ],
+              "payoff": null
+            },
+            "first": 10,
+            "complete": true,
+            "goal_acquired": false,
+            "remaining_goal": {
+              "payoff": null
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

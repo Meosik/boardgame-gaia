@@ -1,0 +1,794 @@
+{
+  "task": "QUEUE 승인: 기술 계획 ON 실제 시험 대국 1판",
+  "outcome": "complete_game; planned technology-to-use chains unobserved in this one game",
+  "seed": "shared-teacher-base-38",
+  "factions_by_seat": [
+    "Itars",
+    "Moweyds",
+    "Terrans",
+    "Ambas"
+  ],
+  "configuration": {
+    "GAIA_ENGINE_FIXES_2": "1",
+    "GAIA_FACTION_TECH_PLANS": "1",
+    "manifest_faction_tech_plans": true,
+    "checkpoint_faction_tech_plans": true,
+    "time_control": {
+      "mode": "adaptive",
+      "target_seconds": 10,
+      "long_seconds": 120,
+      "long_uses_per_seat": 6,
+      "artificial_delays": false,
+      "timeout_fallback": "bounded-native-one-step-reserve"
+    },
+    "initial_standard_tech_slots": [
+      10,
+      8,
+      5,
+      6,
+      3,
+      9,
+      2,
+      4,
+      7
+    ],
+    "versions": {
+      "dependencies": "numpy=2.5.3;gymnasium=1.2.2;pettingzoo=1.27.0;ray=2.58.0;torch=2.14.0",
+      "engine_build_id": "cf4a759359c6a222c3667c78424537615bffcfcbb2e38f7085108726366dd32b",
+      "environment_schema": 1,
+      "python_build_id": "adb84cd3a218d9209447500bd969b7cbe15f2ead7f407c5a3244fcdeab2bba5c"
+    }
+  },
+  "completion": {
+    "terminal": true,
+    "steps": 144,
+    "scores_by_seat": [
+      [
+        0,
+        107
+      ],
+      [
+        1,
+        62
+      ],
+      [
+        2,
+        82
+      ],
+      [
+        3,
+        83
+      ]
+    ],
+    "native_replayed": true,
+    "final_checkpoint_verified": true,
+    "decision_rows": 144,
+    "audit_rows": 144
+  },
+  "observations": {
+    "pilot": {
+      "Terrans": {
+        "evaluated_candidates": 14,
+        "completed_horizon_comparisons": 14,
+        "goal_acquired_in_forecast": 0,
+        "selected_decisions": 0,
+        "cancelled_evaluated_candidates": 0,
+        "pilot_memory_steps": [],
+        "unsearched_comparison_slots_all_goal_types": 984,
+        "decisions_with_unsearched_comparisons": 4,
+        "candidate_audit": [
+          {
+            "step": 1,
+            "goal": "Terrans-charge-and-Gaia@-9,2",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 1,
+            "goal": "Terrans-charge-and-Gaia@-3,7",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 1,
+            "goal": "Terrans-charge-and-Gaia@1,-4",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 4,
+            "goal": "Terrans-charge-and-Gaia@-12,2",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 4,
+            "goal": "Terrans-charge-and-Gaia@-9,2",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 4,
+            "goal": "Terrans-charge-and-Gaia@-6,-1",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 8,
+            "goal": "Terrans-charge-and-Gaia@-5,-3",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 18,
+            "goal": "Terrans-charge-and-Gaia@-3,7",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 41,
+            "goal": "Terrans-charge-and-Gaia@0,6",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 45,
+            "goal": "tile-action-51-then-Terrans-charge-and-Gaia@-8,5",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 45,
+            "goal": "Terrans-charge-and-Gaia@-8,5",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 45,
+            "goal": "tile-action-51-then-Terrans-charge-and-Gaia@-5,-3",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 45,
+            "goal": "tile-action-51-then-Terrans-charge-and-Gaia@-1,6",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 64,
+            "goal": "tile-action-61-then-Terrans-charge-and-Gaia@1,-4",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          }
+        ],
+        "unknown_outcomes": 0
+      },
+      "Ambas": {
+        "evaluated_candidates": 9,
+        "completed_horizon_comparisons": 9,
+        "goal_acquired_in_forecast": 0,
+        "selected_decisions": 0,
+        "cancelled_evaluated_candidates": 3,
+        "pilot_memory_steps": [],
+        "unsearched_comparison_slots_all_goal_types": 748,
+        "decisions_with_unsearched_comparisons": 6,
+        "candidate_audit": [
+          {
+            "step": 7,
+            "goal": "Ambas-large-power@5,0-relocate@2,-5-federate",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 14,
+            "goal": "Ambas-large-power@5,0-relocate@2,-5-federate",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 33,
+            "goal": "Ambas-large-power@2,-5-relocate@1,-1-federate",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 38,
+            "goal": "Ambas-large-power@2,-5-relocate@1,-1-federate",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 42,
+            "goal": "Ambas-large-power@2,-5-relocate@1,-1-federate",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          },
+          {
+            "step": 46,
+            "goal": "Ambas-large-power@2,-5-relocate@1,-1-federate",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": true
+          },
+          {
+            "step": 46,
+            "goal": "Ambas-large-power@1,-1-relocate@2,-5-federate",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": true
+          },
+          {
+            "step": 67,
+            "goal": "Ambas-large-power@1,-1-relocate@3,-2-federate",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": true
+          },
+          {
+            "step": 138,
+            "goal": "Ambas-large-power@1,-1-relocate@-5,-3-federate",
+            "comparison_complete": true,
+            "goal_acquired_in_forecast": false,
+            "selected": false,
+            "cancelled": false
+          }
+        ],
+        "unknown_outcomes": 0
+      }
+    },
+    "Terrans": {
+      "target_tech_10_acquired": false,
+      "target_tech_8_acquired": false,
+      "target_tech_costs": "unobserved",
+      "gaia_formation_steps": [
+        13,
+        74
+      ],
+      "gaia_colony_build_steps": [],
+      "tech_8_gaia_scoring": "unobserved; tile 8 never acquired",
+      "relevant_observed_actions": [
+        {
+          "step": 13,
+          "round": 1,
+          "action": {
+            "type": "GaiaFormation",
+            "coord": "-1,-1"
+          },
+          "new_tech_tiles": [],
+          "planet_type": "Transdim",
+          "vp_delta": 0,
+          "selected": "BGG-R1-1RL+2M via current-choice"
+        },
+        {
+          "step": 25,
+          "round": 1,
+          "action": {
+            "type": "Upgrade",
+            "coord": "4,-1",
+            "to": "ResearchLab",
+            "tech_tile_choice": {
+              "kind": "Standard",
+              "tile": 2,
+              "advance_track": "GaiaProject",
+              "bonus_build_coord": null
+            }
+          },
+          "new_tech_tiles": [
+            2
+          ],
+          "planet_type": "Terra",
+          "vp_delta": 0,
+          "selected": "BGG-R1-1RL+2M via Terrans-academy-Gaia@4,-1"
+        },
+        {
+          "step": 31,
+          "round": 1,
+          "action": {
+            "type": "Build",
+            "coord": "3,2"
+          },
+          "new_tech_tiles": [],
+          "planet_type": "Terra",
+          "vp_delta": 2,
+          "selected": "BGG-R1-1RL+2M via Terrans-academy-Gaia@4,-1"
+        },
+        {
+          "step": 52,
+          "round": 2,
+          "action": {
+            "type": "Build",
+            "coord": "2,1"
+          },
+          "new_tech_tiles": [],
+          "planet_type": "Asteroid",
+          "vp_delta": 3,
+          "selected": "current-choice"
+        },
+        {
+          "step": 64,
+          "round": 3,
+          "action": {
+            "type": "Upgrade",
+            "coord": "4,-1",
+            "to": {
+              "Academy": "Science"
+            },
+            "tech_tile_choice": {
+              "kind": "Standard",
+              "tile": 7,
+              "advance_track": "GaiaProject",
+              "bonus_build_coord": null
+            }
+          },
+          "new_tech_tiles": [
+            7
+          ],
+          "planet_type": "Terra",
+          "vp_delta": 7,
+          "selected": "root-77"
+        },
+        {
+          "step": 69,
+          "round": 3,
+          "action": {
+            "type": "FormFederation",
+            "hexes": [
+              "-4,1",
+              "2,1",
+              "2,2",
+              "3,2",
+              "4,-1"
+            ],
+            "satellite_hexes": [
+              "-3,0",
+              "-2,0",
+              "-1,0",
+              "0,0",
+              "1,0",
+              "2,0",
+              "3,-1"
+            ],
+            "token": {
+              "source": "Supply",
+              "kind": 5
+            },
+            "bonus_build_coord": null,
+            "bonus_tech_tile": null,
+            "bonus_research_track": null
+          },
+          "new_tech_tiles": [],
+          "planet_type": null,
+          "vp_delta": 7,
+          "selected": "local-baseline"
+        },
+        {
+          "step": 74,
+          "round": 3,
+          "action": {
+            "type": "GaiaFormation",
+            "coord": "-4,2"
+          },
+          "new_tech_tiles": [],
+          "planet_type": "Transdim",
+          "vp_delta": 0,
+          "selected": "local-baseline"
+        }
+      ]
+    },
+    "Ambas": {
+      "target_tech_6_acquired": false,
+      "target_tech_cost": "unobserved",
+      "planetary_institute_built": false,
+      "pi_swap_steps": [],
+      "federation_steps": [
+        102
+      ],
+      "technology_to_pi_swap_federation_chain": "unobserved",
+      "relevant_observed_actions": [
+        {
+          "step": 20,
+          "round": 1,
+          "action": {
+            "type": "Upgrade",
+            "coord": "5,0",
+            "to": "ResearchLab",
+            "tech_tile_choice": {
+              "kind": "Standard",
+              "tile": 3,
+              "advance_track": null,
+              "bonus_build_coord": null
+            }
+          },
+          "new_tech_tiles": [
+            3
+          ],
+          "planet_type": "Swamp",
+          "vp_delta": 0,
+          "selected": "BGG-R1-1RL+2M via Science@5,0"
+        },
+        {
+          "step": 27,
+          "round": 1,
+          "action": {
+            "type": "Build",
+            "coord": "1,-1"
+          },
+          "new_tech_tiles": [],
+          "planet_type": "Swamp",
+          "vp_delta": 2,
+          "selected": "BGG-R1-1RL+2M via BGG-R1-1RL+2M"
+        },
+        {
+          "step": 53,
+          "round": 2,
+          "action": {
+            "type": "Upgrade",
+            "coord": "2,-5",
+            "to": "ResearchLab",
+            "tech_tile_choice": {
+              "kind": "Standard",
+              "tile": 2,
+              "advance_track": "GaiaProject",
+              "bonus_build_coord": null
+            }
+          },
+          "new_tech_tiles": [
+            2
+          ],
+          "planet_type": "Swamp",
+          "vp_delta": 0,
+          "selected": "Science@2,-5"
+        },
+        {
+          "step": 58,
+          "round": 2,
+          "action": {
+            "type": "Build",
+            "coord": "3,-2"
+          },
+          "new_tech_tiles": [],
+          "planet_type": "Asteroid",
+          "vp_delta": 3,
+          "selected": "Science@2,-5"
+        },
+        {
+          "step": 97,
+          "round": 5,
+          "action": {
+            "type": "Upgrade",
+            "coord": "2,-5",
+            "to": {
+              "Academy": "Science"
+            },
+            "tech_tile_choice": {
+              "kind": "Standard",
+              "tile": 7,
+              "advance_track": "ArtificialIntelligence",
+              "bonus_build_coord": null
+            }
+          },
+          "new_tech_tiles": [
+            7
+          ],
+          "planet_type": "Swamp",
+          "vp_delta": 7,
+          "selected": "local-baseline"
+        },
+        {
+          "step": 102,
+          "round": 5,
+          "action": {
+            "type": "FormFederation",
+            "hexes": [
+              "1,-1",
+              "2,-5",
+              "3,-2",
+              "5,0"
+            ],
+            "satellite_hexes": [
+              "2,-4",
+              "2,-3",
+              "2,-2",
+              "4,-2",
+              "5,-2",
+              "5,-1"
+            ],
+            "token": {
+              "source": "Supply",
+              "kind": 1
+            },
+            "bonus_build_coord": null,
+            "bonus_tech_tile": null,
+            "bonus_research_track": null
+          },
+          "new_tech_tiles": [],
+          "planet_type": null,
+          "vp_delta": 12,
+          "selected": "local-baseline"
+        },
+        {
+          "step": 105,
+          "round": 5,
+          "action": {
+            "type": "Build",
+            "coord": "-1,-3"
+          },
+          "new_tech_tiles": [],
+          "planet_type": "Titanium",
+          "vp_delta": 3,
+          "selected": "local-baseline"
+        },
+        {
+          "step": 109,
+          "round": 5,
+          "action": {
+            "type": "Build",
+            "coord": "-5,0"
+          },
+          "new_tech_tiles": [],
+          "planet_type": "Swamp",
+          "vp_delta": 3,
+          "selected": "local-baseline"
+        },
+        {
+          "step": 112,
+          "round": 5,
+          "action": {
+            "type": "Build",
+            "coord": "-5,-3"
+          },
+          "new_tech_tiles": [],
+          "planet_type": "Gaia",
+          "vp_delta": 3,
+          "selected": "local-baseline"
+        }
+      ]
+    },
+    "per_faction": {
+      "Itars": {
+        "final_score": 107,
+        "vp_before_final_scoring": 59,
+        "structures": {
+          "Mine": 7,
+          "{\"Academy\": \"Science\"}": 1
+        },
+        "federation_tokens": 0,
+        "federations_formed": 1,
+        "tech_tiles": [
+          3,
+          4,
+          7
+        ],
+        "advanced_tech_tiles": [],
+        "research_tracks": {
+          "terraforming": 1,
+          "navigation": 1,
+          "ai": 5,
+          "gaia": 0,
+          "economy": 1,
+          "science": 1
+        },
+        "decisions": 50,
+        "quick_fallbacks": 6,
+        "completed_comparisons": 630,
+        "pilot_candidates": 0,
+        "pilot_completed": 0,
+        "pilot_selected": 0,
+        "pilot_cancelled": 0,
+        "fallback_rate": 0.12,
+        "time_seconds": {
+          "mean": 14.965569991858793,
+          "max": 119.61430929999915,
+          "count": 50
+        }
+      },
+      "Moweyds": {
+        "final_score": 62,
+        "vp_before_final_scoring": 40,
+        "structures": {
+          "Mine": 6,
+          "ResearchLab": 1
+        },
+        "federation_tokens": 1,
+        "federations_formed": 1,
+        "tech_tiles": [
+          2
+        ],
+        "advanced_tech_tiles": [],
+        "research_tracks": {
+          "terraforming": 1,
+          "navigation": 0,
+          "ai": 0,
+          "gaia": 1,
+          "economy": 1,
+          "science": 1
+        },
+        "decisions": 21,
+        "quick_fallbacks": 0,
+        "completed_comparisons": 194,
+        "pilot_candidates": 0,
+        "pilot_completed": 0,
+        "pilot_selected": 0,
+        "pilot_cancelled": 0,
+        "fallback_rate": 0.0,
+        "time_seconds": {
+          "mean": 38.515034115287044,
+          "max": 119.61802765000903,
+          "count": 21
+        }
+      },
+      "Terrans": {
+        "final_score": 82,
+        "vp_before_final_scoring": 50,
+        "structures": {
+          "{\"Academy\": \"Science\"}": 1,
+          "Mine": 4
+        },
+        "federation_tokens": 0,
+        "federations_formed": 1,
+        "tech_tiles": [
+          2,
+          7
+        ],
+        "advanced_tech_tiles": [],
+        "research_tracks": {
+          "terraforming": 0,
+          "navigation": 0,
+          "ai": 0,
+          "gaia": 5,
+          "economy": 0,
+          "science": 0
+        },
+        "decisions": 26,
+        "quick_fallbacks": 0,
+        "completed_comparisons": 149,
+        "pilot_candidates": 14,
+        "pilot_completed": 14,
+        "pilot_selected": 0,
+        "pilot_cancelled": 0,
+        "fallback_rate": 0.0,
+        "time_seconds": {
+          "mean": 24.04091750511501,
+          "max": 119.61878376299865,
+          "count": 26
+        }
+      },
+      "Ambas": {
+        "final_score": 83,
+        "vp_before_final_scoring": 42,
+        "structures": {
+          "ResearchLab": 1,
+          "{\"Academy\": \"Science\"}": 1,
+          "TradingStation": 3,
+          "Mine": 2
+        },
+        "federation_tokens": 1,
+        "federations_formed": 1,
+        "tech_tiles": [
+          3,
+          2,
+          7
+        ],
+        "advanced_tech_tiles": [],
+        "research_tracks": {
+          "terraforming": 0,
+          "navigation": 1,
+          "ai": 4,
+          "gaia": 1,
+          "economy": 1,
+          "science": 1
+        },
+        "decisions": 47,
+        "quick_fallbacks": 0,
+        "completed_comparisons": 166,
+        "pilot_candidates": 9,
+        "pilot_completed": 9,
+        "pilot_selected": 0,
+        "pilot_cancelled": 3,
+        "fallback_rate": 0.0,
+        "time_seconds": {
+          "mean": 15.570029248617852,
+          "max": 119.61624749899784,
+          "count": 47
+        }
+      }
+    },
+    "search_limits": {
+      "scope": "recorded root decisions; excludes simulated branch generation",
+      "audited_decisions": 144,
+      "unknown_decisions": 0,
+      "federation_limit_hits": 0,
+      "federation_limit_reasons": {}
+    }
+  },
+  "verification": {
+    "run_command": "cd gaia-rl && timeout --signal=TERM --kill-after=10s 27000s env GAIA_ENGINE_FIXES_2=1 GAIA_FACTION_TECH_PLANS=1 PYTHONPATH=python:experiments .venv/bin/python -u -m faction_teachers record --seed shared-teacher-base-38 --adaptive-clock --output runs/tech-plan-pilot-20260924-shared-38",
+    "run_exit_code": 0,
+    "independent_replay_command": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python /tmp/gaia_tech_pilot_audit.py runs/tech-plan-pilot-20260924-shared-38",
+    "independent_replay_exit_code": 0,
+    "replay_checks": [
+      "compatible engine/Python versions",
+      "current source manifest",
+      "recording/trace SHA-256",
+      "every decision id, action, actor and pre/post native state SHA-256",
+      "audit row alignment",
+      "terminal native snapshot and scores",
+      "final checkpoint and progress"
+    ],
+    "git_diff_check": "pass",
+    "frozen_A_files": 200,
+    "frozen_A_missing": 0,
+    "frozen_A_hash_mismatch": 0,
+    "full_engine_clippy_python_invariants": "not rerun in this one-game step; prior STATUS evidence is separate"
+  },
+  "limitations": [
+    "Single seeded functional observation; no A/B or strength inference.",
+    "Completed comparison means the forecast horizon completed; it does not mean the pilot goal was acquired.",
+    "Unsearched comparison slots include all goal types; unsearched pilot routes cannot be classified from this audit.",
+    "No target technology cost or downstream payoff can be measured because those tiles were not acquired."
+  ],
+  "record_paths": {
+    "game": "gaia-rl/runs/tech-plan-pilot-20260924-shared-38",
+    "run_log": "handoff/logs/20260924-tech-plan-pilot-shared-38-run.log",
+    "temporary_replay_analysis": "/tmp/gaia-tech-pilot-replay.json"
+  },
+  "audit_corrections": [
+    {
+      "date": "2026-09-24",
+      "field": "Ambas pilot cancellations",
+      "previous": 0,
+      "corrected": 3,
+      "reason": "Read remaining_goal.payoff after rollout, not initial goal_spec.payoff.",
+      "affected_decisions": [
+        46,
+        46,
+        67
+      ],
+      "tool": "gaia-rl/tools/audit_tech_plan_outcomes.py",
+      "source_sha256": "81e75d82a4ecccdc344db7ffccb13492a6ddaf3c4b2eb6e1f034e925ad56481a",
+      "scope": "Saved audit reaggregation only; no new game or native replay."
+    }
+  ]
+}

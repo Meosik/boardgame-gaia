@@ -244,7 +244,7 @@ fn upgrade_can_take_an_advanced_tile_only_at_level_4_or_5() {
     state.players[0].tech_tiles.push(TechTile(7));
     state.players[0]
         .federation_tokens
-        .push(gaia_engine::game_state::FederationToken(1));
+        .push(gaia_engine::game_state::FederationToken(4));
 
     let too_low = RuleEngine::apply_action(
         &mut state,
@@ -281,7 +281,7 @@ fn upgrade_can_take_an_advanced_tile_only_at_level_4_or_5() {
     assert!(state.players[0].federation_tokens.is_empty());
     assert_eq!(
         state.players[0].gray_federation_tokens,
-        vec![gaia_engine::game_state::FederationToken(1)]
+        vec![gaia_engine::game_state::FederationToken(4)]
     );
     assert!(state.players[0].covered_tech_tiles.contains(&TechTile(7)));
 }
@@ -294,7 +294,7 @@ fn advanced_tile_can_advance_a_different_research_track() {
     state.players[0].tech_tiles.push(TechTile(7));
     state.players[0]
         .federation_tokens
-        .push(gaia_engine::game_state::FederationToken(1));
+        .push(gaia_engine::game_state::FederationToken(4));
 
     RuleEngine::apply_action(
         &mut state,
@@ -320,7 +320,7 @@ fn advanced_tile_and_level_five_research_each_flip_a_green_federation_token() {
     state.players[0].tech_tiles.push(TechTile(7));
     state.players[0]
         .federation_tokens
-        .push(gaia_engine::game_state::FederationToken(1));
+        .push(gaia_engine::game_state::FederationToken(4));
     let action = upgrade_action(Some(TechTileChoice::Advanced {
         track: ResearchTrack::Terraforming,
         covered_tile: TechTile(7),
@@ -473,7 +473,7 @@ fn covered_standard_tile_stops_granting_its_ongoing_power_value_bonus() {
     let mut state = GameStateBuilder::new()
         .with_player_fn(0, |p| {
             p.tech_tiles = vec![TechTile(6), TechTile(7)];
-            p.federation_tokens = vec![gaia_engine::game_state::FederationToken(1)];
+            p.federation_tokens = vec![gaia_engine::game_state::FederationToken(4)];
             p.research_tracks.terraforming = 4;
             p.structures = vec![
                 Structure {
@@ -1179,7 +1179,7 @@ fn lost_fleet_advanced_tech_tile_rejects_fewer_than_three_explored_ships() {
     state.players[0].tech_tiles.push(TechTile(7));
     state.players[0]
         .federation_tokens
-        .push(gaia_engine::game_state::FederationToken(1));
+        .push(gaia_engine::game_state::FederationToken(4));
     state.players[0].explored_ships = vec![0, 1]; // only 2 distinct ships
 
     let result = RuleEngine::apply_action(
@@ -1203,7 +1203,7 @@ fn lost_fleet_advanced_tech_tile_succeeds_with_three_distinct_explored_ships() {
     state.players[0].tech_tiles.push(TechTile(7));
     state.players[0]
         .federation_tokens
-        .push(gaia_engine::game_state::FederationToken(1));
+        .push(gaia_engine::game_state::FederationToken(4));
     state.players[0].explored_ships = vec![0, 1, 2];
 
     RuleEngine::apply_action(
@@ -1223,7 +1223,7 @@ fn lost_fleet_advanced_tech_tile_succeeds_with_three_distinct_explored_ships() {
     assert!(state.players[0].federation_tokens.is_empty());
     assert_eq!(
         state.players[0].gray_federation_tokens,
-        vec![gaia_engine::game_state::FederationToken(1)]
+        vec![gaia_engine::game_state::FederationToken(4)]
     );
 }
 
@@ -1236,7 +1236,7 @@ fn lost_fleet_advanced_tech_tile_25_vp_side_ignores_explored_ship_count() {
     state.players[0].tech_tiles.push(TechTile(7));
     state.players[0]
         .federation_tokens
-        .push(gaia_engine::game_state::FederationToken(1));
+        .push(gaia_engine::game_state::FederationToken(4));
     state.players[0].explored_ships = vec![]; // no ships explored at all
     state.players[0].vp = 10;
 
@@ -1270,7 +1270,7 @@ fn lost_fleet_advanced_tech_tile_cannot_be_taken_once_already_gone() {
     state.players[0].tech_tiles.push(TechTile(7));
     state.players[0]
         .federation_tokens
-        .push(gaia_engine::game_state::FederationToken(1));
+        .push(gaia_engine::game_state::FederationToken(4));
     state.players[0].explored_ships = vec![0, 1, 2];
 
     let result = RuleEngine::apply_action(

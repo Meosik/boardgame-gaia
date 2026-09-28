@@ -45,7 +45,7 @@ fn lost_planet_state(qic: u8) -> gaia_engine::GameState {
             player.research_tracks.navigation = 4;
             player.resources.knowledge = 4;
             player.resources.qic = qic;
-            player.federation_tokens.push(FederationToken(1));
+            player.federation_tokens.push(FederationToken(2));
             player.structures.push(Structure {
                 hex: home,
                 kind: StructureType::Mine,

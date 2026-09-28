@@ -1,0 +1,1762 @@
+{
+  "scope": "Saved-frame validation and selected one-action replay only; not full-game resimulation.",
+  "runtime": {
+    "dependencies": "numpy=2.5.3;gymnasium=1.2.2;pettingzoo=1.27.0;ray=2.58.0;torch=2.14.0",
+    "engine_build_id": "cf4a759359c6a222c3667c78424537615bffcfcbb2e38f7085108726366dd32b",
+    "environment_schema": 1,
+    "python_build_id": "adb84cd3a218d9209447500bd969b7cbe15f2ead7f407c5a3244fcdeab2bba5c"
+  },
+  "replays": 85,
+  "frames": 14789,
+  "file_mutations": [],
+  "selected_actions": 44,
+  "changed_actions": 11,
+  "legacy_rejected_actions": 3,
+  "corrected_rejected_actions": 5,
+  "selected_reason_counts": {
+    "upgrade_bonus_build": 42,
+    "base_12vp_flip": 2
+  },
+  "files": [
+    {
+      "file": "baseline-0.json.gz",
+      "sha256": "127f223fac14372c264a0a791f4671a104331fc15c2b63097a82c5b313e7340a",
+      "frames": 192
+    },
+    {
+      "file": "baseline-1.json.gz",
+      "sha256": "3488b58aa0d6a6f0263683793f6d8ea1f6a99070959e3ae005380bcf629ea92c",
+      "frames": 176
+    },
+    {
+      "file": "baseline-2.json.gz",
+      "sha256": "17bb8ab3120627d5d5f199d58f77cb5272f846c13f2fd29bc52a0a196ddbaddd",
+      "frames": 179
+    },
+    {
+      "file": "baseline-3.json.gz",
+      "sha256": "843e93889e4a3d97e96fc6ed669af47f44963020590f679188c614eb4877b8ae",
+      "frames": 156
+    },
+    {
+      "file": "baseline-4.json.gz",
+      "sha256": "cf4da0ebff3522a8c2cb9d96e693a16ff11e194bfe5278b4ec1eef21aae19c3b",
+      "frames": 173
+    },
+    {
+      "file": "baseline-5.json.gz",
+      "sha256": "2e49456a9c2a0cb873b0326a7b87afc4ee9344623a17d963f2641d9daa2c7fe1",
+      "frames": 203
+    },
+    {
+      "file": "baseline-6.json.gz",
+      "sha256": "a3ef171ca3d6383e89b0f8534a99ed2fb368bdfdd34a29137845d99eb73f76e4",
+      "frames": 182
+    },
+    {
+      "file": "baseline-7.json.gz",
+      "sha256": "56c17a0b8c79864f1852bf33b17ae43242fa40f08fc8566282ee3bf5ba600f23",
+      "frames": 160
+    },
+    {
+      "file": "economy-learning-v1-bc_only-0.json.gz",
+      "sha256": "1ea326e3dc687f53c31679c0e237b120b39426395b30a5284279cad8b52a8f8e",
+      "frames": 162
+    },
+    {
+      "file": "economy-learning-v1-bc_only-1.json.gz",
+      "sha256": "0586c6b5c359c59b9d2859f345ace65494b3925c1b7e82d45a5c05a488eebd24",
+      "frames": 221
+    },
+    {
+      "file": "economy-learning-v1-bc_only-2.json.gz",
+      "sha256": "03442820d6e6d41800c194f4c5a6612929166c50cd703e2bee61f5278aab32e4",
+      "frames": 186
+    },
+    {
+      "file": "economy-learning-v1-bc_only-3.json.gz",
+      "sha256": "640da0608cd8958ad32f797731d1813e81cf8d86c328abd9d0ac4e568b08a7e6",
+      "frames": 132
+    },
+    {
+      "file": "economy-learning-v1-bc_only-4.json.gz",
+      "sha256": "fbb803515ed6ba95fc5e1545e298c5389e3907abe83f5b817d13d2f7d54c75fb",
+      "frames": 155
+    },
+    {
+      "file": "economy-learning-v1-bc_only-5.json.gz",
+      "sha256": "6de4d3966dc3899dad934ddb77c5bf05d801f8b40b55d819dee543febc48b6a2",
+      "frames": 245
+    },
+    {
+      "file": "economy-learning-v1-bc_only-6.json.gz",
+      "sha256": "35e913f6962b0976f04311efbdab4ba9a64f897b6dcfd7038ea175f3ceb42712",
+      "frames": 142
+    },
+    {
+      "file": "economy-learning-v1-bc_only-7.json.gz",
+      "sha256": "ced290395ece607f194556eab3392739ded4fc915e0e875618e5bef2b41e2443",
+      "frames": 162
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-0.json.gz",
+      "sha256": "f11f98a8cfadf8a144cf73178eaf68f01b5083b4072457a40ce3d4bed6dea7f8",
+      "frames": 177
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-1.json.gz",
+      "sha256": "0966feca44198364adfbc2090eb5c89bde07d4b1fbbe6570a895d339a20c8606",
+      "frames": 219
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-2.json.gz",
+      "sha256": "83d7ea92e35b9d8b98a99b435a7db21bd9793f2fb6cd2593bd15237eb5ec4eb0",
+      "frames": 157
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-3.json.gz",
+      "sha256": "5013797088111907afd7b4ab7e5dba72de8f4b9a6343ed334688894f07393ecc",
+      "frames": 181
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-4.json.gz",
+      "sha256": "bb08b47d92f39fcaa119c73e79967de7e31dd280a36a414c2ea811de614abcbc",
+      "frames": 168
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-5.json.gz",
+      "sha256": "f615b13dd3d953f843eb37d4e54b1e600509c1ef0d481cd1d8b274b7bbc697ff",
+      "frames": 188
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-6.json.gz",
+      "sha256": "df7cb52a4eb728ac07ebf4a5eaa64b95e74d9d7809d36882a24e59167289c125",
+      "frames": 185
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-7.json.gz",
+      "sha256": "f5fbb80741bea2f9a7e2149420564e595f1dbe4104eb44791dd1a68f257ba542",
+      "frames": 166
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-0.json.gz",
+      "sha256": "90dc0666ec13ea0444fb0f55c8c28a7c5d7b0331469417c36137fd67d7599b5c",
+      "frames": 144
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-1.json.gz",
+      "sha256": "59155b02bb089d214b2230214ead7630f99abce3e8595c441241639c016ec617",
+      "frames": 182
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-2.json.gz",
+      "sha256": "f5e6d7a260bad2eb7966bd21f1e7831ecf4e3141be22250b8f6dc20d935f7e10",
+      "frames": 158
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-3.json.gz",
+      "sha256": "1348bd191d51c7b39255de0c0013dc5b43c2de19e7339d939bfb60d5e41104d7",
+      "frames": 131
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-4.json.gz",
+      "sha256": "5827e5ae70f3af10b3120a6fb502ec46ca0db52befd1ec4d10f4254bc89de67b",
+      "frames": 142
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-5.json.gz",
+      "sha256": "631d478f37c68c434c1a31f990528590ef6579aa3379ae5e2df383cdcd7179bc",
+      "frames": 204
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-6.json.gz",
+      "sha256": "06708ca88e2951786a5089b6e815589d0e60afe8850e84cd490ff7d82989f9fe",
+      "frames": 130
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-7.json.gz",
+      "sha256": "ee940bcea821636cf836726b69c9e7687e85dc3d4d73bf1a181db49811143755",
+      "frames": 154
+    },
+    {
+      "file": "eval-3d3fad9ddba52bf4-0.json.gz",
+      "sha256": "edf45758ebb651bd0c4af74d7c2d68ba37035c5e198d8fddcaaa859d543c066f",
+      "frames": 183
+    },
+    {
+      "file": "eval-3d3fad9ddba52bf4-1.json.gz",
+      "sha256": "f1bd58ef69e10ad57c2e64f1aec3af2e29ba21d5c55dcbc2368ea2e51b4e87cc",
+      "frames": 204
+    },
+    {
+      "file": "eval-3d3fad9ddba52bf4-2.json.gz",
+      "sha256": "0e090ef2c0319c19e138761f133953f5913a60f52ad19e9eba5d7df294ad32cd",
+      "frames": 167
+    },
+    {
+      "file": "eval-3d3fad9ddba52bf4-3.json.gz",
+      "sha256": "f976e26e1d0fa13e312cce18d1197298ddda0819dd015339124e7cf91d03a575",
+      "frames": 164
+    },
+    {
+      "file": "eval-44fa9ae29e6a0c97-0.json.gz",
+      "sha256": "df745b6f999c0848de2ffecb31ee619af660e2355b0d3ad72230466e4877f7ae",
+      "frames": 175
+    },
+    {
+      "file": "eval-44fa9ae29e6a0c97-1.json.gz",
+      "sha256": "bbaa49ebd030084a1ecddcf1ec1da5a39dac896b979b64987a4a93ead1cf0ce2",
+      "frames": 187
+    },
+    {
+      "file": "eval-44fa9ae29e6a0c97-2.json.gz",
+      "sha256": "20b6331c880001d23d8bcf43cd1f090f02bb057841bca1b301d271e0a2c46e3a",
+      "frames": 203
+    },
+    {
+      "file": "eval-4afeb9e9654d407d-0.json.gz",
+      "sha256": "e55ba1791bf4f1c3ccd34dd78ccb8ee25ea38ef659174a0c9d4040fd48d3fbfb",
+      "frames": 172
+    },
+    {
+      "file": "eval-55091eed07c46dcd-0.json.gz",
+      "sha256": "a1e889cb6e75f37286cb2e0053318512ccebabe09d9abf727f62d2492aae5ce2",
+      "frames": 138
+    },
+    {
+      "file": "eval-76ca613452e7c1d2-0.json.gz",
+      "sha256": "761d23cb8e1fc4df836402869f884fa8d8118bf4afaf4d587055e290ddcefb13",
+      "frames": 171
+    },
+    {
+      "file": "eval-854ca251a4486a11-0.json.gz",
+      "sha256": "91ff5f52c07044c4f4910e66a17c51d020d37a2b88f8421d9f4bdc024ff8f9b3",
+      "frames": 168
+    },
+    {
+      "file": "eval-854ca251a4486a11-1.json.gz",
+      "sha256": "34ffb8ebbe1b0c9960b39654c36b2e4dd1ae130ffd224744b3f7f69ce8296a5e",
+      "frames": 183
+    },
+    {
+      "file": "eval-969fe18779854603-0.json.gz",
+      "sha256": "66bdc83ec58d5233e4b2b9868c61d65971ac3745d1e7aa7b15a51d226534cd19",
+      "frames": 174
+    },
+    {
+      "file": "eval-bd863b58be2df621-0.json.gz",
+      "sha256": "362766c4663e2768076fd485292b33830a088cabfd3cef0f2475ef96492343dd",
+      "frames": 172
+    },
+    {
+      "file": "eval-bd863b58be2df621-1.json.gz",
+      "sha256": "2c512d80ddd0e67764a7e19f13889423fae0a839576e617cf479cb2f0fb1e792",
+      "frames": 172
+    },
+    {
+      "file": "eval-bd863b58be2df621-2.json.gz",
+      "sha256": "4181d892b29125eab9377fa7976431b968700447c20e558c73d57479ec9dae27",
+      "frames": 203
+    },
+    {
+      "file": "eval-bd863b58be2df621-3.json.gz",
+      "sha256": "c18d0f5dfc0cbe1458ff2d31f02c3afc0bdc124d3e28dd3a010411dc87553b0d",
+      "frames": 178
+    },
+    {
+      "file": "eval-d636925b44d0e448-0.json.gz",
+      "sha256": "3c9a0f979d44c1878ede74dbd10c8f3ccfe430856154ca6ed27098cf7639c3c1",
+      "frames": 190
+    },
+    {
+      "file": "eval-da8ae8f7ea590f7a-0.json.gz",
+      "sha256": "ce1b6c9e968efea968e6b4b8f1c56d21999d765acef9a9bf9d32fa1fa6f44dab",
+      "frames": 175
+    },
+    {
+      "file": "eval-dd27fdab557b1f61-0.json.gz",
+      "sha256": "57435b02a6d05d09980ed500049895b6017214f0ed43b74eb80d13de0f165fd3",
+      "frames": 166
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-0.json.gz",
+      "sha256": "90adef14f34bacadb3ab909eb9fe19a76bab2379b61b0421d7d3c7d9e7a0cf50",
+      "frames": 156
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-1.json.gz",
+      "sha256": "e3dcf85fdba02ea65e19d05ea87611a256a9d9900179892583c589b4c44f4ea3",
+      "frames": 172
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-2.json.gz",
+      "sha256": "1961b0f7c55d8b6eda937e4e9d2aaee57e4a07b6b89f961ac40112fff4277146",
+      "frames": 171
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-3.json.gz",
+      "sha256": "7e69ea17c9c899b774a21341555c45841e4eaff52f6454598e764838cefa1330",
+      "frames": 197
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-4.json.gz",
+      "sha256": "44b3c4cc290427beb76fa80e1cb9d993f170ed6cb867a1da870e6b7b14e56ec6",
+      "frames": 218
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-5.json.gz",
+      "sha256": "102c5748bb9698bf63556c3292cb4dc6e495ea3485113bd59a04115f03b1d89c",
+      "frames": 156
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-6.json.gz",
+      "sha256": "24294e649c7e2cc384ece62584d0b5b84fb37792f7cdab842eef60cd602f033f",
+      "frames": 175
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-7.json.gz",
+      "sha256": "4808b7b21dd03eb574921690ed18b597ce456ef297a5541bc85086846b62fe80",
+      "frames": 174
+    },
+    {
+      "file": "eval-fe6aa475a9ec0563-0.json.gz",
+      "sha256": "dd82dca3214c8ff04006485e7ca868f11bd4f74b40516476ecb6d3b9fc794a51",
+      "frames": 161
+    },
+    {
+      "file": "imitation_plus_ppo-0.json.gz",
+      "sha256": "3a41fb5b6b5ba7b78d6027323016756cb0adc664a09fe1665b97e821fa7de0be",
+      "frames": 158
+    },
+    {
+      "file": "imitation_plus_ppo-1.json.gz",
+      "sha256": "444761c7a71a3190813c8b4ebb477cbe0d1ae289d77dcef982ee27021d49dc90",
+      "frames": 191
+    },
+    {
+      "file": "imitation_plus_ppo-2.json.gz",
+      "sha256": "e0ad63539d28e51a497d7fec6f11c791fac91417b81fbe06b5e4f8e3d80a0696",
+      "frames": 156
+    },
+    {
+      "file": "imitation_plus_ppo-3.json.gz",
+      "sha256": "20b86e5e22587aa0ada1024f872cb878a159907899b9f46a3aec7e1e0b6b3de0",
+      "frames": 149
+    },
+    {
+      "file": "imitation_plus_ppo-4.json.gz",
+      "sha256": "2c32916cc944677b97548711dae6351392ca0630d4a81c14dde3cf35a2f8a590",
+      "frames": 150
+    },
+    {
+      "file": "imitation_plus_ppo-5.json.gz",
+      "sha256": "b39d5b7dc31fadc3cb182a8988eb81940f3afeb116cbffc1f8978e7e92b9e0db",
+      "frames": 184
+    },
+    {
+      "file": "imitation_plus_ppo-6.json.gz",
+      "sha256": "899510fc8e5e483e7429f178ea58fa30345e754ed73e86d99586feba85572871",
+      "frames": 144
+    },
+    {
+      "file": "imitation_plus_ppo-7.json.gz",
+      "sha256": "d99547779315110199164d8b10c2f681a0198081d06829f71220ca51a45d4647",
+      "frames": 141
+    },
+    {
+      "file": "source-routes-v1-candidate-0.json.gz",
+      "sha256": "19b0de06c7dd7717b73ddefd8c33a0f124d4b85d5f25fd07b57debd114a48f22",
+      "frames": 206
+    },
+    {
+      "file": "source-routes-v1-candidate-1.json.gz",
+      "sha256": "4de57743b07355e622c94dae2e29cfb7a9733126c55021c6323503621e3f211c",
+      "frames": 192
+    },
+    {
+      "file": "source-routes-v1-candidate-2.json.gz",
+      "sha256": "595890a1d6e55fdf6c4a8f3364c432ea309e735640e64c7fcc5e3b8de2cdbfc5",
+      "frames": 176
+    },
+    {
+      "file": "source-routes-v1-candidate-3.json.gz",
+      "sha256": "6946da6ea82cc598f54360bffccdcb6c1781905a886be0c3b70b4da91940d4f0",
+      "frames": 183
+    },
+    {
+      "file": "source-routes-v1-control-0.json.gz",
+      "sha256": "d56d27d50781b68ac472d643866f06da3cdd6d395b9901044279b405c7b210d0",
+      "frames": 211
+    },
+    {
+      "file": "source-routes-v1-control-1.json.gz",
+      "sha256": "0432a388f461bcc8e8c3e198772d81706af92486ee736144478eefa892cb3047",
+      "frames": 181
+    },
+    {
+      "file": "source-routes-v1-control-2.json.gz",
+      "sha256": "55b8936b2433e07898ec751ac5791ab7d5240f424652ff14834d6aa96898adfa",
+      "frames": 136
+    },
+    {
+      "file": "source-routes-v1-control-3.json.gz",
+      "sha256": "57ed249b86a9a93f2b074037060efb6a7a2656e97eda7eff27fac7569b161285",
+      "frames": 188
+    },
+    {
+      "file": "teacher-0.json.gz",
+      "sha256": "23deb01176d08539234b6c163d18c8bbebe0c4e0d0578fcf03af33e6f93cba22",
+      "frames": 184
+    },
+    {
+      "file": "teacher-1.json.gz",
+      "sha256": "f86f0bcabf4eda5f4ba5dd43535dc79514e3dd242c4f55d786f212b336d7cccc",
+      "frames": 188
+    },
+    {
+      "file": "teacher-2.json.gz",
+      "sha256": "6c65f00a8e308aa3f24183c0ef9cb651ac2ecd333ed3e1803790e9ba3714874c",
+      "frames": 206
+    },
+    {
+      "file": "teacher-3.json.gz",
+      "sha256": "566a04b9320d5a9b77984cc3308730eac08f39704373591f192d9be4ff140c18",
+      "frames": 165
+    },
+    {
+      "file": "teacher-4.json.gz",
+      "sha256": "a80ac59482795180f8e1061cf43cd2ac60a98048b5b50605278d402528577fd3",
+      "frames": 154
+    },
+    {
+      "file": "teacher-5.json.gz",
+      "sha256": "753d7eae6acf00001a5aba8675e346d5f00ec246c52b475cd0bf25c5b4ecd63b",
+      "frames": 162
+    },
+    {
+      "file": "teacher-6.json.gz",
+      "sha256": "6291d07fcf8516effa3fcdf935624aa0e250eeba37971f84bfd2288067497308",
+      "frames": 190
+    },
+    {
+      "file": "teacher-7.json.gz",
+      "sha256": "c0dced4f5030a90e20f6d4fda5eb6aeb06da6d622d4a83921435e4a0f887940a",
+      "frames": 157
+    }
+  ],
+  "cases": [
+    {
+      "file": "baseline-0.json.gz",
+      "decision": 110,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ActionPhase": {
+          "active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ActionPhase": {
+          "active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "baseline-5.json.gz",
+      "decision": 29,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-4,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-4,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "baseline-6.json.gz",
+      "decision": 41,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "2,2",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "2,2",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "baseline-7.json.gz",
+      "decision": 77,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "2,4",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "2,4",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "economy-learning-v1-bc_only-5.json.gz",
+      "decision": 38,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-5,5",
+              "max_power": 1
+            },
+            {
+              "player": 0,
+              "hex": "-5,5",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-4,7",
+              "max_power": 1
+            },
+            {
+              "player": 3,
+              "hex": "-5,5",
+              "max_power": 1
+            },
+            {
+              "player": 0,
+              "hex": "-5,5",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": true
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-0.json.gz",
+      "decision": 97,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "1,0",
+              "max_power": 3
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "1,0",
+              "max_power": 3
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-3.json.gz",
+      "decision": 114,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-5,5",
+              "max_power": 3
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "1,-4",
+              "max_power": 3
+            },
+            {
+              "player": 2,
+              "hex": "-5,5",
+              "max_power": 3
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "changed": true
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-5.json.gz",
+      "decision": 31,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-4,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-4,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-5.json.gz",
+      "decision": 144,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": "insufficient Qic",
+      "corrected_error": "insufficient Qic",
+      "legacy_phase": null,
+      "corrected_phase": null,
+      "changed": false
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-6.json.gz",
+      "decision": 113,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-2,2",
+              "max_power": 2
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-2,2",
+              "max_power": 2
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-6.json.gz",
+      "decision": 125,
+      "reason": "base_12vp_flip",
+      "legacy_error": null,
+      "corrected_error": "action not allowed: taking the Advanced Tech tile and advancing to research level 5 require two green Federation tokens",
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "0,5",
+              "max_power": 2
+            },
+            {
+              "player": 0,
+              "hex": "0,5",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "corrected_phase": null,
+      "changed": true
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-6.json.gz",
+      "decision": 162,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-8,-2",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-1,6",
+              "max_power": 2
+            },
+            {
+              "player": 2,
+              "hex": "-8,-2",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "changed": true
+    },
+    {
+      "file": "economy-learning-v1-continued_ppo-7.json.gz",
+      "decision": 33,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ActionPhase": {
+          "active_player": 0
+        }
+      },
+      "corrected_phase": {
+        "ActionPhase": {
+          "active_player": 0
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-4.json.gz",
+      "decision": 107,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ActionPhase": {
+          "active_player": 0
+        }
+      },
+      "corrected_phase": {
+        "ActionPhase": {
+          "active_player": 0
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-5.json.gz",
+      "decision": 38,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-5,5",
+              "max_power": 1
+            },
+            {
+              "player": 0,
+              "hex": "-5,5",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-4,7",
+              "max_power": 1
+            },
+            {
+              "player": 3,
+              "hex": "-5,5",
+              "max_power": 1
+            },
+            {
+              "player": 0,
+              "hex": "-5,5",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": true
+    },
+    {
+      "file": "economy-learning-v1-economy_bc_ppo-7.json.gz",
+      "decision": 101,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": "insufficient Qic",
+      "corrected_error": "insufficient Qic",
+      "legacy_phase": null,
+      "corrected_phase": null,
+      "changed": false
+    },
+    {
+      "file": "eval-3d3fad9ddba52bf4-1.json.gz",
+      "decision": 79,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ActionPhase": {
+          "active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ActionPhase": {
+          "active_player": 3
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-44fa9ae29e6a0c97-0.json.gz",
+      "decision": 132,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "2,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "2,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-44fa9ae29e6a0c97-1.json.gz",
+      "decision": 77,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-3,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-1,3",
+              "max_power": 1
+            },
+            {
+              "player": 0,
+              "hex": "-1,3",
+              "max_power": 1
+            },
+            {
+              "player": 3,
+              "hex": "-3,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "changed": true
+    },
+    {
+      "file": "eval-44fa9ae29e6a0c97-2.json.gz",
+      "decision": 184,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ActionPhase": {
+          "active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ActionPhase": {
+          "active_player": 3
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-4afeb9e9654d407d-0.json.gz",
+      "decision": 70,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-9,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-9,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-4afeb9e9654d407d-0.json.gz",
+      "decision": 141,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-2,-3",
+              "max_power": 1
+            },
+            {
+              "player": 2,
+              "hex": "-2,-3",
+              "max_power": 3
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-10,8",
+              "max_power": 2
+            },
+            {
+              "player": 3,
+              "hex": "-2,-3",
+              "max_power": 1
+            },
+            {
+              "player": 2,
+              "hex": "-2,-3",
+              "max_power": 3
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": true
+    },
+    {
+      "file": "eval-55091eed07c46dcd-0.json.gz",
+      "decision": 68,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ActionPhase": {
+          "active_player": 1
+        }
+      },
+      "corrected_phase": {
+        "ActionPhase": {
+          "active_player": 1
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-76ca613452e7c1d2-0.json.gz",
+      "decision": 75,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-10,6",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-10,6",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-854ca251a4486a11-0.json.gz",
+      "decision": 69,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-6,6",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-6,6",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-969fe18779854603-0.json.gz",
+      "decision": 73,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-4,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-4,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 0
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-bd863b58be2df621-1.json.gz",
+      "decision": 89,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-6,2",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-6,2",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-bd863b58be2df621-3.json.gz",
+      "decision": 119,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "3,2",
+              "max_power": 2
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "2,5",
+              "max_power": 2
+            },
+            {
+              "player": 0,
+              "hex": "3,2",
+              "max_power": 2
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "changed": true
+    },
+    {
+      "file": "eval-d636925b44d0e448-0.json.gz",
+      "decision": 74,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-1,3",
+              "max_power": 1
+            },
+            {
+              "player": 0,
+              "hex": "-1,3",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-1,3",
+              "max_power": 1
+            },
+            {
+              "player": 0,
+              "hex": "-1,3",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-da8ae8f7ea590f7a-0.json.gz",
+      "decision": 132,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "2,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "2,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-dd27fdab557b1f61-0.json.gz",
+      "decision": 100,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-8,5",
+              "max_power": 2
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-8,5",
+              "max_power": 2
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-dd27fdab557b1f61-0.json.gz",
+      "decision": 104,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-4,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 3,
+              "hex": "-4,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-0.json.gz",
+      "decision": 135,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ActionPhase": {
+          "active_player": 1
+        }
+      },
+      "corrected_phase": {
+        "ActionPhase": {
+          "active_player": 1
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-0.json.gz",
+      "decision": 137,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ActionPhase": {
+          "active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ActionPhase": {
+          "active_player": 3
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-3.json.gz",
+      "decision": 87,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-1,5",
+              "max_power": 3
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-1,5",
+              "max_power": 3
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-e5a3446c3f483d53-6.json.gz",
+      "decision": 143,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-8,5",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-8,5",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "eval-fe6aa475a9ec0563-0.json.gz",
+      "decision": 129,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-8,5",
+              "max_power": 4
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-7,4",
+              "max_power": 4
+            },
+            {
+              "player": 2,
+              "hex": "-8,5",
+              "max_power": 4
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "changed": true
+    },
+    {
+      "file": "imitation_plus_ppo-1.json.gz",
+      "decision": 162,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": "insufficient Qic",
+      "corrected_error": "insufficient Qic",
+      "legacy_phase": null,
+      "corrected_phase": null,
+      "changed": false
+    },
+    {
+      "file": "imitation_plus_ppo-5.json.gz",
+      "decision": 29,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-4,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-4,7",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "source-routes-v1-control-1.json.gz",
+      "decision": 175,
+      "reason": "base_12vp_flip",
+      "legacy_error": null,
+      "corrected_error": "action not allowed: taking the Advanced Tech tile and advancing to research level 5 require two green Federation tokens",
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-1,-3",
+              "max_power": 2
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "corrected_phase": null,
+      "changed": true
+    },
+    {
+      "file": "source-routes-v1-control-3.json.gz",
+      "decision": 120,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-3,-1",
+              "max_power": 1
+            },
+            {
+              "player": 0,
+              "hex": "-3,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-3,-1",
+              "max_power": 1
+            },
+            {
+              "player": 0,
+              "hex": "-3,-1",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "teacher-1.json.gz",
+      "decision": 106,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-4,0",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 1,
+              "hex": "-4,2",
+              "max_power": 1
+            },
+            {
+              "player": 1,
+              "hex": "-4,0",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 1
+        }
+      },
+      "changed": true
+    },
+    {
+      "file": "teacher-3.json.gz",
+      "decision": 121,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-8,6",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 2,
+              "hex": "-8,6",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 2
+        }
+      },
+      "changed": false
+    },
+    {
+      "file": "teacher-3.json.gz",
+      "decision": 129,
+      "reason": "upgrade_bonus_build",
+      "legacy_error": null,
+      "corrected_error": null,
+      "legacy_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-1,-3",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "corrected_phase": {
+        "ChargePowerPending": {
+          "queue": [
+            {
+              "player": 0,
+              "hex": "-1,-3",
+              "max_power": 1
+            }
+          ],
+          "resume_active_player": 3
+        }
+      },
+      "changed": false
+    }
+  ]
+}

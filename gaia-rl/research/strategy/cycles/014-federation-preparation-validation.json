@@ -1,0 +1,148 @@
+{
+  "date": "2026-09-25",
+  "scope": "Approved remaining power preparation for the Ambas pilot, including omitted native legality prerequisites",
+  "status": "Implemented; scoped checks pass. Existing unsupported-faction test failure remains. No whole-plan success or strength gain claim.",
+  "decisions": {
+    "preparation": "Native-paid construction/funding inside preservation, unchanged ranks, no intention bonus",
+    "legality": "Existing cancellation/fallback for target forbidden by native own-federation adjacency; preserve alternatives reject creating that obstruction",
+    "alternatives": "Do not increase time, force a formation, grant resources, count forbidden buildings, or accept power alone as goal completion",
+    "constraints": [
+      "GAIA_FACTION_TECH_PLANS default OFF",
+      "shared Ambas preservation only for power preparation",
+      "Ambas pilot viability validates actual native location rules",
+      "at most32 funding previews, no skipped opponent turn",
+      "same existing rollout and clock limits"
+    ]
+  },
+  "discovery": {
+    "receipt": "014-target-legality.json",
+    "target": "3,-2",
+    "adjacent_existing_federation": [
+      "2,-2",
+      "3,-3"
+    ],
+    "total_unfederated_power": 6,
+    "eligible_power": 2,
+    "implication": "The old R5 target cannot form a new federation; do not spend for it or claim a 6-to-7 fix completes that plan"
+  },
+  "native_evidence": {
+    "comparison_receipt": "014-federation-preparation-comparison.json",
+    "starting_branch": "77, before the obstructing federation; not original game decision77",
+    "comparisons": [
+      {
+        "mode": "existing",
+        "complete": true,
+        "value": 135.17333333333335,
+        "goal_acquired": false,
+        "end_round": 5,
+        "elapsed_seconds": 23.45812216399645
+      },
+      {
+        "mode": "preserve",
+        "complete": true,
+        "value": 133.41,
+        "goal_acquired": false,
+        "end_round": 5,
+        "elapsed_seconds": 32.16528963600285
+      }
+    ],
+    "final_goal": "Unfinished in both same-R5-horizon forecasts; preserve did not yet finish PI or relocation",
+    "construction_regression": "Separate explicitly synthetic legal goal at5,0 on unchanged real R5 board: power4 paid for ore2 then paid Academy; eligible power2->4, total unfederated6->8; not a historical pilot success",
+    "initial_attempt": "014-federation-preparation-initial-comparison.json retained but superseded: before legality repair, not final source or strength evidence",
+    "worker_receipt": "014-progressive-integration.json",
+    "worker_seconds": 9.92204364000645,
+    "worker_depth_counts": [
+      {
+        "depth": 1,
+        "completed": 115
+      },
+      {
+        "depth": 2,
+        "completed": 115
+      },
+      {
+        "depth": 4,
+        "completed": 34
+      }
+    ],
+    "worker_chosen": "current-choice",
+    "long_uses_remaining": 0,
+    "quick_fallback": false,
+    "root_unchanged": true
+  },
+  "verification": {
+    "new_tests": 13,
+    "targeted": {
+      "run": 55,
+      "passed": 55
+    },
+    "experiments": {
+      "run": 424,
+      "passed": 423,
+      "failed": 1,
+      "errors": 0,
+      "seconds": 270.456,
+      "known_failure": "faction_teachers.test_guidance.GuidanceTests.test_every_original_faction_has_technology_or_track_advice"
+    },
+    "python_core": {
+      "run": 19,
+      "passed": 19
+    },
+    "py_compile": "pass",
+    "git_diff_check": "pass",
+    "frozen_A": {
+      "files": 200,
+      "mismatches": 0
+    },
+    "source_hashes_match_current": 253,
+    "raw_audit": "SHA-256 unchanged",
+    "not_rerun": [
+      "Rust workspace",
+      "Clippy",
+      "944 evaluation invariants"
+    ],
+    "test_fixture_corrections": [
+      "New power-action test expected3; native power_action_cost(3) is4",
+      "New post-upgrade assertion needed the actual intervening opponent charge reaction, not a fabricated ActionPhase"
+    ]
+  },
+  "commands": {
+    "targeted": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python -m unittest faction_teachers.test_federation_preparation faction_teachers.test_plan_preservation faction_teachers.test_progressive faction_teachers.test_tech_pilot -q",
+    "experiments": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python -m unittest discover -s experiments -p 'test_*.py'",
+    "python_core": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python -m unittest discover -s python/tests -v",
+    "native_comparison": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python tools/probe_federation_preparation.py experiments/faction_teachers/fixtures/ambas-plan-cancellation.json --seconds 60",
+    "worker": "cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:experiments .venv/bin/python tools/probe_progressive_search.py experiments/faction_teachers/fixtures/ambas-plan-cancellation.json runs/tech-plan-pilot-20260924-shared-38/policy-checkpoint.json"
+  },
+  "logs": {
+    "targeted": {
+      "path": "handoff/logs/20260925-federation-preparation-targeted-final.log",
+      "sha256": "dffffe53fcae60b2dc230b22a93d323fe130c26585268385f20db2ac5aecd86b"
+    },
+    "experiments": {
+      "path": "handoff/logs/20260925-federation-preparation-experiments-final.log",
+      "sha256": "9da975f4c98281bdae7d66910a84225692fa67bd115c99994f4d7b9480874593"
+    },
+    "python_core": {
+      "path": "handoff/logs/20260925-federation-preparation-python.log",
+      "sha256": "e7fe906edc7d9162af832bba1d3ff33b6ff2118034f16f5105c689447dc0dd07"
+    }
+  },
+  "changed_files": [
+    "gaia-rl/experiments/faction_teachers/federation_preparation.py",
+    "gaia-rl/experiments/faction_teachers/guidance.py",
+    "gaia-rl/experiments/faction_teachers/test_federation_preparation.py",
+    "gaia-rl/experiments/faction_teachers/fixtures/ambas-federation-preparation.json",
+    "gaia-rl/experiments/four_factions/preparation.py",
+    "gaia-rl/tools/probe_federation_preparation.py",
+    "gaia-rl/experiments/faction_teachers/README.md",
+    "gaia-rl/research/strategy/teacher-application.md",
+    "gaia-rl/research/strategy/STATUS.md",
+    "gaia-rl/research/strategy/cycles/014-*.json"
+  ],
+  "limitations": [
+    "No completed target federation or match-strength proof in the saved pilot comparison",
+    "Funding preview proves only a same-actor next construction; not exhaustive multistep financing",
+    "Building power is necessary, not sufficient; native formation also requires topology, satellites, tokens and legal ownership",
+    "No new full game, external AI, training experiment, deployment, A/B, commit or default flag enablement"
+  ]
+}

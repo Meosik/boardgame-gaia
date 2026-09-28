@@ -14,6 +14,8 @@ REACTIONS = {'ChargePower', 'TaklonsChargePower', 'ChooseIncomeOrder'}
 def completed_values(result):
     values = {}
     for plan in result.get('plans', ()):
+        if 'comparison_depth' in result and plan.get('comparison_depth') != result['comparison_depth']:
+            continue
         if plan.get('complete') and plan.get('value') is not None:
             first = plan['first']
             values[first] = max(values.get(first, -math.inf), plan['value'])
