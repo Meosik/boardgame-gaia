@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use axum::{
+    http::{header, HeaderValue},
     routing::{get, post},
     Router,
 };
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::{
-    cors::CorsLayer,
     services::{ServeDir, ServeFile},
+    set_header::SetResponseHeaderLayer,
     trace::TraceLayer,
 };
 
@@ -80,6 +81,13 @@ pub fn build_router(state: AppState) -> Router {
         std::env::var("FRONTEND_DIR").unwrap_or_else(|_| "gaia-frontend/dist".to_string());
     let spa_fallback = ServeFile::new(format!("{frontend_dir}/index.html"));
 
+    // The frontend is always served by this same origin — production gets it from
+    // ServeDir above, and local dev proxies /api and /ws through Vite's own dev
+    // server (see gaia-frontend/vite.config.ts) — so every legitimate request is
+    // same-origin already. No CorsLayer is added: without one, axum sends no
+    // Access-Control-Allow-Origin header, so browsers refuse cross-site reads of
+    // API responses (e.g. the public room list) for any third-party page that
+    // still holds a visitor's gate cookie.
     Router::new()
         .merge(rate_limited_routes)
         .merge(gate_routes)
@@ -89,7 +97,21 @@ pub fn build_router(state: AppState) -> Router {
             let gate = gate.clone();
             async move { site_gate::require_password(gate, req, next).await }
         }))
-        .layer(CorsLayer::permissive())
+        // Basic hardening headers: no MIME-sniffing, no framing (the /gate password
+        // form is the concrete clickjacking target), and no referrer leakage to
+        // whatever page a room-invite link was pasted into.
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::HeaderName::from_static("x-frame-options"),
+            HeaderValue::from_static("DENY"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::REFERRER_POLICY,
+            HeaderValue::from_static("no-referrer"),
+        ))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
