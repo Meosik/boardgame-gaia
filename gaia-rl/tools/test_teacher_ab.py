@@ -118,6 +118,12 @@ class TeacherSpecTests(unittest.TestCase):
                         with self.assertRaises(ValueError):
                             ab.resolve_teacher(str(spec))
 
+    def test_per_teacher_comparison_budget_is_validated(self):
+        spec = ab.resolve_teacher(str(Path(ab.__file__).with_name('teacher-a-search2.json')))
+        self.assertEqual(spec['comparisons'], 2)
+        self.assertTrue(spec['frozen'])
+        self.assertIsNone(ab.resolve_teacher('baseline')['comparisons'])
+
     def test_comparison_budget_clock_is_a_count_not_a_deadline(self):
         clock = ab.budget_clock(0)
         self.assertEqual(clock['comparisons'], 0)

@@ -80,6 +80,8 @@ impl RuleEngine {
         state: &GameState,
     ) -> Result<(Vec<AiDecision>, AiCandidateDiagnostics), AiActionError> {
         let mut diagnostics = AiCandidateDiagnostics::default();
+        // `state` is fixed for this whole call; repeated federation checks may share results.
+        let _memo = super::SatelliteMemoScope::enter();
         let Some(player_id) = Self::decision_player(state)? else {
             return Ok((Vec::new(), diagnostics));
         };
@@ -270,3 +272,4 @@ mod tests {
 #[path = "ai_federation.rs"]
 mod federation;
 use federation::federation_candidates;
+

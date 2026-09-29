@@ -128,3 +128,28 @@ B는 `tools/teacher-b-current.json`의 플래그(B-lite+k+n+f′+g+h+o+p+b′+r+
   몰려 있을 가능성이 있다. Lantids는 3쌍이고 13종족 동시 비교라 우연일 수 있다.
 - 평가식 튜닝으로는 A를 넘기 어렵다는 cycle 009 결론을 속도 교란 없이 재확인했다.
   A도 실제로는 대부분 1수 순위로 두므로, 남은 개선 여지는 탐색(롤아웃)을 실제로 돌게 하는 쪽이다.
+
+## 롤아웃 가속 (결과 불변)
+
+A의 롤아웃 1개(두 수입 경계까지)는 약 37초였다. py-spy 샘플링 결과 약 31%가 native 후보 생성 중
+`validate_federation`의 최소 위성 Steiner 탐색이었다. 연방 후보는 토큰·위성 경로만 다른 같은
+행성 집합을 반복 검사한다.
+
+| 변경 | 롤아웃 6개(3상태×상위 2후보) |
+|---|---:|
+| 기준 | 224초 |
+| + `tools/fast_copy.py`(JSON 전용 deepcopy, `--fast-copy`) | 214초 |
+| + 위성 탐색 이진 힙 → 버킷 큐(Dial; 0/1 가중치라 거리 동일) | 133초 |
+| + 후보 생성 1회 범위의 위성 탐색 메모(`SatelliteMemoScope`) | **61초** |
+
+- 롤아웃 6개의 행동·평가값·목표 결과 JSON이 기준과 바이트 단위로 동일.
+- 무작위 20판 지문(매 스냅샷의 후보 목록 포함)과 facts 지문이 엔진 수정 전과 동일.
+- A 대 A `--comparisons 0` 180결정 수순·점수 동일, 판당 95초 → 45초.
+- 비교 2개 예산의 A 결정 1회: 10–24초(이전 비교 1개 약 37초).
+- `cargo test --release -p gaia-engine`, `cargo clippy -p gaia-engine --lib --tests -- -D warnings`,
+  `tools.test_fast_copy`·`tools.test_teacher_ab` 통과.
+- 남은 시간은 대부분 동결 A의 Python 평가 로직(`route_value`의 중첩 `base_rank`)이다.
+  더 줄이려면 A를 고친 파생 트리가 필요하다.
+
+교사별 예산: 스펙의 `comparisons`가 경기 예산을 덮어쓴다. `tools/teacher-a-search2.json`은
+동결 A + 비교 2개다.

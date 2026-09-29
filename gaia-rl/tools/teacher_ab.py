@@ -85,8 +85,12 @@ def resolve_teacher(name):
     env = spec.get('env', {})
     if not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
         raise ValueError(f'Teacher {label}: env must map strings to strings')
+    comparisons = spec.get('comparisons')
+    if comparisons is not None and (type(comparisons) is not int or comparisons < 0):
+        raise ValueError(f'Teacher {label}: comparisons must be a nonnegative integer')
     return {'name': label, 'source': str(source), 'factory': spec['factory'],
-            'kwargs': spec.get('kwargs', {}), 'env': env, 'frozen': bool(spec.get('frozen', False))}
+            'kwargs': spec.get('kwargs', {}), 'env': env, 'comparisons': comparisons,
+            'frozen': bool(spec.get('frozen', False))}
 
 
 def frozen_problems(teacher):
@@ -219,12 +223,19 @@ def report_table(summary):
 def worker(args):
     spec = json.loads(args.spec)
     sys.path.insert(0, spec['source'])
+    clock_spec = json.loads(args.clock)
+    if clock_spec.pop('fast_copy', False):
+        # Before any teacher import, so `from copy import deepcopy` binds the fast path.
+        import fast_copy
+        fast_copy.install()
     from importlib import import_module
     from gaia_rl import Environment
     from faction_teachers.clock import AdaptiveClock
     module, _, attribute = spec['factory'].partition(':')
-    clock_spec = json.loads(args.clock)
     comparisons = clock_spec.pop('comparisons', None)
+    if spec.get('comparisons') is not None:
+        # A per-teacher budget (e.g. deeper search for one arm) overrides the match budget.
+        comparisons = spec['comparisons']
     if comparisons is not None:
         # Deterministic count budget instead of wall-clock deadlines (tools/budget_teacher.py).
         import budget_teacher
@@ -403,7 +414,9 @@ def run(args):
         problems = frozen_problems(teacher)
         if problems:
             raise SystemExit(f'Frozen teacher {arm} ({teacher["name"]}) changed: {problems[:5]}')
-    clock = budget_clock(args.comparisons) if args.comparisons is not None else CLOCKS[args.clock]
+    clock = budget_clock(args.comparisons) if args.comparisons is not None else dict(CLOCKS[args.clock])
+    if args.fast_copy:
+        clock['fast_copy'] = True
     plan = schedule(args.seeds, args.games)
     output.mkdir(parents=True)
     from gaia_rl.versions import runtime_versions
@@ -459,6 +472,8 @@ def main():
     match.add_argument('--comparisons', type=int,
                        help='Deterministic budget: completed comparisons per decision; ignores --clock')
     match.add_argument('--jobs', type=int, default=1, help='Games played in parallel')
+    match.add_argument('--fast-copy', action='store_true',
+                       help='JSON fast path for copy.deepcopy in teacher workers (tools/fast_copy.py)')
     match.add_argument('--output', required=True)
     plan = commands.add_parser('plan', help='Resolve teachers and print the schedule; plays nothing')
     for name in ('--teacher-a', '--teacher-b'):

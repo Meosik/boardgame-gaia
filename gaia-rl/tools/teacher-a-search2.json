@@ -1,0 +1,8 @@
+{
+  "description": "Frozen A with a deterministic search budget of 2 completed horizon comparisons per decision. Use with --comparisons 0 on the other arm to measure what search adds.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "four_factions.timed:TimedPreparationTeacher",
+  "kwargs": {"bgg_openings": true, "shared_factions": true},
+  "comparisons": 2,
+  "frozen": true
+}

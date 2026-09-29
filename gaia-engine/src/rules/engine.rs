@@ -4470,7 +4470,56 @@ fn can_be_satellite_node(state: &GameState, player_id: PlayerId, coord: HexCoord
 /// This is a vertex-weighted Steiner-tree dynamic program. Required planets are collapsed by
 /// zero-cost connected component first, keeping the exponential dimension bounded by the number
 /// of separated selected clusters rather than by the number of individual buildings.
+type SatelliteMemo = HashMap<(PlayerId, bool, Vec<HexCoord>), Option<usize>>;
+
+thread_local! {
+    /// Active only while one candidate list is generated for one fixed state; see
+    /// [`SatelliteMemoScope`]. Outside a scope every call is computed directly.
+    static SATELLITE_MEMO: std::cell::RefCell<Option<SatelliteMemo>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Memoizes minimum satellite counts while candidates for one unchanged state are validated.
+/// Federation candidates differing only in token or satellite route share their planet set,
+/// so the Steiner search would otherwise repeat identically. The previous scope is restored
+/// on drop, so a nested scope for another state never sees these entries.
+pub(crate) struct SatelliteMemoScope(Option<SatelliteMemo>);
+
+impl SatelliteMemoScope {
+    pub(crate) fn enter() -> Self {
+        Self(SATELLITE_MEMO.with(|memo| memo.borrow_mut().replace(HashMap::new())))
+    }
+}
+
+impl Drop for SatelliteMemoScope {
+    fn drop(&mut self) {
+        let previous = self.0.take();
+        SATELLITE_MEMO.with(|memo| *memo.borrow_mut() = previous);
+    }
+}
+
 fn minimum_federation_satellites(
+    state: &GameState,
+    player_id: PlayerId,
+    required_hexes: &[HexCoord],
+    is_ivits_growth: bool,
+) -> Option<usize> {
+    let mut sorted = required_hexes.to_vec();
+    sorted.sort_by_key(|c| (c.q, c.r));
+    let key = (player_id, is_ivits_growth, sorted);
+    if let Some(found) = SATELLITE_MEMO.with(|memo| memo.borrow().as_ref().and_then(|m| m.get(&key).copied())) {
+        return found;
+    }
+    let result = minimum_federation_satellites_uncached(state, player_id, required_hexes, is_ivits_growth);
+    SATELLITE_MEMO.with(|memo| {
+        if let Some(m) = memo.borrow_mut().as_mut() {
+            m.insert(key, result);
+        }
+    });
+    result
+}
+
+fn minimum_federation_satellites_uncached(
     state: &GameState,
     player_id: PlayerId,
     required_hexes: &[HexCoord],
@@ -4600,23 +4649,35 @@ fn minimum_federation_satellites(
             subset = (subset - 1) & mask;
         }
 
-        let mut frontier = BinaryHeap::new();
+        // Edge weights are 0/1 and every finite cost is a small node count, so a bucket
+        // queue (Dial) settles the same shortest distances as a binary heap, faster.
+        let mut buckets: Vec<Vec<usize>> = Vec::new();
         for (node, &cost) in costs[mask].iter().enumerate() {
             if cost != infinity {
-                frontier.push((Reverse(cost), node));
+                if buckets.len() <= cost {
+                    buckets.resize_with(cost + 1, Vec::new);
+                }
+                buckets[cost].push(node);
             }
         }
-        while let Some((Reverse(cost), current)) = frontier.pop() {
-            if cost != costs[mask][current] {
-                continue;
-            }
-            for &neighbor in &neighbors[current] {
-                let next = cost.saturating_add(weights[neighbor]);
-                if next < costs[mask][neighbor] {
-                    costs[mask][neighbor] = next;
-                    frontier.push((Reverse(next), neighbor));
+        let mut cost = 0;
+        while cost < buckets.len() {
+            while let Some(current) = buckets[cost].pop() {
+                if cost != costs[mask][current] {
+                    continue;
+                }
+                for &neighbor in &neighbors[current] {
+                    let next = cost.saturating_add(weights[neighbor]);
+                    if next < costs[mask][neighbor] {
+                        costs[mask][neighbor] = next;
+                        if buckets.len() <= next {
+                            buckets.resize_with(next + 1, Vec::new);
+                        }
+                        buckets[next].push(neighbor);
+                    }
                 }
             }
+            cost += 1;
         }
     }
 
