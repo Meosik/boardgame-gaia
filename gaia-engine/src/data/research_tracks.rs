@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::sync::LazyLock;
 
 static RESEARCH_TRACKS_TOML: &str = include_str!("../../data/research_tracks.toml");
 
@@ -42,9 +43,12 @@ pub fn load_research_tracks() -> ResearchTrackFile {
 }
 
 pub fn get_level_effect(track_id: &str, level: u8) -> Option<LevelEffect> {
-    let file = load_research_tracks();
-    file.tracks
-        .into_iter()
+    // Income and research rewards look this up per player, track and level.
+    // Parse the immutable embedded source once instead of on every lookup.
+    static DATA: LazyLock<ResearchTrackFile> = LazyLock::new(load_research_tracks);
+    DATA.tracks
+        .iter()
         .find(|t| t.id == track_id)
-        .and_then(|t| t.levels.into_iter().find(|l| l.level == level))
+        .and_then(|t| t.levels.iter().find(|l| l.level == level))
+        .cloned()
 }

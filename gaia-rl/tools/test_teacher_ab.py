@@ -88,6 +88,43 @@ class TeacherSpecTests(unittest.TestCase):
                              ['added: pkg/b.py', 'changed or missing: pkg/a.py'])
             self.assertEqual(ab.frozen_problems({**teacher, 'frozen': False}), [])
 
+    def test_untracked_agent_runtime_state_is_not_teacher_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)/'teacher'
+            (source/'pkg').mkdir(parents=True)
+            (source/'pkg/a.py').write_text('x = 1\n')
+            record = {'files': {'pkg/a.py': ab.sha256(source/'pkg/a.py'),
+                                '.omc/state/log.json': 'recorded-but-never-committed'}}
+            (source/'FROZEN.json').write_text(json.dumps(record))
+            teacher = {'source': str(source), 'frozen': True}
+            self.assertEqual(ab.frozen_problems(teacher), [])
+            (source/'pkg/.omc').mkdir()
+            (source/'pkg/.omc/new.json').write_text('{}')
+            self.assertEqual(ab.frozen_problems(teacher), [])
+            (source/'pkg/a.py').write_text('x = 2\n')
+            self.assertEqual(ab.frozen_problems(teacher), ['changed or missing: pkg/a.py'])
+
+    def test_spec_environment_must_be_string_pairs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)/'teacher'
+            source.mkdir()
+            for env, ok in (({'GAIA_X': '1'}, True), ({'GAIA_X': 1}, False)):
+                spec = Path(temporary)/'spec.json'
+                spec.write_text(json.dumps({'source': str(source), 'factory': 'm:f', 'env': env}))
+                with self.subTest(env=env):
+                    if ok:
+                        self.assertEqual(ab.resolve_teacher(str(spec))['env'], env)
+                    else:
+                        with self.assertRaises(ValueError):
+                            ab.resolve_teacher(str(spec))
+
+    def test_comparison_budget_clock_is_a_count_not_a_deadline(self):
+        clock = ab.budget_clock(0)
+        self.assertEqual(clock['comparisons'], 0)
+        self.assertEqual(clock['uses'], 0)
+        with self.assertRaises(ValueError):
+            ab.budget_clock(-1)
+
     def test_registry_baseline_is_frozen_and_currently_intact(self):
         baseline = ab.resolve_teacher('baseline')
         self.assertTrue(baseline['frozen'])

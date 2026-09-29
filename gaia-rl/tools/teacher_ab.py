@@ -34,6 +34,15 @@ CLOCKS = {'data': {'target_seconds': 3, 'long_seconds': 6, 'uses': 0},
 HALVES = ((0, 2), (0, 1), (0, 3))
 WORKER_GRACE_SECONDS = 60
 MAX_DECISIONS = 2000
+# A count budget never cuts a search short; this is only a hung-worker guard.
+BUDGET_DECISION_SECONDS = 900
+
+
+def budget_clock(comparisons):
+    if comparisons < 0:
+        raise ValueError('--comparisons must be nonnegative')
+    return {'target_seconds': BUDGET_DECISION_SECONDS, 'long_seconds': BUDGET_DECISION_SECONDS,
+            'uses': 0, 'comparisons': comparisons}
 
 
 def now():
@@ -73,8 +82,11 @@ def resolve_teacher(name):
     module, _, attribute = spec['factory'].partition(':')
     if not module or not attribute:
         raise ValueError(f'Teacher {label}: factory must be "module:callable"')
+    env = spec.get('env', {})
+    if not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
+        raise ValueError(f'Teacher {label}: env must map strings to strings')
     return {'name': label, 'source': str(source), 'factory': spec['factory'],
-            'kwargs': spec.get('kwargs', {}), 'frozen': bool(spec.get('frozen', False))}
+            'kwargs': spec.get('kwargs', {}), 'env': env, 'frozen': bool(spec.get('frozen', False))}
 
 
 def frozen_problems(teacher):
@@ -83,9 +95,14 @@ def frozen_problems(teacher):
         return []
     source = Path(teacher['source'])
     record = json.loads((source/'FROZEN.json').read_text())
+    # `.omc/` is agent runtime state that was swept into the freeze but is untracked in Git,
+    # so a fresh checkout never has it. It is not teacher code or data.
+    runtime = lambda name: '.omc' in Path(name).parts
     actual = {p.relative_to(source).as_posix(): sha256(p) for p in sorted(source.rglob('*'))
-              if p.is_file() and p.name != 'FROZEN.json' and '__pycache__' not in p.parts}
-    problems = [f'changed or missing: {n}' for n, h in record['files'].items() if actual.get(n) != h]
+              if p.is_file() and p.name != 'FROZEN.json' and '__pycache__' not in p.parts
+              and not runtime(p.relative_to(source))}
+    problems = [f'changed or missing: {n}' for n, h in record['files'].items()
+                if not runtime(n) and actual.get(n) != h]
     problems += [f'added: {n}' for n in actual if n not in record['files']]
     problems += [f'external data changed: {n}' for n, h in record.get('external_data', {}).items()
                  if sha256(ROOT/n) != h]
@@ -206,7 +223,13 @@ def worker(args):
     from gaia_rl import Environment
     from faction_teachers.clock import AdaptiveClock
     module, _, attribute = spec['factory'].partition(':')
-    clock = AdaptiveClock(**json.loads(args.clock))
+    clock_spec = json.loads(args.clock)
+    comparisons = clock_spec.pop('comparisons', None)
+    if comparisons is not None:
+        # Deterministic count budget instead of wall-clock deadlines (tools/budget_teacher.py).
+        import budget_teacher
+        budget_teacher.install(comparisons)
+    clock = AdaptiveClock(**clock_spec)
     teacher = getattr(import_module(module), attribute)(
         args.seed, target_seconds=clock.target_seconds, maximum_seconds=clock.long_seconds,
         adaptive_clock=clock, **spec['kwargs'])
@@ -236,6 +259,7 @@ def worker(args):
             reply({'decision_id': decision, 'index': index,
                    'fallback_timeout': audit.get('ranking_mode') == 'shared-quick-fallback',
                    'unsearched_comparisons': audit.get('unsearched_comparisons') or 0,
+                   'completed_comparisons': len(audit.get('plans') or ()),
                    'selected': audit.get('selected')})
         elif command['op'] == 'step':
             before = snapshot
@@ -253,7 +277,8 @@ def digest(snapshot):
 
 class Worker:
     def __init__(self, teacher, seed, clock, log):
-        env = {**os.environ, 'PYTHONPATH': teacher['source'], 'PYTHONDONTWRITEBYTECODE': '1'}
+        env = {**os.environ, **teacher.get('env', {}),
+               'PYTHONPATH': teacher['source'], 'PYTHONDONTWRITEBYTECODE': '1'}
         self.process = subprocess.Popen(
             [sys.executable, '-u', str(Path(__file__).resolve()), 'worker', '--seed', seed,
              '--spec', json.dumps(teacher), '--clock', json.dumps(clock)],
@@ -336,12 +361,14 @@ def play(output, seed, teachers, a_seats, clock):
                     counts['federation_limit_hits'] += int(limits.get('federation_limit_hits', 0))
                     counts['unsearched_comparisons'] += int(reply['unsearched_comparisons'])
                     counts['unsearched_decisions'] += bool(reply['unsearched_comparisons'])
+                    counts['completed_comparisons'] += int(reply.get('completed_comparisons', 0))
+                    counts['search_milliseconds'] += round((time.monotonic()-tick)*1000)
                     trace.write(json.dumps({'step': snapshot['steps'], 'seat': seat, 'arm': arm,
                                             'decision_id': snapshot['decision_id'], 'index': index,
                                             'seconds': round(time.monotonic()-tick, 3),
                                             'federation_limit_hits': limits.get('federation_limit_hits', 0),
                                             **{k: reply[k] for k in ('fallback_timeout', 'unsearched_comparisons',
-                                                                     'selected')}})+'\n')
+                                                                     'completed_comparisons', 'selected')}})+'\n')
                     env.step(snapshot['decision_id'], index)
                     snapshot = json.loads(env.snapshot_json())
                     expected = digest(snapshot)
@@ -376,29 +403,41 @@ def run(args):
         problems = frozen_problems(teacher)
         if problems:
             raise SystemExit(f'Frozen teacher {arm} ({teacher["name"]}) changed: {problems[:5]}')
-    clock = CLOCKS[args.clock]
+    clock = budget_clock(args.comparisons) if args.comparisons is not None else CLOCKS[args.clock]
     plan = schedule(args.seeds, args.games)
     output.mkdir(parents=True)
     from gaia_rl.versions import runtime_versions
     write_json(output/'manifest.json', {
         'created_at': now(), 'teachers': {arm: {**t, 'fingerprint': fingerprint(t)} for arm, t in teachers.items()},
-        'clock': {'preset': args.clock, **clock}, 'games': args.games, 'seeds': args.seeds, 'schedule': plan,
+        'clock': {'preset': 'comparisons' if args.comparisons is not None else args.clock, **clock},
+        'jobs': args.jobs, 'games': args.games, 'seeds': args.seeds, 'schedule': plan,
         'versions': runtime_versions(), 'training_performed': False})
-    games, pairs_rows = [], []
-    for pair in plan:
-        completed = []
-        for g, game in enumerate(pair['games']):
-            for arm, teacher in teachers.items():
-                if frozen_problems(teacher):
-                    raise SystemExit(f'Frozen teacher {arm} changed during the match; stopping')
-            path = output/f"pair-{pair['pair']:03d}"/f"game-{g}-A{''.join(map(str, game['a_seats']))}"
-            write_json(output/'progress.json', {'pair': pair['pair'], 'game': str(path), 'updated_at': now(),
-                                                'games_done': len(games)})
-            result = play(path, pair['seed'], teachers, set(game['a_seats']), clock)
-            games.append(result)
-            completed.append(result)
+    jobs = [(pair, g, game) for pair in plan for g, game in enumerate(pair['games'])]
+    lock = threading.Lock()
+    finished = []
+
+    def play_one(job):
+        pair, g, game = job
+        for arm, teacher in teachers.items():
+            if frozen_problems(teacher):
+                raise SystemExit(f'Frozen teacher {arm} changed during the match; stopping')
+        path = output/f"pair-{pair['pair']:03d}"/f"game-{g}-A{''.join(map(str, game['a_seats']))}"
+        result = play(path, pair['seed'], teachers, set(game['a_seats']), clock)
+        with lock:
+            finished.append(str(path))
+            write_json(output/'progress.json', {'games_done': len(finished), 'games_planned': len(jobs),
+                                                'last': str(path), 'updated_at': now()})
             print(json.dumps({'game': str(path), 'complete': result['complete'],
                               'scores': result.get('scores'), 'failure': result.get('failure_kind')}), flush=True)
+        return result
+
+    # Games are independent processes; results are consumed in schedule order.
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=args.jobs) as pool:
+        results = list(pool.map(play_one, jobs))
+    games, pairs_rows = results, []
+    for p in range(len(plan)):
+        completed = [r for (pair, _, _), r in zip(jobs, results) if pair['pair'] == plan[p]['pair']]
         if all(r['complete'] for r in completed):
             pairs_rows.append(pair_differences(*completed))
     summary = summarize(pairs_rows, games)
@@ -417,6 +456,9 @@ def main():
     match.add_argument('--games', type=int, required=True, help='N, even: two seat-swapped games per pair')
     match.add_argument('--seeds', nargs='+', required=True, help='Cycled when N/2 exceeds the seed count')
     match.add_argument('--clock', choices=sorted(CLOCKS), default='data')
+    match.add_argument('--comparisons', type=int,
+                       help='Deterministic budget: completed comparisons per decision; ignores --clock')
+    match.add_argument('--jobs', type=int, default=1, help='Games played in parallel')
     match.add_argument('--output', required=True)
     plan = commands.add_parser('plan', help='Resolve teachers and print the schedule; plays nothing')
     for name in ('--teacher-a', '--teacher-b'):

@@ -1,0 +1,18 @@
+{
+  "description": "Teacher B as last measured (B-lite+k+n+f'+g+h+o+p+b'+r+p-fix+k-income): generated tree state-teacher-bghi-20260918 plus the flags the time-budget diagnostic set. The tree is never edited.",
+  "source": "gaia-rl/state-teacher-bghi-20260918",
+  "factory": "state_teacher:StateTeacher",
+  "kwargs": {},
+  "env": {
+    "GAIA_EXPANSION_MODE": "lite",
+    "GAIA_PASS_TIMING": "1",
+    "GAIA_FIXED_INCOME_PLANETS": "1",
+    "GAIA_DIRECT_STOCK_PRICES": "1",
+    "GAIA_FEDERATION_VALUE": "1",
+    "GAIA_DENSITY_BONUS": "0",
+    "GAIA_TOKEN_ORE_PRICE": "1",
+    "GAIA_REACHABLE_PLANETS": "1",
+    "GAIA_FEDERATION_FALLBACK_STABLE": "1",
+    "GAIA_PASS_REALIZED_INCOME": "1"
+  }
+}

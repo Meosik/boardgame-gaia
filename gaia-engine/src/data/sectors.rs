@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::sync::LazyLock;
 
 static SECTORS_TOML: &str = include_str!("../../data/sectors.toml");
 
@@ -9,7 +10,7 @@ pub struct SectorFile {
 
 /// Sector category — standard 19-hex tiles (01-10) or
 /// 3-hex Deep Space tiles (11-18, Lost Fleet expansion).
-#[derive(Debug, Deserialize, PartialEq, Default)]
+#[derive(Debug, Deserialize, PartialEq, Default, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum SectorCategory {
     #[default]
@@ -47,9 +48,10 @@ pub fn load_sectors() -> SectorFile {
 /// The template category for a sector id (1-10 standard, 11-18 Deep Space).
 /// Falls back to `SectorCategory::Standard` for an unknown id.
 pub fn category_for_sector(id: u8) -> SectorCategory {
-    load_sectors()
-        .sectors
-        .into_iter()
+    // Scoring and map lookups call this per sector; parse the embedded source once.
+    static DATA: LazyLock<SectorFile> = LazyLock::new(load_sectors);
+    DATA.sectors
+        .iter()
         .find(|s| s.id == id)
         .map(|s| s.category)
         .unwrap_or_default()
