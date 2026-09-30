@@ -5,6 +5,7 @@ pub mod bidding;
 pub mod data;
 pub mod error;
 pub mod faction;
+pub(crate) mod fast_hash;
 pub mod game_state;
 pub mod map;
 pub mod randomizer;

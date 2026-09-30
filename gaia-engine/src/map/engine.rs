@@ -10,7 +10,8 @@ use crate::randomizer::{
     lost_fleet_sector_origins, GameSetup, Randomizer, SectorPlacement, ADVANCED_TECH_TILE_IDS,
 };
 use crate::setup_policy::SetupPolicy;
-use std::collections::{HashMap, HashSet, VecDeque};
+use crate::fast_hash::{FastMap as HashMap, FastSet as HashSet};
+use std::collections::VecDeque;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct MapEngine;
@@ -23,7 +24,7 @@ impl MapEngine {
         start_hexes: &[HexCoord],
         range: u8,
     ) -> HashSet<HexCoord> {
-        let mut visited: HashMap<HexCoord, u8> = HashMap::new();
+        let mut visited: HashMap<HexCoord, u8> = HashMap::default();
         let mut queue: VecDeque<(HexCoord, u8)> = VecDeque::new();
 
         for &start in start_hexes {
@@ -67,7 +68,7 @@ impl MapEngine {
         if start_hexes.contains(&target) {
             return Some(0);
         }
-        let mut visited: HashMap<HexCoord, u8> = HashMap::new();
+        let mut visited: HashMap<HexCoord, u8> = HashMap::default();
         let mut queue: VecDeque<(HexCoord, u8)> = VecDeque::new();
 
         for &start in start_hexes {
@@ -106,7 +107,7 @@ impl MapEngine {
             return true;
         }
         let hex_set: HashSet<HexCoord> = hexes.iter().copied().collect();
-        let mut visited: HashSet<HexCoord> = HashSet::new();
+        let mut visited: HashSet<HexCoord> = HashSet::default();
         let mut queue: VecDeque<HexCoord> = VecDeque::new();
 
         let start = match hexes.first() {
@@ -210,7 +211,7 @@ impl MapEngine {
 
     /// Count distinct sectors containing at least one structure owned by `player`.
     pub fn sectors_occupied(board: &BoardState, player: PlayerId) -> usize {
-        let mut sector_ids: HashSet<u8> = HashSet::new();
+        let mut sector_ids: HashSet<u8> = HashSet::default();
         for sector in &board.sectors {
             let has_structure = board.hexes.values().any(|hex| {
                 Self::sector_contains_hex(sector, hex.coord)
@@ -301,9 +302,9 @@ impl MapEngine {
     pub fn build_board(sector_layout: &[SectorPlacement]) -> BoardState {
         let mut board = BoardState {
             sectors: Vec::new(),
-            hexes: HashMap::new(),
+            hexes: std::collections::HashMap::new(),
             lost_planet: None,
-            spaceship_tiles: HashMap::new(),
+            spaceship_tiles: std::collections::HashMap::new(),
         };
         let sector_file = load_sectors();
         for placement in sector_layout {
@@ -358,7 +359,7 @@ impl MapEngine {
         let full_union: HashSet<HexCoord> = disks.iter().flatten().copied().collect();
 
         let n = origins.len();
-        let mut adjacency: Vec<HashSet<usize>> = vec![HashSet::new(); n];
+        let mut adjacency: Vec<HashSet<usize>> = vec![HashSet::default(); n];
         for i in 0..n {
             for j in (i + 1)..n {
                 if Self::sectors_tight_adjacent(origins[i], origins[j]) {
@@ -378,7 +379,7 @@ impl MapEngine {
                     if k <= j || !adjacency[i].contains(&k) {
                         continue;
                     }
-                    let mut boundary: HashSet<HexCoord> = HashSet::new();
+                    let mut boundary: HashSet<HexCoord> = HashSet::default();
                     for h in disks[i]
                         .iter()
                         .chain(disks[j].iter())
@@ -580,7 +581,7 @@ impl MapEngine {
         let cycle: [HexCoord; 8] = std::array::from_fn(|i| ring[RING_CYCLE[i]]);
 
         let disk = |center: HexCoord| -> HashSet<HexCoord> {
-            let mut cells = HashSet::new();
+            let mut cells = HashSet::default();
             for dq in -2..=2i32 {
                 for dr in -2..=2i32 {
                     let candidate = HexCoord::new(center.q + dq, center.r + dr);

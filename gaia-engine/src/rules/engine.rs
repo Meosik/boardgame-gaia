@@ -22,7 +22,8 @@ use crate::map::MapEngine;
 use crate::scoring::ScoringEngine;
 use crate::setup_policy::SetupPolicy;
 use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use crate::fast_hash::{FastMap as HashMap, FastSet as HashSet};
+use std::collections::{BinaryHeap, VecDeque};
 
 #[cfg(test)]
 #[path = "tech_tile_audit_tests.rs"]
@@ -4487,7 +4488,7 @@ pub(crate) struct SatelliteMemoScope(Option<SatelliteMemo>);
 
 impl SatelliteMemoScope {
     pub(crate) fn enter() -> Self {
-        Self(SATELLITE_MEMO.with(|memo| memo.borrow_mut().replace(HashMap::new())))
+        Self(SATELLITE_MEMO.with(|memo| memo.borrow_mut().replace(HashMap::default())))
     }
 }
 
@@ -6011,7 +6012,7 @@ fn count_colonized_deep_space_sectors(state: &GameState, player_id: PlayerId) ->
     let Some(player) = state.player(player_id) else {
         return 0;
     };
-    let mut sector_ids: std::collections::HashSet<u8> = std::collections::HashSet::new();
+    let mut sector_ids: std::collections::HashSet<u8> = std::collections::HashSet::default();
     for structure in &player.structures {
         if let Some(sector_id) = MapEngine::sector_id_at(&state.board, structure.hex) {
             if crate::data::category_for_sector(sector_id) == crate::data::SectorCategory::DeepSpace

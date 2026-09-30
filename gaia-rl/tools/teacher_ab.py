@@ -225,9 +225,10 @@ def worker(args):
     sys.path.insert(0, spec['source'])
     clock_spec = json.loads(args.clock)
     if clock_spec.pop('fast_copy', False):
-        # Before any teacher import, so `from copy import deepcopy` binds the fast path.
-        import fast_copy
-        fast_copy.install()
+        # Before any other teacher import: `from copy import deepcopy` and
+        # `from strategy_teacher import distance` bind the patched versions.
+        import fast_teacher
+        fast_teacher.install()
     from importlib import import_module
     from gaia_rl import Environment
     from faction_teachers.clock import AdaptiveClock
@@ -473,7 +474,7 @@ def main():
                        help='Deterministic budget: completed comparisons per decision; ignores --clock')
     match.add_argument('--jobs', type=int, default=1, help='Games played in parallel')
     match.add_argument('--fast-copy', action='store_true',
-                       help='JSON fast path for copy.deepcopy in teacher workers (tools/fast_copy.py)')
+                       help='Decision-preserving teacher speedups in workers (tools/fast_teacher.py)')
     match.add_argument('--output', required=True)
     plan = commands.add_parser('plan', help='Resolve teachers and print the schedule; plays nothing')
     for name in ('--teacher-a', '--teacher-b'):

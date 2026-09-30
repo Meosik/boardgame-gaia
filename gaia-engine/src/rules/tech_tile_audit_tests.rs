@@ -5,6 +5,7 @@ use crate::game_state::{
 };
 use crate::randomizer::{Randomizer, ADVANCED_TECH_TILE_IDS};
 use crate::test_utils::builders::GameStateBuilder;
+use std::collections::HashMap; // public state types keep the std hasher
 use std::path::Path;
 
 const STANDARD_IDS: [u8; 12] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];

@@ -175,3 +175,20 @@ A의 롤아웃 1개(두 수입 경계까지)는 약 37초였다. py-spy 샘플�
   평가식 교체(B, −3.5)보다 훨씬 크다.
 - 그동안의 문제는 평가식이 아니라 탐색이 시간 안에 돌지 못한 것이었다. 성능 개선의 주 경로는
   탐색량(속도)이다.
+
+## 추가 가속 (결과 불변) — 목표: 결정 평균 3초·최대 5초
+
+| 누적 변경 | 롤아웃 6개 |
+|---|---:|
+| 위까지(Dial + 위성 메모 + fast_copy) | 61초 |
+| + `tools/fast_teacher.py`: `waiting_value` 메모(위성 수·토큰만 읽음) | 47초 |
+| + 엔진 내부 작업용 HashMap/HashSet을 FxHash로(`gaia_engine::fast_hash`; 공개 상태 타입은 std 유지) | 35초 |
+| + `strategy_teacher.distance` 메모(순수 함수, 좌표 문자열 재파싱 제거) | **33초** (기준 224초 대비 6.8배) |
+
+- 매 단계 롤아웃 6개 결과 JSON이 기준과 바이트 단위로 동일. 무작위 20판·facts 지문 동일.
+- A 대 A `--comparisons 0 --fast-copy` 180결정 수순·점수 동일, 판당 95초 → 25초.
+- 비교 2개 결정(R2/R4/R5 저장 상태): 10.5/10.1/24.4초 → 5.5/5.7/15.8초, 선택한 수 동일.
+- `cargo test --release -p gaia-engine`, `gaia-rl` Rust 8건, clippy `--lib --tests -D warnings`,
+  워크스페이스 빌드, `tools.test_fast_copy`·`tools.test_teacher_ab` 통과.
+- `--fast-copy`는 이제 `fast_teacher`(fast_copy 포함)를 설치한다.
+- 남은 시간은 동결 A의 Python 점수 계산에 넓게 분포한다(단일 병목 없음).

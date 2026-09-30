@@ -221,7 +221,7 @@ pub(super) fn federation_candidates(state: &GameState, player_id: PlayerId) -> R
         else { usize::from(player.resources.power.bowl1) + usize::from(player.resources.power.bowl2) + usize::from(player.resources.power.bowl3) };
     let supply_left = 25usize.saturating_sub(state.board.hexes.values().filter(|h| h.satellites.contains(&player_id)).count());
     let max_satellites = available.min(supply_left);
-    let mut pair_distances = HashMap::new();
+    let mut pair_distances = HashMap::default();
     for &source in index.values().filter(|&&v| graph.weight[v] == 0) {
         let mut distances = vec![INF; graph.coords.len()];
         distances[source] = 0;

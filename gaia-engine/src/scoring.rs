@@ -5,7 +5,7 @@ use crate::game_state::{
 };
 use crate::map::MapEngine;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use crate::fast_hash::FastSet as HashSet;
 
 /// Auditable components of one player's final score. `gameplay_vp` is the VP
 /// already accumulated before final scoring; every other field is added at
@@ -40,7 +40,7 @@ impl ScoringEngine {
             None => return vec![],
         };
 
-        let mut totals: std::collections::HashMap<PlayerId, i32> = std::collections::HashMap::new();
+        let mut totals: std::collections::HashMap<PlayerId, i32> = std::collections::HashMap::default();
         for event in &state.event_log {
             if let GameEvent::VpAwarded {
                 player,
@@ -71,7 +71,7 @@ impl ScoringEngine {
     /// faction final-scoring hook.
     pub fn calculate_final_scoring_breakdown(state: &GameState) -> [FinalScoreBreakdown; 4] {
         let mut final_tile_scores: std::collections::HashMap<PlayerId, i32> =
-            std::collections::HashMap::new();
+            std::collections::HashMap::default();
         for tile in &state.final_scoring_tiles {
             apply_final_tile_vp(
                 state,
