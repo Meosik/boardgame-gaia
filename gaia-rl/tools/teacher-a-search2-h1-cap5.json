@@ -1,0 +1,10 @@
+{
+  "description": "Frozen A, 2 comparisons at the first income boundary, with a 5-second safety cap per decision (root ranking always completes; an unfinished comparison is abandoned). Candidate live-play setting.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "four_factions.timed:TimedPreparationTeacher",
+  "kwargs": {"bgg_openings": true, "shared_factions": true},
+  "comparisons": 2,
+  "horizon_incomes": 1,
+  "max_seconds": 5,
+  "frozen": true
+}

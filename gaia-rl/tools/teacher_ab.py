@@ -91,9 +91,12 @@ def resolve_teacher(name):
     horizon = spec.get('horizon_incomes')
     if horizon is not None and horizon not in (1, 2):
         raise ValueError(f'Teacher {label}: horizon_incomes must be 1 or 2')
+    cap = spec.get('max_seconds')
+    if cap is not None and not (isinstance(cap, (int, float)) and not isinstance(cap, bool) and cap > 0):
+        raise ValueError(f'Teacher {label}: max_seconds must be positive')
     return {'name': label, 'source': str(source), 'factory': spec['factory'],
             'kwargs': spec.get('kwargs', {}), 'env': env, 'comparisons': comparisons,
-            'horizon_incomes': horizon,
+            'horizon_incomes': horizon, 'max_seconds': cap,
             'frozen': bool(spec.get('frozen', False))}
 
 
@@ -244,7 +247,7 @@ def worker(args):
     if comparisons is not None:
         # Deterministic count budget instead of wall-clock deadlines (tools/budget_teacher.py).
         import budget_teacher
-        budget_teacher.install(comparisons)
+        budget_teacher.install(comparisons, max_seconds=spec.get('max_seconds'))
         if spec.get('horizon_incomes') is not None:
             budget_teacher.set_horizon(spec['horizon_incomes'])
     clock = AdaptiveClock(**clock_spec)

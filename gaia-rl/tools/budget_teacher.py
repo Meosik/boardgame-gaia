@@ -24,6 +24,7 @@ import math
 import time
 
 _installed = None
+_max_seconds = None
 
 
 def _choose(self, snapshot):
@@ -43,7 +44,10 @@ def _choose(self, snapshot):
             state['stopped'] = True
             raise SearchExpired('comparison budget reached')
 
-    kwargs = dict(soft_deadline=math.inf, hard_deadline=math.inf, bgg_openings=self.bgg_openings,
+    # Optional wall-clock safety cap: the root ranking always completes, then an unfinished
+    # comparison is abandoned at the cap and the best completed result is kept.
+    hard_deadline = math.inf if _max_seconds is None else started+_max_seconds
+    kwargs = dict(soft_deadline=math.inf, hard_deadline=hard_deadline, bgg_openings=self.bgg_openings,
                   shared_factions=self.shared_factions, adaptive=True, allocation=None,
                   delta_factions=self.delta_factions, fixed_openings=self.fixed_openings,
                   observed_factions=self.observed_factions)
@@ -72,6 +76,8 @@ def _choose(self, snapshot):
                        'comparison_budget': budget,
                        'completed_comparisons': len(latest.get('plans', ())),
                        'budget_stopped': state['stopped'],
+                       'time_capped': (_max_seconds is not None and not state['stopped']
+                                       and time.monotonic() >= hard_deadline),
                        'timing': {'seconds': elapsed, 'quick_fallback_used': False}}
     return snapshot['decision_id'], index
 
@@ -98,9 +104,16 @@ def set_horizon(incomes):
     preparation.reached_horizon = reached_horizon
 
 
-def install(comparisons):
-    """Patch the tree's TimedPreparationTeacher in this process; subclasses inherit it."""
-    global _installed
+def install(comparisons, max_seconds=None):
+    """Patch the tree's TimedPreparationTeacher in this process; subclasses inherit it.
+
+    `max_seconds` adds a safety cap for live play. Decisions that hit it are no longer
+    deterministic (they depend on machine speed); all others are unchanged.
+    """
+    global _installed, _max_seconds
+    if max_seconds is not None and not (isinstance(max_seconds, (int, float)) and max_seconds > 0):
+        raise ValueError('max_seconds must be positive')
+    _max_seconds = max_seconds
     if type(comparisons) is not int or comparisons < 0:
         raise ValueError('A nonnegative integer comparison budget is required')
     from four_factions.timed import TimedPreparationTeacher

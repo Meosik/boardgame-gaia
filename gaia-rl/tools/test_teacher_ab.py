@@ -135,6 +135,18 @@ class TeacherSpecTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 ab.resolve_teacher(str(bad))
 
+    def test_safety_cap_spec_is_validated(self):
+        spec = ab.resolve_teacher(str(Path(ab.__file__).with_name('teacher-a-search2-h1-cap5.json')))
+        self.assertEqual(spec['max_seconds'], 5)
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)/'teacher'
+            source.mkdir()
+            for cap in (0, -1, True, '5'):
+                bad = Path(temporary)/'bad.json'
+                bad.write_text(json.dumps({'source': str(source), 'factory': 'm:f', 'max_seconds': cap}))
+                with self.subTest(cap=cap), self.assertRaises(ValueError):
+                    ab.resolve_teacher(str(bad))
+
     def test_comparison_budget_clock_is_a_count_not_a_deadline(self):
         clock = ab.budget_clock(0)
         self.assertEqual(clock['comparisons'], 0)
