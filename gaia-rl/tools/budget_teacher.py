@@ -76,6 +76,28 @@ def _choose(self, snapshot):
     return snapshot['decision_id'], index
 
 
+def set_horizon(incomes):
+    """Compare every route at the first (1) or second (2, the teacher's own) income boundary.
+
+    The rollout stops when `reached_horizon(state, round+2)`; with 1 the check uses
+    round+1 instead, for the baseline route and every alternative alike, so all
+    comparisons still end at one shared boundary. This changes decisions and must be
+    judged by matches. Late-game routes then stop at the next round instead of game end.
+    """
+    if incomes not in (1, 2):
+        raise ValueError('horizon_incomes must be 1 or 2')
+    import four_factions.preparation as preparation
+    original = getattr(preparation.reached_horizon, '__wrapped__', preparation.reached_horizon)
+    if incomes == 2:
+        preparation.reached_horizon = original
+        return
+
+    def reached_horizon(state, target_round):
+        return original(state, target_round-1)
+    reached_horizon.__wrapped__ = original
+    preparation.reached_horizon = reached_horizon
+
+
 def install(comparisons):
     """Patch the tree's TimedPreparationTeacher in this process; subclasses inherit it."""
     global _installed

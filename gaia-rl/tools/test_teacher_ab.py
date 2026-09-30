@@ -124,6 +124,17 @@ class TeacherSpecTests(unittest.TestCase):
         self.assertTrue(spec['frozen'])
         self.assertIsNone(ab.resolve_teacher('baseline')['comparisons'])
 
+    def test_one_income_horizon_spec_is_validated(self):
+        spec = ab.resolve_teacher(str(Path(ab.__file__).with_name('teacher-a-search2-h1.json')))
+        self.assertEqual((spec['comparisons'], spec['horizon_incomes']), (2, 1))
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)/'teacher'
+            source.mkdir()
+            bad = Path(temporary)/'bad.json'
+            bad.write_text(json.dumps({'source': str(source), 'factory': 'm:f', 'horizon_incomes': 3}))
+            with self.assertRaises(ValueError):
+                ab.resolve_teacher(str(bad))
+
     def test_comparison_budget_clock_is_a_count_not_a_deadline(self):
         clock = ab.budget_clock(0)
         self.assertEqual(clock['comparisons'], 0)

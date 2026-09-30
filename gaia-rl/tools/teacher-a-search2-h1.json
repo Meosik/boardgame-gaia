@@ -1,0 +1,9 @@
+{
+  "description": "Frozen A, 2 completed comparisons per decision, each route compared at the first income boundary instead of the second. Faster; strength must be re-measured.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "four_factions.timed:TimedPreparationTeacher",
+  "kwargs": {"bgg_openings": true, "shared_factions": true},
+  "comparisons": 2,
+  "horizon_incomes": 1,
+  "frozen": true
+}
