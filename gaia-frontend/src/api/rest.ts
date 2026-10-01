@@ -48,6 +48,13 @@ export const api = {
       body: JSON.stringify({ nickname, seed, setup_mode: setupMode, full_setup: true }),
     });
   },
+  /** A game against three AI seats (server needs the AI pool); random map and factions. */
+  createAiGame(nickname: string): Promise<DevGameResponse> {
+    return request(`${BASE}/dev-games`, {
+      method: 'POST',
+      body: JSON.stringify({ nickname, ai_opponents: true }),
+    });
+  },
   createDevGame(faction = 'Terrans', seed = 'gaia-ui-dev'): Promise<DevGameResponse> {
     return request(`${BASE}/dev-games`, {
       method: 'POST',

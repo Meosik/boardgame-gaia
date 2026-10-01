@@ -37,6 +37,7 @@ interface RoomStore {
       manualControl?: boolean,
       options?: { name?: string; password?: string },
     ) => Promise<void>;
+    createAiGame: (nickname: string) => Promise<void>;
     joinRoom: (code: string, nickname: string, sessionToken?: string, password?: string) => Promise<void>;
     regenerateSetup: (seed?: string) => Promise<void>;
     fetchPreviewBoard: () => Promise<void>;
@@ -94,6 +95,24 @@ export const useRoomStore = create<RoomStore>()(
           if (saved.roomCode && saved.playerId !== null && saved.sessionToken) {
             rememberRoom({ roomCode: saved.roomCode, playerId: saved.playerId, sessionToken: saved.sessionToken, nickname: saved.nickname, manualControl: saved.manualControl });
           }
+        },
+
+        async createAiGame(nickname) {
+          const res = await api.createAiGame(nickname);
+          set({
+            manualControl: false,
+            roomCode: res.room_code,
+            playerId: res.player_id,
+            sessionToken: res.session_token,
+            gameSetup: res.game_setup,
+            playerCount: res.players.length,
+            nickname,
+            lobbyPlayers: res.players,
+            hostPlayerId: res.host_player_id,
+            roomState: 'faction_selection',
+          });
+          rememberRoom({ roomCode: res.room_code, playerId: res.player_id, sessionToken: res.session_token,
+            nickname, manualControl: false });
         },
 
         async joinRoom(code, nickname, sessionToken, password) {
