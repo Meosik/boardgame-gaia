@@ -25,12 +25,19 @@ fn lineup(seed: &str) -> Result<Vec<FactionId>, Box<dyn std::error::Error>> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let prefix = std::env::args().nth(1).ok_or("seed prefix required")?;
     let limit: usize = std::env::args().nth(2).ok_or("limit required")?.parse()?;
-    let targets = [
-        FactionId::Xenos,
-        FactionId::HadschHallas,
-        FactionId::Terrans,
-        FactionId::Taklons,
-    ];
+    // Optional third argument: comma-separated faction names (default: the approved quartet).
+    let targets: Vec<FactionId> = match std::env::args().nth(3) {
+        Some(names) => names
+            .split(',')
+            .map(|name| serde_json::from_value(serde_json::Value::String(name.trim().to_string())))
+            .collect::<Result<_, _>>()?,
+        None => vec![
+            FactionId::Xenos,
+            FactionId::HadschHallas,
+            FactionId::Terrans,
+            FactionId::Taklons,
+        ],
+    };
     for attempt in 0..limit {
         let seed = format!("{prefix}-{attempt}");
         let factions = lineup(&seed)?;
