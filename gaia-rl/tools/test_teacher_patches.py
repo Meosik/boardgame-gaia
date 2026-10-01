@@ -85,3 +85,45 @@ class SymmetricPassTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class GeodensGuideTests(unittest.TestCase):
+    def test_geodens_proposals_put_cheap_new_types_first_and_leave_others_alone(self):
+        from faction_teachers.paths import goals as tree_goals
+        checked = 0
+        for _, snapshot in play(rounds=3):
+            state = snapshot['state']
+            player = state['players'][snapshot['player']]
+            if 'ActionPhase' not in state['phase']:
+                continue
+            original = tree_goals(snapshot)
+            ordered = tp.geodens_goals(snapshot, original)
+            if player['faction'] != 'Geodens':
+                self.assertIs(ordered, original)
+                continue
+            self.assertTrue(set(original) <= set(ordered))
+            costs = [tp._colony_cost(state, player, tp._target_coord(g)) for g in ordered if tp._target_coord(g)]
+            self.assertEqual(costs, sorted(costs))
+            checked += 1
+        self.assertGreater(checked, 0)
+
+    def test_only_geodens_rollouts_use_the_second_income_boundary(self):
+        import four_factions.preparation as preparation
+        states = {s['state']['players'][s['player']]['faction']: s for _, s in play(rounds=1)}
+        budget_teacher.set_horizon(1)
+        tp.install_geodens_guide()
+        seen = {}
+        configured = preparation.reached_horizon
+
+        def fake(env, snapshot, *args, **kwargs):
+            seen[snapshot['state']['players'][snapshot['player']]['faction']] = preparation.reached_horizon
+            return {}
+        preparation.rollout.__wrapped__, original = fake, preparation.rollout.__wrapped__
+        try:
+            for faction, snapshot in states.items():
+                preparation.rollout(None, snapshot)
+        finally:
+            preparation.rollout.__wrapped__ = original
+        self.assertIs(seen['Geodens'], configured.__wrapped__)
+        self.assertIs(seen['Taklons'], configured)
+        self.assertIs(preparation.reached_horizon, configured)

@@ -50,6 +50,8 @@ def main():
     parser.add_argument('--top', type=int, default=5)
     parser.add_argument('--symmetric-pass', action='store_true',
                         help='Apply tools/teacher_patches.py symmetric_pass')
+    parser.add_argument('--geodens-guide', action='store_true',
+                        help='Apply tools/teacher_patches.py geodens_guide (includes symmetric_pass)')
     args = parser.parse_args()
 
     import fast_teacher
@@ -62,7 +64,9 @@ def main():
     budget_teacher.install(comparisons)
     budget_teacher.set_horizon(horizon)
     env = Environment(args.seed, 2000)
-    if args.symmetric_pass:
+    if args.geodens_guide:
+        from teacher_patches import geodens_guide as factory
+    elif args.symmetric_pass:
         from teacher_patches import symmetric_pass as factory
     else:
         factory = TimedPreparationTeacher
@@ -70,8 +74,12 @@ def main():
     teacher.bind(env)
     snapshot = json.loads(env.snapshot_json())
     passes, choices, started = [], Counter(), time.monotonic()
+    from collections import defaultdict
+    thinking = defaultdict(list)
     while not env.is_terminal():
+        tick = time.monotonic()
         decision_id, index = teacher.choose(snapshot)
+        thinking[snapshot['state']['players'][snapshot['player']]['faction']].append(time.monotonic()-tick)
         chosen = snapshot['candidates'][index]
         seat = snapshot['player']
         faction = snapshot['state']['players'][seat]['faction']
@@ -111,6 +119,8 @@ def main():
     result = {'seed': args.seed, 'level': args.level, 'seconds': round(time.monotonic()-started, 1),
               'final_scores': {state['players'][i]['faction']: final.get(i) for i in range(4)},
               'end': [player_summary(state, i) for i in range(4)],
+              'thinking': {f: {'decisions': len(v), 'mean': round(sum(v)/len(v), 2), 'max': round(max(v), 1)}
+                           for f, v in thinking.items()},
               'choices': {f'{f}:{k}': n for (f, k), n in sorted(choices.items())},
               'passes': passes}
     with open(args.output, 'w') as out:

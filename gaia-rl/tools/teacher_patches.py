@@ -84,3 +84,108 @@ def symmetric_pass(seed, **kwargs):
     from four_factions.timed import TimedPreparationTeacher
     install_symmetric_pass()
     return TimedPreparationTeacher(seed, **kwargs)
+
+
+# ── geodens_guide ──────────────────────────────────────────────────────────────────────
+# Opt-in, on top of symmetric_pass. Uses the uiqoo guides B14 (Geodens) and B19 only to
+# ORDER proposals and to lengthen Geodens' own look-ahead; it adds no value term, bonus,
+# coefficient or prohibition. At the normal level a decision compares the current choice
+# with the first proposal only, so the order decides which plan is examined at all.
+#
+# 1. Order (B14 §2–3, B19): once the Planetary Institute stands, Terraforming 3 and
+#    Navigation 2 come before colonising (B14: "테라포밍을 시작하는 라운드에 테라포밍 3단계"),
+#    then new-type colonies cheapest first (terraform steps at the current level plus the
+#    QIC needed for range; a Gaia planet counts its QIC). From round 4, the next AI level
+#    (B14 §3.3: QIC actions every round from round 4). Before the PI, the tree's existing
+#    "PI, then a new type" plans keep their place, now cheapest target first.
+# 2. Look-ahead: Geodens pays for terraforming now and is repaid by the PI's 3 knowledge per
+#    new type and later incomes, so Geodens decisions compare routes at the second income
+#    boundary (the frozen teacher's own horizon) while other seats keep the configured one.
+
+GEODENS_TWO_INCOMES = frozenset({'Geodens'})
+GUIDE = ('B14', 'B19')
+
+
+def _colony_cost(state, player, coord):
+    """(reachable now?, ore-equivalent steps + QIC) for building on `coord`; facts only."""
+    from economy.teacher import RING, path_distance
+    from four_factions.value import navigation
+    planet = state['board']['hexes'][coord]['planet']
+    starts = [s['hex'] for s in player['structures']]
+    qic = max(0, (path_distance(state, starts, coord)-navigation(player)+1)//2)
+    kind = planet['planet_type']
+    if kind == 'Gaia':
+        steps, qic = 0, qic+1
+    elif kind in RING:
+        from faction_teachers.profiles import profiles
+        home = profiles()[player['faction']].home
+        gap = abs(RING.index(home)-RING.index(kind))
+        steps = min(gap, 7-gap)
+    else:
+        steps = 3   # Asteroid / ProtoPlanet / Lost planet: not a ring colour; examined last
+    return (qic > player['resources']['qic'], steps+qic)
+
+
+def _target_coord(goal):
+    for step in (goal, *goal.steps):
+        if step.family == 'faction-action' and step.target == 'Build' and step.coord:
+            return step.coord
+    return None
+
+
+def geodens_goals(snapshot, original):
+    from four_factions.preparation import Goal
+    state, actor = snapshot['state'], snapshot['player']
+    player = state['players'][actor]
+    if player['faction'] != 'Geodens':
+        return original
+    tracks = player['research_tracks']
+    pi = any(s['kind'] == 'PlanetaryInstitute' for s in player['structures'])
+    colonies = [g for g in original if _target_coord(g)]
+    others = [g for g in original if not _target_coord(g)]
+    colonies.sort(key=lambda g: _colony_cost(state, player, _target_coord(g)))
+    research = []
+    if pi:
+        if tracks['terraforming'] < 3:
+            research.append(Goal('Geodens-Terraforming-3', 'research', target='Terraforming', level=3,
+                                 sources=GUIDE))
+        if tracks['navigation'] < 2:
+            research.append(Goal('Geodens-Navigation-2', 'research', target='Navigation', level=2,
+                                 sources=GUIDE))
+    if state['round'] >= 4 and tracks['ai'] < 5:
+        research.append(Goal(f'Geodens-ArtificialIntelligence-{tracks["ai"]+1}', 'research',
+                             target='ArtificialIntelligence', level=tracks['ai']+1, sources=GUIDE))
+    return research + colonies + others
+
+
+def install_geodens_guide():
+    import four_factions.preparation as preparation
+    import faction_teachers.paths as paths
+    original_goals = getattr(paths.goals, '__wrapped__', paths.goals)
+
+    def goals(snapshot):
+        return geodens_goals(snapshot, original_goals(snapshot))
+    goals.__wrapped__ = original_goals
+    paths.goals = goals
+
+    original_rollout = getattr(preparation.rollout, '__wrapped__', preparation.rollout)
+
+    def rollout(env, snapshot, *args, **kwargs):
+        faction = snapshot['state']['players'][snapshot['player']]['faction']
+        if faction not in GEODENS_TWO_INCOMES:
+            return rollout.__wrapped__(env, snapshot, *args, **kwargs)
+        configured = preparation.reached_horizon   # budget_teacher.set_horizon may wrap it
+        preparation.reached_horizon = getattr(configured, '__wrapped__', configured)
+        try:
+            return rollout.__wrapped__(env, snapshot, *args, **kwargs)
+        finally:
+            preparation.reached_horizon = configured
+    rollout.__wrapped__ = original_rollout
+    preparation.rollout = rollout
+
+
+def geodens_guide(seed, **kwargs):
+    """Teacher factory: symmetric_pass plus the Geodens proposal order and look-ahead."""
+    teacher = symmetric_pass(seed, **kwargs)
+    install_geodens_guide()
+    return teacher

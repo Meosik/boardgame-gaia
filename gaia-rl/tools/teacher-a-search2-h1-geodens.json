@@ -1,0 +1,9 @@
+{
+  "description": "symmetric_pass teacher plus tools/teacher_patches.py geodens_guide: B14/B19 order Geodens proposals (T3/N2 after the PI, cheapest new planet type first, AI from round 4) and Geodens compares routes at the second income boundary. Other factions are unchanged from symmetric_pass.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:geodens_guide",
+  "kwargs": {"bgg_openings": true, "shared_factions": true},
+  "comparisons": 2,
+  "horizon_incomes": 1,
+  "frozen": true
+}
