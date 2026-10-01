@@ -47,3 +47,18 @@ GAIA_ENGINE_FIXES_2=1 .venv/bin/python tools/teacher_ab.py run \
     geo-quartet-4513 geo-quartet-5088 geo-quartet-7532 geo-quartet-7597 geo-quartet-7615 geo-quartet-9108 geo-quartet-9718 \
   --comparisons 2 --jobs 4 --fast-copy --output runs/ab-sympass-geo-quartet
 ```
+
+## A/B result (user run, normal level, 12 seeds, 11 complete pairs, 1 timeout pair)
+
+| Faction | Pairs | B−A (sympass − A) | 95% CI |
+|---|---:|---:|---|
+| Geodens | 11 | +11.2 | [−0.9, +23.3] |
+| Taklons | 11 | +9.3 | [−3.7, +22.3] |
+| Terrans | 11 | +10.5 | [+3.4, +17.7] |
+| Xenos (not `potential`-based; control) | 11 | −0.3 | [−11.8, +11.3] |
+| **All seats** | 11 | **+7.7** | **[+0.1, +15.2]** |
+
+The three `potential`-based factions gain 9–11 VP; Xenos, whose evaluator is unaffected,
+does not move, as expected for a correction specific to `potential`. Adopted: the live AI
+worker (`tools/ai_worker.py`) now builds its teacher with `symmetric_pass`. Geodens remains
+the weakest seat; its guide (B14) is not yet applied (see Finding 2).

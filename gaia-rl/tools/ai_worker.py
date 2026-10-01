@@ -9,7 +9,8 @@ Reply    {"ok": true, "decision": {"phase": "Game", "action": {...}}, "seconds":
 Request  {"op": "forget", "room": "AB12"}   drop that room's teacher memory
 Request  {"op": "ping"}
 
-Levels: "easy" = the frozen teacher's one-step ranking only; "normal" = 2 completed
+Both levels use the frozen teacher with tools/teacher_patches.py symmetric_pass.
+Levels: "easy" = the teacher's one-step ranking only; "normal" = 2 completed
 comparisons at the next income boundary with a 5 s cap (cycle 016: +21.8 VP/seat over
 easy without the cap, -3.8 for the cap). Run with
 PYTHONPATH=python:baseline-teacher-20260917:tools from gaia-rl/.
@@ -72,7 +73,8 @@ def main():
     fast_teacher.install()
     import budget_teacher
     from gaia_rl import Environment
-    from four_factions.timed import TimedPreparationTeacher
+    # Cycle 017: the symmetric-pass correction (+7.7 VP/seat, 95% CI [+0.1, +15.2]).
+    from teacher_patches import symmetric_pass as make_teacher
 
     teachers = {}
     out = sys.stdout
@@ -116,7 +118,7 @@ def main():
             room = request['room']
             teacher = teachers.pop(room, None)
             if teacher is None:
-                teacher = TimedPreparationTeacher(room, bgg_openings=True, shared_factions=True)
+                teacher = make_teacher(room, bgg_openings=True, shared_factions=True)
             teachers[room] = teacher          # most recently used last
             while len(teachers) > MAX_ROOMS:
                 teachers.pop(next(iter(teachers)))
