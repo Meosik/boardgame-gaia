@@ -45,5 +45,5 @@ GAIA_ENGINE_FIXES_2=1 .venv/bin/python tools/teacher_ab.py run \
   --teacher-a tools/teacher-a-search2-h1.json --teacher-b tools/teacher-a-search2-h1-sympass.json \
   --games 24 --seeds geo-quartet-24 geo-quartet-340 geo-quartet-2090 geo-quartet-2683 geo-quartet-4321 \
     geo-quartet-4513 geo-quartet-5088 geo-quartet-7532 geo-quartet-7597 geo-quartet-7615 geo-quartet-9108 geo-quartet-9718 \
-  --jobs 4 --fast-copy --output runs/ab-sympass-geo-quartet
+  --comparisons 2 --jobs 4 --fast-copy --output runs/ab-sympass-geo-quartet
 ```
