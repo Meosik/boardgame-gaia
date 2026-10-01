@@ -23,6 +23,7 @@ impl FactionSelectionService {
         command_id: CommandId,
         expected_revision: Revision,
     ) -> CommandResult {
+        let ai_seats = state.ai.is_some();
         let outcome =
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
                 if room.state != RoomState::FactionSelection {
@@ -41,7 +42,7 @@ impl FactionSelectionService {
                     action.clone(),
                 )?;
 
-                if let Some(human_player) = dev_human_player {
+                if let Some(human_player) = dev_human_player.filter(|_| !ai_seats) {
                     events.extend(auto_advance_dev_setup(game_state, human_player)?);
                 }
 
@@ -50,7 +51,7 @@ impl FactionSelectionService {
                     events.extend(gaia_engine::RuleEngine::start_first_round(game_state)?);
                 }
 
-                if let Some(human_player) = dev_human_player {
+                if let Some(human_player) = dev_human_player.filter(|_| !ai_seats) {
                     events.extend(auto_advance_dev_actions(room, human_player)?);
                 }
 
@@ -59,6 +60,7 @@ impl FactionSelectionService {
             .await?;
 
         broadcast_snapshot(state, room_code, outcome.revision).await;
+        crate::ai::spawn_driver(state.clone(), room_code.to_string());
         Ok(outcome)
     }
 }

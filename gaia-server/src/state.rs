@@ -14,6 +14,8 @@ pub struct AppState {
     pub rooms: Arc<RwLock<RoomManager>>,
     pub sessions: Arc<SessionManager>,
     pub event_bus: Arc<EventBus>,
+    /// Live AI seats; `None` unless `GAIA_AI_DIR` is configured (see `crate::ai`).
+    pub ai: Option<Arc<crate::ai::AiPool>>,
 }
 
 impl AppState {
@@ -23,6 +25,10 @@ impl AppState {
             db,
             rooms: Arc::new(RwLock::new(RoomManager::new())),
             event_bus: Arc::new(EventBus::new()),
+            ai: crate::ai::AiConfig::from_env().map(|config| {
+                log::info!("AI seats enabled: {} worker(s), level {}", config.workers, config.level);
+                Arc::new(crate::ai::AiPool::new(config))
+            }),
         }
     }
 

@@ -24,6 +24,7 @@ impl GameActionService {
         command_id: CommandId,
         expected_revision: Revision,
     ) -> CommandResult {
+        let ai_seats = state.ai.is_some();
         let outcome =
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
                 let acting_player = crate::services::dev_game::acting_player(room, player_id);
@@ -39,7 +40,7 @@ impl GameActionService {
                         expected_revision.get(),
                     )?
                 };
-                if room.dev_human_player == Some(player_id) {
+                if room.dev_human_player == Some(player_id) && !ai_seats {
                     events.extend(auto_advance_dev_actions(room, player_id)?);
                 }
                 Ok(events)
@@ -49,6 +50,7 @@ impl GameActionService {
         broadcast_snapshot(state, room_code, outcome.revision).await;
 
         maybe_end_round(state, room_code).await;
+        crate::ai::spawn_driver(state.clone(), room_code.to_string());
 
         Ok(outcome)
     }

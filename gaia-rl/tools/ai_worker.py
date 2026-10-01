@@ -19,6 +19,47 @@ import sys
 import time
 import traceback
 
+# Server player ids are global (1, 2, 3, ...); the teachers index `players[player_id]`, so
+# states are renumbered to list positions 0..3 first. Actions carry no player ids.
+ID_KEYS = {'player_id', 'player', 'owner', 'winner', 'requester', 'responder', 'dev_controller'}
+ID_LIST_KEYS = {'satellites', 'turn_order', 'pass_order', 'player_order', 'winners',
+                'required_approvals', 'approvals', 'alliance_taken', 'explorers'}
+SETUP_PHASES = {'FactionSelection', 'Bidding', 'StartingStructures', 'StartingBoosters'}
+
+
+def renumber(state):
+    """Return (state with ids 0..3 by players-list position, {server id: index})."""
+    mapping = {p['player_id']: i for i, p in enumerate(state['players'])}
+
+    def ident(value):
+        return mapping[value] if isinstance(value, int) and value in mapping else value
+
+    def walk(value, key=None):
+        if isinstance(value, dict):
+            out = {}
+            for k, v in value.items():
+                if k == 'player_levels':
+                    out[k] = {str(ident(int(pid))): level for pid, level in v.items()}
+                elif k == 'final_scores':
+                    out[k] = [[ident(pid), score] for pid, score in v]
+                elif k == 'active_player' and key in SETUP_PHASES:
+                    out[k] = ident(v)            # setup phases name a player; ActionPhase an index
+                else:
+                    out[k] = walk(v, k)
+            return out
+        if isinstance(value, list):
+            if key in ID_LIST_KEYS:
+                return [ident(v) for v in value]
+            return [walk(v) for v in value]
+        if key in ID_KEYS:
+            return ident(value)
+        return value
+
+    renumbered = walk({k: v for k, v in state.items() if k != 'event_log'})
+    renumbered['event_log'] = []
+    return renumbered, mapping
+
+
 LEVELS = {'easy': {'comparisons': 0, 'horizon_incomes': 2, 'max_seconds': None},
           'normal': {'comparisons': 2, 'horizon_incomes': 1, 'max_seconds': 5}}
 MAX_ROOMS = 256
@@ -58,10 +99,15 @@ def main():
             # Budget settings are process-wide; set them for every request.
             budget_teacher.install(level['comparisons'], max_seconds=level['max_seconds'])
             budget_teacher.set_horizon(level['horizon_incomes'])
-            env = Environment.from_state_json(json.dumps(request['state']), 2000)
+            original = json.loads(Environment.from_state_json(json.dumps(request['state']), 2000).snapshot_json())
+            if original['player'] != request['player']:
+                raise ValueError(f"state awaits player {original['player']}, not {request['player']}")
+            state, mapping = renumber(request['state'])
+            env = Environment.from_state_json(json.dumps(state), 2000)
             snapshot = json.loads(env.snapshot_json())
-            if snapshot['player'] != request['player']:
-                raise ValueError(f"state awaits player {snapshot['player']}, not {request['player']}")
+            # Any missed id field would change legality; refuse rather than misplay.
+            if snapshot['player'] != mapping[request['player']] or snapshot['candidates'] != original['candidates']:
+                raise ValueError('player renumbering changed the decision; refusing to play')
             room = request['room']
             teacher = teachers.pop(room, None)
             if teacher is None:

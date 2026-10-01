@@ -79,6 +79,10 @@ pub struct CreateDevGameRequest {
     pub setup_mode: Option<SetupMode>,
     pub faction: Option<FactionId>,
     pub seed: Option<String>,
+    /// Three AI opponents play their own seats (requires the AI pool, see `crate::ai`)
+    /// instead of the controller manually playing all four seats.
+    #[serde(default)]
+    pub ai_opponents: bool,
 }
 
 #[derive(Serialize)]
@@ -185,9 +189,19 @@ pub async fn create_dev_game(
         build_dev_game_state(&code, &seed, player_id, &bot_player_ids, &setup, faction)?
     };
 
-    game_state.dev_controller = Some(player_id);
-    for player in &mut game_state.players {
-        player.nickname = player.nickname.replace("BOT ·", "DEV ·");
+    let ai_opponents = req.ai_opponents && !req.full_setup;
+    if ai_opponents && app.ai.is_none() {
+        return Err(ServerError::Internal("AI opponents are not configured on this server".into()));
+    }
+    if ai_opponents {
+        for player in &mut game_state.players {
+            player.nickname = player.nickname.replace("BOT ·", "AI ·");
+        }
+    } else {
+        game_state.dev_controller = Some(player_id);
+        for player in &mut game_state.players {
+            player.nickname = player.nickname.replace("BOT ·", "DEV ·");
+        }
     }
 
     let (players, host_player_id) = {
@@ -210,6 +224,10 @@ pub async fn create_dev_game(
 
     let session_token = app.sessions.create_session(player_id, &code).await?;
     app.event_bus.get_or_create(&code).await;
+    if ai_opponents {
+        // An AI seat may place the first starting structure.
+        crate::ai::spawn_driver(app.clone(), code.clone());
+    }
 
     Ok((
         StatusCode::CREATED,

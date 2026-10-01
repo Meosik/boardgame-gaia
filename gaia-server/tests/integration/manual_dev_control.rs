@@ -27,6 +27,7 @@ async fn manual_dev_controller_places_every_mine_and_passes_every_seat_across_si
             setup_mode: None,
             faction: None,
             seed: Some("manual-dev-regression".into()),
+            ai_opponents: false,
         }),
     )
     .await

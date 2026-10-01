@@ -8,3 +8,5 @@ mod room_lifecycle;
 mod websocket_messaging;
 
 mod manual_dev_control;
+
+mod ai_seats;

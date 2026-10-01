@@ -287,6 +287,41 @@ pub fn auto_advance_dev_actions(
     Ok(events)
 }
 
+/// One legal move for an automated seat when the AI worker is unavailable or fails:
+/// the same simple choices the DEV bots make (setup placement/booster, a ranked main action
+/// or pass, a conservative pending response).
+pub(crate) fn fallback_step(
+    state: &mut GameState,
+    player: PlayerId,
+    human_player: PlayerId,
+) -> Result<Vec<GameEvent>, RuleError> {
+    match state.phase {
+        GamePhase::Setup(SetupPhase::StartingStructures { .. }) => {
+            let coord = automatic_starting_coord(state, player, human_player).ok_or_else(|| {
+                RuleError::ActionNotAllowed("automated seat has no legal starting planet".into())
+            })?;
+            RuleEngine::apply_setup_action(state, player, SetupAction::PlaceStartingStructure { coord })
+        }
+        GamePhase::Setup(SetupPhase::StartingBoosters { .. }) => {
+            let booster_id = state.boosters.first().map(|booster| booster.0).ok_or_else(|| {
+                RuleError::ActionNotAllowed("automated seat has no starting booster".into())
+            })?;
+            RuleEngine::apply_setup_action(state, player, SetupAction::SelectStartingBooster { booster_id })
+        }
+        GamePhase::ActionPhase { .. } => {
+            let action = match automatic_main_action(state, player, 0) {
+                Some(action) => action,
+                None => automatic_pass(state, player)?,
+            };
+            super::game_action::apply_logged_action(state, player, action)
+        }
+        _ => {
+            let action = automatic_pending_action(state, player)?;
+            super::game_action::apply_logged_action(state, player, action)
+        }
+    }
+}
+
 pub(crate) fn required_player(state: &GameState) -> Option<PlayerId> {
     match &state.phase {
         GamePhase::Setup(

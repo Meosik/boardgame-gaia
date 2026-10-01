@@ -80,7 +80,7 @@ impl TurnManagementService {
                     .ok_or(gaia_engine::error::RuleError::WrongPhase)?;
                 RuleEngine::advance_to_next_round(gs)?;
             }
-            if let Some(human_player) = room.dev_human_player {
+            if let Some(human_player) = room.dev_human_player.filter(|_| state.ai.is_none()) {
                 let bot_events = auto_advance_dev_actions(room, human_player)?;
                 if !bot_events.is_empty() {
                     room.game_state
@@ -98,6 +98,7 @@ impl TurnManagementService {
         // The reset `passed` flags, pass-order-derived turn order, and new round number are all
         // visible in this Snapshot; no separate turn-change signal is needed.
         coordinator::broadcast_snapshot(state, room_code, outcome.revision).await;
+        crate::ai::spawn_driver(state.clone(), room_code.to_string());
 
         Ok(())
     }
