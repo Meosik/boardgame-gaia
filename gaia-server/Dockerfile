@@ -10,7 +10,7 @@ COPY gaia-frontend/ ./
 RUN npm run build
 
 # ── Rust build ────────────────────────────────────────────────────────────────
-FROM rust:1.95.0-slim AS builder
+FROM rust:1.95.0-slim-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config libssl-dev \
