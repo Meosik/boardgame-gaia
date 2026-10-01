@@ -1,0 +1,9 @@
+{
+  "description": "Frozen A tree (unchanged), normal-level budget (2 comparisons, first income horizon), with tools/teacher_patches.py symmetric_pass: unpassed states also count the booster pass VP and next-income booster that passed states already counted.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:symmetric_pass",
+  "kwargs": {"bgg_openings": true, "shared_factions": true},
+  "comparisons": 2,
+  "horizon_incomes": 1,
+  "frozen": true
+}

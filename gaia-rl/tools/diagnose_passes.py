@@ -23,6 +23,11 @@ def action_label(decision):
     return f"{decision.get('phase')}:{kind} {json.dumps(detail, sort_keys=True)[:160]}"
 
 
+def kind_of(decision):
+    action = decision.get('action', {})
+    return action.get('type', '?') if isinstance(action, dict) else str(action)
+
+
 def player_summary(state, index):
     player = state['players'][index]
     hexes = state['board']['hexes']
@@ -43,6 +48,8 @@ def main():
     parser.add_argument('--level', choices=sorted(LEVELS), default='easy')
     parser.add_argument('--output', required=True)
     parser.add_argument('--top', type=int, default=5)
+    parser.add_argument('--symmetric-pass', action='store_true',
+                        help='Apply tools/teacher_patches.py symmetric_pass')
     args = parser.parse_args()
 
     import fast_teacher
@@ -55,7 +62,11 @@ def main():
     budget_teacher.install(comparisons)
     budget_teacher.set_horizon(horizon)
     env = Environment(args.seed, 2000)
-    teacher = TimedPreparationTeacher(args.seed, bgg_openings=True, shared_factions=True)
+    if args.symmetric_pass:
+        from teacher_patches import symmetric_pass as factory
+    else:
+        factory = TimedPreparationTeacher
+    teacher = factory(args.seed, bgg_openings=True, shared_factions=True)
     teacher.bind(env)
     snapshot = json.loads(env.snapshot_json())
     passes, choices, started = [], Counter(), time.monotonic()
@@ -84,7 +95,12 @@ def main():
                 'selected': (teacher.last_audit or {}).get('selected'),
                 'alternatives': [{'score': scores[i][0], 'reason': str(scores[i][1])[:200],
                                   'action': action_label(snapshot['candidates'][i])}
-                                 for i in alternatives[:args.top]]})
+                                 for i in alternatives[:args.top]],
+                # The best candidate of every action type, so an absent type is visible.
+                'best_by_type': {kind_of(snapshot['candidates'][i]): {
+                    'score': scores[i][0], 'reason': str(scores[i][1])[:300],
+                    'action': action_label(snapshot['candidates'][i])}
+                    for i in reversed(ranked)}})
         before = snapshot
         env.step(decision_id, index)
         snapshot = json.loads(env.snapshot_json())
