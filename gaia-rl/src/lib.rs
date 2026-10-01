@@ -37,6 +37,14 @@ mod python {
                 inner: Environment::new(seed, max_steps).map_err(error)?,
             })
         }
+        #[staticmethod]
+        #[pyo3(signature = (state_json, max_steps=10000))]
+        fn from_state_json(state_json: &str, max_steps: usize) -> PyResult<Self> {
+            let state = serde_json::from_str(state_json).map_err(error)?;
+            Ok(Self {
+                inner: Environment::from_state(state, max_steps).map_err(error)?,
+            })
+        }
         fn reset(&mut self, seed: &str) -> PyResult<()> {
             self.inner.reset(seed).map_err(error)
         }

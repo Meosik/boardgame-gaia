@@ -49,6 +49,23 @@ pub struct Environment {
 }
 
 impl Environment {
+    /// Start from an existing game state (e.g. a live server game) instead of a seed.
+    /// Candidates are generated exactly as after any `step`; the decision id starts at 0.
+    pub fn from_state(state: GameState, max_steps: usize) -> Result<Self, EnvError> {
+        if max_steps == 0 {
+            return Err(EnvError::Configuration("max_steps must be positive"));
+        }
+        let (candidates, candidate_generation) = RuleEngine::ai_decisions_with_diagnostics(&state)?;
+        Ok(Self {
+            state,
+            candidates,
+            decision_id: 0,
+            steps: 0,
+            max_steps,
+            candidate_generation,
+        })
+    }
+
     pub fn new(seed: &str, max_steps: usize) -> Result<Self, EnvError> {
         if max_steps == 0 {
             return Err(EnvError::Configuration("max_steps must be positive"));
