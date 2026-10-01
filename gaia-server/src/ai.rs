@@ -10,6 +10,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -85,12 +86,26 @@ pub struct AiPool {
     config: AiConfig,
     workers: Vec<Mutex<Option<Worker>>>,
     driving: std::sync::Mutex<HashSet<String>>,
+    /// Committed AI moves and how many of them used the DEV fallback instead of the teacher.
+    moves: AtomicUsize,
+    fallbacks: AtomicUsize,
 }
 
 impl AiPool {
     pub fn new(config: AiConfig) -> Self {
         let workers = (0..config.workers).map(|_| Mutex::new(None)).collect();
-        Self { config, workers, driving: std::sync::Mutex::new(HashSet::new()) }
+        Self {
+            config,
+            workers,
+            driving: std::sync::Mutex::new(HashSet::new()),
+            moves: AtomicUsize::new(0),
+            fallbacks: AtomicUsize::new(0),
+        }
+    }
+
+    /// (committed AI moves, of which fallback moves) since the pool started.
+    pub fn move_counts(&self) -> (usize, usize) {
+        (self.moves.load(Ordering::Relaxed), self.fallbacks.load(Ordering::Relaxed))
     }
 
     fn spawn_worker(&self) -> std::io::Result<Worker> {
@@ -231,6 +246,7 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
             return;
         };
         let decision = pool.choose(room_code, &turn.state, turn.player).await;
+        let mut used_fallback = false;
         let applied = coordinator::apply_server_transition(app, room_code, |room| {
             if room.revision != turn.revision {
                 return Err(RuleError::ActionNotAllowed("room moved on during AI thinking".into()));
@@ -240,16 +256,17 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 return Err(RuleError::NotYourTurn);
             }
             let mut probe = state.clone();
-            let events = match apply_decision(&mut probe, turn.player, decision.clone()) {
+            let (events, fallback) = match apply_decision(&mut probe, turn.player, decision.clone()) {
                 Ok(events) => {
                     *state = probe;
-                    events
+                    (events, false)
                 }
                 Err(error) => {
                     log::warn!("AI move rejected in room {room_code} ({error}); using fallback");
-                    fallback_step(state, turn.player, turn.human)?
+                    (fallback_step(state, turn.player, turn.human)?, true)
                 }
             };
+            used_fallback = fallback;
             state.event_log.extend(events);
             if state.phase == GamePhase::Setup(SetupPhase::Complete) {
                 room.state = RoomState::InGame;
@@ -263,6 +280,10 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
         match applied {
             Ok(outcome) => {
                 rejected_in_a_row = 0;
+                pool.moves.fetch_add(1, Ordering::Relaxed);
+                if used_fallback {
+                    pool.fallbacks.fetch_add(1, Ordering::Relaxed);
+                }
                 coordinator::broadcast_snapshot(app, room_code, outcome.revision).await;
                 if let Err(error) = TurnManagementService::maybe_end_round(app, room_code).await {
                     log::error!("maybe_end_round failed for room {room_code}: {error}");

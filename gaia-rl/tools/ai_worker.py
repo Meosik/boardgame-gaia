@@ -15,6 +15,7 @@ easy without the cap, -3.8 for the cap). Run with
 PYTHONPATH=python:baseline-teacher-20260917:tools from gaia-rl/.
 """
 import json
+import os
 import sys
 import time
 import traceback
@@ -108,6 +109,10 @@ def main():
             # Any missed id field would change legality; refuse rather than misplay.
             if snapshot['player'] != mapping[request['player']] or snapshot['candidates'] != original['candidates']:
                 raise ValueError('player renumbering changed the decision; refusing to play')
+            if os.environ.get('GAIA_AI_DUMP'):    # diagnostics: keep every request state
+                with open(os.environ['GAIA_AI_DUMP'], 'a') as dump:
+                    dump.write(json.dumps({'room': request['room'], 'player': request['player'],
+                                           'state': request['state']})+'\n')
             room = request['room']
             teacher = teachers.pop(room, None)
             if teacher is None:

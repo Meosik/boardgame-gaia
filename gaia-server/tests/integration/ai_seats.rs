@@ -98,5 +98,14 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
         .filter(|event| matches!(event, gaia_engine::game_state::GameEvent::ActionLog { player, .. } if *player != human))
         .count();
     println!("human moves {human_moves}, AI logged actions {ai_actions}, final scores {final_scores:?}, {:?}", started.elapsed());
+    for player in &state.players {
+        println!(
+            "seat {} {:?} structures {} vp {}",
+            player.player_id, player.faction, player.structures.len(), player.vp
+        );
+    }
+    let (moves, fallbacks) = app.ai.as_ref().expect("pool").move_counts();
+    println!("AI moves {moves}, fallback moves {fallbacks}");
     assert!(ai_actions > 30, "AI seats must have played the game");
+    assert_eq!(fallbacks, 0, "every AI move must come from the teacher");
 }

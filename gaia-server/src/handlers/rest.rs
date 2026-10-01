@@ -149,14 +149,17 @@ pub async fn create_dev_game(
     Json(req): Json<CreateDevGameRequest>,
 ) -> ServerResult<(StatusCode, Json<CreateDevGameResponse>)> {
     let explicitly_enabled = std::env::var("GAIA_DEV_MODE").is_ok_and(|value| value == "1");
-    if !cfg!(debug_assertions) && !explicitly_enabled {
+    // Games against AI seats are a player feature wherever the AI pool is configured; the
+    // manual four-seat controller stays a DEV-only tool.
+    let ai_game = req.ai_opponents && !req.full_setup && app.ai.is_some();
+    if !cfg!(debug_assertions) && !explicitly_enabled && !ai_game {
         return Err(ServerError::RoomNotFound(
             "dev game endpoint disabled".into(),
         ));
     }
 
     let seed = req.seed.unwrap_or_else(|| {
-        if req.full_setup {
+        if req.full_setup || req.ai_opponents {
             uuid::Uuid::new_v4().to_string()
         } else {
             "gaia-ui-dev".to_string()
@@ -168,7 +171,12 @@ pub async fn create_dev_game(
     } else {
         SetupMode::Sequential
     };
-    let faction = req.faction.unwrap_or(FactionId::Terrans);
+    let (faction, ai_bot_factions) = if req.ai_opponents {
+        let (human, bots) = crate::services::dev_game::ai_game_factions(&seed, req.faction);
+        (human, Some(bots))
+    } else {
+        (req.faction.unwrap_or(FactionId::Terrans), None)
+    };
     let (code, player_id, setup) =
         GameSetupService::create_room(&app, nickname, Some(seed.clone()), setup_mode, None, None)
             .await?;
@@ -185,6 +193,10 @@ pub async fn create_dev_game(
                 .map(|(index, id)| (*id, format!("DEV {}", index + 2))),
         );
         MapEngine::init_game_state(&code, &seed, &players, &setup)
+    } else if let Some(bot_factions) = ai_bot_factions {
+        crate::services::dev_game::build_game_state_with_factions(
+            &code, &seed, player_id, &bot_player_ids, &setup, faction, bot_factions,
+        )?
     } else {
         build_dev_game_state(&code, &seed, player_id, &bot_player_ids, &setup, faction)?
     };

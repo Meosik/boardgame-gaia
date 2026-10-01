@@ -122,7 +122,40 @@ pub fn build_dev_game_state(
     setup: &GameSetup,
     faction: FactionId,
 ) -> ServerResult<GameState> {
-    let bot_factions = dev_bot_factions(faction);
+    build_game_state_with_factions(room_code, seed, player_id, bot_player_ids, setup, faction, dev_bot_factions(faction))
+}
+
+/// Four distinct factions for an AI game, varied by seed, never two sides of one board.
+/// The first entry is the human's unless `human` fixes it.
+pub fn ai_game_factions(seed: &str, human: Option<FactionId>) -> (FactionId, Vec<FactionId>) {
+    let mut pool = FactionId::all();
+    let digest = Sha256::digest(format!("{seed}:ai-factions").as_bytes());
+    for index in (1..pool.len()).rev() {
+        let swap_index = usize::from(digest[index % digest.len()]) % (index + 1);
+        pool.swap(index, swap_index);
+    }
+    let human = human.unwrap_or(pool[0]);
+    let mut chosen = vec![human];
+    for faction in pool {
+        if chosen.len() == 4 {
+            break;
+        }
+        if chosen.iter().all(|taken| *taken != faction && taken.other_board_side() != faction) {
+            chosen.push(faction);
+        }
+    }
+    (human, chosen.split_off(1))
+}
+
+pub fn build_game_state_with_factions(
+    room_code: &str,
+    seed: &str,
+    player_id: PlayerId,
+    bot_player_ids: &[PlayerId],
+    setup: &GameSetup,
+    faction: FactionId,
+    bot_factions: Vec<FactionId>,
+) -> ServerResult<GameState> {
     let mut players = vec![(player_id, "DEV".to_string())];
     players.extend(
         bot_player_ids
@@ -482,7 +515,15 @@ fn faction_label(faction: FactionId) -> &'static str {
         FactionId::Nevlas => "네블라",
         FactionId::Tinkeroids => "틴커로이드",
         FactionId::Moweyds => "모웨이드",
-        _ => "상대",
+        FactionId::Lantids => "란티다",
+        FactionId::Gleens => "글린",
+        FactionId::Ambas => "앰바스",
+        FactionId::Ivits => "아이비츠",
+        FactionId::BalTaks => "발타크",
+        FactionId::Bescods => "베스코드",
+        FactionId::Itars => "아이타",
+        FactionId::SpaceGiants => "스페이스 자이언트",
+        FactionId::Darkanians => "다카니안",
     }
 }
 
@@ -921,5 +962,23 @@ mod tests {
             room.game_state.as_ref().map(|state| &state.phase),
             Some(GamePhase::ActionPhase { active_player: 0 })
         ));
+    }
+
+    #[test]
+    fn ai_game_factions_are_four_distinct_boards_and_honor_the_human_choice() {
+        for seed in ["a", "b", "c", "ai-seats-regression", "x9"] {
+            let (human, bots) = super::ai_game_factions(seed, None);
+            let all: Vec<_> = std::iter::once(human).chain(bots.iter().copied()).collect();
+            assert_eq!(all.len(), 4, "{seed}");
+            for (i, a) in all.iter().enumerate() {
+                for b in &all[i + 1..] {
+                    assert!(a != b && a.other_board_side() != *b, "{seed}: {a:?} vs {b:?}");
+                }
+            }
+        }
+        let (human, bots) = super::ai_game_factions("a", Some(FactionId::Ivits));
+        assert_eq!(human, FactionId::Ivits);
+        assert!(!bots.contains(&FactionId::Ivits) && !bots.contains(&FactionId::Ivits.other_board_side()));
+        assert_ne!(super::ai_game_factions("a", None), super::ai_game_factions("b", None));
     }
 }
