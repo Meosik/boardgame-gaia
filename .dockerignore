@@ -15,3 +15,7 @@ docs
 *.py
 svg_preview.html
 setup_team.sh
+gaia-rl/.venv
+gaia-rl/target
+gaia-rl/runs
+gaia-rl/datasets

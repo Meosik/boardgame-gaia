@@ -1,6 +1,7 @@
 use crate::bidding::BiddingPolicy;
 use crate::data::sectors::{load_sectors, SectorFile};
 use crate::error::RuleError;
+use crate::fast_hash::{FastMap as HashMap, FastSet as HashSet};
 use crate::game_state::{
     ArtifactId, BoardState, EconomyResearchTileSide, FederationToken, GamePhase, GameState, Hex,
     HexCoord, Planet, PlanetType, PlayerId, PlayerState, PowerCycle, ResearchBoard, ResearchTracks,
@@ -10,7 +11,6 @@ use crate::randomizer::{
     lost_fleet_sector_origins, GameSetup, Randomizer, SectorPlacement, ADVANCED_TECH_TILE_IDS,
 };
 use crate::setup_policy::SetupPolicy;
-use crate::fast_hash::{FastMap as HashMap, FastSet as HashSet};
 use std::collections::VecDeque;
 use std::time::{SystemTime, UNIX_EPOCH};
 

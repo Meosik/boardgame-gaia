@@ -50,7 +50,11 @@ impl AiConfig {
     /// `GAIA_AI_WORKERS` (default 6), `GAIA_AI_LEVEL` (`normal` or `easy`),
     /// `GAIA_AI_TIMEOUT_SECS` (default 30, a hung-worker guard; the teacher caps itself at 5 s).
     pub fn from_env() -> Option<Self> {
-        let dir = PathBuf::from(std::env::var("GAIA_AI_DIR").ok()?);
+        let dir = PathBuf::from(
+            std::env::var("GAIA_AI_DIR")
+                .ok()
+                .filter(|dir| !dir.trim().is_empty())?,
+        );
         let python = std::env::var("GAIA_AI_PYTHON")
             .map(PathBuf::from)
             .unwrap_or_else(|_| dir.join(".venv/bin/python"));
@@ -65,7 +69,13 @@ impl AiConfig {
             .and_then(|value| value.parse().ok())
             .map(Duration::from_secs)
             .unwrap_or(Duration::from_secs(30));
-        Some(Self { dir, python, workers, level, timeout })
+        Some(Self {
+            dir,
+            python,
+            workers,
+            level,
+            timeout,
+        })
     }
 }
 
@@ -105,7 +115,10 @@ impl AiPool {
 
     /// (committed AI moves, of which fallback moves) since the pool started.
     pub fn move_counts(&self) -> (usize, usize) {
-        (self.moves.load(Ordering::Relaxed), self.fallbacks.load(Ordering::Relaxed))
+        (
+            self.moves.load(Ordering::Relaxed),
+            self.fallbacks.load(Ordering::Relaxed),
+        )
     }
 
     fn spawn_worker(&self) -> std::io::Result<Worker> {
@@ -124,21 +137,36 @@ impl AiPool {
             .stderr(Stdio::inherit())
             .kill_on_drop(true)
             .spawn()?;
-        let stdin = child.stdin.take().ok_or_else(|| std::io::Error::other("no worker stdin"))?;
-        let stdout = child.stdout.take().ok_or_else(|| std::io::Error::other("no worker stdout"))?;
-        Ok(Worker { _child: child, stdin, stdout: BufReader::new(stdout) })
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| std::io::Error::other("no worker stdin"))?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| std::io::Error::other("no worker stdout"))?;
+        Ok(Worker {
+            _child: child,
+            stdin,
+            stdout: BufReader::new(stdout),
+        })
     }
 
     fn slot(&self, room_code: &str) -> usize {
-        let hash = room_code
-            .bytes()
-            .fold(0xcbf2_9ce4_8422_2325_u64, |h, b| (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3));
+        let hash = room_code.bytes().fold(0xcbf2_9ce4_8422_2325_u64, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
+        });
         (hash % self.workers.len() as u64) as usize
     }
 
     /// The teacher's move for `player`, or `None` when the worker is unavailable, errs or
     /// exceeds the timeout (the worker is then restarted on the next request).
-    pub async fn choose(&self, room_code: &str, state: &GameState, player: PlayerId) -> Option<AiDecision> {
+    pub async fn choose(
+        &self,
+        room_code: &str,
+        state: &GameState,
+        player: PlayerId,
+    ) -> Option<AiDecision> {
         let mut guard = self.workers[self.slot(room_code)].lock().await;
         if guard.is_none() {
             match self.spawn_worker() {
@@ -166,9 +194,16 @@ impl AiPool {
             serde_json::from_str::<Reply>(&response).map_err(std::io::Error::other)
         };
         match tokio::time::timeout(self.config.timeout, exchange).await {
-            Ok(Ok(Reply { ok: true, decision: Some(decision), .. })) => Some(decision),
+            Ok(Ok(Reply {
+                ok: true,
+                decision: Some(decision),
+                ..
+            })) => Some(decision),
             Ok(Ok(reply)) => {
-                log::warn!("AI worker declined room {room_code}: {}", reply.error.unwrap_or_default());
+                log::warn!(
+                    "AI worker declined room {room_code}: {}",
+                    reply.error.unwrap_or_default()
+                );
                 None
             }
             Ok(Err(error)) => {
@@ -235,7 +270,12 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
     if player == human || state.undo_state.pending_request.is_some() {
         return None;
     }
-    Some(Turn { revision: room.revision, player, human, state: state.clone() })
+    Some(Turn {
+        revision: room.revision,
+        player,
+        human,
+        state: state.clone(),
+    })
 }
 
 async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
@@ -249,14 +289,17 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
         let mut used_fallback = false;
         let applied = coordinator::apply_server_transition(app, room_code, |room| {
             if room.revision != turn.revision {
-                return Err(RuleError::ActionNotAllowed("room moved on during AI thinking".into()));
+                return Err(RuleError::ActionNotAllowed(
+                    "room moved on during AI thinking".into(),
+                ));
             }
             let state = room.game_state.as_mut().ok_or(RuleError::WrongPhase)?;
             if required_player(state) != Some(turn.player) {
                 return Err(RuleError::NotYourTurn);
             }
             let mut probe = state.clone();
-            let (events, fallback) = match apply_decision(&mut probe, turn.player, decision.clone()) {
+            let (events, fallback) = match apply_decision(&mut probe, turn.player, decision.clone())
+            {
                 Ok(events) => {
                     *state = probe;
                     (events, false)

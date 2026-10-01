@@ -45,6 +45,10 @@ services:
       # Shared passphrase gating every route behind the tunnel — set it in .env
       # and hand it out to invited players; leave unset to disable the gate.
       GAIA_SITE_PASSWORD: ${GAIA_SITE_PASSWORD:-}
+      # AI seats ("AI 3명과 대전"). Clear GAIA_AI_DIR in .env to turn them off.
+      GAIA_AI_DIR: ${GAIA_AI_DIR-/opt/gaia/gaia-rl}
+      GAIA_AI_WORKERS: ${GAIA_AI_WORKERS:-6}
+      GAIA_AI_LEVEL: ${GAIA_AI_LEVEL:-normal}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
       interval: 10s

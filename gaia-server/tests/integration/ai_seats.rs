@@ -33,7 +33,10 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
     let pool = sqlx::PgPool::connect(&std::env::var("DATABASE_URL").expect("test DB URL"))
         .await
         .expect("connect test DB");
-    sqlx::migrate!("./migrations").run(&pool).await.expect("migrate");
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("migrate");
     let app = AppState::new(pool);
     assert!(app.ai.is_some(), "AI pool must be configured");
     let _server = TestServer::new(gaia_server::router::build_router(app.clone())).expect("server");
@@ -61,25 +64,38 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
         let wait = Instant::now();
         let (state, revision) = loop {
             let (state, revision) = room_state(&app, &code).await;
-            if matches!(state.phase, GamePhase::Ended { .. }) || awaited_player(&state) == Some(human) {
+            if matches!(state.phase, GamePhase::Ended { .. })
+                || awaited_player(&state) == Some(human)
+            {
                 break (state, revision);
             }
-            assert!(wait.elapsed() < Duration::from_secs(300), "AI seats stalled: {:?}", state.phase);
+            assert!(
+                wait.elapsed() < Duration::from_secs(300),
+                "AI seats stalled: {:?}",
+                state.phase
+            );
             tokio::time::sleep(Duration::from_millis(50)).await;
         };
         if matches!(state.phase, GamePhase::Ended { .. }) {
             break;
         }
-        assert!(started.elapsed() < Duration::from_secs(3600), "game took too long");
+        assert!(
+            started.elapsed() < Duration::from_secs(3600),
+            "game took too long"
+        );
         // The human always takes the first legal candidate (a deterministic stand-in).
-        let decision = RuleEngine::ai_decisions(&state).expect("human candidates").remove(0);
+        let decision = RuleEngine::ai_decisions(&state)
+            .expect("human candidates")
+            .remove(0);
         let command = CommandId::parse(&format!("human-{human_moves}")).expect("command id");
         let expected = Revision::new(revision).expect("revision");
         match decision {
             AiDecision::Setup(action) => {
-                FactionSelectionService::process_setup_action(&app, &code, human, action, command, expected)
-                    .await
-                    .expect("human setup move");
+                FactionSelectionService::process_setup_action(
+                    &app, &code, human, action, command, expected,
+                )
+                .await
+                .expect("human setup move");
             }
             AiDecision::Game(action) => {
                 GameActionService::process_action(&app, &code, human, action, command, expected)
@@ -91,7 +107,9 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
     }
 
     let (state, _) = room_state(&app, &code).await;
-    let GamePhase::Ended { final_scores, .. } = &state.phase else { unreachable!() };
+    let GamePhase::Ended { final_scores, .. } = &state.phase else {
+        unreachable!()
+    };
     let ai_actions = state
         .event_log
         .iter()
@@ -101,7 +119,10 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
     for player in &state.players {
         println!(
             "seat {} {:?} structures {} vp {}",
-            player.player_id, player.faction, player.structures.len(), player.vp
+            player.player_id,
+            player.faction,
+            player.structures.len(),
+            player.vp
         );
     }
     let (moves, fallbacks) = app.ai.as_ref().expect("pool").move_counts();

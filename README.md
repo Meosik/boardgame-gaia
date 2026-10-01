@@ -67,6 +67,25 @@ Build the combined server/client image:
 docker compose up --build
 ```
 
+## AI opponents
+
+"AI 3명과 대전" (create-room view) starts a game whose other three seats are played by the
+frozen teacher through a pool of Python workers (`gaia-server/src/ai.rs`,
+`gaia-rl/tools/ai_worker.py`). The Docker image ships the worker; `docker-compose.yml`
+enables it with:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `GAIA_AI_DIR` | `/opt/gaia/gaia-rl` | gaia-rl directory; set it empty to disable AI games |
+| `GAIA_AI_WORKERS` | `6` | worker processes = AI decisions computed at once (≈ cores − 2) |
+| `GAIA_AI_LEVEL` | `normal` | `normal`: 2 comparisons, one-income horizon, 5 s cap; `easy`: one-step ranking |
+| `GAIA_AI_PYTHON` | image Python | interpreter with the `gaia_rl` wheel installed |
+| `GAIA_AI_TIMEOUT_SECS` | `30` | hung-worker guard; the move then falls back to a simple legal move |
+
+Locally: build the extension (`cd gaia-rl && maturin develop --release`) and run the server
+with `GAIA_AI_DIR=$PWD/gaia-rl`. Strength and timing evidence:
+`gaia-rl/research/strategy/cycles/016-search-cost-diagnosis.md`.
+
 ## Verification
 
 ```bash

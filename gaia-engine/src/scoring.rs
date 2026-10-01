@@ -1,11 +1,11 @@
 use crate::faction::registry::global as faction_registry;
+use crate::fast_hash::FastSet as HashSet;
 use crate::game_state::{
     FactionId, FinalScoringCondition, GameEvent, GameState, HexCoord, PlanetType, PlayerId,
     StructureType, VpReason,
 };
 use crate::map::MapEngine;
 use serde::{Deserialize, Serialize};
-use crate::fast_hash::FastSet as HashSet;
 
 /// Auditable components of one player's final score. `gameplay_vp` is the VP
 /// already accumulated before final scoring; every other field is added at
@@ -40,7 +40,8 @@ impl ScoringEngine {
             None => return vec![],
         };
 
-        let mut totals: std::collections::HashMap<PlayerId, i32> = std::collections::HashMap::default();
+        let mut totals: std::collections::HashMap<PlayerId, i32> =
+            std::collections::HashMap::default();
         for event in &state.event_log {
             if let GameEvent::VpAwarded {
                 player,

@@ -26,7 +26,11 @@ impl AppState {
             rooms: Arc::new(RwLock::new(RoomManager::new())),
             event_bus: Arc::new(EventBus::new()),
             ai: crate::ai::AiConfig::from_env().map(|config| {
-                log::info!("AI seats enabled: {} worker(s), level {}", config.workers, config.level);
+                log::info!(
+                    "AI seats enabled: {} worker(s), level {}",
+                    config.workers,
+                    config.level
+                );
                 Arc::new(crate::ai::AiPool::new(config))
             }),
         }
