@@ -34,3 +34,25 @@ Caveats: on-policy data (states the A-family teachers reach), correlated terms, 
 `teacher_patches.calibrated_value` evaluates with these weights instead of 1.0
 (unit weights reproduce the current value exactly). Pending: export weights on the full
 dataset with stronger regularisation, then a 12-seed A/B against the live (geodens_guide) teacher.
+
+## A/B result (user run; A = geodens_guide live teacher, B = calibrated_value, alpha 0.1 weights;
+## 12 new seeds not used for fitting, 12 complete pairs)
+
+| Faction | B−A | 95% CI |
+|---|---:|---|
+| Geodens | −14.8 | [−36.4, +6.8] |
+| Taklons | −5.8 | [−15.6, +4.0] |
+| Terrans | −5.7 | [−15.2, +3.8] |
+| Xenos (evaluator unchanged) | +11.1 | [−5.7, +27.9] |
+| All seats | −3.8 | [−11.7, +4.1] |
+
+Not adopted. Every `potential`-based faction lost and the unchanged Xenos gained, i.e. the
+calibrated seats played worse. Unsearched comparisons rose (A 1942 / B 2711): the new root
+ranking spreads candidates differently.
+
+Interpretation (hypothesis, to verify on game records): the weights *predict* results on
+states the old teachers reached, but are not the *marginal value of a decision*. A strong
+player both scores well and holds few resources, so `materials` fitted near 0 — yet as a
+decision rule a near-zero resource price makes every spend look free. Prediction accuracy
+from on-policy data is necessary, not sufficient; a decision value needs counterfactual
+evidence (other actions tried in the same state).
