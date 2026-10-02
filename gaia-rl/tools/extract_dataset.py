@@ -171,7 +171,7 @@ def main():
                                         'facts': facts(state, i), 'potential': sum(terms.values())})
                     buffered.append({'game': str(game_dir), 'seed': result['seed'], 'step': snapshot['steps'],
                                      'round': state['round'], 'to_move': snapshot['player'], 'players': players})
-            except ValueError as error:
+            except (ValueError, RuntimeError) as error:
                 skipped += 1
                 print(f'skip {game_dir}: {error}', file=sys.stderr)
                 continue
