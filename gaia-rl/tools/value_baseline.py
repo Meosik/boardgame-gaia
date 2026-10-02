@@ -108,6 +108,8 @@ def main():
     parser.add_argument('--validation-fraction', type=float, default=.25)
     parser.add_argument('--alpha', type=float, default=1e-2, help='Ridge strength (standardised)')
     parser.add_argument('--report')
+    parser.add_argument('--save-weights', help='Refit the terms model on ALL positions and save per-round '
+                        'weights (raw term units) for tools/teacher_patches.py calibrated_value')
     args = parser.parse_args()
     samples, term_keys = design(load(args.dataset))
     seeds = sorted({s['seed'] for s in samples})
@@ -145,6 +147,22 @@ def main():
               '| Term | ' + ' | '.join(f'R{r}' for r in coefficients) + ' |', '|---|' + '---:|'*len(coefficients)]
     for k in term_keys:
         lines.append(f'| {k} | ' + ' | '.join(f'{coefficients[r].get(k, 0):.2f}' for r in coefficients) + ' |')
+    if args.save_weights:
+        rounds = {}
+        for rnd in sorted({s['round'] for s in samples}):
+            group = [s for s in samples if s['round'] == rnd]
+            model = Ridge(args.alpha).fit(np.array([s['X']['terms'] for s in group]),
+                                          np.array([s['target'] for s in group]))
+            rounds[str(rnd)] = dict(zip(term_keys, (model.coef/model.scale).tolist()))
+        valid_terms = metrics(valid, predictions['terms'])
+        with open(args.save_weights, 'w') as out:
+            json.dump({'target': 'final VP minus the mean of the other three', 'model': 'per-round ridge on '
+                       'potential terms (own minus others mean)', 'alpha': args.alpha,
+                       'games': len({s['position'][0] for s in samples}), 'seeds': len(seeds),
+                       'validation': {'pair_acc_terms': valid_terms['pair_acc'], 'r2_terms': valid_terms['r2'],
+                                      'pair_acc_potential': metrics(valid, predictions['potential'])['pair_acc']},
+                       'rounds': rounds}, out, indent=1)
+        lines += ['', f'Saved per-round weights (refitted on all {len(samples)} rows) to {args.save_weights}']
     report = '\n'.join(lines)+'\n'
     print(report)
     if args.report:

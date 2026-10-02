@@ -127,3 +127,26 @@ class GeodensGuideTests(unittest.TestCase):
         self.assertIs(seen['Geodens'], configured.__wrapped__)
         self.assertIs(seen['Taklons'], configured)
         self.assertIs(preparation.reached_horizon, configured)
+
+
+class CalibratedValueTests(unittest.TestCase):
+    def test_unit_weights_reproduce_the_symmetric_potential(self):
+        import json
+        import tempfile
+        from extract_dataset import potential_terms, pass_terms
+        from faction_teachers.profiles import profiles
+        states = [s for _, s in play(rounds=2) if 'ActionPhase' in s['state']['phase']]
+        keys = set()
+        for snapshot in states:
+            for i, p in enumerate(snapshot['state']['players']):
+                keys |= set(potential_terms(snapshot['state'], i, profiles()[p['faction']].home))
+                keys |= set(pass_terms(snapshot['state'], i))
+        with tempfile.NamedTemporaryFile('w', suffix='.json') as weights:
+            json.dump({'rounds': {str(r): dict.fromkeys(keys, 1.0) for r in range(1, 7)}}, weights)
+            weights.flush()
+            tp.install_calibrated_value(weights.name)
+        for snapshot in states:
+            for i, p in enumerate(snapshot['state']['players']):
+                home = profiles()[p['faction']].home
+                self.assertAlmostEqual(tp.calibrated_potential(snapshot['state'], i, home=home),
+                                       tp.symmetric_potential(snapshot['state'], i, home=home), places=9)

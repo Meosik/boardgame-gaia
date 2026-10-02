@@ -70,7 +70,8 @@ def install_symmetric_pass():
     """Rebind `potential` wherever the tree imported it by name."""
     import sys
     for module in list(sys.modules.values()):
-        if getattr(module, 'potential', None) in (_original, symmetric_potential) and module is not None:
+        bound = getattr(module, 'potential', None)
+        if bound in (_original, symmetric_potential) or getattr(bound, '__name__', '') == 'calibrated_potential':
             if getattr(module, '__name__', '').split('.')[0] in ('four_factions', 'faction_teachers'):
                 module.potential = symmetric_potential
     _value.potential = symmetric_potential
@@ -188,4 +189,52 @@ def geodens_guide(seed, **kwargs):
     """Teacher factory: symmetric_pass plus the Geodens proposal order and look-ahead."""
     teacher = symmetric_pass(seed, **kwargs)
     install_geodens_guide()
+    return teacher
+
+
+# ── calibrated_value ───────────────────────────────────────────────────────────────────
+# Opt-in, on top of geodens_guide. Replaces the hand-weighted sum in `potential` by the
+# per-round weights that tools/value_baseline.py fitted to final results (cycle 019): the
+# same terms (tools/extract_dataset.py potential_terms + the cycle-017 pass terms), each
+# multiplied by its data-fitted weight instead of 1.0. Setup (round 0) and finished games
+# keep the original function. The weights file is the only input; no term is hand-tuned.
+
+_calibrated = {'weights': None}
+
+
+def calibrated_potential(state, actor, home=None, guide_tracks=False):
+    phase = state['phase']
+    if (isinstance(phase, dict) and 'Ended' in phase) or state['round'] < 1:
+        return symmetric_potential(state, actor, home=home, guide_tracks=guide_tracks)
+    from extract_dataset import potential_terms, pass_terms
+    if home is None:
+        from faction_teachers.profiles import profiles
+        home = profiles()[state['players'][actor]['faction']].home
+    weights = _calibrated['weights'][str(min(state['round'], 6))]
+    terms = {**potential_terms(state, actor, home), **pass_terms(state, actor)}
+    return sum(weights.get(k, 0.0)*x for k, x in terms.items())
+
+
+calibrated_potential.__wrapped__ = _original
+
+
+def install_calibrated_value(path):
+    import json
+    import sys
+    with open(path) as source:
+        _calibrated['weights'] = json.load(source)['rounds']
+    for module in list(sys.modules.values()):
+        if getattr(module, 'potential', None) in (_original, symmetric_potential, calibrated_potential):
+            if getattr(module, '__name__', '').split('.')[0] in ('four_factions', 'faction_teachers'):
+                module.potential = calibrated_potential
+    _value.potential = calibrated_potential
+
+
+def calibrated_value(seed, **kwargs):
+    """Teacher factory: geodens_guide with data-fitted term weights (GAIA_VALUE_WEIGHTS)."""
+    import os
+    from pathlib import Path
+    path = os.environ.get('GAIA_VALUE_WEIGHTS') or str(Path(__file__).with_name('value-weights.json'))
+    teacher = geodens_guide(seed, **kwargs)
+    install_calibrated_value(path)
     return teacher
