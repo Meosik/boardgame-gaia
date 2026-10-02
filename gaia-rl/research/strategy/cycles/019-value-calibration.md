@@ -56,3 +56,16 @@ player both scores well and holds few resources, so `materials` fitted near 0 �
 decision rule a near-zero resource price makes every spend look free. Prediction accuracy
 from on-policy data is necessary, not sufficient; a decision value needs counterfactual
 evidence (other actions tried in the same state).
+
+## Diagnosis of the A/B loss (easy level, seeds geo-quartet-9840 / -10640, user's weights)
+Free conversions per game (live teacher → calibrated): Geodens 1 → 46 and 1 → 28, Terrans
+0 → 35 and 2 → 36, Taklons 5 → 22 and 7 → 32; knowledge left at the end fell from 13–17 to
+1–2. With `materials` fitted at ≈0 (and `vp` negative in rounds 1–2), converting resources
+costs nothing in the evaluation, so the calibrated seats liquidated them. Hypothesis confirmed.
+
+## Next: counterfactual data
+`tools/branch_dataset.py` replays recorded games, picks positions, plays several different
+first moves (recorded, easy rank 1–2, one random, more ranks) and finishes each branch with the
+same deterministic easy teacher. `tools/branch_value.py` fits term weights to within-position
+differences of the mover's final margin and compares evaluators by pair accuracy, best-branch
+rate and regret on held-out seeds.
