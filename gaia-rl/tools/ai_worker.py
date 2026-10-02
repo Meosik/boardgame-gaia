@@ -9,7 +9,8 @@ Reply    {"ok": true, "decision": {"phase": "Game", "action": {...}}, "seconds":
 Request  {"op": "forget", "room": "AB12"}   drop that room's teacher memory
 Request  {"op": "ping"}
 
-Both levels use the frozen teacher with tools/teacher_patches.py symmetric_pass.
+Both levels use the frozen teacher with tools/teacher_patches.py geodens_guide
+(symmetric pass for all seats, Geodens guide order and look-ahead for Geodens).
 Levels: "easy" = the teacher's one-step ranking only; "normal" = 2 completed
 comparisons at the next income boundary with a 5 s cap (cycle 016: +21.8 VP/seat over
 easy without the cap, -3.8 for the cap). Run with
@@ -73,8 +74,9 @@ def main():
     fast_teacher.install()
     import budget_teacher
     from gaia_rl import Environment
-    # Cycle 017: the symmetric-pass correction (+7.7 VP/seat, 95% CI [+0.1, +15.2]).
-    from teacher_patches import symmetric_pass as make_teacher
+    # Cycle 017: symmetric pass (+7.7 VP/seat, 95% CI [+0.1, +15.2]); cycle 018: Geodens
+    # guide order and look-ahead (Geodens +15.5, 95% CI [+3.9, +27.2]).
+    from teacher_patches import geodens_guide as make_teacher
 
     teachers = {}
     out = sys.stdout
