@@ -368,6 +368,12 @@ pub(crate) fn fallback_step(
                 SetupAction::SelectStartingBooster { booster_id },
             )
         }
+        GamePhase::Setup(SetupPhase::Bidding { .. } | SetupPhase::BiddingChoice { .. }) => {
+            let action = crate::ai_bidding::decide(state, player).ok_or_else(|| {
+                RuleError::ActionNotAllowed("automated seat cannot act in this auction".into())
+            })?;
+            RuleEngine::apply_setup_action(state, player, action)
+        }
         GamePhase::ActionPhase { .. } => {
             let action = match automatic_main_action(state, player, 0) {
                 Some(action) => action,

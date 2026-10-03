@@ -291,9 +291,14 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
         let Some(turn) = next_ai_turn(app, room_code).await else {
             return;
         };
-        let decision = pool
-            .choose(room_code, &turn.state, turn.player, turn.level.as_deref())
-            .await;
+        // The teacher workers do not play the setup auction; AI seats bid with ai_bidding.
+        let decision = match crate::ai_bidding::decide(&turn.state, turn.player) {
+            Some(action) => Some(AiDecision::Setup(action)),
+            None => {
+                pool.choose(room_code, &turn.state, turn.player, turn.level.as_deref())
+                    .await
+            }
+        };
         let mut used_fallback = false;
         let applied = coordinator::apply_server_transition(app, room_code, |room| {
             if room.revision != turn.revision {

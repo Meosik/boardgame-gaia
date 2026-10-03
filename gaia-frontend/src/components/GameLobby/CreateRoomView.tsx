@@ -163,7 +163,7 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
               className="btn btn-secondary"
               onClick={() => handleCreateAiGame('normal')}
               disabled={loading}
-              title="무작위 맵과 종족으로 AI 3명과 바로 대전합니다. 방 제목·비밀번호·종족 결정 방식은 쓰지 않습니다."
+              title="무작위 맵으로 AI 3명과 바로 대전합니다. 종족과 차례는 AI와 비딩으로 정합니다. 방 제목·비밀번호는 쓰지 않습니다."
             >
               AI 3명과 대전
             </button>

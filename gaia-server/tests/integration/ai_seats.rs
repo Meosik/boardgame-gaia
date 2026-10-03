@@ -84,10 +84,14 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
             started.elapsed() < Duration::from_secs(3600),
             "game took too long"
         );
-        // The human always takes the first legal candidate (a deterministic stand-in).
-        let decision = RuleEngine::ai_decisions(&state)
-            .expect("human candidates")
-            .remove(0);
+        // The human always takes the first legal candidate (a deterministic stand-in); in the
+        // setup auction, which has no candidate list, it bids like an AI seat.
+        let decision = match gaia_server::ai_bidding::decide(&state, human) {
+            Some(action) => AiDecision::Setup(action),
+            None => RuleEngine::ai_decisions(&state)
+                .expect("human candidates")
+                .remove(0),
+        };
         let command = CommandId::parse(&format!("human-{human_moves}")).expect("command id");
         let expected = Revision::new(revision).expect("revision");
         match decision {

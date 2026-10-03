@@ -167,12 +167,22 @@ pub async fn create_dev_game(
         }
     });
     let nickname = req.nickname.as_deref().unwrap_or("DEV");
+    // AI games start with the setup auction (the human bids against the AI seats, see
+    // crate::ai_bidding); `setup_mode: Sequential` keeps the earlier random faction assignment.
+    let ai_bidding = req.ai_opponents
+        && !req.full_setup
+        && matches!(
+            req.setup_mode.unwrap_or(SetupMode::Bidding),
+            SetupMode::Bidding
+        );
     let setup_mode = if req.full_setup {
         req.setup_mode.unwrap_or(SetupMode::Bidding)
+    } else if ai_bidding {
+        SetupMode::Bidding
     } else {
         SetupMode::Sequential
     };
-    let (faction, ai_bot_factions) = if req.ai_opponents {
+    let (faction, ai_bot_factions) = if req.ai_opponents && !ai_bidding {
         let (human, bots) = crate::services::dev_game::ai_game_factions(&seed, req.faction);
         (human, Some(bots))
     } else {
@@ -194,6 +204,16 @@ pub async fn create_dev_game(
                 .map(|(index, id)| (*id, format!("DEV {}", index + 2))),
         );
         MapEngine::init_game_state(&code, &seed, &players, &setup)
+    } else if ai_bidding {
+        let mut players = vec![(player_id, nickname.to_string())];
+        players.extend(
+            bot_player_ids
+                .iter()
+                .enumerate()
+                .map(|(index, id)| (*id, format!("AI · {}", index + 1))),
+        );
+        MapEngine::init_game_state_with_bidding(&code, &seed, &players, &setup)
+            .map_err(|error| ServerError::Internal(format!("AI bidding setup: {error}")))?
     } else if let Some(bot_factions) = ai_bot_factions {
         crate::services::dev_game::build_game_state_with_factions(
             &code,

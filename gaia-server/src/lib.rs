@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod ai_bidding;
 pub mod coordinator;
 pub mod error;
 pub mod event_bus;
