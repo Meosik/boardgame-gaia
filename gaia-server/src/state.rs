@@ -96,6 +96,7 @@ impl AppState {
             dev_human_player: dev_controller,
             dev_bot_action_counts: HashMap::new(),
             dev_bot_action_round: 0,
+            ai_level: None,
         };
 
         let mut rooms = self.rooms.write().await;

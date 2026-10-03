@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { api } from '../api/rest';
+import { api, type AiLevel } from '../api/rest';
 import { rememberRoom, type RecentRoom } from './recentRoom';
 import type { GameSetup, LobbyPlayer, PlayerId, PreviewBoard, SetupMode } from '../types/game';
 
@@ -37,7 +37,7 @@ interface RoomStore {
       manualControl?: boolean,
       options?: { name?: string; password?: string },
     ) => Promise<void>;
-    createAiGame: (nickname: string) => Promise<void>;
+    createAiGame: (nickname: string, level?: AiLevel) => Promise<void>;
     joinRoom: (code: string, nickname: string, sessionToken?: string, password?: string) => Promise<void>;
     regenerateSetup: (seed?: string) => Promise<void>;
     fetchPreviewBoard: () => Promise<void>;
@@ -97,8 +97,8 @@ export const useRoomStore = create<RoomStore>()(
           }
         },
 
-        async createAiGame(nickname) {
-          const res = await api.createAiGame(nickname);
+        async createAiGame(nickname, level = 'normal') {
+          const res = await api.createAiGame(nickname, level);
           set({
             manualControl: false,
             roomCode: res.room_code,

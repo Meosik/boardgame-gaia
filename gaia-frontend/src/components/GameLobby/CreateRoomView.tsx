@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { shallow } from 'zustand/shallow';
 import { useRoomStore } from '../../store/roomStore';
 import type { GameSetup, SetupMode } from '../../types/game';
+import type { AiLevel } from '../../api/rest';
 import { factionDisplayName } from '../../displayNames';
 
 interface Props {
@@ -49,7 +50,7 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
     }
   }
 
-  async function handleCreateAiGame() {
+  async function handleCreateAiGame(level: AiLevel) {
     if (!nickname.trim()) {
       setError('닉네임을 입력해주세요');
       return;
@@ -57,7 +58,7 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
     setLoading(true);
     setError('');
     try {
-      await actions.createAiGame(nickname.trim());
+      await actions.createAiGame(nickname.trim(), level);
       onRoomCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 대전을 시작하지 못했습니다');
@@ -157,14 +158,24 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
           </button>
         )}
         {!manualControl && (
-          <button
-            className="btn btn-secondary"
-            onClick={handleCreateAiGame}
-            disabled={loading}
-            title="무작위 맵과 종족으로 AI 3명과 바로 대전합니다. 방 제목·비밀번호·종족 결정 방식은 쓰지 않습니다."
-          >
-            AI 3명과 대전
-          </button>
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => handleCreateAiGame('normal')}
+              disabled={loading}
+              title="무작위 맵과 종족으로 AI 3명과 바로 대전합니다. 방 제목·비밀번호·종족 결정 방식은 쓰지 않습니다."
+            >
+              AI 3명과 대전
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => handleCreateAiGame('hard')}
+              disabled={loading}
+              title="더 강한 AI 3명과 대전합니다. AI가 수마다 더 오래 생각합니다(평균 몇 초, 길면 20초)."
+            >
+              AI 3명과 대전 (어려움)
+            </button>
+          </>
         )}
         <button className="btn btn-primary" onClick={handleCreate} disabled={loading}>
           {loading ? '생성 중...' : '방 만들기'}

@@ -83,6 +83,8 @@ pub struct CreateDevGameRequest {
     /// instead of the controller manually playing all four seats.
     #[serde(default)]
     pub ai_opponents: bool,
+    /// AI difficulty for `ai_opponents` games: `easy`, `normal` or `hard` (default: server's).
+    pub ai_level: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -102,16 +104,15 @@ pub async fn create_room(
     State(app): State<AppState>,
     Json(req): Json<CreateRoomRequest>,
 ) -> ServerResult<(StatusCode, Json<CreateRoomResponse>)> {
-    let (code, player_id, setup) =
-        GameSetupService::create_room(
-            &app,
-            &req.nickname,
-            req.seed,
-            req.setup_mode,
-            req.name.as_deref(),
-            req.password.as_deref(),
-        )
-        .await?;
+    let (code, player_id, setup) = GameSetupService::create_room(
+        &app,
+        &req.nickname,
+        req.seed,
+        req.setup_mode,
+        req.name.as_deref(),
+        req.password.as_deref(),
+    )
+    .await?;
 
     let session_token = app.sessions.create_session(player_id, &code).await?;
 
@@ -195,7 +196,13 @@ pub async fn create_dev_game(
         MapEngine::init_game_state(&code, &seed, &players, &setup)
     } else if let Some(bot_factions) = ai_bot_factions {
         crate::services::dev_game::build_game_state_with_factions(
-            &code, &seed, player_id, &bot_player_ids, &setup, faction, bot_factions,
+            &code,
+            &seed,
+            player_id,
+            &bot_player_ids,
+            &setup,
+            faction,
+            bot_factions,
         )?
     } else {
         build_dev_game_state(&code, &seed, player_id, &bot_player_ids, &setup, faction)?
@@ -203,7 +210,16 @@ pub async fn create_dev_game(
 
     let ai_opponents = req.ai_opponents && !req.full_setup;
     if ai_opponents && app.ai.is_none() {
-        return Err(ServerError::Internal("AI opponents are not configured on this server".into()));
+        return Err(ServerError::Internal(
+            "AI opponents are not configured on this server".into(),
+        ));
+    }
+    if let Some(level) = &req.ai_level {
+        if !crate::ai::LEVELS.contains(&level.as_str()) {
+            return Err(ServerError::InvalidAction(format!(
+                "unknown AI level {level}"
+            )));
+        }
     }
     if ai_opponents {
         for player in &mut game_state.players {
@@ -228,6 +244,11 @@ pub async fn create_dev_game(
         };
         room.game_state = Some(game_state.clone());
         room.dev_human_player = Some(player_id);
+        room.ai_level = if ai_opponents {
+            req.ai_level.clone()
+        } else {
+            None
+        };
         for (_, _, ready) in &mut room.players {
             *ready = !req.full_setup;
         }

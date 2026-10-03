@@ -25,12 +25,30 @@ describe('AI game', () => {
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
     fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
     await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
-    expect(createAiGame).toHaveBeenCalledWith('나');
+    expect(createAiGame).toHaveBeenCalledWith('나', 'normal');
     const room = useRoomStore.getState();
     expect(room.roomCode).toBe('AI1234');
     expect(room.playerId).toBe(5);
     expect(room.manualControl).toBe(false);
     expect(room.roomState).toBe('faction_selection');
+  });
+
+  it('starts a hard AI game from its own button', async () => {
+    const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
+      room_code: 'AI5678',
+      player_id: 6,
+      session_token: 'token',
+      game_setup: null as never,
+      game_state: null as never,
+      players: [{ player_id: 6, nickname: '나', ready: true }] as never,
+      host_player_id: 6,
+    });
+    const onRoomCreated = vi.fn();
+    render(<CreateRoomView onRoomCreated={onRoomCreated} onBack={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
+    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' }));
+    await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
+    expect(createAiGame).toHaveBeenCalledWith('나', 'hard');
   });
 
   it('asks for a nickname before starting', () => {

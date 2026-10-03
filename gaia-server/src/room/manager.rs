@@ -73,6 +73,9 @@ pub struct Room {
     /// harness state; ordinary rooms leave it empty.
     pub dev_bot_action_counts: HashMap<PlayerId, u8>,
     pub dev_bot_action_round: u8,
+    /// AI difficulty chosen when an AI game was created (`easy`/`normal`/`hard`); `None` uses
+    /// the server's `GAIA_AI_LEVEL`.
+    pub ai_level: Option<String>,
 }
 
 impl Room {
@@ -259,6 +262,7 @@ impl RoomManager {
             dev_human_player: None,
             dev_bot_action_counts: HashMap::new(),
             dev_bot_action_round: 0,
+            ai_level: None,
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))
@@ -319,10 +323,7 @@ impl RoomManager {
             .map(|room| RoomSummary {
                 code: room.code.clone(),
                 name: room.name.clone(),
-                host_nickname: room
-                    .nickname_of(room.host_player)
-                    .unwrap_or("")
-                    .to_string(),
+                host_nickname: room.nickname_of(room.host_player).unwrap_or("").to_string(),
                 player_count: room.player_count(),
                 has_password: room.password_hash.is_some(),
                 setup_mode: room.setup.as_ref().map(|setup| setup.setup_mode),
@@ -405,17 +406,35 @@ mod tests {
     fn list_rooms_omits_rooms_that_join_room_would_reject() {
         let mut rooms = RoomManager::new();
         let (open_code, _) = rooms
-            .create_room("Host", Some("list-rooms-open".to_string()), SetupMode::Bidding, None, None)
+            .create_room(
+                "Host",
+                Some("list-rooms-open".to_string()),
+                SetupMode::Bidding,
+                None,
+                None,
+            )
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
         let (started_code, _) = rooms
-            .create_room("Host2", Some("list-rooms-started".to_string()), SetupMode::Bidding, None, None)
+            .create_room(
+                "Host2",
+                Some("list-rooms-started".to_string()),
+                SetupMode::Bidding,
+                None,
+                None,
+            )
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
-        rooms.get_room_mut(&started_code).unwrap_or_else(|| panic!("created room should exist")).state = super::RoomState::InGame;
+        rooms
+            .get_room_mut(&started_code)
+            .unwrap_or_else(|| panic!("created room should exist"))
+            .state = super::RoomState::InGame;
 
         let listed = rooms.list_rooms();
         assert!(listed.iter().any(|room| room.code == open_code));
         assert!(!listed.iter().any(|room| room.code == started_code));
-        let open = listed.iter().find(|room| room.code == open_code).unwrap_or_else(|| panic!("joinable room should be listed"));
+        let open = listed
+            .iter()
+            .find(|room| room.code == open_code)
+            .unwrap_or_else(|| panic!("joinable room should be listed"));
         assert_eq!(open.host_nickname, "Host");
         assert_eq!(open.player_count, 1);
         assert_eq!(open.name, "Host님의 방");
@@ -427,13 +446,30 @@ mod tests {
     fn a_blank_title_becomes_the_host_name_and_a_long_one_is_capped() {
         let mut rooms = RoomManager::new();
         let (default_code, _) = rooms
-            .create_room("호스트", Some("name-default".to_string()), SetupMode::Bidding, Some("   "), None)
+            .create_room(
+                "호스트",
+                Some("name-default".to_string()),
+                SetupMode::Bidding,
+                Some("   "),
+                None,
+            )
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
         let (named_code, _) = rooms
-            .create_room("호스트", Some("name-long".to_string()), SetupMode::Bidding, Some(&"가".repeat(40)), None)
+            .create_room(
+                "호스트",
+                Some("name-long".to_string()),
+                SetupMode::Bidding,
+                Some(&"가".repeat(40)),
+                None,
+            )
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
 
-        let name_of = |code: &str| rooms.get_room(code).map(|room| room.name.clone()).unwrap_or_default();
+        let name_of = |code: &str| {
+            rooms
+                .get_room(code)
+                .map(|room| room.name.clone())
+                .unwrap_or_default()
+        };
         assert_eq!(name_of(&default_code), "호스트님의 방");
         assert_eq!(name_of(&named_code).chars().count(), 24);
     }
@@ -442,16 +478,31 @@ mod tests {
     fn a_locked_room_admits_only_the_matching_password() {
         let mut rooms = RoomManager::new();
         let (code, _) = rooms
-            .create_room("Host", Some("locked-room".to_string()), SetupMode::Bidding, Some("우리끼리"), Some(" hunter2 "))
+            .create_room(
+                "Host",
+                Some("locked-room".to_string()),
+                SetupMode::Bidding,
+                Some("우리끼리"),
+                Some(" hunter2 "),
+            )
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
 
-        assert!(matches!(rooms.join_room(&code, "Guest", None), Err(crate::error::ServerError::InvalidRoomPassword)));
-        assert!(matches!(rooms.join_room(&code, "Guest", Some("nope")), Err(crate::error::ServerError::InvalidRoomPassword)));
+        assert!(matches!(
+            rooms.join_room(&code, "Guest", None),
+            Err(crate::error::ServerError::InvalidRoomPassword)
+        ));
+        assert!(matches!(
+            rooms.join_room(&code, "Guest", Some("nope")),
+            Err(crate::error::ServerError::InvalidRoomPassword)
+        ));
         // Surrounding whitespace is trimmed on both sides, as it is for the nickname.
         assert!(rooms.join_room(&code, "Guest", Some("hunter2")).is_ok());
 
         let listed = rooms.list_rooms();
-        let room = listed.iter().find(|room| room.code == code).unwrap_or_else(|| panic!("locked room should still be listed"));
+        let room = listed
+            .iter()
+            .find(|room| room.code == code)
+            .unwrap_or_else(|| panic!("locked room should still be listed"));
         assert_eq!(room.name, "우리끼리");
         assert!(room.has_password, "the list must say a room is locked");
         assert_eq!(room.player_count, 2);
@@ -461,7 +512,13 @@ mod tests {
     fn an_open_room_ignores_a_supplied_password() {
         let mut rooms = RoomManager::new();
         let (code, _) = rooms
-            .create_room("Host", Some("open-room".to_string()), SetupMode::Bidding, None, None)
+            .create_room(
+                "Host",
+                Some("open-room".to_string()),
+                SetupMode::Bidding,
+                None,
+                None,
+            )
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
 
         assert!(rooms.join_room(&code, "Guest", Some("anything")).is_ok());
@@ -471,12 +528,20 @@ mod tests {
     fn leaving_frees_the_seat_and_hands_the_host_role_to_the_next_player() {
         let mut rooms = RoomManager::new();
         let (code, host) = rooms
-            .create_room("Host", Some("leave-host".to_string()), SetupMode::Bidding, None, None)
+            .create_room(
+                "Host",
+                Some("leave-host".to_string()),
+                SetupMode::Bidding,
+                None,
+                None,
+            )
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
         let guest = rooms
             .join_room(&code, "Guest", None)
             .unwrap_or_else(|error| panic!("guest should join: {error}"));
-        let room = rooms.get_room_mut(&code).unwrap_or_else(|| panic!("room should exist"));
+        let room = rooms
+            .get_room_mut(&code)
+            .unwrap_or_else(|| panic!("room should exist"));
 
         let emptied = room
             .remove_player(host)
@@ -484,7 +549,10 @@ mod tests {
 
         assert!(!emptied, "a room with someone still in it is not empty");
         assert_eq!(room.player_count(), 1);
-        assert_eq!(room.host_player, guest, "the remaining player becomes the host");
+        assert_eq!(
+            room.host_player, guest,
+            "the remaining player becomes the host"
+        );
         // The freed seat is joinable again — a removed player is not banned.
         assert!(rooms.join_room(&code, "Host", None).is_ok());
     }
@@ -493,9 +561,17 @@ mod tests {
     fn removing_the_last_player_reports_the_room_as_empty() {
         let mut rooms = RoomManager::new();
         let (code, host) = rooms
-            .create_room("Host", Some("leave-last".to_string()), SetupMode::Bidding, None, None)
+            .create_room(
+                "Host",
+                Some("leave-last".to_string()),
+                SetupMode::Bidding,
+                None,
+                None,
+            )
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
-        let room = rooms.get_room_mut(&code).unwrap_or_else(|| panic!("room should exist"));
+        let room = rooms
+            .get_room_mut(&code)
+            .unwrap_or_else(|| panic!("room should exist"));
 
         let emptied = room
             .remove_player(host)
@@ -509,9 +585,17 @@ mod tests {
     fn removing_someone_who_is_not_in_the_room_is_an_error() {
         let mut rooms = RoomManager::new();
         let (code, host) = rooms
-            .create_room("Host", Some("leave-absent".to_string()), SetupMode::Bidding, None, None)
+            .create_room(
+                "Host",
+                Some("leave-absent".to_string()),
+                SetupMode::Bidding,
+                None,
+                None,
+            )
             .unwrap_or_else(|error| panic!("room should be created: {error}"));
-        let room = rooms.get_room_mut(&code).unwrap_or_else(|| panic!("room should exist"));
+        let room = rooms
+            .get_room_mut(&code)
+            .unwrap_or_else(|| panic!("room should exist"));
 
         assert!(matches!(
             room.remove_player(host.wrapping_add(9)),

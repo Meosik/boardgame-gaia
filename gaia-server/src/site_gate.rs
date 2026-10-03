@@ -44,9 +44,7 @@ impl SiteGate {
     }
 
     fn with_password(password: Option<&str>) -> Self {
-        let expected = password
-            .filter(|password| !password.is_empty())
-            .map(hash);
+        let expected = password.filter(|password| !password.is_empty()).map(hash);
         Self { expected }
     }
 
@@ -66,7 +64,10 @@ impl SiteGate {
 // Case-insensitive: friends retyping the shared passphrase from a Kakao/Discord
 // message shouldn't get locked out over Shift being on.
 fn hash(password: &str) -> String {
-    format!("{:x}", Sha256::digest(password.trim().to_lowercase().as_bytes()))
+    format!(
+        "{:x}",
+        Sha256::digest(password.trim().to_lowercase().as_bytes())
+    )
 }
 
 fn cookie_value(raw: &str, name: &str) -> Option<String> {
@@ -307,7 +308,10 @@ mod tests {
     #[tokio::test]
     async fn password_check_is_case_insensitive() {
         let server = app(SiteGate::with_password(Some("KHU-2osvz9")));
-        let res = server.post("/gate").form(&[("password", "khu-2OSVZ9")]).await;
+        let res = server
+            .post("/gate")
+            .form(&[("password", "khu-2OSVZ9")])
+            .await;
         res.assert_status(StatusCode::SEE_OTHER);
     }
 

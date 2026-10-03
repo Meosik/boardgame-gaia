@@ -78,7 +78,7 @@ enables it with:
 |---|---|---|
 | `GAIA_AI_DIR` | `/opt/gaia/gaia-rl` | gaia-rl directory; set it empty to disable AI games |
 | `GAIA_AI_WORKERS` | `6` | worker processes = AI decisions computed at once (≈ cores − 2) |
-| `GAIA_AI_LEVEL` | `normal` | `normal`: 2 comparisons, one-income horizon, 5 s cap; `easy`: one-step ranking |
+| `GAIA_AI_LEVEL` | `normal` | Default difficulty. `normal`: 2 comparisons, one-income horizon, 5 s cap; `easy`: one-step ranking; `hard`: 4 comparisons, 20 s cap. A player can pick normal or hard per AI game ("AI 3명과 대전" / "(어려움)"). |
 | `GAIA_AI_PYTHON` | image Python | interpreter with the `gaia_rl` wheel installed |
 | `GAIA_AI_TIMEOUT_SECS` | `30` | hung-worker guard; the move then falls back to a simple legal move |
 

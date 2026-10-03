@@ -28,6 +28,7 @@ async fn manual_dev_controller_places_every_mine_and_passes_every_seat_across_si
             faction: None,
             seed: Some("manual-dev-regression".into()),
             ai_opponents: false,
+            ai_level: None,
         }),
     )
     .await
@@ -391,18 +392,27 @@ async fn full_dev_setup_keeps_randomizer_and_bidding_interactive() {
 async fn manual_dev_tools_refill_persist_and_delete_only_owned_sandbox() {
     let _ = dotenvy::from_path(concat!(env!("CARGO_MANIFEST_DIR"), "/.env"));
     let pool = sqlx::PgPool::connect(&std::env::var("DATABASE_URL").expect("test DB URL"))
-        .await.expect("DB");
+        .await
+        .expect("DB");
     let app = AppState::new(pool.clone());
     let server = TestServer::new(gaia_server::router::build_router(app.clone())).expect("server");
-    let created: serde_json::Value = server.post("/api/dev-games")
-        .json(&serde_json::json!({"seed":"dev-tools-test"})).await.json();
+    let created: serde_json::Value = server
+        .post("/api/dev-games")
+        .json(&serde_json::json!({"seed":"dev-tools-test"}))
+        .await
+        .json();
     let code = created["room_code"].as_str().expect("code");
     let _cleanup = RoomCleanupGuard::new(code);
     let token = created["session_token"].as_str().expect("token");
     // Isolate controls from setup; seed committed power to verify all three bowls refill while Gaia stays unchanged.
     {
         let mut rooms = app.rooms.write().await;
-        let state = rooms.get_room_mut(code).expect("room").game_state.as_mut().expect("state");
+        let state = rooms
+            .get_room_mut(code)
+            .expect("room")
+            .game_state
+            .as_mut()
+            .expect("state");
         state.phase = GamePhase::ActionPhase { active_player: 0 };
         for player in &mut state.players {
             player.resources.power.bowl3 = 3;
@@ -412,40 +422,96 @@ async fn manual_dev_tools_refill_persist_and_delete_only_owned_sandbox() {
     let req = serde_json::json!({
         "session_token":token, "command_id":"dev-refill-test", "expected_revision":0
     });
-    server.post(&format!("/api/rooms/{code}/dev-refill")).json(&serde_json::json!({
-        "session_token":"invalid", "command_id":"invalid-test", "expected_revision":0
-    })).await.assert_status_unauthorized();
-    server.post(&format!("/api/rooms/{code}/dev-refill")).json(&req).await.assert_status_ok();
+    server
+        .post(&format!("/api/rooms/{code}/dev-refill"))
+        .json(&serde_json::json!({
+            "session_token":"invalid", "command_id":"invalid-test", "expected_revision":0
+        }))
+        .await
+        .assert_status_unauthorized();
+    server
+        .post(&format!("/api/rooms/{code}/dev-refill"))
+        .json(&req)
+        .await
+        .assert_status_ok();
     // Same command ID must not refill again or advance revision.
-    server.post(&format!("/api/rooms/{code}/dev-refill")).json(&req).await.assert_status_ok();
+    server
+        .post(&format!("/api/rooms/{code}/dev-refill"))
+        .json(&req)
+        .await
+        .assert_status_ok();
     app.rooms.write().await.remove_room(code);
-    app.ensure_room_loaded(code).await.expect("reload persisted resources");
+    app.ensure_room_loaded(code)
+        .await
+        .expect("reload persisted resources");
     {
         let rooms = app.rooms.read().await;
         let room = rooms.get_room(code).expect("restored");
         assert_eq!(room.revision, 1);
         for p in &room.game_state.as_ref().expect("state").players {
-            assert_eq!((p.resources.ore, p.resources.credits, p.resources.knowledge, p.resources.qic), (250,250,250,250));
-            assert_eq!((p.resources.power.bowl1,p.resources.power.bowl2,p.resources.power.bowl3,p.resources.power.gaia_bowl), (10,10,10,2));
+            assert_eq!(
+                (
+                    p.resources.ore,
+                    p.resources.credits,
+                    p.resources.knowledge,
+                    p.resources.qic
+                ),
+                (250, 250, 250, 250)
+            );
+            assert_eq!(
+                (
+                    p.resources.power.bowl1,
+                    p.resources.power.bowl2,
+                    p.resources.power.bowl3,
+                    p.resources.power.gaia_bowl
+                ),
+                (10, 10, 10, 2)
+            );
         }
     }
     // A valid session for a normal room is not DEV authority, even for its host.
-    let ordinary: serde_json::Value = server.post("/api/rooms").json(&serde_json::json!({"nickname":"ordinary"})).await.json();
+    let ordinary: serde_json::Value = server
+        .post("/api/rooms")
+        .json(&serde_json::json!({"nickname":"ordinary"}))
+        .await
+        .json();
     let normal_code = ordinary["room_code"].as_str().expect("normal code");
     let _normal_cleanup = RoomCleanupGuard::new(normal_code);
     for tool in ["refill", "delete"] {
         server.post(&format!("/api/rooms/{normal_code}/dev-{tool}")).json(&serde_json::json!({
             "session_token":ordinary["session_token"], "command_id":format!("normal-{tool}"), "expected_revision":0
         })).await.assert_status_forbidden();
-        server.post(&format!("/api/rooms/{normal_code}/dev-{tool}")).json(&req).await.assert_status_unauthorized();
+        server
+            .post(&format!("/api/rooms/{normal_code}/dev-{tool}"))
+            .json(&req)
+            .await
+            .assert_status_unauthorized();
     }
-    server.post(&format!("/api/rooms/{code}/dev-delete")).json(&req).await.assert_status_unprocessable_entity();
-    server.post(&format!("/api/rooms/{code}/dev-delete")).json(&serde_json::json!({
-        "session_token":token, "command_id":"delete-test", "expected_revision":1
-    })).await.assert_status_ok();
+    server
+        .post(&format!("/api/rooms/{code}/dev-delete"))
+        .json(&req)
+        .await
+        .assert_status_unprocessable_entity();
+    server
+        .post(&format!("/api/rooms/{code}/dev-delete"))
+        .json(&serde_json::json!({
+            "session_token":token, "command_id":"delete-test", "expected_revision":1
+        }))
+        .await
+        .assert_status_ok();
     assert!(app.rooms.read().await.get_room(code).is_none());
-    assert!(app.sessions.validate(token).await.expect("session lookup").is_none());
-    let remaining: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM game_snapshots WHERE room_code=$1").bind(code).fetch_one(&pool).await.expect("snapshots");
+    assert!(app
+        .sessions
+        .validate(token)
+        .await
+        .expect("session lookup")
+        .is_none());
+    let remaining: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM game_snapshots WHERE room_code=$1")
+            .bind(code)
+            .fetch_one(&pool)
+            .await
+            .expect("snapshots");
     assert_eq!(remaining.0, 0);
     assert!(app.rooms.read().await.get_room(normal_code).is_some());
 }

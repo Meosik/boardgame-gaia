@@ -36,6 +36,9 @@ use crate::{
     state::AppState,
 };
 
+/// Difficulties `tools/ai_worker.py` accepts.
+pub const LEVELS: [&str; 3] = ["easy", "normal", "hard"];
+
 #[derive(Debug, Clone)]
 pub struct AiConfig {
     pub dir: PathBuf,
@@ -166,6 +169,7 @@ impl AiPool {
         room_code: &str,
         state: &GameState,
         player: PlayerId,
+        level: Option<&str>,
     ) -> Option<AiDecision> {
         let mut guard = self.workers[self.slot(room_code)].lock().await;
         if guard.is_none() {
@@ -180,7 +184,7 @@ impl AiPool {
         let worker = guard.as_mut()?;
         let request = serde_json::json!({
             "op": "choose", "room": room_code, "player": player,
-            "level": self.config.level, "state": state,
+            "level": level.unwrap_or(&self.config.level), "state": state,
         });
         let exchange = async {
             let mut line = serde_json::to_string(&request).map_err(std::io::Error::other)?;
@@ -253,6 +257,7 @@ struct Turn {
     player: PlayerId,
     human: PlayerId,
     state: GameState,
+    level: Option<String>,
 }
 
 async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
@@ -275,6 +280,7 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
         player,
         human,
         state: state.clone(),
+        level: room.ai_level.clone(),
     })
 }
 
@@ -285,7 +291,9 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
         let Some(turn) = next_ai_turn(app, room_code).await else {
             return;
         };
-        let decision = pool.choose(room_code, &turn.state, turn.player).await;
+        let decision = pool
+            .choose(room_code, &turn.state, turn.player, turn.level.as_deref())
+            .await;
         let mut used_fallback = false;
         let applied = coordinator::apply_server_transition(app, room_code, |room| {
             if room.revision != turn.revision {

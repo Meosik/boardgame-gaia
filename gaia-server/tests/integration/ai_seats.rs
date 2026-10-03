@@ -49,6 +49,7 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
             faction: None,
             seed: Some("ai-seats-regression".into()),
             ai_opponents: true,
+            ai_level: None,
         }),
     )
     .await

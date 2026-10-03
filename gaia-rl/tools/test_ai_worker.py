@@ -61,6 +61,10 @@ class AiWorkerTests(unittest.TestCase):
         reply = self.play(30, 'normal')
         self.assertLess(reply['seconds'], 30)
 
+    def test_hard_level_plays_legal_moves(self):
+        reply = self.play(25, 'hard')
+        self.assertLess(reply['seconds'], 30)
+
     def test_wrong_seat_is_reported_not_played(self):
         snapshot = json.loads(Environment(SEED, 2000).snapshot_json())
         reply = self.worker.ask({'op': 'choose', 'room': 'x', 'state': snapshot['state'],

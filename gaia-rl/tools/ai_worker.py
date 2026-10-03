@@ -11,7 +11,7 @@ Request  {"op": "ping"}
 
 Both levels use the frozen teacher with tools/teacher_patches.py geodens_guide
 (symmetric pass for all seats, Geodens guide order and look-ahead for Geodens).
-Levels: "easy" = the teacher's one-step ranking only; "normal" = 2 completed
+Levels: "easy" = the teacher's one-step ranking only; "hard" = 4 comparisons, 20 s cap; "normal" = 2 completed
 comparisons at the next income boundary with a 5 s cap (cycle 016: +21.8 VP/seat over
 easy without the cap, -3.8 for the cap). Run with
 PYTHONPATH=python:baseline-teacher-20260917:tools from gaia-rl/.
@@ -64,7 +64,10 @@ def renumber(state):
 
 
 LEVELS = {'easy': {'comparisons': 0, 'horizon_incomes': 2, 'max_seconds': None},
-          'normal': {'comparisons': 2, 'horizon_incomes': 1, 'max_seconds': 5}}
+          'normal': {'comparisons': 2, 'horizon_incomes': 1, 'max_seconds': 5},
+          # Cycle 023: 4 comparisons +13.1 VP/seat over 2, at ~1.9x decision time (mean 6.3 s,
+          # p90 18.3 s on a laptop). Opt-in per room; the cap keeps the server's 30 s guard clear.
+          'hard': {'comparisons': 4, 'horizon_incomes': 1, 'max_seconds': 20}}
 MAX_ROOMS = 256
 
 

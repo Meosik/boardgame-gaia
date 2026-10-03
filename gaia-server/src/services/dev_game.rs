@@ -122,7 +122,15 @@ pub fn build_dev_game_state(
     setup: &GameSetup,
     faction: FactionId,
 ) -> ServerResult<GameState> {
-    build_game_state_with_factions(room_code, seed, player_id, bot_player_ids, setup, faction, dev_bot_factions(faction))
+    build_game_state_with_factions(
+        room_code,
+        seed,
+        player_id,
+        bot_player_ids,
+        setup,
+        faction,
+        dev_bot_factions(faction),
+    )
 }
 
 /// Four distinct factions for an AI game, varied by seed, never two sides of one board.
@@ -140,7 +148,10 @@ pub fn ai_game_factions(seed: &str, human: Option<FactionId>) -> (FactionId, Vec
         if chosen.len() == 4 {
             break;
         }
-        if chosen.iter().all(|taken| *taken != faction && taken.other_board_side() != faction) {
+        if chosen
+            .iter()
+            .all(|taken| *taken != faction && taken.other_board_side() != faction)
+        {
             chosen.push(faction);
         }
     }
@@ -312,7 +323,11 @@ pub fn auto_advance_dev_actions(
                 action,
                 GameAction::Pass { .. } | GameAction::FreeAction { .. }
             );
-        events.extend(super::game_action::apply_logged_action(state, active_player, action)?);
+        events.extend(super::game_action::apply_logged_action(
+            state,
+            active_player,
+            action,
+        )?);
         if is_main_action {
             *room.dev_bot_action_counts.entry(active_player).or_insert(0) += 1;
         }
@@ -333,13 +348,25 @@ pub(crate) fn fallback_step(
             let coord = automatic_starting_coord(state, player, human_player).ok_or_else(|| {
                 RuleError::ActionNotAllowed("automated seat has no legal starting planet".into())
             })?;
-            RuleEngine::apply_setup_action(state, player, SetupAction::PlaceStartingStructure { coord })
+            RuleEngine::apply_setup_action(
+                state,
+                player,
+                SetupAction::PlaceStartingStructure { coord },
+            )
         }
         GamePhase::Setup(SetupPhase::StartingBoosters { .. }) => {
-            let booster_id = state.boosters.first().map(|booster| booster.0).ok_or_else(|| {
-                RuleError::ActionNotAllowed("automated seat has no starting booster".into())
-            })?;
-            RuleEngine::apply_setup_action(state, player, SetupAction::SelectStartingBooster { booster_id })
+            let booster_id = state
+                .boosters
+                .first()
+                .map(|booster| booster.0)
+                .ok_or_else(|| {
+                    RuleError::ActionNotAllowed("automated seat has no starting booster".into())
+                })?;
+            RuleEngine::apply_setup_action(
+                state,
+                player,
+                SetupAction::SelectStartingBooster { booster_id },
+            )
         }
         GamePhase::ActionPhase { .. } => {
             let action = match automatic_main_action(state, player, 0) {
@@ -641,6 +668,7 @@ mod tests {
                 dev_human_player: Some(7),
                 dev_bot_action_counts: std::collections::HashMap::new(),
                 dev_bot_action_round: 0,
+                ai_level: None,
             },
             coord,
         )
@@ -972,13 +1000,22 @@ mod tests {
             assert_eq!(all.len(), 4, "{seed}");
             for (i, a) in all.iter().enumerate() {
                 for b in &all[i + 1..] {
-                    assert!(a != b && a.other_board_side() != *b, "{seed}: {a:?} vs {b:?}");
+                    assert!(
+                        a != b && a.other_board_side() != *b,
+                        "{seed}: {a:?} vs {b:?}"
+                    );
                 }
             }
         }
         let (human, bots) = super::ai_game_factions("a", Some(FactionId::Ivits));
         assert_eq!(human, FactionId::Ivits);
-        assert!(!bots.contains(&FactionId::Ivits) && !bots.contains(&FactionId::Ivits.other_board_side()));
-        assert_ne!(super::ai_game_factions("a", None), super::ai_game_factions("b", None));
+        assert!(
+            !bots.contains(&FactionId::Ivits)
+                && !bots.contains(&FactionId::Ivits.other_board_side())
+        );
+        assert_ne!(
+            super::ai_game_factions("a", None),
+            super::ai_game_factions("b", None)
+        );
     }
 }

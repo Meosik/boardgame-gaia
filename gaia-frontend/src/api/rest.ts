@@ -11,6 +11,9 @@ import type {
 import { decodeHexCoordinates } from './websocket';
 import { apiError } from './errors';
 
+/** AI difficulty for games against AI seats (server: crate::ai::LEVELS). */
+export type AiLevel = 'easy' | 'normal' | 'hard';
+
 const BASE = '/api';
 
 // Same "q,r" string <-> { q, r } object boundary conversion the WebSocket
@@ -48,11 +51,11 @@ export const api = {
       body: JSON.stringify({ nickname, seed, setup_mode: setupMode, full_setup: true }),
     });
   },
-  /** A game against three AI seats (server needs the AI pool); random map and factions. */
-  createAiGame(nickname: string): Promise<DevGameResponse> {
+  /** A game against three AI seats ('hard' searches twice as much and thinks longer); (server needs the AI pool); random map and factions. */
+  createAiGame(nickname: string, level: AiLevel = 'normal'): Promise<DevGameResponse> {
     return request(`${BASE}/dev-games`, {
       method: 'POST',
-      body: JSON.stringify({ nickname, ai_opponents: true }),
+      body: JSON.stringify({ nickname, ai_opponents: true, ai_level: level }),
     });
   },
   createDevGame(faction = 'Terrans', seed = 'gaia-ui-dev'): Promise<DevGameResponse> {
