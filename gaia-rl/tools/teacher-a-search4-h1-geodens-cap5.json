@@ -1,0 +1,13 @@
+{
+  "description": "Live teacher (geodens_guide) with 4 comparisons and the live 5 s safety cap.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:geodens_guide",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 5
+}
