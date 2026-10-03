@@ -203,3 +203,29 @@ class QuartetGuideTests(unittest.TestCase):
             self.assertEqual(keys, sorted(keys))
             seen.add(faction)
         self.assertEqual(seen, {'Terrans', 'Taklons'})
+
+
+class BoosterLookaheadTests(unittest.TestCase):
+    def test_booster_decisions_propose_other_boosters_and_flag_the_horizon(self):
+        tp.install_booster_lookahead()
+        from four_factions.preparation import Policies, PolicyCache, goals_for, best_index
+        seen = 0
+        for _, snapshot in play(rounds=2):
+            state = snapshot['state']
+            if not any(tp._booster_choice(c) for c in snapshot['candidates']):
+                continue
+            from gaia_rl import Environment
+            env = Environment.from_state_json(json.dumps(state), 2000)
+            fresh = json.loads(env.snapshot_json())
+            scores = Policies({}, cache=PolicyCache(), shared_factions=True).rank(env, fresh)
+            goals = goals_for(fresh, shared_factions=True)
+            control = best_index(scores, range(len(scores)))
+            if tp._booster_choice(fresh['candidates'][control]):
+                self.assertEqual(tp.decision_horizon(fresh), 2)
+                boosters = [g for g in goals if g.name.startswith('booster-')]
+                self.assertTrue(boosters and goals[:len(boosters)] == boosters)
+                self.assertTrue(all(tp._booster_choice(fresh['candidates'][g.first]) for g in boosters))
+                seen += 1
+            else:
+                self.assertIsNone(tp.decision_horizon(fresh))
+        self.assertGreater(seen, 0)

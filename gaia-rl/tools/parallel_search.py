@@ -131,9 +131,15 @@ def _prefetch(env, snapshot, memory, budget, kwargs):
     tasks, capture = _planned_tasks(env, snapshot, policies.memory, scores, policies, kwargs)
     state_json = json.dumps(snapshot['state'])
     memory_after = _memory_key(policies.memory)
+    # A patch may compare one decision at another boundary (teacher_patches.decision_horizon).
+    try:
+        from teacher_patches import decision_horizon
+        horizon = decision_horizon(snapshot) or _state['horizon']
+    except ImportError:
+        horizon = _state['horizon']
     pending = {}
     for goal in tasks[:budget]:
-        job = (state_json, policies.memory, scores, asdict(goal), settings, capture, _state['horizon'])
+        job = (state_json, policies.memory, scores, asdict(goal), settings, capture, horizon)
         pending[goal] = _state['pool'].apply_async(_compute, (job,))
     _state['prefetch'] = (_key(snapshot), memory_after, pending)
 

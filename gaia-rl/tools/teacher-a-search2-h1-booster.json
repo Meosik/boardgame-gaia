@@ -1,0 +1,9 @@
+{
+  "description": "Live teacher plus tools/teacher_patches.py booster_lookahead: other boosters are compared first and booster decisions look through the next round.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:booster_lookahead",
+  "kwargs": {"bgg_openings": true, "shared_factions": true},
+  "comparisons": 2,
+  "horizon_incomes": 1,
+  "frozen": true
+}

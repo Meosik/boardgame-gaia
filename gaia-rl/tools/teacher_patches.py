@@ -373,3 +373,118 @@ def quartet_guide(seed, **kwargs):
     teacher = geodens_guide(seed, **kwargs)
     install_quartet_guide()
     return teacher
+
+
+# ── booster_lookahead ──────────────────────────────────────────────────────────────────
+# Opt-in, on top of geodens_guide. A booster is chosen when passing (and once in setup), but
+# (1) at the normal level only the current choice and ONE plan are compared, so other boosters
+# are never rolled out, and (2) a comparison stops at the next income, before the new booster
+# is ever used, so its special action (1 terraform, +3 range, ...) and its next round's pass VP
+# cannot show. When the best-ranked root move is a booster choice, this proposes the other
+# boosters first (best-ranked first) and compares every route of THAT decision at the second
+# income boundary, i.e. through the round played with the booster. No value is added.
+
+_booster = {'scores': {}, 'flag': None}
+
+
+def _decision_key(snapshot):
+    import json
+    return json.dumps([snapshot['decision_id'], snapshot['steps']])
+
+
+def _booster_choice(candidate):
+    action = candidate.get('action', {})
+    return isinstance(action, dict) and (
+        (action.get('type') == 'Pass' and action.get('booster_id') is not None)
+        or action.get('type') == 'SelectStartingBooster')
+
+
+def decision_horizon(snapshot):
+    """2 for a booster decision prepared by booster_goals, else None (configured horizon)."""
+    return 2 if _booster['flag'] == _decision_key(snapshot) else None
+
+
+def booster_goals(snapshot, goals):
+    from four_factions.preparation import Goal, best_index, blocked
+    key = _decision_key(snapshot)
+    scores = _booster['scores'].get(key)
+    if scores is None:
+        return goals
+    control = best_index(scores, range(len(scores)))
+    if control is None or not _booster_choice(snapshot['candidates'][control]):
+        if _booster['flag'] == key:
+            _booster['flag'] = None
+        return goals
+    _booster['flag'] = key
+    alternatives = sorted((i for i, c in enumerate(snapshot['candidates'])
+                           if i != control and _booster_choice(c) and not blocked(scores[i])),
+                          key=lambda i: (-scores[i][0], i))
+    return [Goal(f'booster-{i}', 'root', first=i) for i in alternatives[:3]] + goals
+
+
+def install_booster_lookahead():
+    import four_factions.preparation as p
+    if not getattr(p.Policies.rank, '_booster', False):
+        original_rank = p.Policies.rank
+
+        def rank(self, env, snapshot):
+            scores = original_rank(self, env, snapshot)
+            store = _booster['scores']
+            store[_decision_key(snapshot)] = scores
+            while len(store) > 8:
+                store.pop(next(iter(store)))
+            return scores
+        rank.__wrapped__ = original_rank
+        rank._booster = True
+        p.Policies.rank = rank
+    original_goals_for = getattr(p.goals_for, '__wrapped__', p.goals_for)
+    if not getattr(p.goals_for, '_booster', False):
+        inner_goals_for = p.goals_for
+
+        def goals_for(snapshot, **kwargs):
+            return booster_goals(snapshot, inner_goals_for(snapshot, **kwargs))
+        goals_for.__wrapped__ = original_goals_for
+        goals_for._booster = True
+        p.goals_for = goals_for
+    if not getattr(p.rollout, '_booster', False):
+        inner_rollout = p.rollout
+
+        def rollout(env, snapshot, *args, **kwargs):
+            if decision_horizon(snapshot) != 2:
+                return inner_rollout(env, snapshot, *args, **kwargs)
+            configured = p.reached_horizon
+            p.reached_horizon = getattr(configured, '__wrapped__', configured)
+            try:
+                return inner_rollout(env, snapshot, *args, **kwargs)
+            finally:
+                p.reached_horizon = configured
+        rollout.__wrapped__ = getattr(inner_rollout, '__wrapped__', inner_rollout)
+        rollout._booster = True
+        p.rollout = rollout
+
+
+def _install_booster_search_scope():
+    # Live decisions start from a fresh native environment (decision id 0, step 0), so the
+    # per-decision key repeats; the flag and stored scores must not outlive one search.
+    import four_factions.preparation as p
+    if getattr(p.search, '_booster', False):
+        return
+    inner_search = p.search
+
+    def search(*args, **kwargs):
+        try:
+            return inner_search(*args, **kwargs)
+        finally:
+            _booster['flag'] = None
+            _booster['scores'].clear()
+    search._booster = True
+    search._parallel = getattr(inner_search, '_parallel', False)
+    p.search = search
+
+
+def booster_lookahead(seed, **kwargs):
+    """Teacher factory: geodens_guide plus booster alternatives compared through the next round."""
+    teacher = geodens_guide(seed, **kwargs)
+    install_booster_lookahead()
+    _install_booster_search_scope()
+    return teacher
