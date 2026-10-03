@@ -238,3 +238,48 @@ def calibrated_value(seed, **kwargs):
     teacher = geodens_guide(seed, **kwargs)
     install_calibrated_value(path)
     return teacher
+
+
+# ── family_rotation ────────────────────────────────────────────────────────────────────
+# Opt-in, on top of geodens_guide. At the normal level a decision compares the current choice
+# with the FIRST proposal only (cycle 016 budget). `goals_for` lists Academy/PI upgrades
+# first, then research, then colonies, so in rounds 2+ the one examined plan was almost
+# always an upgrade or a research step and expansion plans were never examined (cycle 021,
+# one replayed game: the most frequent first proposals were Qic/Science Academy and PI
+# upgrades and Terraforming steps for Terrans, Taklons and Xenos). This rotates which proposal family comes first, by the
+# decision's step number, so every family is examined in turn. It ranks nothing: the
+# families, their contents and the comparison itself are unchanged. Geodens keeps the
+# cycle-018 guide order.
+
+ROTATION_EXEMPT = frozenset({'Geodens'})
+
+
+def rotate_families(snapshot, goals):
+    player = snapshot['state']['players'][snapshot['player']]
+    if player['faction'] in ROTATION_EXEMPT or not goals:
+        return goals
+    order, groups = [], {}
+    for goal in goals:
+        if goal.family not in groups:
+            order.append(goal.family)
+            groups[goal.family] = []
+        groups[goal.family].append(goal)
+    k = snapshot['steps'] % len(order)
+    return [goal for family in order[k:]+order[:k] for goal in groups[family]]
+
+
+def install_family_rotation():
+    import four_factions.preparation as preparation
+    original = getattr(preparation.goals_for, '__wrapped__', preparation.goals_for)
+
+    def goals_for(snapshot, **kwargs):
+        return rotate_families(snapshot, original(snapshot, **kwargs))
+    goals_for.__wrapped__ = original
+    preparation.goals_for = goals_for
+
+
+def family_rotation(seed, **kwargs):
+    """Teacher factory: geodens_guide plus rotating the first proposal family per decision."""
+    teacher = geodens_guide(seed, **kwargs)
+    install_family_rotation()
+    return teacher

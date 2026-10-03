@@ -150,3 +150,23 @@ class CalibratedValueTests(unittest.TestCase):
                 home = profiles()[p['faction']].home
                 self.assertAlmostEqual(tp.calibrated_potential(snapshot['state'], i, home=home),
                                        tp.symmetric_potential(snapshot['state'], i, home=home), places=9)
+
+
+class FamilyRotationTests(unittest.TestCase):
+    def test_rotation_keeps_every_goal_and_varies_the_first_family(self):
+        from four_factions.preparation import goals_for, interleave_families
+        firsts, checked = set(), 0
+        for _, snapshot in play(rounds=3):
+            if 'ActionPhase' not in snapshot['state']['phase']:
+                continue
+            original = goals_for(snapshot, shared_factions=True)
+            rotated = tp.rotate_families(snapshot, original)
+            self.assertCountEqual(rotated, original)
+            faction = snapshot['state']['players'][snapshot['player']]['faction']
+            if faction == 'Geodens':
+                self.assertEqual(rotated, original)
+            elif rotated:
+                firsts.add(interleave_families(rotated, lambda g: g.family)[0].family)
+                checked += 1
+        self.assertGreater(checked, 10)
+        self.assertGreater(len(firsts), 2)
