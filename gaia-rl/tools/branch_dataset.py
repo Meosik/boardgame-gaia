@@ -148,7 +148,7 @@ def positions(run_dirs, per_game):
             continue
         step = max(1, len(eligible)//per_game)
         for state_json, steps, recorded in eligible[step//2::step][:per_game]:
-            root = f'{result["seed"]}@{game_dir.name}#{steps}'
+            root = f'{result["seed"]}@{game_dir.parent.parent.name}/{game_dir.name}#{steps}'
             yield state_json, root, recorded, result['seed']
 
 
