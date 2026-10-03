@@ -18,3 +18,19 @@ Smoke (geo-quartet-9840, normal, to round 3): Taklons selected `one-new-colony`,
 
 ## Pending A/B: A = geodens_guide (live), B = quartet_guide, 12 fresh seeds
 geo-quartet-62074 geo-quartet-62555 geo-quartet-62634 geo-quartet-63239 geo-quartet-63574 geo-quartet-65849 geo-quartet-68390 geo-quartet-68609 geo-quartet-71365 geo-quartet-75708 geo-quartet-82639 geo-quartet-83878
+
+## A/B result (user run; 12 fresh seeds, 12 pairs)
+
+| Faction | B−A | 95% CI |
+|---|---:|---|
+| Geodens (unchanged) | +2.4 | [−2.6, +7.5] |
+| Taklons | **−9.0** | **[−14.9, −3.1]** |
+| Terrans | −3.5 | [−11.2, +4.2] |
+| Xenos (unchanged) | −4.6 | [−12.8, +3.7] |
+| All seats | **−3.7** | **[−6.1, −1.3]** |
+
+Not adopted. Expansion-first hurt Taklons (rotation gave −2.5 in the same direction). For
+`potential`-ranked factions, changing *which* plan is examined does not help while the
+evaluation itself prices building low; the Geodens gain (cycle 018) may owe more to its
+two-income look-ahead than to the order. Next: more search with the same evaluation
+(cycle 023, 4 comparisons instead of 2).

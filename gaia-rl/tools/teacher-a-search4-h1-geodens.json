@@ -1,0 +1,9 @@
+{
+  "description": "Live teacher (geodens_guide) with 4 completed comparisons per decision instead of 2: current choice plus three proposals.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:geodens_guide",
+  "kwargs": {"bgg_openings": true, "shared_factions": true},
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true
+}
