@@ -43,3 +43,7 @@ Not adopted as a whole. Xenos ranks with its own evaluator (`endpoint_value`) an
 examining expansion plans; Terrans and Taklons rank with `potential`, which prices building
 low, and do not. Restricting the rotation to Xenos was chosen after seeing this table, so it
 is confirmed separately on 12 seeds not used here (`teacher-a-search2-h1-xenos-rotation.json`).
+
+## Confirmation (user run; A = geodens_guide, B = xenos_rotation; 12 fresh seeds)
+Xenos +1.2 [−16.1, +18.6]; others −0.6 to +1.7, all intervals include 0; all seats +0.7.
+The cycle-021 Xenos gain did not replicate: discarded. Live teacher unchanged.

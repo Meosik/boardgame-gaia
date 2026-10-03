@@ -183,3 +183,23 @@ class FamilyRotationTests(unittest.TestCase):
                     self.assertEqual(tp.rotate_families(snapshot, original), original)
         finally:
             tp._rotation['only'] = None
+
+
+class QuartetGuideTests(unittest.TestCase):
+    def test_terrans_and_taklons_orders_and_others_untouched(self):
+        from four_factions.preparation import goals_for
+        seen = set()
+        for _, snapshot in play(rounds=3):
+            if 'ActionPhase' not in snapshot['state']['phase']:
+                continue
+            faction = snapshot['state']['players'][snapshot['player']]['faction']
+            original = goals_for(snapshot, shared_factions=True)
+            ordered = tp.quartet_goals(snapshot, original)
+            if faction not in tp.QUARTET_KEYS:
+                self.assertIs(ordered, original)
+                continue
+            self.assertTrue(set(original) <= set(ordered))
+            keys = [tp.QUARTET_KEYS[faction](g) for g in ordered]
+            self.assertEqual(keys, sorted(keys))
+            seen.add(faction)
+        self.assertEqual(seen, {'Terrans', 'Taklons'})

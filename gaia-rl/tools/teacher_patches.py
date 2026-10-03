@@ -301,3 +301,75 @@ def xenos_rotation(seed, **kwargs):
     _rotation['only'] = frozenset({'Xenos'})
     install_family_rotation()
     return teacher
+
+
+# ── quartet_guide ──────────────────────────────────────────────────────────────────────
+# Opt-in, on top of geodens_guide. B19 (uiqoo, 2023) only ORDERS proposals for Terrans and
+# Taklons, as cycle 018 did for Geodens; no value term, bonus or prohibition.
+# Terrans (B19 "테란"): Academy first for the 4-charge and Gaia-3-VP tiles ("아광"), then the
+#   Gaia track, Gaia/Transdim colonies and ordinary expansion; a PI start "is a trap", so PI
+#   proposals move to the back (still examined when nothing else is proposed).
+# Taklons (B19 "타클론"): research lab + mines ("연5광"); "cover the map with tier-1/2
+#   buildings" — an expansion plan first, then the existing two-labs path.
+
+def _expansion(snapshot):
+    from four_factions.preparation import Goal
+    from four_factions.source_paths import colony_count
+    player = snapshot['state']['players'][snapshot['player']]
+    return Goal('one-new-colony', 'expansion', level=colony_count(snapshot['state'], player)+1,
+                sources=('B19',))
+
+
+def _terrans_key(goal):
+    if goal.name.startswith('Terrans-academy'):
+        return 0
+    if goal.family == 'research' and goal.target == 'GaiaProject':
+        return 1
+    if goal.family == 'colony':
+        return 2
+    if goal.family == 'expansion':
+        return 3
+    if goal.name.startswith('Terrans-PI') or (goal.family == 'upgrade' and goal.target == 'PlanetaryInstitute'):
+        return 9
+    return 5
+
+
+def _taklons_key(goal):
+    if goal.family == 'expansion':
+        return 0
+    if goal.name.startswith('Taklons-two-labs'):
+        return 1
+    return 5
+
+
+QUARTET_KEYS = {'Terrans': _terrans_key, 'Taklons': _taklons_key}
+
+
+def quartet_goals(snapshot, goals):
+    from four_factions.preparation import viable, achieved
+    faction = snapshot['state']['players'][snapshot['player']]['faction']
+    key = QUARTET_KEYS.get(faction)
+    if key is None:
+        return goals
+    extra = _expansion(snapshot)
+    if (not any(g.family == 'expansion' and not g.steps for g in goals)
+            and viable(snapshot, snapshot['player'], extra) and not achieved(snapshot, snapshot['player'], extra)):
+        goals = [*goals, extra]
+    return sorted(goals, key=key)   # stable: the tree's order within each rank is kept
+
+
+def install_quartet_guide():
+    import four_factions.preparation as preparation
+    original = getattr(preparation.goals_for, '__wrapped__', preparation.goals_for)
+
+    def goals_for(snapshot, **kwargs):
+        return quartet_goals(snapshot, original(snapshot, **kwargs))
+    goals_for.__wrapped__ = original
+    preparation.goals_for = goals_for
+
+
+def quartet_guide(seed, **kwargs):
+    """Teacher factory: geodens_guide plus the B19 proposal order for Terrans and Taklons."""
+    teacher = geodens_guide(seed, **kwargs)
+    install_quartet_guide()
+    return teacher

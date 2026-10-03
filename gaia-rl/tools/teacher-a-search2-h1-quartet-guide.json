@@ -1,0 +1,9 @@
+{
+  "description": "geodens_guide teacher plus tools/teacher_patches.py quartet_guide: B19 proposal order for Terrans (Academy, Gaia track, colonies, expansion; PI last) and Taklons (expansion, then two labs).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:quartet_guide",
+  "kwargs": {"bgg_openings": true, "shared_factions": true},
+  "comparisons": 2,
+  "horizon_incomes": 1,
+  "frozen": true
+}
