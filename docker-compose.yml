@@ -49,6 +49,7 @@ services:
       GAIA_AI_DIR: ${GAIA_AI_DIR-/opt/gaia/gaia-rl}
       GAIA_AI_WORKERS: ${GAIA_AI_WORKERS:-6}
       GAIA_AI_LEVEL: ${GAIA_AI_LEVEL:-normal}
+      GAIA_AI_PARALLEL: ${GAIA_AI_PARALLEL:-0}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
       interval: 10s

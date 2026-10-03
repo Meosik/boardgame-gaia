@@ -76,6 +76,7 @@ def main():
     import fast_teacher
     fast_teacher.install()
     import budget_teacher
+    import parallel_search
     from gaia_rl import Environment
     # Cycle 017: symmetric pass (+7.7 VP/seat, 95% CI [+0.1, +15.2]); cycle 018: Geodens
     # guide order and look-ahead (Geodens +15.5, 95% CI [+3.9, +27.2]).
@@ -124,6 +125,9 @@ def main():
             teacher = teachers.pop(room, None)
             if teacher is None:
                 teacher = make_teacher(room, bgg_openings=True, shared_factions=True)
+                # GAIA_AI_PARALLEL=N runs a decision's comparisons in N processes (same decisions,
+                # less wall time; tools/parallel_search.py). Re-applied after every factory call.
+                parallel_search.install(int(os.environ.get('GAIA_AI_PARALLEL') or 0))
             teachers[room] = teacher          # most recently used last
             while len(teachers) > MAX_ROOMS:
                 teachers.pop(next(iter(teachers)))

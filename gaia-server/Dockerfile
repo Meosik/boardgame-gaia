@@ -81,7 +81,8 @@ COPY --from=ai-builder /wheels /tmp/wheels
 RUN pip install --no-cache-dir /tmp/wheels/*.whl && rm -rf /tmp/wheels
 COPY gaia-rl/baseline-teacher-20260917 /opt/gaia/gaia-rl/baseline-teacher-20260917
 COPY gaia-rl/tools/ai_worker.py gaia-rl/tools/fast_teacher.py gaia-rl/tools/fast_copy.py \
-     gaia-rl/tools/budget_teacher.py gaia-rl/tools/teacher_patches.py /opt/gaia/gaia-rl/tools/
+     gaia-rl/tools/budget_teacher.py gaia-rl/tools/teacher_patches.py gaia-rl/tools/parallel_search.py \
+     /opt/gaia/gaia-rl/tools/
 COPY gaia-rl/research/strategy/bgg-openings-part2.csv /opt/gaia/gaia-rl/research/strategy/
 COPY gaia-frontend/src/data /opt/gaia/gaia-frontend/src/data
 COPY gaia-engine/data /opt/gaia/gaia-engine/data
