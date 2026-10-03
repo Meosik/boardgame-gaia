@@ -28,3 +28,18 @@ proposal family rotates with the decision's step number. Neutral — no family i
 nothing is added or removed. Geodens keeps its cycle-018 guide order.
 
 ## Pending A/B: A = geodens_guide (live), B = family_rotation
+
+## A/B result (user run; A = geodens_guide live, B = family_rotation; 12 seeds, 12 pairs)
+
+| Faction | B−A | 95% CI |
+|---|---:|---|
+| Geodens (unchanged; control) | −3.2 | [−10.7, +4.2] |
+| Taklons | −2.5 | [−14.6, +9.6] |
+| Terrans | −12.1 | [−24.5, +0.3] |
+| Xenos | **+10.2** | **[+1.3, +19.1]** |
+| All seats | −1.9 | [−7.6, +3.8] |
+
+Not adopted as a whole. Xenos ranks with its own evaluator (`endpoint_value`) and gains from
+examining expansion plans; Terrans and Taklons rank with `potential`, which prices building
+low, and do not. Restricting the rotation to Xenos was chosen after seeing this table, so it
+is confirmed separately on 12 seeds not used here (`teacher-a-search2-h1-xenos-rotation.json`).

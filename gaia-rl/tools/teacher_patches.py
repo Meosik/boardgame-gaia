@@ -254,9 +254,13 @@ def calibrated_value(seed, **kwargs):
 ROTATION_EXEMPT = frozenset({'Geodens'})
 
 
+_rotation = {'only': None}   # None: every faction but ROTATION_EXEMPT; else this set only
+
+
 def rotate_families(snapshot, goals):
     player = snapshot['state']['players'][snapshot['player']]
-    if player['faction'] in ROTATION_EXEMPT or not goals:
+    only = _rotation['only']
+    if not goals or player['faction'] in ROTATION_EXEMPT or (only is not None and player['faction'] not in only):
         return goals
     order, groups = [], {}
     for goal in goals:
@@ -281,5 +285,19 @@ def install_family_rotation():
 def family_rotation(seed, **kwargs):
     """Teacher factory: geodens_guide plus rotating the first proposal family per decision."""
     teacher = geodens_guide(seed, **kwargs)
+    _rotation['only'] = None
+    install_family_rotation()
+    return teacher
+
+
+def xenos_rotation(seed, **kwargs):
+    """Teacher factory: geodens_guide plus family rotation for Xenos only.
+
+    Cycle 021 A/B (rotation for every faction but Geodens): Xenos +10.2 [+1.3, +19.1],
+    Terrans -12.1 [-24.5, +0.3], Taklons -2.5. Xenos ranks with its own evaluator, not
+    `potential`. Selected after seeing that result, so it must be confirmed on new seeds.
+    """
+    teacher = geodens_guide(seed, **kwargs)
+    _rotation['only'] = frozenset({'Xenos'})
     install_family_rotation()
     return teacher

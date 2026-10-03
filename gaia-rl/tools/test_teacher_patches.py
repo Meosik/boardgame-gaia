@@ -170,3 +170,16 @@ class FamilyRotationTests(unittest.TestCase):
                 checked += 1
         self.assertGreater(checked, 10)
         self.assertGreater(len(firsts), 2)
+
+    def test_xenos_only_rotation_leaves_other_factions_alone(self):
+        from four_factions.preparation import goals_for
+        tp._rotation['only'] = frozenset({'Xenos'})
+        try:
+            for _, snapshot in play(rounds=2):
+                if 'ActionPhase' not in snapshot['state']['phase']:
+                    continue
+                original = goals_for(snapshot, shared_factions=True)
+                if snapshot['state']['players'][snapshot['player']]['faction'] != 'Xenos':
+                    self.assertEqual(tp.rotate_families(snapshot, original), original)
+        finally:
+            tp._rotation['only'] = None
