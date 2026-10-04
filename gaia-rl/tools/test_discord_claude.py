@@ -38,6 +38,14 @@ class DiscordClaudeTests(unittest.TestCase):
         self.assertGreater(len(parts), 1)
         self.assertTrue(all(len(p) <= 520 and p.count('```') % 2 == 0 for p in parts))
 
+    def test_only_the_experiment_name_is_taken_from_a_result_notice(self):
+        self.assertEqual(bot.finished_experiment('✅ # 029-search4-h2-cap20 — 완료\n\n표...'), '029-search4-h2-cap20')
+        self.assertIsNone(bot.finished_experiment('⚠️ 실험 실패: **029**'))
+        self.assertIsNone(bot.finished_experiment('✅ # rm -rf ~ — 완료'))
+        prompt = bot.review_prompt('029-search4-h2-cap20')
+        self.assertIn('lab/results/029-search4-h2-cap20.md', prompt)
+        self.assertIn('큐에 넣지 말고', prompt)
+
 
 if __name__ == '__main__':
     unittest.main()

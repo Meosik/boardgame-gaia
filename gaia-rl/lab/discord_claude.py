@@ -11,11 +11,15 @@ the running turn. Turns run one at a time; later messages wait in order.
 
 Environment (lab/discord_claude.env, git-ignored; see lab/discord_claude.env.example):
   DISCORD_BOT_TOKEN, DISCORD_OWNER_ID, DISCORD_CHANNEL_IDS (comma-separated),
+  DISCORD_LAB_CHANNEL_ID (lab's webhook channel: each '✅' result notice there starts an automatic
+  review in the first channel; only the experiment name is read from the notice),
+  DISCORD_LAB_WEBHOOK_ID (optional: accept only this webhook),
   GAIA_WORKDIR (default ~/projects/gaia-work), CLAUDE_BIN (default: claude on PATH),
   CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json).
 """
 import asyncio
 import json
+import re
 import os
 from pathlib import Path
 import shutil
@@ -82,6 +86,24 @@ def summarize(stdout, stderr, code):
     return text, result.get('session_id')
 
 
+RESULT_NAME = re.compile(r'^✅\s*#\s*([0-9A-Za-z._-]{1,80})\s*—\s*완료', re.M)
+
+
+def finished_experiment(text):
+    """The experiment name from a lab '✅ # <name> — 완료' notice, else None.
+
+    Only the name is taken; nothing else in a webhook message is passed to Claude."""
+    match = RESULT_NAME.search(text)
+    return match.group(1) if match else None
+
+
+def review_prompt(name):
+    return (f'lab 실험 {name} 결과가 나왔다. git pull로 받은 뒤 gaia-rl/lab/results/{name}.md와 .json을 읽고, '
+            'HANDOFF.md 규칙대로 1) research/strategy/cycles/에 사이클 문서를 쓰고 2) HANDOFF.md의 결과표와 '
+            '"진행 중"을 갱신해 3) 커밋·푸시하라. 4) 결과의 의미를 짧게 정리하고 다음 실험을 제안하라. 다음 실험은 '
+            '큐에 넣지 말고 사용자의 확인을 기다린다. 설정 변경이나 배포가 필요하면 제안만 한다.')
+
+
 def load_state(path):
     try:
         return json.loads(path.read_text())
@@ -94,7 +116,9 @@ def main():
 
     token = os.environ['DISCORD_BOT_TOKEN']
     owner = int(os.environ['DISCORD_OWNER_ID'])
-    channels = {int(c) for c in os.environ.get('DISCORD_CHANNEL_IDS', '').split(',') if c.strip()}
+    channels = [int(c) for c in os.environ.get('DISCORD_CHANNEL_IDS', '').split(',') if c.strip()]
+    lab_channel = int(os.environ.get('DISCORD_LAB_CHANNEL_ID') or 0)  # where lab's webhook posts
+    lab_webhook = int(os.environ.get('DISCORD_LAB_WEBHOOK_ID') or 0)  # optional: only this webhook
     workdir = Path(os.path.expanduser(os.environ.get('GAIA_WORKDIR', '~/projects/gaia-work')))
     claude = os.environ.get('CLAUDE_BIN') or shutil.which('claude') or 'claude'
     turn_seconds = float(os.environ.get('CLAUDE_TURN_MINUTES', '30'))*60
@@ -116,10 +140,48 @@ def main():
 
     @client.event
     async def on_ready():
-        print(f'connected as {client.user}; channels {sorted(channels)}; workdir {workdir}', flush=True)
+        print(f'connected as {client.user}; channels {channels}; lab channel {lab_channel or "-"}; '
+              f'workdir {workdir}', flush=True)
+
+    async def run_turn(channel, key, prompt, resume=True):
+        """One `claude -p` turn whose reply goes to `channel`; turns run one at a time."""
+        async with lock:
+            async with channel.typing():
+                proc = await asyncio.create_subprocess_exec(
+                    *command(claude, state.get(key) if resume else None), cwd=workdir,
+                    stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE)
+                running['proc'] = proc
+                try:
+                    out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), turn_seconds)
+                except asyncio.TimeoutError:
+                    proc.kill()
+                    await proc.wait()
+                    out, err = b'', f'{turn_seconds/60:.0f}분 제한 초과로 중단'.encode()
+                finally:
+                    running.pop('proc', None)
+            reply, session = summarize(out.decode(errors='replace'), err.decode(errors='replace'), proc.returncode)
+            if session:
+                state[key] = session
+                save()
+            await send(channel, reply)
+
+    async def review_result(message):
+        """A lab result notice: record it automatically in a fresh conversation in the first channel."""
+        name = finished_experiment(message.content)
+        if not name or not channels:
+            return
+        target = client.get_channel(channels[0]) or await client.fetch_channel(channels[0])
+        await target.send(f'🤖 **{name}** 결과 자동 정리 시작 (기록·커밋까지, 다음 실험은 제안만)')
+        # A fresh conversation, kept as the channel's conversation so the owner can answer the proposal.
+        await run_turn(target, str(target.id), review_prompt(name), resume=False)
 
     @client.event
     async def on_message(message):
+        if (message.webhook_id is not None and lab_channel and message.channel.id == lab_channel
+                and (not lab_webhook or message.webhook_id == lab_webhook)):
+            await review_result(message)
+            return
         if message.author.id != owner or message.webhook_id is not None:
             return
         is_dm = isinstance(message.channel, discord.DMChannel)
@@ -146,29 +208,8 @@ def main():
             return
         if not text:
             return
-        if lock.locked():
-            await message.add_reaction('⏳')
-        async with lock:
-            await message.add_reaction('👀')
-            async with message.channel.typing():
-                proc = await asyncio.create_subprocess_exec(
-                    *command(claude, state.get(key)), cwd=workdir,
-                    stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE)
-                running['proc'] = proc
-                try:
-                    out, err = await asyncio.wait_for(proc.communicate(text.encode()), turn_seconds)
-                except asyncio.TimeoutError:
-                    proc.kill()
-                    await proc.wait()
-                    out, err = b'', f'{turn_seconds/60:.0f}분 제한 초과로 중단'.encode()
-                finally:
-                    running.pop('proc', None)
-            reply, session = summarize(out.decode(errors='replace'), err.decode(errors='replace'), proc.returncode)
-            if session:
-                state[key] = session
-                save()
-            await send(message.channel, reply)
+        await message.add_reaction('⏳' if lock.locked() else '👀')
+        await run_turn(message.channel, key, text)
 
     client.run(token)
 

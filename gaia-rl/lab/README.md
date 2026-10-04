@@ -119,4 +119,7 @@ cargo run --release --example faction_lineups -- geo-quartet 400000 Xenos,Taklon
   systemctl --user daemon-reload && systemctl --user enable --now discord-claude
   journalctl --user -u discord-claude -f       # "connected as ..." 이면 정상
   ```
+- 자동 정리: `DISCORD_LAB_CHANNEL_ID`(모니터링 채널)를 설정하면, lab의 ✅ 결과 알림마다 봇이 `#claude`에서
+  새 대화로 결과를 기록(사이클 문서, HANDOFF 갱신, 커밋·푸시)하고 다음 실험을 **제안만** 한다.
+  큐에 넣을지는 그 대화에 답해서 정한다. 알림에서는 실험 이름만 읽는다.
 - 같은 봇 토큰으로 채널 플러그인 세션(`claude --channels ...`)을 동시에 띄우지 않는다. 둘 다 답하게 된다.
