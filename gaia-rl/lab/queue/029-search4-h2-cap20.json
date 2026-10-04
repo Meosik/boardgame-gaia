@@ -1,0 +1,7 @@
+{
+  "kind": "ab",
+  "note": "넓이 대신 깊이: hard(비교 4, 한 라운드 수입까지)에서 두 라운드 수입까지 내다보면 더 강해지나. 같은 20초 상한.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h2-geodens-cap20.json",
+  "pairs": 12
+}

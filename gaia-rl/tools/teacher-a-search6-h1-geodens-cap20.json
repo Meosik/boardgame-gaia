@@ -1,0 +1,13 @@
+{
+  "description": "geodens_guide teacher, 6 comparisons, one-income horizon, 20 s cap (cycle 028: does more search keep paying?)",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:geodens_guide",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 6,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

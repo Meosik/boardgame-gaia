@@ -1,0 +1,13 @@
+{
+  "description": "geodens_guide teacher, 4 comparisons, two-income horizon, 20 s cap (cycle 029: deeper instead of wider)",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:geodens_guide",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 2,
+  "frozen": true,
+  "max_seconds": 20
+}

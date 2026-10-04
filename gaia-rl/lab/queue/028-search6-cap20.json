@@ -1,0 +1,7 @@
+{
+  "kind": "ab",
+  "note": "탐색량 곡선: hard(비교 4, 20초)에서 비교를 6개로 늘리면 더 강해지나. 같은 20초 상한.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search6-h1-geodens-cap20.json",
+  "pairs": 12
+}
