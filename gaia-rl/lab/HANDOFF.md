@@ -118,6 +118,13 @@
      - 실험이 끝나면 최고·최저 판을 `ab_replays.py`로 `ai-replays`에 자동으로 넣는다.
      - 볼륨 분리는 끝났다: `~/gaia-media/ai-replays`, `~/gaia-media/ai-live`(`GAIA_REPLAY_DIR`, `GAIA_LIVE_DIR`).
        lab이 이 두 폴더에 쓰면 재배포 없이 사이트에 보인다.
+   - **027 최저 판(pair-004/game-0-A01) 분석에서 나온 약점** (2026-10-05):
+     - 1라운드 BGG 오프닝 선택(`bgg_openings/planning.py:select_forecast`)이 비교값을 무시한다.
+       오프닝과 맞는 계획을 고르고, 더 높게 나온 current-choice는 버린다.
+       예: Geodens 15프레임 122.8 vs 154.4, Terrans 14프레임 144.6 vs 159.0.
+     - Taklons·Terrans·Geodens의 부스터 순위는 즉시 자원만 본다. 테라포밍·사거리 액션 가치가 빠진다.
+       Xenos만 `integrated/boosters.py`로 평가한다.
+     - 비교 예산이 같은 첫 수에 중복으로 쓰인다(10프레임: 비교 4개 중 3개가 같은 부스터 13). 다른 후보는 비교되지 않는다.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
@@ -142,6 +149,8 @@ GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:baseline-teacher-20260917:tools .venv/bi
 ```
 그 국면을 재현해 실제 수, 다시 고른 수, 기본 순위(점수와 이유), 비교한 계획(예측값)을 보여 준다.
 교사는 이전 수를 모두 지켜보지만 그 판의 계획 기억은 없으므로, 실제 수와 다르면 그 점을 감안해 해석한다.
+계획 기억까지 맞추려면 `tools/explain_ab_decisions.py <게임폴더> --arm A|B --steps N ...`(0부터 센 step = 프레임−1)를 쓴다.
+이 도구는 그 팔의 좌석 수를 처음부터 다시 고르게 해서 기억을 재현한다.
 
 ## 6. 디스코드 세션 안전 규칙
 
