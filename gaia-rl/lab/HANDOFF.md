@@ -110,6 +110,17 @@
      루트 순위 계산은 결정당 0.65초 이하라 효과가 작다. 비교(rollout) 쪽 비용이 대부분이다.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
+## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
+
+- lab 경기 데이터는 `~/projects/gaia-lab/gaia-rl/runs/lab-<실험>/pair-*/game-*`에 있다.
+- 목록 보기:
+  ```sh
+  GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:tools .venv/bin/python tools/ab_replays.py list ~/projects/gaia-lab/gaia-rl/runs/lab-<실험>
+  ```
+- 리플레이 만들기: `... ab_replays.py export <게임폴더> --output /tmp/ab-<이름> --focus best|A|B|좌석`.
+  만든 것을 `tools/publish_replays.py --source /tmp/ab-<이름> --destination ../gaia-frontend/public/ai-replays`로 카탈로그에 넣고 커밋·푸시한다.
+- 사이트(`/?aiReplay=1`)에 보이려면 배포가 필요하다. 배포는 사용자가 한다.
+
 ## 6. 디스코드 세션 안전 규칙
 
 - 디스코드 대화는 호출식이다. 항상 떠 있는 작은 봇(`lab/discord_claude.py`, 서비스 `discord-claude`)이
