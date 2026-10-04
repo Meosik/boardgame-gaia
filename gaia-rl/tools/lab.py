@@ -99,18 +99,23 @@ def commit_id():
     return git('rev-parse', '--short', 'HEAD', check=False).stdout.strip()
 
 
-def commit(message):
-    """Commit what is staged; a host without a git identity commits as gaia-lab."""
-    identity = []
+def ensure_identity():
+    """Commits and rebases need a git identity; a host without one gets a repo-local gaia-lab."""
     if not git('config', 'user.email', check=False).stdout.strip():
-        identity = ['-c', 'user.name=gaia-lab', '-c', f'user.email=gaia-lab@{platform.node() or "host"}']
-    git(*identity, 'commit', '-m', message)
+        git('config', 'user.name', 'gaia-lab')
+        git('config', 'user.email', f'gaia-lab@{platform.node() or "host"}')
+
+
+def commit(message):
+    ensure_identity()
+    git('commit', '-m', message)
 
 
 def pull():
     """Update from the branch, keeping any local result commits on top (a push may have failed).
 
     Results a crashed run left uncommitted (e.g. a failed commit) are committed first."""
+    ensure_identity()
     results = str(LAB.relative_to(GAIA_RL)/'results') if LAB.is_relative_to(GAIA_RL) else None
     if results and git('status', '--porcelain', '--', results, check=False).stdout.strip():
         git('add', '--', results)
