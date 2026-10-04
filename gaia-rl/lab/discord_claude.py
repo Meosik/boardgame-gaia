@@ -33,7 +33,9 @@ SYSTEM = (
     'with `git pull --rebase origin claude/epic-goodall-0ot55w` to see new lab results, push with '
     '`git push origin HEAD:claude/epic-goodall-0ot55w`. Keep shell commands simple: run git in the '
     'working directory (no -C), one command per call, and prefer the Read/Grep/Glob tools for '
-    'files; a pipe or && chain is refused if any part is outside the allow list.')
+    'files; a pipe or && chain is refused if any part is outside the allow list. A command '
+    'containing a newline is refused too: write commit messages on one line with repeated -m '
+    'flags (git commit -m "subject" -m "body" -m "trailer"), never a multi-line string.')
 
 
 def chunks(text, size=1900):
