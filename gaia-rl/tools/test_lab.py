@@ -104,5 +104,20 @@ class AnnounceTests(unittest.TestCase):
         self.assertIn('`a.json` vs B `b.json`', self.sent[0])
 
 
+class FinalScoreTests(unittest.TestCase):
+    def test_final_scores_are_averaged_per_faction_and_arm(self):
+        run = Path(tempfile.mkdtemp())
+        for name, a_seats, scores in [('game-0-A02', [0, 2], [100, 90, 80, 70]), ('game-1-A13', [1, 3], [60, 110, 50, 120])]:
+            game = run/'pair-000'/name
+            game.mkdir(parents=True)
+            (game/'result.json').write_text(json.dumps({'complete': True, 'a_seats': a_seats,
+                'factions': ['Xenos', 'Taklons', 'Terrans', 'Geodens'], 'scores': {str(i): v for i, v in enumerate(scores)}}))
+        table = lab.final_scores(run)
+        self.assertEqual(table['Xenos'], {'A': [100], 'B': [60]})
+        self.assertEqual(table['Taklons'], {'A': [110], 'B': [90]})
+        text = lab.scores_table(table)
+        self.assertIn('| **전체** | 102.5 | 67.5 | 120 |', text)
+
+
 if __name__ == '__main__':
     unittest.main()

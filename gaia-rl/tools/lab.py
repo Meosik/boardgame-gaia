@@ -247,6 +247,34 @@ def timing(run_dir):
     return stats
 
 
+def final_scores(run_dir):
+    """Mean final VP per faction and arm over completed games (absolute level, not just B−A)."""
+    table = {}
+    for path in run_dir.glob('pair-*/game-*/result.json'):
+        result = json.loads(path.read_text())
+        if not result.get('complete'):
+            continue
+        for seat, faction in enumerate(result['factions']):
+            arm = 'A' if seat in result['a_seats'] else 'B'
+            table.setdefault(faction, {'A': [], 'B': []})[arm].append(result['scores'][str(seat)])
+    return table
+
+
+def scores_table(table):
+    rows = ['| 종족 | A 평균 총점 | B 평균 총점 | 최고 |', '|---|---:|---:|---:|']
+    every = {'A': [], 'B': []}
+    for faction in sorted(table):
+        arms = table[faction]
+        every['A'] += arms['A']
+        every['B'] += arms['B']
+        mean = {arm: f'{sum(v)/len(v):.1f}' if v else '—' for arm, v in arms.items()}
+        rows.append(f"| {faction} | {mean['A']} | {mean['B']} | {max(arms['A']+arms['B'], default=0)} |")
+    if every['A'] or every['B']:
+        mean = {arm: f'{sum(v)/len(v):.1f}' if v else '—' for arm, v in every.items()}
+        rows.append(f"| **전체** | {mean['A']} | {mean['B']} | {max(every['A']+every['B'], default=0)} |")
+    return '\n'.join(rows)
+
+
 def timing_table(stats):
     rows = ['| 팔 | 결정 수 | 평균 | 중앙값 | p90 | 최대 |', '|---|---:|---:|---:|---:|---:|']
     for arm, s in stats.items():
@@ -292,9 +320,11 @@ def run_ab(name, spec, jobs):
     summary = json.loads((out/'results.json').read_text())
     data['summary'] = {k: v for k, v in summary.items() if k != 'pairs'}
     data['timing'] = timing(out)
+    data['final_scores'] = final_scores(out)
     body = (f"A: `{spec['teacher_a']}`\nB: `{spec['teacher_b']}`\n"
             f"시드 {len(seeds)}개 × 좌석 교대 2판 (비교 기본값 {spec.get('comparisons', 2)}, 스펙 파일에 있으면 그 값)\n\n"
-            f"{(out/'report.md').read_text().strip()}\n\n결정 시간\n\n{timing_table(data['timing'])}")
+            f"{(out/'report.md').read_text().strip()}\n\n평균 총점 (같은 판의 상대와 겨룬 절대 점수)\n\n"
+            f"{scores_table(data['final_scores'])}\n\n결정 시간\n\n{timing_table(data['timing'])}")
     return 'done', data, body
 
 
