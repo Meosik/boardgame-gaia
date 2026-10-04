@@ -38,6 +38,7 @@ class AbReplayTests(unittest.TestCase):
         replay = ab_replays.replay_game(game, 'B', 'test')
         self.assertIn(replay['metadata']['focus_player'], (1, 3))
         self.assertIn('B팔 (A 좌석 0,2)', replay['metadata']['policy'])
+        self.assertIsInstance(replay['metadata']['versions'], dict)  # the browser viewer requires it
         out = root/'out'
 
         class Args:

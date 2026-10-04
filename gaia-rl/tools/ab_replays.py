@@ -84,12 +84,19 @@ def replay_game(game_dir, focus, label):
     if not env.is_terminal() or scores != result['scores']:
         raise ValueError(f'{game_dir}: replay does not reproduce the recorded final scores')
     seat = focus_seat(result, focus)
+    # The viewer requires the engine versions; teacher_ab's manifest records those of the match.
+    manifest = game_dir.parents[1]/'manifest.json'
+    if manifest.exists():
+        versions = json.loads(manifest.read_text())['versions']
+    else:
+        from gaia_rl.versions import runtime_versions
+        versions = runtime_versions()
     a_seats = ','.join(map(str, result['a_seats']))
     replay = {'schema_version': 1, 'metadata': {
         'seed': result['seed'], 'focus_player': seat,
         'faction': result['factions'][seat],
         'policy': f'{label} · {arm(result, seat)}팔 (A 좌석 {a_seats})',
-        'scores': scores, 'steps': snapshot['steps'], 'reproduced_original': True,
+        'versions': versions, 'scores': scores, 'steps': snapshot['steps'], 'reproduced_original': True,
         'source': str(game_dir)}, 'frames': frames, 'events': []}
     replay = add_decision_log(replay)
     validate_replay(replay)
