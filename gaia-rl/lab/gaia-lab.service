@@ -1,0 +1,19 @@
+# systemd user service for tools/lab.py watch (installed by lab/setup-host.sh).
+# Experiments run at the lowest CPU priority so the live game server's AI always comes first.
+[Unit]
+Description=Gaia experiment lab (pull, run queued experiments, push results)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/projects/gaia-lab/gaia-rl
+EnvironmentFile=-%h/projects/gaia-lab/gaia-rl/lab/lab.env
+Environment=PATH=%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/projects/gaia-lab/gaia-rl/.venv/bin/python tools/lab.py watch --jobs ${GAIA_LAB_JOBS}
+Nice=19
+CPUWeight=10
+IOSchedulingClass=idle
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=default.target

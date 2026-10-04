@@ -10,3 +10,6 @@ __pycache__/
 /research/bgs-records/
 # Derived training sets built from the mirror (python -m bgs_records build).
 /datasets/
+
+# Per-host lab settings (may hold a webhook URL).
+/lab/lab.env

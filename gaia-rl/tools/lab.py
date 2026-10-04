@@ -105,6 +105,26 @@ def pull():
         raise RuntimeError(f'git pull failed: {out.stderr.strip()[-500:]}')
 
 
+# Everything the native extension is built from (paths from the repository root).
+BUILD_INPUTS = ('gaia-engine', 'gaia-rl/src', 'gaia-rl/Cargo.toml', 'gaia-rl/Cargo.lock', 'gaia-rl/build.rs')
+
+
+def ensure_built():
+    """Rebuild the engine extension when a pull changed its sources (stamp in runs/)."""
+    tree = git('rev-parse', *[f'HEAD:{p}' for p in BUILD_INPUTS], check=False).stdout.split()
+    stamp = GAIA_RL/'runs'/'.lab-build'
+    if stamp.exists() and stamp.read_text().split() == tree:
+        return
+    print(f'[{now()}] engine sources changed: rebuilding', flush=True)
+    venv = GAIA_RL/'.venv'
+    out = subprocess.run([str(venv/'bin'/'maturin'), 'develop', '--release'], cwd=GAIA_RL,
+                         env={**os.environ, 'VIRTUAL_ENV': str(venv)}, capture_output=True, text=True)
+    if out.returncode:
+        raise RuntimeError(f'engine rebuild failed: {out.stderr.strip()[-800:]}')
+    stamp.parent.mkdir(exist_ok=True)
+    stamp.write_text(' '.join(tree)+'\n')
+
+
 def publish(paths, message):
     git('add', '--', *map(str, paths))
     if not git('diff', '--cached', '--quiet', check=False).returncode:
@@ -272,6 +292,8 @@ def cmd_watch(args):
     while True:
         try:
             pull()
+            if pending():
+                ensure_built()
             run_pending(args.jobs, push=True)
         except Exception as error:
             print(f'[{now()}] {error}', file=sys.stderr, flush=True)
@@ -282,6 +304,7 @@ def cmd_watch(args):
 def cmd_once(args):
     if not args.no_pull:
         pull()
+        ensure_built()
     print(f'{run_pending(args.jobs, push=not args.no_push)} experiment(s) run')
 
 

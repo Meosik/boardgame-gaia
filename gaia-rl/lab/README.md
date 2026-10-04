@@ -12,6 +12,20 @@ lab/seeds.txt             아직 안 쓴 geo-quartet 시드. 쓴 시드는 결�
 결과 파일이 있는 실험은 다시 돌지 않는다. 다시 돌리려면 그 결과 두 파일을 지우고 푸시한다.
 실패도 결과로 남는다(`status: failed`, 로그 끝부분 포함). 무한 재시도는 없다.
 
+## 항상 켜진 기계(agentmaco)에 서비스로 등록
+
+한 번만 하면 부팅 때 자동 시작, 죽으면 재시작, 실험은 가장 낮은 CPU 우선순위로 돈다(실서버 AI가 먼저).
+실서버 체크아웃(`~/projects/gaia`)과 별도로 `~/projects/gaia-lab`에 받아서 쓴다.
+
+```sh
+curl -sO https://raw.githubusercontent.com/Meosik/boardgame-gaia/claude/epic-goodall-0ot55w/gaia-rl/lab/setup-host.sh \
+  || git -C ~/projects/gaia show origin/claude/epic-goodall-0ot55w:gaia-rl/lab/setup-host.sh > setup-host.sh
+bash setup-host.sh "$(git -C ~/projects/gaia remote get-url origin)"
+```
+- 엔진(Rust) 소스가 바뀐 코드를 받으면 lab이 알아서 다시 빌드한다.
+- 동시 판 수와 웹후크는 `~/projects/gaia-lab/gaia-rl/lab/lab.env`.
+- 상태 `systemctl --user status gaia-lab`, 로그 `journalctl --user -u gaia-lab -f`, 멈추기 `systemctl --user stop gaia-lab`.
+
 ## 노트북: 켜 두기
 
 ```sh
