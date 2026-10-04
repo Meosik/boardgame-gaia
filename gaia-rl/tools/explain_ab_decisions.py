@@ -24,6 +24,7 @@ def main():
     parser.add_argument('--steps', type=int, nargs='+', required=True, help='0-based steps (replay frame - 1)')
     parser.add_argument('--top', type=int, default=8)
     parser.add_argument('--spec', help='Another teacher spec .json to ask instead (what would it choose here?)')
+    parser.add_argument('--actions', action='store_true', help="Print the actor's own rollout moves per comparison")
     args = parser.parse_args()
     game = Path(args.game)
     manifest = json.loads((game.parents[1]/'manifest.json').read_text())
@@ -65,7 +66,7 @@ def main():
         if row['seat'] in seats:
             decision, index = teacher.choose(snapshot)
             if row['step'] in args.steps:
-                report(snapshot, row, index, teacher.last_audit or {}, args.top, result['factions'])
+                report(snapshot, row, index, teacher.last_audit or {}, args.top, result['factions'], args.actions)
             elif index != row['index']:
                 print(f"note: step {row['step']} re-chose {index}, game played {row['index']}", file=sys.stderr)
         before = snapshot
@@ -78,7 +79,7 @@ def short(action):
     return json.dumps(action, ensure_ascii=False, separators=(',', ':'))[:140]
 
 
-def report(snapshot, row, index, audit, top, factions):
+def report(snapshot, row, index, audit, top, factions, actions=False):
     candidates = snapshot['candidates']
     print(f"\n=== step {row['step']} (frame {row['step']+1}) seat {row['seat']} {factions[row['seat']]} "
           f"arm {row['arm']}: played {row['index']} {short(candidates[row['index']]['action'])}; "
@@ -93,6 +94,15 @@ def report(snapshot, row, index, audit, top, factions):
         extra = {k: plan[k] for k in ('value', 'complete', 'r1_buildings', 'final_vp', 'vp') if k in plan}
         print(f"  {plan['goal']} first=[{plan['first']}] {short(candidates[plan['first']]['action'])} "
               f"{json.dumps(extra, ensure_ascii=False, default=str)[:400]}")
+        if actions:
+            for move in plan.get('actions') or []:
+                r0, r1 = move['resources_before'], move['resources_after']
+                delta = {k: r1[k]-r0[k] for k in ('ore', 'credits', 'knowledge', 'qic') if r1[k] != r0[k]}
+                print(f"      r{move['round']} {short(move['action'])[:110]} {delta} vp+{move['vp_after']-move['vp_before']}")
+            end = plan.get('end_player')
+            if end:
+                print(f"      end: vp {end['vp']} res { {k: end['resources'][k] for k in ('ore', 'credits', 'knowledge', 'qic')} } "
+                      f"buildings {[s['kind'] for s in end['structures']]}")
     if audit.get('bgg_opening'):
         print('-- bgg_opening', json.dumps(audit['bgg_opening'], ensure_ascii=False, default=str)[:600])
 

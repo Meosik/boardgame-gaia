@@ -506,12 +506,29 @@ def booster_lookahead(seed, **kwargs):
 #    so choices whose gain comes later (a booster with an action, an action tech tile,
 #    exploring a ship, an upgrade that raises power value and income) rank last and were
 #    never compared. They are now compared first among root alternatives (order only).
+# 4. Setup horizon. With a one-income horizon a setup decision (placement, starting booster)
+#    stopped at the round-1 income, before a single round-1 move: every placement scored the
+#    same and a booster was worth only its income, never its action. Setup decisions now
+#    compare through round 1 (stop at the round-2 income), for every route alike.
+# 5. Equal continuations. The current choice is valued as the best of every plan that starts
+#    with it (BGG openings, academy and research plans), a root alternative by one default
+#    continuation, so the incumbent won by construction (frame 10: 158 vs 143). A root
+#    alternative is now also rolled out under the best plan found so far and keeps the better.
 
 ACTION_BOOSTERS = frozenset({5, 8, 12})   # Gaia formation, range +3, terraform step
 ACTION_TECH_TILES = frozenset({10})       # engine tech_tile_special_action_effect
 LATER_GAIN_TYPES = frozenset({'ExploreSpaceship', 'Upgrade'})
 
-_distinct = {'snapshot': None, 'results': {}}
+_distinct = {'snapshot': None, 'results': {}, 'plan': None}
+
+
+def _better(a, b):
+    """The completed comparison with the higher value (a on ties)."""
+    if not (b and b.get('complete')):
+        return a
+    if not (a and a.get('complete')) or b['value'] > a['value']:
+        return b
+    return a
 
 
 def later_gain(candidate):
@@ -574,9 +591,26 @@ def install_distinct_search(value_openings=True):
             results = _distinct['results']
             if goal.family != 'current' and first in results:
                 return copy.deepcopy(results[first])
-            result = inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
+            configured = p.reached_horizon
+            if snapshot['state']['round'] == 0:
+                # Unwrapped = the tree's own two-income horizon: through round 1.
+                p.reached_horizon = getattr(configured, '__wrapped__', configured)
+            try:
+                result = inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
+                plan = _distinct['plan']
+                if goal.family == 'root' and plan is not None and _distinct['snapshot'] is not None:
+                    from dataclasses import replace
+                    planned = inner_rollout(env, snapshot, first, replace(plan[1], first=first), policies,
+                                            deadline, *args, **kwargs)
+                    result = _better(result, planned)
+            finally:
+                p.reached_horizon = configured
             if _distinct['snapshot'] is not None:
                 results.setdefault(first, copy.deepcopy(result))
+                best = _distinct['plan']
+                if (goal.family not in ('current', 'root') and result.get('complete')
+                        and (best is None or result['value'] > best[0])):
+                    _distinct['plan'] = (result['value'], goal)
             return result
         rollout.__wrapped__ = getattr(inner_rollout, '__wrapped__', inner_rollout)
         rollout._distinct = True
@@ -587,11 +621,11 @@ def install_distinct_search(value_openings=True):
 
         def search(env, snapshot, *args, **kwargs):
             # One decision's cache; live decisions restart at decision id 0.
-            _distinct.update(snapshot=snapshot, results={})
+            _distinct.update(snapshot=snapshot, results={}, plan=None)
             try:
                 return inner_search(env, snapshot, *args, **kwargs)
             finally:
-                _distinct.update(snapshot=None, results={})
+                _distinct.update(snapshot=None, results={}, plan=None)
         search._distinct = True
         search._parallel = getattr(inner_search, '_parallel', False)
         p.search = search
