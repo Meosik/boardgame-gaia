@@ -7,7 +7,19 @@ remote="${1:?usage: setup-host.sh <git remote url, e.g. from: git -C ~/projects/
 branch=claude/epic-goodall-0ot55w
 dir="$HOME/projects/gaia-lab"
 
-command -v python3.12 >/dev/null || { echo "python3.12 이 필요합니다"; exit 1; }
+# Any Python 3.12+ works (GAIA_LAB_PYTHON overrides, e.g. a uv-installed one).
+python="${GAIA_LAB_PYTHON:-}"
+if [ -z "$python" ]; then
+  for candidate in python3.12 python3.13 python3.14 python3; do
+    if command -v "$candidate" >/dev/null && "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 12))'; then
+      python="$candidate"; break
+    fi
+  done
+fi
+[ -n "$python" ] || { echo "Python 3.12 이상이 필요합니다 (lab/README.md의 uv 안내 참고)"; exit 1; }
+"$python" -c 'import venv, ensurepip' 2>/dev/null \
+  || { echo "$python 의 venv 모듈이 없습니다: sudo apt install python3-venv"; exit 1; }
+echo "Python: $("$python" --version) ($python)"
 command -v cargo >/dev/null || [ -x "$HOME/.cargo/bin/cargo" ] || {
   echo "Rust가 필요합니다: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"; exit 1; }
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -16,7 +28,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 cd "$dir/gaia-rl"
 git pull --ff-only origin "$branch"
 
-[ -x .venv/bin/python ] || python3.12 -m venv .venv
+[ -x .venv/bin/python ] || "$python" -m venv .venv
 .venv/bin/pip install -q --upgrade pip "maturin>=1.15,<2.0"
 VIRTUAL_ENV="$PWD/.venv" .venv/bin/maturin develop --release
 PYTHONPATH=tools .venv/bin/python -m unittest tools/test_lab.py

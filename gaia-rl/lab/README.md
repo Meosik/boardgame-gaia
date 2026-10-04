@@ -22,6 +22,9 @@ curl -sO https://raw.githubusercontent.com/Meosik/boardgame-gaia/claude/epic-goo
   || git -C ~/projects/gaia show origin/claude/epic-goodall-0ot55w:gaia-rl/lab/setup-host.sh > setup-host.sh
 bash setup-host.sh "$(git -C ~/projects/gaia remote get-url origin)"
 ```
+- Python 3.12 이상이 필요하다. 배포판에 없으면 uv로 설치한다(sudo 불필요):
+  `curl -LsSf https://astral.sh/uv/install.sh | sh` → `~/.local/bin/uv python install 3.12` →
+  `GAIA_LAB_PYTHON="$(~/.local/bin/uv python find 3.12)" bash setup-host.sh ...`
 - 엔진(Rust) 소스가 바뀐 코드를 받으면 lab이 알아서 다시 빌드한다.
 - 동시 판 수와 웹후크는 `~/projects/gaia-lab/gaia-rl/lab/lab.env`.
 - 상태 `systemctl --user status gaia-lab`, 로그 `journalctl --user -u gaia-lab -f`, 멈추기 `systemctl --user stop gaia-lab`.
