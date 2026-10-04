@@ -88,11 +88,11 @@ export function AiReplay() {
   useEffect(() => {
     const controller = new AbortController();
     // Optional historical registration dates must never delay or block playback.
-    fetch('/ai-replays/publication-times.json', { signal: controller.signal })
+    fetch('/ai-replays/publication-times.json', { signal: controller.signal, cache: 'no-cache' })
       .then(response => response.ok ? response.json() as Promise<unknown> : null)
       .then(value => { if (!controller.signal.aborted) setRegisteredAt(publicationLabels(value)); })
       .catch(() => {});
-    fetch('/ai-replays/index.json', { signal: controller.signal })
+    fetch('/ai-replays/index.json', { signal: controller.signal, cache: 'no-cache' })
       .then(response => { if (!response.ok) throw new Error('AI 리플레이 목록을 불러오지 못했습니다.'); return response.json() as Promise<unknown>; })
       .then(value => {
         const catalog = parseCatalog(value);

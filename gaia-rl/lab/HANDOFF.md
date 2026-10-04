@@ -116,8 +116,8 @@
    - **실험 실시간 관전 → 끝나면 다시보기로 남기기** (사용자 요청, 2026-10-05):
      - lab이 실험을 돌릴 때 한 판을 `ai-live`에 실시간으로 쓴다. 기존 `LiveReplayWriter`, `watch_ai_game.py`를 쓴다.
      - 실험이 끝나면 최고·최저 판을 `ab_replays.py`로 `ai-replays`에 자동으로 넣는다.
-     - 사이트가 재배포 없이 보려면 `ai-live`·`ai-replays`를 호스트 폴더 볼륨으로 서버 컨테이너에 마운트해야 한다
-       (docker-compose 변경과 배포 1회, 사용자 확인 필요). 지금은 이미지 빌드 때 복사돼서 매번 배포해야 한다.
+     - 볼륨 분리는 끝났다: `~/gaia-media/ai-replays`, `~/gaia-media/ai-live`(`GAIA_REPLAY_DIR`, `GAIA_LIVE_DIR`).
+       lab이 이 두 폴더에 쓰면 재배포 없이 사이트에 보인다.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
@@ -129,7 +129,9 @@
   ```
 - 리플레이 만들기: `... ab_replays.py export <게임폴더> --output /tmp/ab-<이름> --focus best|A|B|좌석`.
   만든 것을 `tools/publish_replays.py --source /tmp/ab-<이름> --destination ../gaia-frontend/public/ai-replays`로 카탈로그에 넣고 커밋·푸시한다.
-- 사이트(`/?aiReplay=1`)에 보이려면 배포가 필요하다. 배포는 사용자가 한다.
+- 사이트는 `/ai-replays`를 호스트 폴더 `~/gaia-media/ai-replays`(`.env`의 `GAIA_REPLAY_DIR`)에서 바로 읽는다
+  (2026-10-05 볼륨 분리). publish의 `--destination`을 그 폴더로 하면 **배포 없이** 바로 보인다.
+  저장소 `gaia-frontend/public/ai-replays`는 기본값일 뿐, 실제 사이트 목록은 `~/gaia-media` 쪽이다.
 
 ## 6. 디스코드 세션 안전 규칙
 
