@@ -19,6 +19,25 @@ use crate::{
     state::AppState,
 };
 
+/// AI replays and live recordings are served from host folders that change in place
+/// (`GAIA_REPLAY_DIR`, `GAIA_LIVE_DIR` in docker-compose.yml), so neither browsers nor the
+/// Cloudflare edge may reuse a stored copy without asking again. Cloudflare caches `.gz`
+/// by extension otherwise, which served a replaced replay's old bytes.
+pub async fn revalidate_recordings(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let path = req.uri().path();
+    let recording = path.starts_with("/ai-replays/") || path.starts_with("/ai-live/");
+    let mut response = next.run(req).await;
+    if recording {
+        response
+            .headers_mut()
+            .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+    }
+    response
+}
+
 pub fn build_router(state: AppState) -> Router {
     let gate = SiteGate::from_env();
 
@@ -93,6 +112,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(gate_routes)
         .route("/health", get(rest::health))
         .nest_service("/", ServeDir::new(frontend_dir).fallback(spa_fallback))
+        .layer(axum::middleware::from_fn(revalidate_recordings))
         .layer(axum::middleware::from_fn(move |req, next| {
             let gate = gate.clone();
             async move { site_gate::require_password(gate, req, next).await }
@@ -114,4 +134,31 @@ pub fn build_router(state: AppState) -> Router {
         ))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn recordings_must_be_revalidated_and_other_files_are_untouched() {
+        let app = Router::new()
+            .route("/ai-replays/index.json", get(|| async { "{}" }))
+            .route("/ai-live/index.json", get(|| async { "{}" }))
+            .route("/assets/app.js", get(|| async { "" }))
+            .layer(axum::middleware::from_fn(revalidate_recordings));
+        let server = axum_test::TestServer::new(app).expect("test server");
+        for (path, expected) in [
+            ("/ai-replays/index.json", Some("no-cache")),
+            ("/ai-live/index.json", Some("no-cache")),
+            ("/assets/app.js", None),
+        ] {
+            let response = server.get(path).await;
+            let value = response
+                .headers()
+                .get(header::CACHE_CONTROL)
+                .and_then(|v| v.to_str().ok());
+            assert_eq!(value, expected, "{path}");
+        }
+    }
 }
