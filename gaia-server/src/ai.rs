@@ -51,7 +51,8 @@ pub struct AiConfig {
 impl AiConfig {
     /// `GAIA_AI_DIR` (required), `GAIA_AI_PYTHON` (default `<dir>/.venv/bin/python`),
     /// `GAIA_AI_WORKERS` (default 6), `GAIA_AI_LEVEL` (`normal` or `easy`),
-    /// `GAIA_AI_TIMEOUT_SECS` (default 30, a hung-worker guard; the teacher caps itself at 5 s).
+    /// `GAIA_AI_TIMEOUT_SECS` (default 30, a hung-worker guard; the teacher caps itself at 5 s;
+    /// the "hard" level gets at least 60 s, see `guard_timeout`).
     pub fn from_env() -> Option<Self> {
         let dir = PathBuf::from(
             std::env::var("GAIA_AI_DIR")
@@ -79,6 +80,16 @@ impl AiConfig {
             level,
             timeout,
         })
+    }
+}
+
+/// The hung-worker guard for one request. "hard" caps itself at 20 s, but a comparison already
+/// running at the cap finishes first (cycle 025: max 33 s on a laptop), so it gets at least 60 s.
+fn guard_timeout(configured: Duration, level: &str) -> Duration {
+    if level == "hard" {
+        configured.max(Duration::from_secs(60))
+    } else {
+        configured
     }
 }
 
@@ -182,9 +193,10 @@ impl AiPool {
             }
         }
         let worker = guard.as_mut()?;
+        let level = level.unwrap_or(&self.config.level);
         let request = serde_json::json!({
             "op": "choose", "room": room_code, "player": player,
-            "level": level.unwrap_or(&self.config.level), "state": state,
+            "level": level, "state": state,
         });
         let exchange = async {
             let mut line = serde_json::to_string(&request).map_err(std::io::Error::other)?;
@@ -197,7 +209,7 @@ impl AiPool {
             }
             serde_json::from_str::<Reply>(&response).map_err(std::io::Error::other)
         };
-        match tokio::time::timeout(self.config.timeout, exchange).await {
+        match tokio::time::timeout(guard_timeout(self.config.timeout, level), exchange).await {
             Ok(Ok(Reply {
                 ok: true,
                 decision: Some(decision),
@@ -372,5 +384,21 @@ fn apply_decision(
         Some(AiDecision::Game(action)) => apply_logged_action(state, player, action),
         Some(AiDecision::Setup(action)) => RuleEngine::apply_setup_action(state, player, action),
         None => Err(RuleError::ActionNotAllowed("no AI decision".into())),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hard_level_gets_a_longer_worker_guard() {
+        let configured = Duration::from_secs(30);
+        assert_eq!(guard_timeout(configured, "normal"), configured);
+        assert_eq!(guard_timeout(configured, "hard"), Duration::from_secs(60));
+        assert_eq!(
+            guard_timeout(Duration::from_secs(90), "hard"),
+            Duration::from_secs(90)
+        );
     }
 }
