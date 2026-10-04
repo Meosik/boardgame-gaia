@@ -2,6 +2,24 @@
   "schema_version": 1,
   "games": [
     {
+      "id": "ab-lab-027-search4-cap10-pair-003-game-1-a02",
+      "file": "ab-lab-027-search4-cap10-pair-003-game-1-a02.json.gz",
+      "policy": "lab-027-search4-cap10 \u00b7 B\ud314 (A \uc88c\uc11d 0,2)",
+      "faction": "Xenos",
+      "seed": "geo-quartet-169577",
+      "vp": 167,
+      "steps": 254
+    },
+    {
+      "id": "ab-lab-027-search4-cap10-pair-004-game-0-a01",
+      "file": "ab-lab-027-search4-cap10-pair-004-game-0-a01.json.gz",
+      "policy": "lab-027-search4-cap10 \u00b7 A\ud314 (A \uc88c\uc11d 0,1)",
+      "faction": "Geodens",
+      "seed": "geo-quartet-171220",
+      "vp": 41,
+      "steps": 209
+    },
+    {
       "id": "eval-55091eed07c46dcd-0",
       "file": "eval-55091eed07c46dcd-0.json.gz",
       "policy": "EconomyFirstTeacher",
@@ -198,24 +216,6 @@
       "seed": "strategy-19-heldout-497",
       "vp": 83,
       "steps": 153
-    },
-    {
-      "id": "teacher-5",
-      "file": "teacher-5.json.gz",
-      "policy": "teacher",
-      "faction": "HadschHallas",
-      "seed": "strategy-19-heldout-497",
-      "vp": 80,
-      "steps": 161
-    },
-    {
-      "id": "teacher-6",
-      "file": "teacher-6.json.gz",
-      "policy": "teacher",
-      "faction": "Xenos",
-      "seed": "strategy-19-heldout-900",
-      "vp": 73,
-      "steps": 189
     }
   ]
 }
