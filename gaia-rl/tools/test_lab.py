@@ -60,6 +60,14 @@ class LabTests(unittest.TestCase):
         self.assertEqual((stats['A']['n'], stats['A']['mean'], stats['B']['max']), (2, 2.0, 2.0))
 
 
+    def test_broken_files_are_skipped_and_a_broken_result_reruns(self):
+        self.queue('ok', {'kind': 'command', 'run': ['true']})
+        (self.dir/'queue'/'cut.json').write_text('')
+        (self.dir/'results'/'ok.json').write_text('{"status": "do')
+        self.assertEqual([n for n, _ in lab.pending()], ['ok'])
+        self.assertEqual(lab.allocate(1), ['s-1'])
+        self.assertTrue(any(p.endswith('cut.json') for p in lab._broken))
+
 
 class DiscordTextTests(unittest.TestCase):
     def test_tables_become_short_code_blocks_and_chunks_stay_fenced(self):

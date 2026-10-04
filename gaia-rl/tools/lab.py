@@ -49,13 +49,29 @@ def now():
 
 # ── queue and results ───────────────────────────────────────────────────────
 
+_broken = {}  # path -> error, for files that are not valid JSON (e.g. cut short by a full disk)
+
+
+def read_json(path):
+    """A JSON file's value, or None (recorded in _broken) when it is empty or cut short."""
+    try:
+        value = json.loads(path.read_text())
+    except ValueError as error:
+        _broken[str(path)] = str(error)
+        return None
+    _broken.pop(str(path), None)
+    return value
+
+
 def queue():
     """[(name, spec)] in name order; a file whose name starts with '_' is ignored."""
     items = []
     for path in sorted((LAB/'queue').glob('*.json')):
         if path.name.startswith('_'):
             continue
-        spec = json.loads(path.read_text())
+        spec = read_json(path)
+        if spec is None:
+            continue
         if spec.get('kind', 'ab') not in KINDS:
             raise ValueError(f'{path.name}: unknown kind {spec.get("kind")!r}')
         items.append((path.stem, spec))
@@ -64,7 +80,8 @@ def queue():
 
 def result(name):
     path = LAB/'results'/f'{name}.json'
-    return json.loads(path.read_text()) if path.exists() else None
+    # An unreadable result counts as missing, so the experiment runs again and rewrites it.
+    return read_json(path) if path.exists() else None
 
 
 def pending():
@@ -74,7 +91,7 @@ def pending():
 def used_seeds():
     used = set()
     for path in (LAB/'results').glob('*.json'):
-        used.update(json.loads(path.read_text()).get('seeds', ()))
+        used.update((read_json(path) or {}).get('seeds', ()))
     for _, spec in queue():
         used.update(spec.get('seeds', ()))
     return used
@@ -418,7 +435,7 @@ def source_digest():
 
 def cmd_watch(args):
     print(f'lab watching {BRANCH} every {args.interval}s (Ctrl+C to stop)', flush=True)
-    digest, seen = source_digest(), None
+    digest, seen, reported = source_digest(), None, set()
     while True:
         try:
             pull()
@@ -426,6 +443,10 @@ def cmd_watch(args):
                 print(f'[{now()}] lab.py changed: restarting', flush=True)
                 os.execv(sys.executable, [sys.executable, *sys.argv])
             seen = announce_new(seen)
+            for path, error in list(_broken.items()):
+                if path not in reported:
+                    notify(f'⚠️ lab: 읽을 수 없는 파일을 건너뜀 `{Path(path).relative_to(GAIA_RL)}` ({error})')
+                    reported.add(path)
             if pending():
                 ensure_built()
             run_pending(args.jobs, push=True)
