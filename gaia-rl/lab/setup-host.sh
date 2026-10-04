@@ -30,7 +30,7 @@ cd "$dir/gaia-rl"
 git pull --ff-only origin "$branch"
 
 [ -x .venv/bin/python ] || "$python" -m venv .venv
-.venv/bin/pip install -q --upgrade pip "maturin>=1.15,<2.0"
+.venv/bin/pip install -q --upgrade pip "maturin>=1.15,<2.0" scipy   # scipy: teacher_ab confidence intervals
 VIRTUAL_ENV="$PWD/.venv" .venv/bin/maturin develop --release
 PYTHONPATH=tools .venv/bin/python -m unittest tools/test_lab.py
 

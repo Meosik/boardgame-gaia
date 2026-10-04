@@ -269,6 +269,10 @@ def tail(path, lines=40):
 
 
 def run_ab(name, spec, jobs):
+    try:  # teacher_ab needs scipy only for its final table; fail before hours of games
+        import scipy.stats  # noqa: F401
+    except ImportError:
+        raise RuntimeError('scipy is missing: .venv/bin/pip install scipy') from None
     seeds = spec.get('seeds') or allocate(int(spec.get('pairs', 12)))
     out = fresh_dir(GAIA_RL/'runs'/f'lab-{name}')
     log = GAIA_RL/'runs'/f'lab-{name}.log'
