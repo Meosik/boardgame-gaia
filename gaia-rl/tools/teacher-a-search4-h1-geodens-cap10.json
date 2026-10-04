@@ -1,0 +1,13 @@
+{
+  "description": "Middle level candidate: geodens_guide teacher, 4 comparisons, 10 s cap (cycle 027).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:geodens_guide",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 10
+}
