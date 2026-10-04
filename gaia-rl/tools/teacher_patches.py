@@ -544,12 +544,12 @@ def value_first_forecast(original, rows, remembered, comparisons):
     return original(rows, remembered, [c for c in comparisons if c.get('complete') and c.get('value') == best])
 
 
-def install_distinct_search():
+def install_distinct_search(value_openings=True):
     import budget_teacher
     import bgg_openings.planning as planning
     import four_factions.preparation as p
     budget_teacher.count_distinct_firsts(True)
-    if not getattr(planning.select_forecast, '_distinct', False):
+    if value_openings and not getattr(planning.select_forecast, '_distinct', False):
         inner_forecast = planning.select_forecast
 
         def select_forecast(rows, remembered, comparisons):
@@ -601,4 +601,15 @@ def distinct_search(seed, **kwargs):
     """Teacher factory: geodens_guide plus distinct first moves, value-led openings, later-gain order."""
     teacher = geodens_guide(seed, **kwargs)
     install_distinct_search()
+    return teacher
+
+
+def distinct_search_openings(seed, **kwargs):
+    """distinct_search without change 2: a matching BGG opening still overrides the value.
+
+    The comparisons stop at the first income, before a PI or lab opening repays its cost,
+    so the value may undervalue the opening (cycle 030 checks both variants).
+    """
+    teacher = geodens_guide(seed, **kwargs)
+    install_distinct_search(value_openings=False)
     return teacher
