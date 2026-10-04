@@ -27,7 +27,11 @@ export function replayScrollTarget(root: HTMLElement, frame: ReplayFrame, previo
   if (hotspot) return hotspot.closest('#game-research') ? researchTarget() : hotspot;
   const personalAction = find(`.player-action-tile${MARKED}`);
   if (personalAction && action.type !== 'Upgrade') return personalAction;
+  const hex = find('.replay-hex-highlight')?.closest('.hex-cell');
+  const map = () => find('#game-map .game-board-container') ?? find('#game-map') ?? hex;
   if (action.type.startsWith('RoundBooster')) {
+    // A booster build or Gaia formation happens on the map; show where it landed.
+    if (hex) return map();
     return actorBoard?.querySelector('.faction-board-side-rack-booster') ?? actorBoard;
   }
   if (mark.research.size) return researchTarget();
@@ -35,10 +39,7 @@ export function replayScrollTarget(root: HTMLElement, frame: ReplayFrame, previo
     const tile = find(`.research-board-standard-tech${MARKED}, .research-board-advanced-tech${MARKED}, .spaceship-board img${MARKED}, .faction-board-side-rack-tech ${MARKED}`);
     if (tile) return tile;
   }
-  const hex = find('.replay-hex-highlight')?.closest('.hex-cell');
-  if (hex) {
-    return find('#game-map .game-board-container') ?? find('#game-map') ?? hex;
-  }
+  if (hex) return map();
   // Free conversions/other faction abilities have no shared-board target.
   return null;
 }

@@ -43,10 +43,14 @@ describe('replay action-follow destination', () => {
     expect(replayScrollTarget(dom, frame('Upgrade'), before)?.id).toBe('hex');
     expect(replayScrollTarget(dom, frame('Build'), before)?.id).toBe('hex');
   });
-  it('shows another player’s own booster rather than the focal player’s action shelf', () => {
-    const dom = root('<div id="game-player-actions"></div><article data-replay-player="0"><aside id="booster" class="faction-board-side-rack-booster"></aside></article><svg><g class="hex-cell"><g class="replay-hex-highlight"></g></g></svg>');
+  it('shows the map for a booster build, not the booster that paid for it', () => {
+    const dom = root('<div id="game-map"></div><div id="game-player-actions"></div><article data-replay-player="0"><aside id="booster" class="faction-board-side-rack-booster"></aside></article><svg><g class="hex-cell"><g class="replay-hex-highlight"></g></g></svg>');
+    expect(replayScrollTarget(dom, frame('RoundBoosterRangeBuild'))?.id).toBe('game-map');
+    expect(replayScrollTarget(dom, frame('RoundBoosterTerraformBuild'))?.id).toBe('game-map');
+  });
+  it('shows another player’s own booster when the booster action marks no hex', () => {
+    const dom = root('<div id="game-player-actions"></div><article data-replay-player="0"><aside id="booster" class="faction-board-side-rack-booster"></aside></article>');
     expect(replayScrollTarget(dom, frame('RoundBoosterRangeBuild'))?.id).toBe('booster');
-    expect(replayScrollTarget(dom, frame('RoundBoosterTerraformBuild'))?.id).toBe('booster');
   });
   it('finds ship technology and actor-specific abilities without targeting another player', () => {
     const before = structuredClone(initial);
