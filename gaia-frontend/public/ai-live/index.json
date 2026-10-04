@@ -1,1 +1,4 @@
-{"schema_version": 1, "games": [{"id": "live-a4e45620f30e8272", "file": "live-a4e45620f30e8272-44.json.gz", "policy": "quartet_teacher", "faction": "HadschHallas", "seed": "quartet-pilot-20260913-27703", "steps": 58, "vp": 17, "status": "failed", "revision": 44, "updated_at": 1789616175.4468994}, {"id": "live-109b0a2a3e7dc8b8", "file": "live-109b0a2a3e7dc8b8-20.json.gz", "policy": "live_observer", "faction": "Taklons", "seed": "ob01-2825", "steps": 51, "vp": 12, "status": "failed", "revision": 20, "updated_at": 1789612877.371731}, {"id": "live-7e69e1bc0dd49ba1", "file": "live-7e69e1bc0dd49ba1-0.json.gz", "policy": "live_observer", "faction": "Xenos", "seed": "quartet-pilot-20260913-424", "steps": 69, "vp": 10, "status": "running", "revision": 0, "updated_at": 1789323631.3677378}]}
+{
+  "schema_version": 1,
+  "games": []
+}
