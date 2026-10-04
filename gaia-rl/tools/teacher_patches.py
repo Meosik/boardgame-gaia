@@ -514,12 +514,19 @@ def booster_lookahead(seed, **kwargs):
 #    with it (BGG openings, academy and research plans), a root alternative by one default
 #    continuation, so the incumbent won by construction (frame 10: 158 vs 143). A root
 #    alternative is now also rolled out under the best plan found so far and keeps the better.
+# 6. Opening order. A BGG row is only the end-of-round-1 inventory (e.g. 1AC+2M), not an
+#    order; the tree reached it with the cheapest-looking step, so mines always came first.
+#    Each opening is now also proposed "upgrades first" (an upgrade toward the inventory
+#    before a new mine, so the larger building collects power sooner), and the comparison
+#    decides which order to play.
+
+UPGRADES_FIRST = 'upgrades-first'
 
 ACTION_BOOSTERS = frozenset({5, 8, 12})   # Gaia formation, range +3, terraform step
 ACTION_TECH_TILES = frozenset({10})       # engine tech_tile_special_action_effect
 LATER_GAIN_TYPES = frozenset({'ExploreSpaceship', 'Upgrade'})
 
-_distinct = {'snapshot': None, 'results': {}, 'plan': None}
+_distinct = {'snapshot': None, 'results': {}, 'plan': None, 'opening': {}}
 
 
 def _better(a, b):
@@ -550,6 +557,17 @@ def order_roots(snapshot, roots):
     return sorted(roots, key=lambda goal: _later_gain_rank(snapshot['candidates'][goal.first]))
 
 
+def upgrades_first_scores(snapshot, scores):
+    """Lift unblocked upgrades above every other move; their own order is kept."""
+    from current_actions.conservation import blocked
+    top = max((s[0] for s in scores), default=0)
+    lifted = list(scores)
+    for i, candidate in enumerate(snapshot['candidates']):
+        if candidate['action'].get('type') == 'Upgrade' and not blocked(scores[i]):
+            lifted[i] = (scores[i][0]+abs(top)+1000, *scores[i][1:])
+    return lifted
+
+
 def value_first_forecast(original, rows, remembered, comparisons):
     """Pick an opening only from the comparisons with the highest completed value."""
     import math
@@ -573,6 +591,30 @@ def install_distinct_search(value_openings=True):
             return value_first_forecast(inner_forecast, rows, remembered, comparisons)
         select_forecast._distinct = True
         planning.select_forecast = select_forecast
+    inner_rollout = getattr(p.rollout, '_distinct_inner', p.rollout)
+    if not getattr(p.select_goal, '_distinct', False):
+        inner_select = p.select_goal
+
+        def select_goal(env, snapshot, scores, goal, policies, deadline):
+            from dataclasses import replace
+            if goal.family == 'bgg-opening' and goal.payoff == UPGRADES_FIRST:
+                scores = upgrades_first_scores(snapshot, scores)
+            first = inner_select(env, snapshot, scores, goal, policies, deadline)
+            if goal.family != 'bgg-opening' or goal.payoff is not None or snapshot is not _distinct['snapshot']:
+                return first
+            # Same inventory, upgrades first: both orders compared in one slot, the better kept.
+            ordered = replace(goal, payoff=UPGRADES_FIRST)
+            other = inner_select(env, snapshot, upgrades_first_scores(snapshot, scores), ordered, policies, deadline)
+            if other == first:
+                return first
+            own = inner_rollout(env, snapshot, first, goal, policies, deadline, capture_r1=True)
+            alternative = inner_rollout(env, snapshot, other, ordered, policies, deadline, capture_r1=True)
+            if _better(own, alternative) is alternative:
+                first, own = other, {**alternative, 'opening_order': UPGRADES_FIRST}
+            _distinct['opening'][(goal.name, first)] = own
+            return first
+        select_goal._distinct = True
+        p.select_goal = select_goal
     if not getattr(p.interleave_families, '_distinct', False):
         inner_interleave = p.interleave_families
 
@@ -584,22 +626,21 @@ def install_distinct_search(value_openings=True):
         interleave_families._distinct = True
         p.interleave_families = interleave_families
     if not getattr(p.rollout, '_distinct', False):
-        inner_rollout = p.rollout
-
         def rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs):
             import copy
+            from dataclasses import replace
             results = _distinct['results']
-            if goal.family != 'current' and first in results:
+            opening = _distinct['opening'].pop((goal.name, first), None)
+            if opening is None and goal.family != 'current' and first in results:
                 return copy.deepcopy(results[first])
             configured = p.reached_horizon
             if snapshot['state']['round'] == 0:
                 # Unwrapped = the tree's own two-income horizon: through round 1.
                 p.reached_horizon = getattr(configured, '__wrapped__', configured)
             try:
-                result = inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
+                result = opening or inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
                 plan = _distinct['plan']
                 if goal.family == 'root' and plan is not None and _distinct['snapshot'] is not None:
-                    from dataclasses import replace
                     planned = inner_rollout(env, snapshot, first, replace(plan[1], first=first), policies,
                                             deadline, *args, **kwargs)
                     result = _better(result, planned)
@@ -613,6 +654,7 @@ def install_distinct_search(value_openings=True):
                     _distinct['plan'] = (result['value'], goal)
             return result
         rollout.__wrapped__ = getattr(inner_rollout, '__wrapped__', inner_rollout)
+        rollout._distinct_inner = inner_rollout
         rollout._distinct = True
         rollout._parallel = getattr(inner_rollout, '_parallel', False)
         p.rollout = rollout
@@ -621,11 +663,11 @@ def install_distinct_search(value_openings=True):
 
         def search(env, snapshot, *args, **kwargs):
             # One decision's cache; live decisions restart at decision id 0.
-            _distinct.update(snapshot=snapshot, results={}, plan=None)
+            _distinct.update(snapshot=snapshot, results={}, plan=None, opening={})
             try:
                 return inner_search(env, snapshot, *args, **kwargs)
             finally:
-                _distinct.update(snapshot=None, results={}, plan=None)
+                _distinct.update(snapshot=None, results={}, plan=None, opening={})
         search._distinct = True
         search._parallel = getattr(inner_search, '_parallel', False)
         p.search = search
