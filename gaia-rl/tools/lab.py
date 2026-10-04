@@ -100,9 +100,14 @@ def commit_id():
 
 
 def pull():
-    out = git('pull', '--ff-only', 'origin', BRANCH, check=False)
+    """Update from the branch, keeping any local result commits on top (a push may have failed)."""
+    out = git('pull', '--rebase', 'origin', BRANCH, check=False)
     if out.returncode:
+        git('rebase', '--abort', check=False)
         raise RuntimeError(f'git pull failed: {out.stderr.strip()[-500:]}')
+    ahead = git('rev-list', '--count', f'origin/{BRANCH}..HEAD', check=False).stdout.strip()
+    if ahead not in ('', '0') and git('push', 'origin', f'HEAD:{BRANCH}', check=False).returncode:
+        raise RuntimeError(f'{ahead} result commit(s) not pushed: check push credentials')
 
 
 # Everything the native extension is built from (paths from the repository root).
