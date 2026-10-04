@@ -27,6 +27,7 @@ GAIA_LAB_DIR (tests only).
 import argparse
 import datetime
 import gzip
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -337,7 +338,7 @@ def write_result(name, spec, status, data, body, started):
 def run_one(name, spec, jobs, push):
     kind = spec.get('kind', 'ab')
     started = now()
-    notify(f'🧪 실험 시작: **{name}** ({kind}) — {platform.node()}')
+    notify(f'🧪 실험 시작: **{name}** ({kind}) — {platform.node()}' + describe(spec))
     print(f'[{started}] {name}: start', flush=True)
     try:
         status, data, body = (run_ab if kind == 'ab' else run_command)(name, spec, jobs)
@@ -365,11 +366,36 @@ def run_pending(jobs, push):
 
 # ── commands ────────────────────────────────────────────────────────────────
 
+def describe(spec):
+    lines = [spec['note']] if spec.get('note') else []
+    if spec.get('kind', 'ab') == 'ab':
+        lines.append(f"A `{Path(spec['teacher_a']).name}` vs B `{Path(spec['teacher_b']).name}`")
+    return ''.join(f'\n> {line}' for line in lines)
+
+
+def announce_new(seen):
+    """Post each queued experiment once, when it first appears (not those queued before start)."""
+    waiting = [(n, s) for n, s in pending() if s.get('kind') != 'external']
+    for position, (name, spec) in enumerate(waiting, 1):
+        if seen is not None and name not in seen:
+            notify(f'📋 실험 대기열에 추가: **{name}** ({position}/{len(waiting)}번째)' + describe(spec))
+    return {name for name, _ in pending()} | (seen or set())
+
+
+def source_digest():
+    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
 def cmd_watch(args):
     print(f'lab watching {BRANCH} every {args.interval}s (Ctrl+C to stop)', flush=True)
+    digest, seen = source_digest(), None
     while True:
         try:
             pull()
+            if source_digest() != digest:  # a pull changed lab.py: continue as the new version
+                print(f'[{now()}] lab.py changed: restarting', flush=True)
+                os.execv(sys.executable, [sys.executable, *sys.argv])
+            seen = announce_new(seen)
             if pending():
                 ensure_built()
             run_pending(args.jobs, push=True)

@@ -77,5 +77,32 @@ class DiscordTextTests(unittest.TestCase):
         self.assertTrue(all(len(p) <= 520 and p.count('```') % 2 == 0 for p in parts))
 
 
+class AnnounceTests(unittest.TestCase):
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp())
+        (self.dir/'queue').mkdir()
+        (self.dir/'results').mkdir()
+        lab.LAB = self.dir
+        self.sent = []
+        self.original_notify = lab.notify
+        lab.notify = self.sent.append
+
+    def tearDown(self):
+        lab.notify = self.original_notify
+
+    def test_only_experiments_queued_after_start_are_announced_once(self):
+        (self.dir/'queue'/'old.json').write_text(json.dumps({'kind': 'command', 'run': ['true']}))
+        seen = lab.announce_new(None)
+        self.assertEqual(self.sent, [])
+        (self.dir/'queue'/'new.json').write_text(json.dumps(
+            {'kind': 'ab', 'note': '깊이 확인', 'teacher_a': 'tools/a.json', 'teacher_b': 'tools/b.json'}))
+        seen = lab.announce_new(seen)
+        lab.announce_new(seen)
+        self.assertEqual(len(self.sent), 1)
+        self.assertIn('new', self.sent[0])
+        self.assertIn('깊이 확인', self.sent[0])
+        self.assertIn('`a.json` vs B `b.json`', self.sent[0])
+
+
 if __name__ == '__main__':
     unittest.main()
