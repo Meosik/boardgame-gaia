@@ -43,7 +43,7 @@ class ReplayIncomeIntegrationTest(unittest.TestCase):
         self.assertEqual(replay, original)
 
     def test_pending_income_order_does_not_hide_income_before_round_increments(self):
-        path = ROOT/'gaia-frontend/public/ai-replays/economy-learning-v1-bc_only-1.json.gz'
+        path = Path(__file__).resolve().parent/'fixtures/income-order-replay.json.gz'
         if not path.exists():
             self.skipTest('Income-order replay unavailable')
         with gzip.open(path, 'rt') as f:
