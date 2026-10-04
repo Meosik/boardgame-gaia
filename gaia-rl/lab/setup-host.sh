@@ -7,16 +7,17 @@ remote="${1:?usage: setup-host.sh <git remote url, e.g. from: git -C ~/projects/
 branch=claude/epic-goodall-0ot55w
 dir="$HOME/projects/gaia-lab"
 
-# Any Python 3.12+ works (GAIA_LAB_PYTHON overrides, e.g. a uv-installed one).
+# Python 3.12 or 3.13: PyO3 0.23 (the engine binding) does not build for 3.14 yet.
+# GAIA_LAB_PYTHON overrides, e.g. a uv-installed 3.12.
 python="${GAIA_LAB_PYTHON:-}"
 if [ -z "$python" ]; then
-  for candidate in python3.12 python3.13 python3.14 python3; do
-    if command -v "$candidate" >/dev/null && "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 12))'; then
+  for candidate in python3.12 python3.13 python3; do
+    if command -v "$candidate" >/dev/null && "$candidate" -c 'import sys; sys.exit(not (3, 12) <= sys.version_info[:2] <= (3, 13))'; then
       python="$candidate"; break
     fi
   done
 fi
-[ -n "$python" ] || { echo "Python 3.12 이상이 필요합니다 (lab/README.md의 uv 안내 참고)"; exit 1; }
+[ -n "$python" ] || { echo "Python 3.12 또는 3.13이 필요합니다 (lab/README.md의 uv 안내 참고)"; exit 1; }
 "$python" -c 'import venv, ensurepip' 2>/dev/null \
   || { echo "$python 의 venv 모듈이 없습니다: sudo apt install python3-venv"; exit 1; }
 echo "Python: $("$python" --version) ($python)"
