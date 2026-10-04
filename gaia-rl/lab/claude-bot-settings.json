@@ -38,7 +38,25 @@
       "Bash(nproc)",
       "Bash(.venv/bin/python:*)",
       "Bash(cargo test:*)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(cut:*)",
+      "Bash(echo:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(date:*)",
+      "Bash(git -C /home/sohegi/projects/gaia-lab log:*)",
+      "Bash(git -C /home/sohegi/projects/gaia-lab status:*)",
+      "Bash(git -C /home/sohegi/projects/gaia-work fetch:*)",
+      "Bash(git -C /home/sohegi/projects/gaia-work log:*)",
+      "Bash(git -C /home/sohegi/projects/gaia-work status:*)",
+      "Bash(git -C /home/sohegi/projects/gaia-work pull:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git stash list:*)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -54,7 +72,9 @@
       "Bash(docker rm:*)",
       "Bash(docker inspect:*)",
       "Bash(rm:*)",
-      "Bash(sudo:*)"
+      "Bash(sudo:*)",
+      "Bash(cat **/.env)",
+      "Bash(cat ~/.git-credentials)"
     ]
   }
 }

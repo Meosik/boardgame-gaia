@@ -28,7 +28,12 @@ SYSTEM = (
     'gaia-rl/lab/HANDOFF.md and follow its rules (section 6 above all). You cannot ask for '
     'permission mid-turn: a refused tool is reported to the owner, so when an action needs '
     'confirmation or is outside your allowed tools, stop and give the exact command for the '
-    'owner to run instead. Never print secrets (.env values, tokens, webhook URLs).')
+    'owner to run instead. Never print secrets (.env values, tokens, webhook URLs). '
+    'Your working directory is the work tree ~/projects/gaia-work (branch work): start each topic '
+    'with `git pull --rebase origin claude/epic-goodall-0ot55w` to see new lab results, push with '
+    '`git push origin HEAD:claude/epic-goodall-0ot55w`. Keep shell commands simple: run git in the '
+    'working directory (no -C), one command per call, and prefer the Read/Grep/Glob tools for '
+    'files; a pipe or && chain is refused if any part is outside the allow list.')
 
 
 def chunks(text, size=1900):
