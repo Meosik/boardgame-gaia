@@ -1,8 +1,8 @@
 {
   "kind": "ab",
-  "note": "030에서 오프닝 변경만 뺀 것: 중복 비교 제거와 나중-이득 수 먼저 비교는 같고, 1라운드 BGG 오프닝은 지금처럼 가이드를 따른다. 030과 비교해 오프닝을 가이드대로 두는 쪽이 나은지 본다(사용자 의견: 가이드가 점수가 더 나온다).",
-  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap10.json",
-  "teacher_b": "tools/teacher-a-search4-h1-distinct-openings-cap10.json",
+  "note": "030에서 오프닝 변경만 뺀 것: 중복 비교 제거와 나중-이득 수 먼저 비교는 같고, 1라운드 BGG 오프닝은 지금처럼 가이드를 따른다. 030과 비교해 오프닝을 가이드대로 두는 쪽이 나은지 본다(사용자 의견: 가이드가 점수가 더 나온다). 사용자 지시(2026-10-05)로 hard(비교 4개·20초) 기준으로 바꿈: 파일 이름의 cap10과 달리 두 팔 모두 20초 상한.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-distinct-openings-cap20.json",
   "pairs": 12,
   "comparisons": 2
 }

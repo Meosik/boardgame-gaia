@@ -1,8 +1,8 @@
 {
   "kind": "ab",
-  "note": "027 최저 판에서 찾은 탐색 문제 수정(distinct_search): 같은 첫 수 중복 비교 제거, 1라운드 오프닝은 예측값이 가장 높을 때만, 나중에 이득이 나는 수(액션 부스터·액션 타일·탐사·업그레이드)를 먼저 비교. 비교 4개·10초에서.",
-  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap10.json",
-  "teacher_b": "tools/teacher-a-search4-h1-distinct-cap10.json",
+  "note": "027 최저 판에서 찾은 탐색 문제 수정(distinct_search): 같은 첫 수 중복 비교 제거, 1라운드 오프닝은 예측값이 가장 높을 때만, 나중에 이득이 나는 수(액션 부스터·액션 타일·탐사·업그레이드)를 먼저 비교. 사용자 지시(2026-10-05)로 hard(비교 4개·20초) 기준으로 바꿈: 파일 이름의 cap10과 달리 두 팔 모두 20초 상한.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-distinct-cap20.json",
   "pairs": 12,
   "comparisons": 2
 }

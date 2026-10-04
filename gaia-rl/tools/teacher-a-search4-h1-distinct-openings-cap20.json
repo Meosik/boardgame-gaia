@@ -1,0 +1,13 @@
+{
+  "description": "distinct_search but BGG openings still override the value (distinct first moves, later-gain alternatives first; 4 comparisons, 20 s cap).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:distinct_search_openings",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}
