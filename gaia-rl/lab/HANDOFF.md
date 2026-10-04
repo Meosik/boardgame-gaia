@@ -133,6 +133,16 @@
   (2026-10-05 볼륨 분리). publish의 `--destination`을 그 폴더로 하면 **배포 없이** 바로 보인다.
   저장소 `gaia-frontend/public/ai-replays`는 기본값일 뿐, 실제 사이트 목록은 `~/gaia-media` 쪽이다.
 
+## 5c. 수 하나 분석 ("왜 그 수를 뒀나")
+
+사용자가 다시보기에서 이상한 수를 짚으면(결정 번호 = 다시보기의 프레임 번호):
+```sh
+GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:baseline-teacher-20260917:tools .venv/bin/python tools/explain_decision.py \
+  ~/projects/gaia-lab/gaia-rl/runs/lab-<실험>/pair-XXX/game-Y-AZZ --step N
+```
+그 국면을 재현해 실제 수, 다시 고른 수, 기본 순위(점수와 이유), 비교한 계획(예측값)을 보여 준다.
+교사는 이전 수를 모두 지켜보지만 그 판의 계획 기억은 없으므로, 실제 수와 다르면 그 점을 감안해 해석한다.
+
 ## 6. 디스코드 세션 안전 규칙
 
 - 디스코드 대화는 호출식이다. 항상 떠 있는 작은 봇(`lab/discord_claude.py`, 서비스 `discord-claude`)이
