@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "기본 레벨 결정용: 비교 4개를 10초 상한으로 (hard는 20초에 +21.1, 평균 4.9초/p90 17초). 강함 대부분이 남으면서 대기가 줄어드는지.",
+  "teacher_a": "tools/teacher-a-search2-h1-geodens-cap5.json",
+  "teacher_b": "tools/teacher-a-search4-h1-geodens-cap10.json",
+  "pairs": 12,
+  "comparisons": 2
+}
