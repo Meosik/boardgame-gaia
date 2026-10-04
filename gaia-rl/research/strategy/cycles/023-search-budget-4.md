@@ -30,3 +30,20 @@ guides: every `potential`-ranked faction gains 12–22 VP; Xenos (own evaluator)
 Cost: ~1.9× decision time. Live play caps a decision at 5 s, which would cut many of the extra
 comparisons, so adoption needs either (a) proof that the gain survives the cap, or (b) the
 extra comparisons run in parallel processes (same decisions, less wall time).
+
+## Under the live 5 s cap (user run; A = 2 comparisons + cap, B = 4 comparisons + cap; 12 fresh seeds)
+
+| Faction | B−A | 95% CI |
+|---|---:|---|
+| Geodens | +3.2 | [−9.8, +16.1] |
+| Taklons | +8.8 | [−2.5, +20.0] |
+| Terrans | −7.4 | [−19.7, +4.9] |
+| Xenos | +5.8 | [−12.8, +24.5] |
+| All seats | +2.6 | [−6.3, +11.4] |
+
+Time: A mean 1.98 s, median 0.81, p90 5.10, max 65.5; B mean 2.67, median 1.64, p90 5.16,
+max 215.1 (the cap starts after the root ranking, which alone is long for 300–400 candidates).
+The uncapped +13.1 mostly disappears under the cap: the extra comparisons that matter are in the
+long decisions the cap cuts. Normal stays at 2 comparisons; `hard` (4, 20 s cap) keeps them;
+parallel processes (live: GAIA_AI_PARALLEL=3) finish more comparisons within the same cap — this
+A/B ran without them.
