@@ -488,3 +488,117 @@ def booster_lookahead(seed, **kwargs):
     install_booster_lookahead()
     _install_booster_search_scope()
     return teacher
+
+
+# ── distinct_search ────────────────────────────────────────────────────────────────────
+# Opt-in, on top of geodens_guide. Three search-scope changes found in the lab 027 worst
+# game (pair-004/game-0-A01); no value term or coefficient is added, the rollout decides.
+#
+# 1. Distinct first moves. Several proposals often start with the same move (frame 10:
+#    three of four comparisons were booster 13), so the budget never reached another
+#    candidate. A comparison whose first move was already rolled out reuses that result,
+#    and the budget counts distinct first moves (budget_teacher.count_distinct_firsts).
+#    The current choice is always rolled out itself.
+# 2. Openings follow value. In round 1 a BGG opening route was taken even when another
+#    completed comparison forecast more (frame 15: 122.8 vs 154.4). An opening is now
+#    taken only when its comparison has the highest completed value.
+# 3. Order of root alternatives. The root ranking prices only the immediate state change,
+#    so choices whose gain comes later (a booster with an action, an action tech tile,
+#    exploring a ship, an upgrade that raises power value and income) rank last and were
+#    never compared. They are now compared first among root alternatives (order only).
+
+ACTION_BOOSTERS = frozenset({5, 8, 12})   # Gaia formation, range +3, terraform step
+ACTION_TECH_TILES = frozenset({10})       # engine tech_tile_special_action_effect
+LATER_GAIN_TYPES = frozenset({'ExploreSpaceship', 'Upgrade'})
+
+_distinct = {'snapshot': None, 'results': {}}
+
+
+def later_gain(candidate):
+    """True for a choice whose gain the immediate root ranking does not see."""
+    action = candidate.get('action') or {}
+    kind = action.get('type')
+    if kind in ('SelectStartingBooster', 'Pass'):
+        return action.get('booster_id') in ACTION_BOOSTERS
+    return kind in LATER_GAIN_TYPES
+
+
+def _later_gain_rank(candidate):
+    tile = ((candidate.get('action') or {}).get('tech_tile_choice') or {}).get('tile')
+    return (not later_gain(candidate), tile not in ACTION_TECH_TILES)
+
+
+def order_roots(snapshot, roots):
+    """Later-gain alternatives first, the ranking's order kept inside each group."""
+    return sorted(roots, key=lambda goal: _later_gain_rank(snapshot['candidates'][goal.first]))
+
+
+def value_first_forecast(original, rows, remembered, comparisons):
+    """Pick an opening only from the comparisons with the highest completed value."""
+    import math
+    values = [c['value'] for c in comparisons if c.get('complete')
+              and isinstance(c.get('value'), (int, float)) and math.isfinite(c['value'])]
+    if not values:
+        return None
+    best = max(values)
+    return original(rows, remembered, [c for c in comparisons if c.get('complete') and c.get('value') == best])
+
+
+def install_distinct_search():
+    import budget_teacher
+    import bgg_openings.planning as planning
+    import four_factions.preparation as p
+    budget_teacher.count_distinct_firsts(True)
+    if not getattr(planning.select_forecast, '_distinct', False):
+        inner_forecast = planning.select_forecast
+
+        def select_forecast(rows, remembered, comparisons):
+            return value_first_forecast(inner_forecast, rows, remembered, comparisons)
+        select_forecast._distinct = True
+        planning.select_forecast = select_forecast
+    if not getattr(p.interleave_families, '_distinct', False):
+        inner_interleave = p.interleave_families
+
+        def interleave_families(items, family):
+            snapshot = _distinct['snapshot']
+            if snapshot is not None and items and all(getattr(g, 'family', None) == 'root' for g in items):
+                items = order_roots(snapshot, items)
+            return inner_interleave(items, family)
+        interleave_families._distinct = True
+        p.interleave_families = interleave_families
+    if not getattr(p.rollout, '_distinct', False):
+        inner_rollout = p.rollout
+
+        def rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs):
+            import copy
+            results = _distinct['results']
+            if goal.family != 'current' and first in results:
+                return copy.deepcopy(results[first])
+            result = inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
+            if _distinct['snapshot'] is not None:
+                results.setdefault(first, copy.deepcopy(result))
+            return result
+        rollout.__wrapped__ = getattr(inner_rollout, '__wrapped__', inner_rollout)
+        rollout._distinct = True
+        rollout._parallel = getattr(inner_rollout, '_parallel', False)
+        p.rollout = rollout
+    if not getattr(p.search, '_distinct', False):
+        inner_search = p.search
+
+        def search(env, snapshot, *args, **kwargs):
+            # One decision's cache; live decisions restart at decision id 0.
+            _distinct.update(snapshot=snapshot, results={})
+            try:
+                return inner_search(env, snapshot, *args, **kwargs)
+            finally:
+                _distinct.update(snapshot=None, results={})
+        search._distinct = True
+        search._parallel = getattr(inner_search, '_parallel', False)
+        p.search = search
+
+
+def distinct_search(seed, **kwargs):
+    """Teacher factory: geodens_guide plus distinct first moves, value-led openings, later-gain order."""
+    teacher = geodens_guide(seed, **kwargs)
+    install_distinct_search()
+    return teacher

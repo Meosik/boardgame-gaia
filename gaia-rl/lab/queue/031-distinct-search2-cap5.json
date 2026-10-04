@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "030과 같은 수정(distinct_search)을 지금 실서버 normal(비교 2개·5초)에서. 비교가 적을수록 중복 제거 효과가 큰지.",
+  "teacher_a": "tools/teacher-a-search2-h1-geodens-cap5.json",
+  "teacher_b": "tools/teacher-a-search2-h1-distinct-cap5.json",
+  "pairs": 12,
+  "comparisons": 2
+}

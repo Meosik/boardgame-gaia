@@ -25,6 +25,17 @@ import time
 
 _installed = None
 _max_seconds = None
+_distinct_firsts = False
+
+
+def count_distinct_firsts(enabled):
+    """Count a comparison toward the budget only when its first move is new (distinct_search)."""
+    global _distinct_firsts
+    _distinct_firsts = bool(enabled)
+
+
+def _spent(plans):
+    return len({p['first'] for p in plans}) if _distinct_firsts else len(plans)
 
 
 def _choose(self, snapshot):
@@ -40,7 +51,7 @@ def _choose(self, snapshot):
     def publish(result):
         # Round-trip exactly like the subprocess worker's JSON hand-off.
         state['latest'] = json.loads(json.dumps(result, allow_nan=False))
-        if not state['stopped'] and len(result.get('plans', ())) >= budget:
+        if not state['stopped'] and _spent(result.get('plans', ())) >= budget:
             state['stopped'] = True
             raise SearchExpired('comparison budget reached')
 

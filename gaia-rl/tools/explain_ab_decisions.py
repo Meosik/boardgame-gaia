@@ -23,10 +23,13 @@ def main():
     parser.add_argument('--arm', choices='AB', required=True)
     parser.add_argument('--steps', type=int, nargs='+', required=True, help='0-based steps (replay frame - 1)')
     parser.add_argument('--top', type=int, default=8)
+    parser.add_argument('--spec', help='Another teacher spec .json to ask instead (what would it choose here?)')
     args = parser.parse_args()
     game = Path(args.game)
     manifest = json.loads((game.parents[1]/'manifest.json').read_text())
     spec, clock = manifest['teachers'][args.arm], dict(manifest['clock'])
+    if args.spec:
+        spec = json.loads(Path(args.spec).read_text())
     result = json.loads((game/'result.json').read_text())
     rows = [json.loads(line) for line in gzip.open(game/'decisions.jsonl.gz', 'rt')]
     # Lab games are played with the second engine-fix set (HANDOFF 5b).

@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "027 최저 판에서 찾은 탐색 문제 수정(distinct_search): 같은 첫 수 중복 비교 제거, 1라운드 오프닝은 예측값이 가장 높을 때만, 나중에 이득이 나는 수(액션 부스터·액션 타일·탐사·업그레이드)를 먼저 비교. 비교 4개·10초에서.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap10.json",
+  "teacher_b": "tools/teacher-a-search4-h1-distinct-cap10.json",
+  "pairs": 12,
+  "comparisons": 2
+}

@@ -1,0 +1,13 @@
+{
+  "description": "Live normal with distinct_search: distinct first moves, value-led openings, later-gain alternatives first (2 comparisons, 5 s cap).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:distinct_search",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 2,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 5
+}
