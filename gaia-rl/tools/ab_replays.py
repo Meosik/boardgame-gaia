@@ -18,6 +18,7 @@ Run with GAIA_ENGINE_FIXES_2=1 and PYTHONPATH=python:tools, as the games were pl
 """
 import argparse
 import gzip
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -113,8 +114,12 @@ def cmd_export(args):
     catalog = []
     for game_dir, replay in replays:
         meta = replay['metadata']
-        name = re.sub(r'[^a-z0-9_-]+', '-', f"ab-{game_dir.parents[1].name}-{game_dir.parent.name}-{game_dir.name}".lower())
         payload = json.dumps(replay, separators=(',', ':'), ensure_ascii=False).encode()
+        # The content hash in the name gives a regenerated replay a new URL, so no browser or
+        # CDN copy of an earlier version can be served in its place.
+        digest = hashlib.sha256(payload).hexdigest()[:8]
+        name = re.sub(r'[^a-z0-9_-]+', '-',
+                      f"ab-{game_dir.parents[1].name}-{game_dir.parent.name}-{game_dir.name}-{digest}".lower())
         (output/f'{name}.json.gz').write_bytes(gzip.compress(payload, mtime=0))
         catalog.append({'id': name, 'file': f'{name}.json.gz', 'policy': meta['policy'],
                         'faction': meta['faction'], 'seed': meta['seed'],
