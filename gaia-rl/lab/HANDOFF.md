@@ -57,9 +57,14 @@
     ```sh
     cd ~/gaia-live && git fetch origin claude/epic-goodall-0ot55w \
       && git checkout --detach origin/claude/epic-goodall-0ot55w \
-      && docker compose -p gaia up -d --build
+      && docker compose -p gaia up -d --build \
+      && docker builder prune -f --keep-storage 10GB && docker image prune -f
     ```
   - `-p gaia`를 빼면 서버가 하나 더 떠서 충돌한다.
+  - 마지막 줄은 빌드 캐시를 10GB로 줄이고 이름 없는 옛 이미지를 지운다. 2026-10-05에 빌드 캐시가 25GB까지 쌓여
+    디스크가 가득 차 lab이 멈췄다. `docker system prune --volumes`나 `docker image prune -a`는 쓰지 않는다
+    (DB 볼륨, 되돌리기용 이미지).
+  - 디스크: 같은 날 LVM을 SSD 전체로 늘렸다(100GiB → 235GiB). `df -h /`로 가끔 확인한다.
   - 되돌리기: 이전 커밋으로 checkout한 뒤 `up -d --build`.
 - **2026-10-04 배포 내용**:
   - 레벨: geodens_guide 교사. easy는 비교 0, normal은 비교 2·5초, hard는 비교 4·20초(서버 대기 한도 60초).
