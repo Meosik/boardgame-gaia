@@ -60,5 +60,22 @@ class LabTests(unittest.TestCase):
         self.assertEqual((stats['A']['n'], stats['A']['mean'], stats['B']['max']), (2, 2.0, 2.0))
 
 
+
+class DiscordTextTests(unittest.TestCase):
+    def test_tables_become_short_code_blocks_and_chunks_stay_fenced(self):
+        md = ('# x — 완료\n\n| 종족 | 완료 쌍 | 차이 | 구간 | 오류 |\n|---|---:|---:|---|---:|\n'
+              '| Geodens | 12 | +2.2 | [-5.5, +9.8] | 0 |\n| **전체** | 12 | -0.9 | [-6.4, +4.6] | 0 |\n\n<sub>vm</sub>\n')
+        text = lab.discord_text(md)
+        rows = text.split('```')[1].strip().splitlines()
+        self.assertEqual([r.split()[0] for r in rows], ['종족', 'Geodens', '전체'])
+        self.assertEqual(len({lab._width(r.split('  [')[0]) for r in rows[1:]}), 1)  # columns line up
+        self.assertIn('-0.9', rows[2])
+        self.assertNotIn('오류', text)
+        self.assertNotIn('<sub>', text)
+        parts = lab.chunks('a\n```\n' + '\n'.join(['row ' * 20] * 60) + '\n```\nb', size=500)
+        self.assertGreater(len(parts), 1)
+        self.assertTrue(all(len(p) <= 520 and p.count('```') % 2 == 0 for p in parts))
+
+
 if __name__ == '__main__':
     unittest.main()

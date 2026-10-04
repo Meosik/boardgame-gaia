@@ -143,13 +143,61 @@ def publish(paths, message):
     raise RuntimeError('git push failed 5 times; results are committed locally')
 
 
+def _width(text):
+    """Display columns in a monospace font: Hangul and other wide characters take two."""
+    import unicodedata
+    return sum(2 if unicodedata.east_asian_width(c) in 'WF' else 1 for c in text)
+
+
+def discord_text(markdown):
+    """A result page as Discord text: Discord has no tables, so tables become aligned code blocks
+    (first four columns: what, pairs, difference, interval) and the footer tag is dropped."""
+    out, table = [], []
+
+    def flush():
+        if table:
+            rows = [[c.strip().replace('**', '') for c in row.strip('|').split('|')][:4] for row in table]
+            widths = [max(_width(r[i]) if i < len(r) else 0 for r in rows) for i in range(4)]
+            out.append('```')
+            out.extend('  '.join(c+' '*(widths[i]-_width(c)) for i, c in enumerate(r)).rstrip() for r in rows)
+            out.append('```')
+            table.clear()
+    for line in markdown.splitlines():
+        if line.startswith('|'):
+            if not set(line) <= set('|-: '):
+                table.append(line)
+            continue
+        flush()
+        out.append(line.replace('<sub>', '').replace('</sub>', ''))
+    flush()
+    return '\n'.join(out).strip()
+
+
+def chunks(text, size=1900):
+    """Split on line boundaries under Discord's 2000-character limit, keeping code blocks closed."""
+    parts, current, fenced = [], [], False
+    for line in text.splitlines():
+        if current and sum(len(l)+1 for l in current)+len(line) > size:
+            parts.append('\n'.join(current+(['```'] if fenced else [])))
+            current = ['```'] if fenced else []
+        current.append(line[:size])
+        if line.startswith('```'):
+            fenced = not fenced
+    if current:
+        parts.append('\n'.join(current))
+    return parts
+
+
 def notify(text):
     """Post to the Discord webhook if one is configured; never fails the caller."""
     url = os.environ.get('GAIA_LAB_WEBHOOK')
     if not url:
         return
-    if len(text) > 1990:
-        text = text[:1980]+'\n…'
+    for part in chunks(text):
+        _post(url, part)
+
+
+def _post(url, text):
     request = urllib.request.Request(url, data=json.dumps({'content': text}).encode(), method='POST',
                                      headers={'Content-Type': 'application/json',
                                               'User-Agent': 'gaia-lab (https://github.com, 1.0)'})
@@ -274,7 +322,9 @@ def run_one(name, spec, jobs, push):
         status, data, body = 'failed', {'error': repr(error)}, f'```\n{error!r}\n```'
     paths = write_result(name, spec, status, data, body, started)
     print(f'[{now()}] {name}: {status}', flush=True)
-    if status != 'done':
+    if status == 'done':
+        notify('✅ '+discord_text(paths[1].read_text()))
+    else:
         notify(f'⚠️ 실험 실패: **{name}** — lab/results/{name}.md 참고')
     if push:
         publish(paths, f'lab: {name} {status}')
@@ -337,6 +387,7 @@ def cmd_record(args):
         spec = {**spec, 'note': args.note}
     paths = write_result(args.name, spec, args.status, data, body.strip(), args.started or now())
     print('\n'.join(map(str, paths)))
+    notify(('✅ ' if args.status == 'done' else '⚠️ ')+discord_text(paths[1].read_text()))
     if args.push:
         publish(paths, f'lab: record {args.name}')
 
