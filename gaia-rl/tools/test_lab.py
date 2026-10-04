@@ -68,6 +68,19 @@ class LabTests(unittest.TestCase):
         self.assertEqual(lab.allocate(1), ['s-1'])
         self.assertTrue(any(p.endswith('cut.json') for p in lab._broken))
 
+    def test_low_disk_is_announced_once_until_it_recovers(self):
+        import shutil
+        from unittest import mock
+        sent = []
+        with mock.patch.object(lab, 'notify', sent.append), \
+                mock.patch.object(shutil, 'disk_usage', return_value=mock.Mock(free=5*1024**3)):
+            warned = lab.disk_warning(self.dir, False)
+            warned = lab.disk_warning(self.dir, warned)
+        self.assertTrue(warned)
+        self.assertEqual(len(sent), 1)
+        with mock.patch.object(shutil, 'disk_usage', return_value=mock.Mock(free=50*1024**3)):
+            self.assertFalse(lab.disk_warning(self.dir, warned))
+
 
 class DiscordTextTests(unittest.TestCase):
     def test_tables_become_short_code_blocks_and_chunks_stay_fenced(self):

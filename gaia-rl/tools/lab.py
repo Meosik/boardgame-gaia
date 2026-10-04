@@ -32,6 +32,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -429,19 +430,33 @@ def announce_new(seen):
     return {name for name, _ in pending()} | (seen or set())
 
 
+LOW_DISK_BYTES = 15 * 1024**3
+
+
+def disk_warning(path, warned):
+    """A notice when free space drops below 15 GB (once until it recovers); returns the new flag."""
+    free = shutil.disk_usage(path).free
+    if free < LOW_DISK_BYTES and not warned:
+        notify(f'⚠️ {platform.node()} 디스크 여유 {free/1024**3:.1f}GB: `docker builder prune -f --keep-storage 10GB`, '
+               '`df -h /`로 확인하세요 (꽉 차면 실험과 사이트 DB가 멈춥니다)')
+        return True
+    return free < LOW_DISK_BYTES
+
+
 def source_digest():
     return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 
 def cmd_watch(args):
     print(f'lab watching {BRANCH} every {args.interval}s (Ctrl+C to stop)', flush=True)
-    digest, seen, reported = source_digest(), None, set()
+    digest, seen, reported, low_disk = source_digest(), None, set(), False
     while True:
         try:
             pull()
             if source_digest() != digest:  # a pull changed lab.py: continue as the new version
                 print(f'[{now()}] lab.py changed: restarting', flush=True)
                 os.execv(sys.executable, [sys.executable, *sys.argv])
+            low_disk = disk_warning(GAIA_RL, low_disk)
             seen = announce_new(seen)
             for path, error in list(_broken.items()):
                 if path not in reported:
