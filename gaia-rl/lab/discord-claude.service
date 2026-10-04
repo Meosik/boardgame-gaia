@@ -1,0 +1,15 @@
+# systemd user service for the on-demand Discord → Claude Code bot (see lab/README.md).
+[Unit]
+Description=Discord bot that runs Claude Code on demand for gaia
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/projects/gaia-work/gaia-rl/lab
+EnvironmentFile=%h/projects/gaia-work/gaia-rl/lab/discord_claude.env
+Environment=PATH=%h/.local/bin:%h/.bun/bin:%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.venvs/gaia-claude-bot/bin/python discord_claude.py
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

@@ -97,3 +97,26 @@ PPO 정책이 교사처럼 수를 둘 수 있게 되면(정책을 불러오는 f
 ```sh
 cargo run --release --example faction_lineups -- geo-quartet 400000 Xenos,Taklons,Terrans,Geodens
 ```
+
+## 디스코드로 Claude에게 일 시키기 (호출식)
+
+항상 떠 있는 것은 작은 봇(`lab/discord_claude.py`) 하나다. `#claude` 채널(또는 DM)에 쓴 **본인 메시지**마다
+`~/projects/gaia-work`에서 `claude -p`를 한 번 실행하고 답을 올린다.
+
+- 권한: `lab/claude-bot-settings.json`.
+  - 읽기, 작업 폴더 수정, git, 읽기 전용 진단, 저장소 Python 실행만 허용한다.
+  - 배포·재시작·삭제·비밀 파일 읽기는 거부한다.
+  - 거부된 도구는 답 끝에 🔒로 표시되니, 필요하면 직접 실행한다.
+- 명령: `!new` 새 대화, `!status` 상태, `!stop` 실행 중단. 한 번에 하나씩 처리하고, 나머지는 ⏳ 표시 후 순서대로 처리한다.
+- 설치 (agentmaco, 한 번):
+  ```sh
+  ~/.local/bin/uv venv --seed -p 3.12 ~/.venvs/gaia-claude-bot
+  ~/.venvs/gaia-claude-bot/bin/pip install -q discord.py
+  cd ~/projects/gaia-work && git pull --rebase origin claude/epic-goodall-0ot55w
+  cp gaia-rl/lab/discord_claude.env.example gaia-rl/lab/discord_claude.env && chmod 600 gaia-rl/lab/discord_claude.env
+  nano gaia-rl/lab/discord_claude.env          # 토큰, 내 사용자 ID, #claude 채널 ID
+  cp gaia-rl/lab/discord-claude.service ~/.config/systemd/user/
+  systemctl --user daemon-reload && systemctl --user enable --now discord-claude
+  journalctl --user -u discord-claude -f       # "connected as ..." 이면 정상
+  ```
+- 같은 봇 토큰으로 채널 플러그인 세션(`claude --channels ...`)을 동시에 띄우지 않는다. 둘 다 답하게 된다.

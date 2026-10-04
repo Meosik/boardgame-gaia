@@ -13,3 +13,4 @@ __pycache__/
 
 # Per-host lab settings (may hold a webhook URL).
 /lab/lab.env
+/lab/discord_claude.env
