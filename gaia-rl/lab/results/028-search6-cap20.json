@@ -1,0 +1,179 @@
+{
+ "name": "028-search6-cap20",
+ "kind": "ab",
+ "status": "done",
+ "note": "탐색량 곡선: hard(비교 4, 20초)에서 비교를 6개로 늘리면 더 강해지나. 같은 20초 상한.",
+ "host": "agentmaco",
+ "commit": "ff9b55d",
+ "started_at": "2026-10-04T23:41:56+09:00",
+ "finished_at": "2026-10-05T01:20:04+09:00",
+ "seeds": [
+  "geo-quartet-177415",
+  "geo-quartet-180637",
+  "geo-quartet-183338",
+  "geo-quartet-183558",
+  "geo-quartet-187349",
+  "geo-quartet-189374",
+  "geo-quartet-191845",
+  "geo-quartet-191883",
+  "geo-quartet-192239",
+  "geo-quartet-194691",
+  "geo-quartet-197932",
+  "geo-quartet-198948"
+ ],
+ "command": [
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "--teacher-b",
+  "tools/teacher-a-search6-h1-geodens-cap20.json",
+  "--games",
+  "24",
+  "--seeds",
+  "geo-quartet-177415",
+  "geo-quartet-180637",
+  "geo-quartet-183338",
+  "geo-quartet-183558",
+  "geo-quartet-187349",
+  "geo-quartet-189374",
+  "geo-quartet-191845",
+  "geo-quartet-191883",
+  "geo-quartet-192239",
+  "geo-quartet-194691",
+  "geo-quartet-197932",
+  "geo-quartet-198948",
+  "--comparisons",
+  "2",
+  "--jobs",
+  "4",
+  "--fast-copy",
+  "--output",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-028-search6-cap20"
+ ],
+ "exit_code": 0,
+ "summary": {
+  "factions": {
+   "Geodens": {
+    "pairs": 12,
+    "mean_B_minus_A": -1.1666666666666667,
+    "ci95": [
+     -13.315461128016654,
+     10.982127794683322
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 601,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 422,
+    "A_unsearched_comparisons": 98929,
+    "B_decisions": 583,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 406,
+    "B_unsearched_comparisons": 93023
+   },
+   "Taklons": {
+    "pairs": 12,
+    "mean_B_minus_A": 3.6666666666666665,
+    "ci95": [
+     -1.3533265650442954,
+     8.686659898377629
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 580,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 446,
+    "A_unsearched_comparisons": 75471,
+    "B_decisions": 583,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 449,
+    "B_unsearched_comparisons": 73761
+   },
+   "Terrans": {
+    "pairs": 12,
+    "mean_B_minus_A": 11.666666666666666,
+    "ci95": [
+     -0.297971473651792,
+     23.631304806985124
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 592,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 444,
+    "A_unsearched_comparisons": 65354,
+    "B_decisions": 618,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 484,
+    "B_unsearched_comparisons": 73387
+   },
+   "Xenos": {
+    "pairs": 12,
+    "mean_B_minus_A": 2.6666666666666665,
+    "ci95": [
+     -18.140349410148506,
+     23.47368274348184
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 863,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 720,
+    "A_unsearched_comparisons": 143076,
+    "B_decisions": 873,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 711,
+    "B_unsearched_comparisons": 154144
+   },
+   "ALL": {
+    "pairs": 12,
+    "mean_B_minus_A": 4.208333333333333,
+    "ci95": [
+     -3.4580546687312186,
+     11.874721335397885
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 2636,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 2032,
+    "A_unsearched_comparisons": 382830,
+    "B_decisions": 2657,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 2050,
+    "B_unsearched_comparisons": 394315
+   }
+  },
+  "failures": {},
+  "games_planned": 24,
+  "games_complete": 24,
+  "pairs_complete": 12
+ },
+ "timing": {
+  "A": {
+   "n": 2636,
+   "mean": 3.7714518209408197,
+   "median": 1.339,
+   "p90": 11.445,
+   "max": 23.882
+  },
+  "B": {
+   "n": 2657,
+   "mean": 4.499561911930749,
+   "median": 1.78,
+   "p90": 15.228,
+   "max": 34.405
+  }
+ }
+}
