@@ -123,6 +123,7 @@ export function SidebarTurnControls({
         aria-label={option.label}
         title={unavailable && !controlsDisabled ? `${option.label} · 자원이 부족합니다.` : option.label}
         disabled={unavailable}
+        data-tutorial-target={`free:${option.kind}`}
         onClick={() => onFreeAction(option.kind)}
       >
         {powerCostBadge ? (
@@ -151,7 +152,7 @@ export function SidebarTurnControls({
 
   return (
     <section className="sidebar-turn-controls" aria-label="내 행동 보조 메뉴">
-      <div className="sidebar-power-actions">
+      <div className="sidebar-power-actions" id="game-free-actions" data-tutorial-target="free-actions">
         <h2>자유 행동</h2>
         <div className="sidebar-power-action-grid">
           {(() => {
@@ -166,6 +167,7 @@ export function SidebarTurnControls({
                   ? `${burnPower.label} · 2단계 파워가 부족합니다.`
                   : burnPower.label}
                 disabled={unavailable}
+                data-tutorial-target="free:BurnPower"
                 onClick={() => onFreeAction('BurnPower')}
               >
                 <span className="sidebar-power-bowl-token sidebar-power-bowl-token--two" aria-hidden>

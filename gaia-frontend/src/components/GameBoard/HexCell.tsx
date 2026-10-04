@@ -162,6 +162,7 @@ export function HexCell({
 
   return (
     <g
+      data-tutorial-target={`hex:${hex.coord.q},${hex.coord.r}`}
       className="hex-cell"
       role="button"
       aria-label={`hex ${hex.coord.q},${hex.coord.r}`}

@@ -33,6 +33,13 @@ impl GameActionService {
                         .game_state
                         .as_mut()
                         .ok_or(gaia_engine::error::RuleError::WrongPhase)?;
+                    if game_state.tutorial.is_some() {
+                        return gaia_engine::tutorial::apply_step(
+                            game_state,
+                            acting_player,
+                            action.clone(),
+                        );
+                    }
                     apply_tracked_action(
                         game_state,
                         acting_player,
@@ -50,7 +57,12 @@ impl GameActionService {
         broadcast_snapshot(state, room_code, outcome.revision).await;
 
         maybe_end_round(state, room_code).await;
-        crate::ai::spawn_driver(state.clone(), room_code.to_string());
+        let tutorial = state.rooms.read().await.get_room(room_code)
+            .and_then(|room| room.game_state.as_ref())
+            .is_some_and(|game| game.tutorial.is_some());
+        if !tutorial {
+            crate::ai::spawn_driver(state.clone(), room_code.to_string());
+        }
 
         Ok(outcome)
     }

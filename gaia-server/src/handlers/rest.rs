@@ -140,6 +140,69 @@ pub async fn create_room(
     ))
 }
 
+/// Creates the fixed round-one teaching scenario with three scripted seats.
+pub async fn create_tutorial_game(
+    State(app): State<AppState>,
+) -> ServerResult<(StatusCode, Json<CreateDevGameResponse>)> {
+    let (code, player_id, setup, game_state) = {
+        let mut rooms = app.rooms.write().await;
+        let (code, player_id) = rooms.create_room(
+            "나",
+            Some(gaia_engine::tutorial::SEED.into()),
+            SetupMode::Sequential,
+            None,
+            None,
+        )?;
+        let bots = rooms.alloc_virtual_player_ids(3);
+        let game_state =
+            gaia_engine::tutorial::initial_state(&code, [player_id, bots[0], bots[1], bots[2]])
+                .map_err(|error| ServerError::Internal(error.to_string()))?;
+        let room = rooms
+            .get_room_mut(&code)
+            .ok_or_else(|| ServerError::RoomNotFound(code.clone()))?;
+        let setup = room
+            .setup
+            .clone()
+            .ok_or_else(|| ServerError::Internal("tutorial setup missing".into()))?;
+        // Mark it before releasing the lock so it never appears as an open lobby room.
+        room.state = crate::room::manager::RoomState::InGame;
+        room.game_state = Some(game_state.clone());
+        (code, player_id, setup, game_state)
+    };
+    crate::repository::GameRepository::new(app.db.clone())
+        .save_room(&code, gaia_engine::tutorial::SEED, player_id, &setup)
+        .await?;
+    crate::coordinator::apply_server_transition(&app, &code, |room| {
+        room.state = crate::room::manager::RoomState::InGame;
+        room.game_state = Some(game_state.clone());
+        Ok(())
+    })
+    .await
+    .map_err(crate::coordinator::command_error_to_server_error)?;
+    let session_token = app.sessions.create_session(player_id, &code).await?;
+    app.event_bus.get_or_create(&code).await;
+    let players = {
+        let rooms = app.rooms.read().await;
+        lobby_players(
+            rooms
+                .get_room(&code)
+                .ok_or_else(|| ServerError::RoomNotFound(code.clone()))?,
+        )
+    };
+    Ok((
+        StatusCode::CREATED,
+        Json(CreateDevGameResponse {
+            room_code: code,
+            player_id,
+            session_token,
+            game_setup: serde_json::to_value(&setup)?,
+            game_state,
+            players,
+            host_player_id: player_id,
+        }),
+    ))
+}
+
 /// Local UI-development shortcut: one authenticated controller manually plays all four seats.
 /// It skips invitations, bidding, and faction selection, then follows the normal placement,
 /// booster, action, and pending-decision order without automated opponents.

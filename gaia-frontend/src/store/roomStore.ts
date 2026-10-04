@@ -1,3 +1,4 @@
+import { useGameStore } from './gameStore';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { api, type AiLevel } from '../api/rest';
@@ -37,6 +38,7 @@ interface RoomStore {
       manualControl?: boolean,
       options?: { name?: string; password?: string },
     ) => Promise<void>;
+    createTutorialGame: () => Promise<void>;
     createAiGame: (nickname: string, level?: AiLevel) => Promise<void>;
     joinRoom: (code: string, nickname: string, sessionToken?: string, password?: string) => Promise<void>;
     regenerateSetup: (seed?: string) => Promise<void>;
@@ -95,6 +97,20 @@ export const useRoomStore = create<RoomStore>()(
           if (saved.roomCode && saved.playerId !== null && saved.sessionToken) {
             rememberRoom({ roomCode: saved.roomCode, playerId: saved.playerId, sessionToken: saved.sessionToken, nickname: saved.nickname, manualControl: saved.manualControl });
           }
+        },
+
+        async createTutorialGame() {
+          const res = await api.createTutorialGame();
+          useGameStore.getState().wsClient?.disconnect();
+          useGameStore.getState().actions.reset();
+          set({ ...initialState, roomCode: res.room_code, playerId: res.player_id,
+            sessionToken: res.session_token, gameSetup: res.game_setup,
+            playerCount: res.players.length, nickname: '나', lobbyPlayers: res.players,
+            hostPlayerId: res.host_player_id, roomState: 'in_game' });
+          useGameStore.getState().actions.setMyPlayerId(res.player_id);
+          useGameStore.getState().actions.setGameState(res.game_state);
+          rememberRoom({ roomCode: res.room_code, playerId: res.player_id,
+            sessionToken: res.session_token, nickname: '나', manualControl: false });
         },
 
         async createAiGame(nickname, level = 'normal') {

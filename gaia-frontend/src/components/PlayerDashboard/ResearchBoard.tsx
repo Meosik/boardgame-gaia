@@ -242,6 +242,7 @@ export function ResearchBoard({
                   className="research-board-tech-hotspot research-board-tech-hotspot--standard"
                   style={style}
                   disabled={!selectable}
+                  data-tutorial-target={`tech:${tileId}`}
                   onClick={() => onStandardTechTile?.(tileId, index)}
                   aria-label={`표준 기술 타일 ${tileId} 선택`}
                   title={selectable ? `표준 기술 타일 ${tileId} 선택` : '선택할 수 없는 기술 타일'}
@@ -280,6 +281,7 @@ export function ResearchBoard({
                   className="research-board-tech-hotspot research-board-tech-hotspot--advanced"
                   style={style}
                   disabled={!selectable}
+                  data-tutorial-target={`advanced:${track}`}
                   onClick={() => onAdvancedTechTile?.(tileId, track)}
                   aria-label={`고급 기술 타일 ${tileId} 선택`}
                   title={`${ADVANCED_TECH_TILE_LABELS[tileId] ?? ''}${selectable ? ' · 선택' : ' · 연구 4레벨과 사용 가능한 연방 토큰이 필요합니다'}`}
@@ -331,6 +333,7 @@ export function ResearchBoard({
           return (
             <button
               key={`research-track-choice-${track}`}
+              data-tutorial-target={`research:${track}`}
               type="button"
               className={`research-board-track-hotspot${
                 techSelectionMode === null ? ' research-board-track-hotspot--paid' : ''
@@ -374,6 +377,7 @@ export function ResearchBoard({
               }${selected ? ' board-action-hotspot--selected' : ''}`}
               style={{ left: `${x}%`, top: `${y}%` }}
               disabled={!available}
+              data-tutorial-target={`power:${id}`}
               onClick={() => onPowerAction(id)}
               aria-label={`${label}: ${reason}`}
               title={`${label} — ${reason}`}

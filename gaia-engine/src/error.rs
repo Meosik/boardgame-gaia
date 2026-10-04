@@ -3,6 +3,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum RuleError {
+    #[error("{0}")]
+    TutorialStepMismatch(String),
+
     #[error("not your turn")]
     NotYourTurn,
 

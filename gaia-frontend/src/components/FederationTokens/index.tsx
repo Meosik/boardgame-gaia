@@ -79,6 +79,7 @@ export function FederationTokens({
                   className="federation-token-select-button"
                   aria-label={`연방 토큰 ${id} 선택`}
                   aria-pressed={selectedToken?.source === 'Supply' && selectedToken.kind === id}
+                  data-tutorial-target={`federation:${id}`}
                   onClick={() => onSelectToken({ source: 'Supply', kind: id })}
                 >
                   <img src={src} alt={`연방 토큰 ${id}`} />

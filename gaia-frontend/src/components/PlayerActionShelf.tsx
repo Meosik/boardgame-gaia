@@ -187,6 +187,7 @@ export function PlayerActionShelf({
               {actionTiles.map((tile) => (
                 <button
                   key={tile.key}
+                  data-tutorial-target={tile.key === 'booster' ? 'booster' : tile.key.startsWith('standard-') ? `tech:${tile.key.slice(9)}` : tile.action?.type === 'AcademyQicAction' ? 'academy' : `action:${tile.action?.type ?? tile.key}`}
                   type="button"
                   className="player-action-tile"
                   data-replay-highlight={replay?.player === player.player_id && (
@@ -258,6 +259,7 @@ export function PlayerActionShelf({
                     }`}
                     aria-pressed={federationSelectionMode ? selected : undefined}
                     disabled={!canSelectFederation}
+                    data-tutorial-target={`federation:${kind}`}
                     onClick={() => onSelectFederationKind?.(kind)}
                   >
                     <img src={src} alt="" />

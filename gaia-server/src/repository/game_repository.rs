@@ -206,7 +206,7 @@ impl GameRepository {
         .execute(&mut *tx)
         .await?;
 
-        for event in events {
+        for event in events.iter().filter(|_| state.tutorial.is_none()) {
             let event_type = format!("{:?}", std::mem::discriminant(event));
             let payload = serde_json::to_value(event)?;
             sqlx::query(

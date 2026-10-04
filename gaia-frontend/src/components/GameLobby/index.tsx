@@ -49,6 +49,7 @@ export function GameLobby({ onGameStart, manualControl = false }: Props) {
             useRoomStore.getState().actions.resumeRoom(recentRoom);
             navigate('waiting');
           } : undefined}
+          onTutorialStart={onGameStart}
           onCreateRoom={() => navigate('create')}
           onRoomJoined={() => navigate('waiting')}
         />

@@ -29,7 +29,7 @@ export function LostFleetTechRequirementBoard({
         src={lostFleetTechRequirementBoardImageSrc(side)}
         alt={requirementLabel}
       />
-      {tileSrc && onSelect ? <button type="button" className="lost-fleet-tech-requirement-tile"
+      {tileSrc && onSelect ? <button type="button" data-tutorial-target="advanced:LostFleet" className="lost-fleet-tech-requirement-tile"
         style={{ background: 'transparent', border: 0, padding: 0 }} onClick={onSelect}
         aria-label={`함대 고급 기술 타일 ${tileId} 선택`}>
         <img src={tileSrc} alt="" style={{ width: '100%', display: 'block' }} />

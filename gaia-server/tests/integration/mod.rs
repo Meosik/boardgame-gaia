@@ -10,3 +10,5 @@ mod websocket_messaging;
 mod manual_dev_control;
 
 mod ai_seats;
+
+mod tutorial_round1;

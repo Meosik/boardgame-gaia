@@ -75,6 +75,7 @@ impl AppState {
             .players
             .iter()
             .filter(|player| dev_controller.is_none_or(|controller| player.player_id == controller))
+            .filter(|player| game_state.tutorial.is_none() || player.player_id == host_player)
             .map(|p| (p.player_id, p.nickname.clone(), state_str != "lobby"))
             .collect();
 

@@ -215,6 +215,23 @@ export function FactionBoard({
             ))}
           </>
         )}
+        {power && POWER_BOWLS.filter(bowl => bowl.key !== 'gaia_bowl').map(bowl => (
+          <span
+            key={`power-region-${bowl.key}`}
+            data-tutorial-target={`power:${bowl.label}`}
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: `${bowl.centerX}%`,
+              top: `${bowl.centerY}%`,
+              width: '13%',
+              height: '13%',
+              transform: 'translate(-50%, -35%)',
+              borderRadius: '50%',
+              pointerEvents: 'none',
+            }}
+          />
+        ))}
         {power && POWER_BOWLS.flatMap((bowl) => {
           const count = powerBowlCount(bowl.key);
           return Array.from({ length: count }, (_, index) => (

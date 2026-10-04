@@ -1,0 +1,19 @@
+.round-one-guide { position: fixed; z-index: 85; left: 14px; bottom: 14px; width: min(390px, calc(100vw - 28px)); max-height: 48vh; overflow-y: auto; padding: 14px; border: 2px solid #f2cd63; border-radius: 12px; background: #152035; color: #edf2fa; box-shadow: 0 8px 30px #0008; font-size: 13px; line-height: 1.5; }
+.round-one-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.round-one-guide h2 { font-size: 16px; margin: 12px 0 6px; }
+.round-one-guide p { margin: 8px 0; }
+.round-one-guide ul { padding-left: 20px; }
+.round-one-guide button, .round-one-guide a { color: #f2cd63; }
+.round-one-guide table { border-collapse: collapse; font-size: 11px; width: 100%; }
+.round-one-guide td, .round-one-guide th { padding: 4px; border: 1px solid #5b6473; text-align: right; }
+.round-one-success { color: #96ebae; }
+.tutorial-highlight { outline: 3px solid #ffcf50 !important; outline-offset: 3px; box-shadow: 0 0 16px #ffd04b99; }
+g.tutorial-highlight { outline: none !important; filter: drop-shadow(0 0 6px #ffcf50); }
+g.tutorial-highlight > polygon:first-child { stroke: #ffcf50; stroke-width: 4px; }
+
+.tutorial-power-flow { margin: 12px 0; }
+.tutorial-power-bowls { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.tutorial-power-bowls > span { border: 2px solid #b89ae8; border-radius: 50%; padding: 10px; text-align: center; }
+.tutorial-power-bowls > b { text-align: center; }
+.tutorial-power-bowls small { display: block; font-size: 10px; white-space: nowrap; }
+.tutorial-power-flow figcaption { margin-top: 8px; }

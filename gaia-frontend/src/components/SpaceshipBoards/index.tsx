@@ -231,6 +231,7 @@ export function SpaceshipBoards({
                       className="spaceship-board-artifact spaceship-board-artifact--transparent-redraw spaceship-board-artifact--button"
                       style={style}
                       disabled={!available}
+                      data-tutorial-target={`artifact:${artifactId}`}
                       onClick={() => onArtifactSelect(artifactId)}
                       title={ARTIFACT_LABELS[artifactId]}
                       aria-label={`아티팩트 ${artifactId} 조사${available ? '' : ' (트와일라잇 함선 진입 필요)'}`}
@@ -323,6 +324,7 @@ export function SpaceshipBoards({
                 return (
                   <button
                     key={`${id}-action-space-${space.id}`}
+                    data-tutorial-target={`action:${space.primaryActionType}`}
                     data-replay-highlight={!!replay && space.actionTypes.some(type => type === replay.actionType) || undefined}
                     type="button"
                     className={`board-action-hotspot spaceship-board-action-space board-action-hotspot--${

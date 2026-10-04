@@ -185,6 +185,7 @@ export function StructureActionPopup({
                   className="structure-action-popup__choice"
                   disabled={unavailable}
                   title={unavailable ? '필요 자원 또는 건물 말이 부족합니다.' : undefined}
+                  data-tutorial-target={`upgrade:${typeof to === 'string' ? to : `Academy:${to.Academy}`}`}
                   onClick={() => onUpgrade?.(to)}
                 >
                   <img src={structureImageSrc(color, asset)} alt="" />
@@ -200,6 +201,7 @@ export function StructureActionPopup({
             <button
               type="button"
               className="structure-action-popup__choice structure-action-popup__choice--federation"
+              data-tutorial-target="federation"
               onClick={onStartFederation}
             >
               <span className="structure-action-popup__satellite">◆</span>
@@ -232,6 +234,7 @@ export function StructureActionPopup({
                 key={tileId}
                 type="button"
                 className="structure-action-popup__tech"
+                data-tutorial-target={`cover:${tileId}`}
                 onClick={() => onCoverTile?.(tileId)}
                 aria-label={`표준 기술 타일 ${tileId} 덮기`}
               >

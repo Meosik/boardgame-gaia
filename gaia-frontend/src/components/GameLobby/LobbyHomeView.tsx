@@ -7,6 +7,7 @@ import type { RoomSummary } from '../../types/game';
 interface Props {
   onRoomJoined: () => void;
   onCreateRoom: () => void;
+  onTutorialStart?: () => void;
   recentRoomCode?: string;
   onResumeRoom?: () => void;
 }
@@ -17,7 +18,7 @@ const SETUP_MODE_LABELS = { bidding: '승점 비딩', sequential: '순차 선택
  * full-width entries underneath. Every waiting room is listed, so picking one from the list is the
  * only way in — typing a code would just be a slower way to reach the same rooms, and reconnecting
  * to a game already in progress is what the 이어하기 shortcut is for. */
-export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onResumeRoom }: Props) {
+export function LobbyHomeView({ onRoomJoined, onCreateRoom, onTutorialStart, recentRoomCode, onResumeRoom }: Props) {
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [lockedRoom, setLockedRoom] = useState<RoomSummary | null>(null);
@@ -155,10 +156,17 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, recentRoomCode, onRe
       {error && <p className="error-msg">{error}</p>}
 
       <div className="lobby-entries">
-        <a className="lobby-entry" href="?tutorial=1">
+        <div className="lobby-entry">
           <span className="lobby-entry-title">튜토리얼</span>
-          <span className="lobby-entry-desc">행동 설명과 첫 게임 따라 하기</span>
-        </a>
+          <button type="button" className="btn btn-primary" disabled={loading} onClick={async () => {
+            setLoading(true);
+            setError('');
+            try { await useRoomStore.getState().actions.createTutorialGame(); onTutorialStart?.(); }
+            catch (e) { setError(e instanceof Error ? e.message : '튜토리얼을 시작하지 못했습니다'); }
+            finally { setLoading(false); }
+          }}>1라운드 따라 하기</button>
+          <a href="?tutorial=1">행동 설명 보기</a>
+        </div>
         <a className="lobby-entry" href="?aiReplay=1">
           <span className="lobby-entry-title">AI 보기</span>
           <span className="lobby-entry-desc">AI끼리 둔 대국을 처음부터 되돌려 봅니다</span>

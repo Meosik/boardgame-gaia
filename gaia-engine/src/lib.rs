@@ -2,6 +2,7 @@
 // All errors returned as Result<_, E>; no panics in library code.
 
 pub mod bidding;
+pub mod tutorial;
 pub mod data;
 pub mod error;
 pub mod faction;

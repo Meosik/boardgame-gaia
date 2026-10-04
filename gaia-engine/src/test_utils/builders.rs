@@ -68,6 +68,7 @@ impl GameStateBuilder {
         let turn_order: Vec<u8> = self.players.iter().map(|p| p.player_id).collect();
 
         GameState {
+            tutorial: None,
             dev_controller: None,
             room_code: RoomCode("TEST".into()),
             created_at: 0,

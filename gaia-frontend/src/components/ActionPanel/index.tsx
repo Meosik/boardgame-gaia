@@ -787,6 +787,7 @@ export function ActionPanel({
         ) : (
           <button
             className="btn btn-primary confirm-btn"
+            data-tutorial-target="charge"
             onClick={() => actions.sendAction({ type: 'ChargePower', accept: true })}
           >
             충전 ({entry.max_power})
@@ -1425,6 +1426,7 @@ export function ActionPanel({
     return (
       <button
         key={actionType}
+        data-tutorial-target={`action:${actionType}`}
         className={clsx(
           'btn action-btn',
           unavailableReason ? 'action-btn--unavailable' : 'action-btn--available',

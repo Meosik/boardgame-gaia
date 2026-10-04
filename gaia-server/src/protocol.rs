@@ -182,6 +182,7 @@ pub fn compatibility_rejection_reason(
 fn rule_error_code(error: &gaia_engine::error::RuleError) -> &'static str {
     use gaia_engine::error::RuleError;
     match error {
+        RuleError::TutorialStepMismatch(_) => "TutorialStepMismatch",
         RuleError::NotYourTurn => "NOT_YOUR_TURN",
         RuleError::WrongPhase => "WRONG_PHASE",
         RuleError::InsufficientResources(_) => "INSUFFICIENT_RESOURCES",

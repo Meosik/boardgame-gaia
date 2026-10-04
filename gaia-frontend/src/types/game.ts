@@ -374,7 +374,37 @@ export interface BiddingState {
 
 // ── Game State ────────────────────────────────────────────────────────────────
 
+export interface TutorialStep {
+  title: string;
+  instruction: string;
+  reason: string;
+  target: string;
+  action: GameAction;
+}
+
+export interface TutorialFinalScore {
+  player_id: PlayerId;
+  gameplay_vp: number;
+  bid_penalty_vp: number;
+  final_tile_vp: number;
+  research_vp: number;
+  resource_vp: number;
+  faction_vp: number;
+  total_vp: number;
+}
+
+export interface TutorialState {
+  script_id: string;
+  step: number;
+  steps: TutorialStep[];
+  introduction: string[];
+  opponents: { player: PlayerId; action: GameAction; description: string }[];
+  final_scores: TutorialFinalScore[] | null;
+  final_tiles: { tile_id: number; scores: [PlayerId, number][] }[];
+}
+
 export interface GameState {
+  tutorial?: TutorialState | null;
   dev_controller?: PlayerId | null;
   players: PlayerState[];
   board: BoardState;

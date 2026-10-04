@@ -315,6 +315,7 @@ fn decode_stored_outcome(stored: &serde_json::Value) -> CommandResult {
 
 fn rule_error_code(error: &RuleError) -> &'static str {
     match error {
+        RuleError::TutorialStepMismatch(_) => "TutorialStepMismatch",
         RuleError::NotYourTurn => "NOT_YOUR_TURN",
         RuleError::WrongPhase => "WRONG_PHASE",
         RuleError::InsufficientResources(_) => "INSUFFICIENT_RESOURCES",

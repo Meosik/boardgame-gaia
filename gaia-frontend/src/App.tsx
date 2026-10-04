@@ -1,3 +1,6 @@
+import { RoundOneGuide } from './components/Tutorial/RoundOneGuide';
+import { Tutorial } from './components/Tutorial';
+import { currentTutorialStep, tutorialNotice, tutorialTargets, tutorialPanel } from './tutorial/round1';
 import type { CoachBoardControls } from './components/AiCoach/boardSelection';
 import { GameCommandControls, GameCommandStatus } from './components/GameCommandControls';
 import { RewardMotion } from './components/RewardMotion';
@@ -105,11 +108,13 @@ type TechUpgradeFlow = {
     }
   | {
       stage: 'cover';
+      lostFleet?: boolean;
       tile: number;
       track: ResearchTrack;
     }
   | {
       stage: 'advanced-track';
+      lostFleet?: boolean;
       track: ResearchTrack;
       coveredTile: number;
     }
@@ -323,6 +328,36 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     }),
     shallow,
   );
+
+  useEffect(() => {
+    if (view !== 'game' || !gameState?.tutorial) return;
+    closeBoardContext();
+    setSidebarTab('info');
+    setPersonalBoardPlayerId(null);
+    setTutorialOpen(false);
+    setPassBoosterSelection(false);
+    setRangePreviewQic(0);
+    const action = currentTutorialStep(gameState.tutorial)?.action;
+    gameActions.selectAction(action?.type === 'FormFederation' ? 'FormFederation' : null);
+    const panel = tutorialPanel(gameState);
+    if (panel) {
+      scrollToGameBoard(panel);
+      window.requestAnimationFrame(() => {
+        const board = document.getElementById(panel);
+        const wanted = tutorialTargets(gameState);
+        const primary = currentTutorialStep(gameState.tutorial!)?.target;
+        const elements = Array.from(board?.querySelectorAll<HTMLElement>('[data-tutorial-target]') ?? []);
+        const target = elements.find(node => node.dataset.tutorialTarget === primary)
+          ?? elements.find(node => wanted.includes(node.dataset.tutorialTarget ?? ''));
+        const focus = action?.type === 'ChargePower' ? target?.closest('.faction-board-main') : target;
+        focus?.scrollIntoView?.({
+          behavior: 'smooth',
+          block: action?.type === 'ChargePower' ? 'start' : 'center',
+          inline: 'nearest',
+        });
+      });
+    }
+  }, [gameState?.tutorial?.step, roomCode, view]);
 
   useEffect(() => {
     if (selectedAction !== 'TwilightReplayFederationToken' && selectedAction !== 'ExamineArtifact') {
@@ -633,7 +668,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       ? selectedPowerActionId
       : undefined;
     if ((mainActionLocked && powerActionId === undefined)
-      || (!devGameRequested && powerActionId === undefined)
+      || (!devGameRequested && !gameState?.tutorial && powerActionId === undefined)
       || !hex.planet
       || hex.structures.length > 0
       || !isMyActionTurn) return;
@@ -643,7 +678,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       informationCubesNeededForRange(gameState!.board, me, hex.coord),
       rangePreviewQic,
     );
-    if (rangeNotice) {
+    if (rangeNotice && !gameState?.tutorial) {
       setGameNotice(rangeNotice);
       return;
     }
@@ -1030,8 +1065,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       finishStandardTechChoice(techUpgradeFlow.tile, track);
     } else if (techUpgradeFlow?.stage === 'advanced-track') {
       sendTechUpgrade({
-        kind: 'Advanced',
-        track: techUpgradeFlow.track,
+        ...(techUpgradeFlow.lostFleet ? { kind: 'LostFleetAdvanced' as const } : { kind: 'Advanced' as const, track: techUpgradeFlow.track }),
         covered_tile: techUpgradeFlow.coveredTile,
         advance_track: track,
       });
@@ -1052,8 +1086,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     if (techUpgradeFlow?.stage !== 'cover') return;
     if (selectableAdvancedTechResearchTracks.length === 0) {
       sendTechUpgrade({
-        kind: 'Advanced',
-        track: techUpgradeFlow.track,
+        ...(techUpgradeFlow.lostFleet ? { kind: 'LostFleetAdvanced' as const } : { kind: 'Advanced' as const, track: techUpgradeFlow.track }),
         covered_tile: tile,
         advance_track: null,
       });
@@ -1067,8 +1100,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       finishStandardTechChoice(techUpgradeFlow.tile, null);
     } else if (techUpgradeFlow?.stage === 'advanced-track') {
       sendTechUpgrade({
-        kind: 'Advanced',
-        track: techUpgradeFlow.track,
+        ...(techUpgradeFlow.lostFleet ? { kind: 'LostFleetAdvanced' as const } : { kind: 'Advanced' as const, track: techUpgradeFlow.track }),
         covered_tile: techUpgradeFlow.coveredTile,
         advance_track: null,
       });
@@ -1250,6 +1282,15 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     <LiveHighlightScope highlight={activityHighlight} enabled={!replay}>
     <div className="app app--game app--game-table" onClickCapture={(event) => {
       const target = event.target;
+      if (gameState.tutorial && target instanceof Element) {
+        const marked = target.closest<HTMLElement>('[data-tutorial-target]');
+        if (marked && !tutorialTargets(gameState).includes(marked.dataset.tutorialTarget ?? '')) {
+          event.preventDefault();
+          event.stopPropagation();
+          roomActions.setError({ code: 'TutorialStepMismatch', message: tutorialNotice(gameState.tutorial) });
+          return;
+        }
+      }
       if (!replay && target instanceof Element && target.closest('button, [role="button"]')) {
         const bounds = target.closest('button, [role="button"]')!.getBoundingClientRect();
         rewardClick.current = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2, time: performance.now() };
@@ -1258,6 +1299,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
         actionAnchorRef.current = target.closest('button, [role="button"]') ?? target;
       }
     }}>
+      {!replay && gameState.tutorial && <RoundOneGuide key={roomCode} state={gameState} />}
       {!replay && <RewardMotion batch={rewardBatch} />}
       {!replay && <TurnBanner status={turnBannerStatus} />}
       {!replay && <ActionToast entry={toastAction} myPlayerId={myId} />}
@@ -1402,7 +1444,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               isMyActionTurn && !mainActionLocked ? handleOwnedStructureClick : undefined
             }
             onPlanetClick={
-              isMyActionTurn && (devGameRequested || selectedTerraformingPowerAction)
+              isMyActionTurn && (devGameRequested || !!gameState.tutorial || selectedTerraformingPowerAction)
                 ? handlePlanetClick
                 : undefined
             }
@@ -1433,7 +1475,10 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
                 tileId={gameState.research_board.lost_fleet_advanced_tech_tile}
                 onSelect={coach?.enabled && coach.techMode && gameState.research_board.lost_fleet_advanced_tech_tile != null
                   && coach.advancedTiles.includes(gameState.research_board.lost_fleet_advanced_tech_tile)
-                  ? () => coach.onTech(gameState.research_board.lost_fleet_advanced_tech_tile!, true) : undefined}
+                  ? () => coach.onTech(gameState.research_board.lost_fleet_advanced_tech_tile!, true)
+                  : gameState.tutorial && techUpgradeFlow?.stage === 'tile' && gameState.research_board.lost_fleet_advanced_tech_tile != null
+                    ? () => setTechUpgradeFlow({ ...techUpgradeFlow, stage: 'cover', tile: gameState.research_board.lost_fleet_advanced_tech_tile!, track: 'Science', lostFleet: true })
+                    : undefined}
               />
             </div>
           </article>
@@ -1451,7 +1496,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               techSelectionMode={
                 coach ? coach.techMode : techUpgradeFlow?.stage === 'tile'
                   ? 'tile'
-                  : techUpgradeFlow?.stage === 'track' || selectedAction === 'EclipseResearchBoost' || selectedAction === 'BescodsLowestResearchAdvance'
+                  : techUpgradeFlow?.stage === 'track' || (!!gameState.tutorial && techUpgradeFlow?.stage === 'advanced-track') || selectedAction === 'EclipseResearchBoost' || selectedAction === 'BescodsLowestResearchAdvance'
                     ? 'track'
                     : null
               }
@@ -1515,7 +1560,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             }}
             onAction={coach ? coach.onAction : gameActions.sendAction}
           />
-          <article className="game-table-card game-table-ships-card">
+          <article className="game-table-card game-table-ships-card" id="game-ships">
             <h2>함선 보드</h2>
             <SpaceshipBoards
               spaceshipBoards={gameState.spaceship_boards}
@@ -1712,7 +1757,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             spaceshipBoard={spaceshipBoard}
             board={gameState.board}
             player={me}
-            selectedRangeQic={rangePreviewQic}
+            selectedRangeQic={gameState.tutorial ? informationCubesNeededForRange(gameState.board, me, gameState.board.spaceship_tiles[spaceshipPopup.ship]!) ?? 0 : rangePreviewQic}
             onConfirm={() => {
               gameActions.sendAction({ type: 'ExploreSpaceship', ship: spaceshipPopup.ship });
               setRangePreviewQic(0);
@@ -1752,7 +1797,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       </GameCommandControls>
       {!replay && tutorialOpen && (
         <FloatingBoardPanel title="도움말 · 따라 하기와 행동 설명" onClose={() => setTutorialOpen(false)}>
-          <TutorialPanel events={gameState.event_log} myPlayerId={myPlayerId} />
+          {gameState.tutorial ? <Tutorial compact /> : <TutorialPanel events={gameState.event_log} myPlayerId={myPlayerId} />}
         </FloatingBoardPanel>
       )}
       {personalBoardPlayer && (

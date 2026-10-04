@@ -84,7 +84,7 @@ impl Room {
         if let Some(state) = self
             .game_state
             .as_ref()
-            .filter(|state| state.dev_controller == Some(self.host_player))
+            .filter(|state| state.dev_controller == Some(self.host_player) || state.tutorial.is_some())
         {
             let ready = self
                 .players
@@ -316,6 +316,7 @@ impl RoomManager {
             .rooms
             .values()
             .filter(|room| room.state == RoomState::Lobby)
+            .filter(|room| room.game_state.as_ref().is_none_or(|game| game.tutorial.is_none()))
             .collect();
         rooms.sort_by_key(|room| std::cmp::Reverse(room.host_player));
         rooms

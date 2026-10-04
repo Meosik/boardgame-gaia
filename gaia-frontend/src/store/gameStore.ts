@@ -1,3 +1,4 @@
+import { matchesTutorialAction, tutorialNotice } from '../tutorial/round1';
 import { controlledPlayer } from '../devControl';
 import { create } from 'zustand';
 import type { ClientCommand, GameAction, GameState, HexCoord, PlayerId } from '../types/game';
@@ -143,6 +144,11 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     sendAction(action) {
+      const tutorial = get().gameState?.tutorial;
+      if (tutorial && !matchesTutorialAction(tutorial, action)) {
+        useRoomStore.getState().actions.setError({ code: 'TutorialStepMismatch', message: tutorialNotice(tutorial) });
+        return null;
+      }
       const commandId = sendCommand({ type: 'place_game_action', action });
       if (commandId === null) return null;
       // Free actions are deliberately allowed in the middle of a selected main action and must

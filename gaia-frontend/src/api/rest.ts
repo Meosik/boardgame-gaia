@@ -58,6 +58,9 @@ export const api = {
       body: JSON.stringify({ nickname, ai_opponents: true, ai_level: level }),
     });
   },
+  createTutorialGame(): Promise<DevGameResponse> {
+    return request(`${BASE}/tutorial-games`, { method: 'POST' });
+  },
   createDevGame(faction = 'Terrans', seed = 'gaia-ui-dev'): Promise<DevGameResponse> {
     return request(`${BASE}/dev-games`, {
       method: 'POST',

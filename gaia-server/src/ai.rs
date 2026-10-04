@@ -280,7 +280,10 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
         return None;
     }
     let state = room.game_state.as_ref()?;
-    if state.dev_controller.is_some() || matches!(state.phase, GamePhase::Ended { .. }) {
+    if state.tutorial.is_some()
+        || state.dev_controller.is_some()
+        || matches!(state.phase, GamePhase::Ended { .. })
+    {
         return None;
     }
     let player = required_player(state)?;

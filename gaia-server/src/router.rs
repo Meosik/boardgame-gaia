@@ -97,6 +97,7 @@ pub fn build_router(state: AppState) -> Router {
     let api = Router::new()
         .route("/rooms", post(rest::create_room).get(rest::list_rooms))
         .route("/dev-games", post(rest::create_dev_game))
+        .route("/tutorial-games", post(rest::create_tutorial_game))
         .route("/rooms/:code/dev-refill", post(dev_tools::refill))
         .route("/rooms/:code/dev-delete", post(dev_tools::delete))
         .route("/rooms/:code/join", post(rest::join_room))

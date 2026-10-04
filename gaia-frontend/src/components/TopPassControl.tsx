@@ -55,6 +55,7 @@ export function TopPassControl({
         type="button"
         className="game-top-control game-top-pass-control"
         disabled={controlsDisabled || (requiresBoosterChoice && availableBoosters.length === 0)}
+        data-tutorial-target="pass"
         onClick={handlePassClick}
       >
         패스

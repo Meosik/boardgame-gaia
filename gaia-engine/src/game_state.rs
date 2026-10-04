@@ -1344,6 +1344,8 @@ pub struct UndoState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tutorial: Option<crate::tutorial::TutorialState>,
     /// Server-created local test controller; ordinary games never set this field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dev_controller: Option<PlayerId>,
