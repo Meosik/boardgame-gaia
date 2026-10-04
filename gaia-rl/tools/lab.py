@@ -99,8 +99,22 @@ def commit_id():
     return git('rev-parse', '--short', 'HEAD', check=False).stdout.strip()
 
 
+def commit(message):
+    """Commit what is staged; a host without a git identity commits as gaia-lab."""
+    identity = []
+    if not git('config', 'user.email', check=False).stdout.strip():
+        identity = ['-c', 'user.name=gaia-lab', '-c', f'user.email=gaia-lab@{platform.node() or "host"}']
+    git(*identity, 'commit', '-m', message)
+
+
 def pull():
-    """Update from the branch, keeping any local result commits on top (a push may have failed)."""
+    """Update from the branch, keeping any local result commits on top (a push may have failed).
+
+    Results a crashed run left uncommitted (e.g. a failed commit) are committed first."""
+    results = str(LAB.relative_to(GAIA_RL)/'results') if LAB.is_relative_to(GAIA_RL) else None
+    if results and git('status', '--porcelain', '--', results, check=False).stdout.strip():
+        git('add', '--', results)
+        commit('lab: results (recovered)')
     out = git('pull', '--rebase', 'origin', BRANCH, check=False)
     if out.returncode:
         git('rebase', '--abort', check=False)
@@ -134,7 +148,7 @@ def publish(paths, message):
     git('add', '--', *map(str, paths))
     if not git('diff', '--cached', '--quiet', check=False).returncode:
         return
-    git('commit', '-m', message)
+    commit(message)
     for attempt in range(5):
         git('pull', '--rebase', 'origin', BRANCH, check=False)
         if not git('push', 'origin', f'HEAD:{BRANCH}', check=False).returncode:
