@@ -1,0 +1,241 @@
+{
+ "name": "035-guide-values-free-academy",
+ "kind": "ab",
+ "status": "done",
+ "note": "사용자 요청(2026-10-06, 새 시드 6쌍): A = 실서버 hard(geodens_guide), B = guide_r1 = 034의 B(guide_values + 종족 1라운드 오프닝 순서) + 변환 금지 해제(값이 판단) + 1R 아카데미 목표면 업그레이드 먼저 + 셋업은 상대 옆(거리 2) 자리만 비교 + 테란 1–3R 가이아 연구 후순위 + QIC 사거리 이중 계산 제거. 평가는 1·2라운드 플레이 위주(사용자).",
+ "host": "agentmaco",
+ "commit": "7888704",
+ "started_at": "2026-10-06T02:21:05+09:00",
+ "finished_at": "2026-10-06T03:49:45+09:00",
+ "seeds": [
+  "geo-quartet-395465",
+  "geo-quartet-397269",
+  "geo-quartet-398221",
+  "geo-quartet-402485",
+  "geo-quartet-405302",
+  "geo-quartet-406729"
+ ],
+ "command": [
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-cap20.json",
+  "--games",
+  "12",
+  "--seeds",
+  "geo-quartet-395465",
+  "geo-quartet-397269",
+  "geo-quartet-398221",
+  "geo-quartet-402485",
+  "geo-quartet-405302",
+  "geo-quartet-406729",
+  "--comparisons",
+  "2",
+  "--jobs",
+  "4",
+  "--fast-copy",
+  "--output",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-035-guide-values-free-academy"
+ ],
+ "exit_code": 0,
+ "summary": {
+  "factions": {
+   "Geodens": {
+    "pairs": 6,
+    "mean_B_minus_A": -41.166666666666664,
+    "ci95": [
+     -58.93180711095121,
+     -23.401526222382113
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 324,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 215,
+    "A_unsearched_comparisons": 42997,
+    "B_decisions": 295,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 204,
+    "B_unsearched_comparisons": 50285
+   },
+   "Taklons": {
+    "pairs": 6,
+    "mean_B_minus_A": -10.5,
+    "ci95": [
+     -37.40937976248543,
+     16.40937976248543
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 330,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 238,
+    "A_unsearched_comparisons": 42177,
+    "B_decisions": 465,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 367,
+    "B_unsearched_comparisons": 68077
+   },
+   "Terrans": {
+    "pairs": 6,
+    "mean_B_minus_A": -14,
+    "ci95": [
+     -33.38475517955449,
+     5.384755179554492
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 290,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 215,
+    "A_unsearched_comparisons": 41338,
+    "B_decisions": 371,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 296,
+    "B_unsearched_comparisons": 60813
+   },
+   "Xenos": {
+    "pairs": 6,
+    "mean_B_minus_A": -0.6666666666666666,
+    "ci95": [
+     -29.625513079702117,
+     28.29217974636878
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 415,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 348,
+    "A_unsearched_comparisons": 78146,
+    "B_decisions": 437,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 365,
+    "B_unsearched_comparisons": 94282
+   },
+   "ALL": {
+    "pairs": 6,
+    "mean_B_minus_A": -16.583333333333332,
+    "ci95": [
+     -28.594291189925695,
+     -4.5723754767409694
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 1359,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 1016,
+    "A_unsearched_comparisons": 204658,
+    "B_decisions": 1568,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 1232,
+    "B_unsearched_comparisons": 273457
+   }
+  },
+  "failures": {},
+  "games_planned": 12,
+  "games_complete": 12,
+  "pairs_complete": 6
+ },
+ "timing": {
+  "A": {
+   "n": 1359,
+   "mean": 4.284643855776306,
+   "median": 1.724,
+   "p90": 13.697,
+   "max": 21.324
+  },
+  "B": {
+   "n": 1568,
+   "mean": 7.718683035714286,
+   "median": 4.085,
+   "p90": 20.134,
+   "max": 21.606
+  }
+ },
+ "final_scores": {
+  "Terrans": {
+   "A": [
+    99,
+    111,
+    89,
+    106,
+    75,
+    99
+   ],
+   "B": [
+    89,
+    84,
+    72,
+    98,
+    91,
+    61
+   ]
+  },
+  "Xenos": {
+   "A": [
+    111,
+    120,
+    72,
+    115,
+    126,
+    97
+   ],
+   "B": [
+    141,
+    96,
+    100,
+    105,
+    89,
+    106
+   ]
+  },
+  "Taklons": {
+   "A": [
+    93,
+    123,
+    115,
+    100,
+    94,
+    87
+   ],
+   "B": [
+    85,
+    83,
+    107,
+    78,
+    73,
+    123
+   ]
+  },
+  "Geodens": {
+   "A": [
+    101,
+    89,
+    115,
+    89,
+    123,
+    101
+   ],
+   "B": [
+    46,
+    33,
+    67,
+    41,
+    107,
+    77
+   ]
+  }
+ }
+}
