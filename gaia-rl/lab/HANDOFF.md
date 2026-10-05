@@ -184,7 +184,14 @@
      셋업 결정은 hard에서 1라운드를 두지 않은 채 평가되고, 비교 예산도 같은 첫 수에 중복으로 쓰인다.
    - **어잌후 자료 전면 적용 (2026-10-05 시작, 사용자: "다 적용할 때까지 테스트 없음")**: 원문 PDF는
      `docs/references/discord/`(git 제외). 정리 완료: `b03-tech-boosters-claims.md`, `lf01-lf02-value-table.md`,
-     `lf03-lf04-goals-round1.md`, `b01-b02-strategy-power-buildings.md`. 남은 정리: B18–B20(공통 부분만). 그다음 구현: 자원 가격을 LF01 충전 환율로, 라운드별 점수
+     `lf03-lf04-goals-round1.md`, `b01-b02-strategy-power-buildings.md`. B18–B20은 claims.csv 요약으로 갈음.
+     **구현 1단계 완료(871c65d)**: `tools/guide_value.py` + `teacher_patches:guide_values`(spec
+     `teacher-a-search4-h1-guide-values-cap20.json`). 자원·파워·토큰·수입·부스터·행성·함선을 LF 충전 가격으로,
+     라운드별 점수 환율(R4–5 1.5충전=1점, 나머지 보간). Xenos `resource_value`도 LF 가격. 점검:
+     `.venv/bin/python tools/guide_values_smoke.py <seed> [--baseline]`(비교 0, 충돌 확인용). 관찰: 1R 함대 입장이
+     늘고 건설이 줄어듦(테란 1R 2수 후 패스) — 함선 가치(라운드당 3충전)가 큰지 A/B에서 볼 것.
+     남은 구현: Xenos 부스터 표(integrated/boosters.py), 일반·고급 기술 값표, 연구 트랙 sweet spot·첫 고급 기술
+     트랙, 함대 입장 점수 예산·리치, 셋업(배치·평가 범위), 연방 목표·광산 1개 남기기, 짝수 지식. 그다음 구현: 자원 가격을 LF01 충전 환율로, 라운드별 점수
      환율, 기술·고급 기술·부스터 값표, 1라운드 지침을 비교 후보에. 구현을 다 마친 뒤 hard와 한 번에 A/B.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
