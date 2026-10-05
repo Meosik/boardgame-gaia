@@ -932,6 +932,27 @@ def _next_to_opponent(state, actor, coord):
                for c, cell in state['board']['hexes'].items() if cell['structures'])
 
 
+def _future_opponent_sites(state, actor):
+    """Free home planets of opponents who still place starting structures (rule: a starting
+    structure goes on the faction's home planet; counts from gaia-engine/data/factions.toml)."""
+    from faction_teachers.profiles import profiles
+    homes = set()
+    for p in state['players']:
+        if p['player_id'] == actor:
+            continue
+        profile = profiles().get(p['faction'])
+        if profile and len(p['structures']) < profile.starting_structures:
+            homes.add(profile.home)
+    return [c for c, cell in state['board']['hexes'].items()
+            if cell['planet'] and cell['planet']['planet_type'] in homes
+            and cell['planet']['owner'] is None and not cell['structures']]
+
+
+def _near_sites(state, actor, coord, sites):
+    from strategy_teacher import distance
+    return any(c != coord and distance(c, coord) <= NEXT_TO_OPPONENT for c in sites)
+
+
 def _early_terrans_gaia(state, actor):
     return (state['players'][actor]['faction'] == 'Terrans'
             and state['round'] < TERRANS_GAIA_FROM_ROUND)
@@ -945,9 +966,14 @@ def guide_r1_scores(snapshot, scores):
         return scores
     bottom = min(finite)
     result = list(scores)
-    near = {i for i, c in enumerate(snapshot['candidates'])
-            if c['action']['type'] == 'PlaceStartingStructure' and not blocked(scores[i])
-            and _next_to_opponent(state, actor, c['action']['coord'])}
+    places = [i for i, c in enumerate(snapshot['candidates'])
+              if c['action']['type'] == 'PlaceStartingStructure' and not blocked(scores[i])]
+    near = {i for i in places if _next_to_opponent(state, actor, snapshot['candidates'][i]['action']['coord'])}
+    if not near and places:
+        # Nobody placed nearby yet (e.g. the first placements): next to where an opponent
+        # can still place, i.e. a free home planet of an opponent with placements left.
+        sites = _future_opponent_sites(state, actor)
+        near = {i for i in places if _near_sites(state, actor, snapshot['candidates'][i]['action']['coord'], sites)}
     for i, candidate in enumerate(snapshot['candidates']):
         action = candidate['action']
         if blocked(scores[i]):
