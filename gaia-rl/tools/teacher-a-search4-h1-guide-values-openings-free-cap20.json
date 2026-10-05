@@ -1,5 +1,5 @@
 {
-  "description": "guide_values_openings (hard, 4 comparisons, 20 s cap) without the frozen teacher's conversion bans (QicToOre proof, OreToCredit, KnowledgeToCredit); the guide prices decide.",
+  "description": "guide_values_openings (hard, 4 comparisons, 20 s cap) without the frozen teacher's conversion bans (QicToOre proof, OreToCredit, KnowledgeToCredit); the guide prices decide. Round-1 academy openings upgrade before new mines (academy_first).",
   "source": "gaia-rl/baseline-teacher-20260917",
   "factory": "teacher_patches:guide_values_openings_free",
   "kwargs": {

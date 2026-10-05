@@ -862,8 +862,42 @@ def install_free_conversions():
     native.critical_proofs = critical_proofs
 
 
+# ── academy_first ──────────────────────────────────────────────────────────────────────
+# User (2026-10-06): a round-1 academy opening needs every resource (the 4-power 2-ore action,
+# QIC to ore); a new mine before it spends what the academy needs. While a BGG round-1 target
+# still lacks its academy, the opening step tries the upgrade chain and its funding first and
+# builds a mine only when no academy progress is found (order only, no value).
+def _new_mine(action):
+    return action['type'] == 'Build' or action['type'].endswith('RangeBuild')
+
+
+def install_academy_first():
+    import bgg_openings.planning as planning
+    from bgg_openings.inventory import building_counts
+    from current_actions.conservation import BLOCKED, PREFIX
+    from research_plans.teacher import best_index
+    original = getattr(planning.select_action, '__wrapped__', planning.select_action)
+
+    def select_action(env, snapshot, scores, target, policies, deadline):
+        player = snapshot['state']['players'][snapshot['player']]
+        if (snapshot['state']['round'] == 1 and 'ActionPhase' in snapshot['state']['phase']
+                and target.academy > building_counts(player).academy):
+            masked = [(BLOCKED, PREFIX+'academy first: new mine after the academy')
+                      if _new_mine(c['action']) else score
+                      for c, score in zip(snapshot['candidates'], scores)]
+            i = original(env, snapshot, masked, target, policies, deadline)
+            if i is not None and (i != best_index(masked, range(len(masked)))
+                                  or snapshot['candidates'][i]['action']['type'] == 'Upgrade'):
+                return i
+        return original(env, snapshot, scores, target, policies, deadline)
+    select_action.__wrapped__ = original
+    planning.select_action = select_action
+
+
 def guide_values_openings_free(seed, **kwargs):
-    """Teacher factory: guide_values_openings without the hand-written conversion bans."""
+    """Teacher factory: guide_values_openings without the hand-written conversion bans,
+    and round-1 academy openings built before new mines."""
     teacher = guide_values_openings(seed, **kwargs)
     install_free_conversions()
+    install_academy_first()
     return teacher
