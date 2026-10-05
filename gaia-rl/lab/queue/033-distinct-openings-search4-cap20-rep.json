@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "032 재확인: 같은 A/B(hard 비교 4개·20초 vs distinct_search·가이드 오프닝 유지)를 새 시드 24쌍으로. 032는 +8.4 [−0.9, +17.6]로 0을 살짝 걸침. 유의하면 hard 교사를 032 B로 바꾸는 배포를 제안한다.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-distinct-openings-cap20.json",
+  "pairs": 24,
+  "comparisons": 2
+}
