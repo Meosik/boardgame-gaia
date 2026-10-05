@@ -828,3 +828,42 @@ def guide_values_openings(seed, **kwargs):
     teacher = guide_values(seed, **kwargs)
     install_uiqoo_openings()
     return teacher
+
+
+# ── free_conversions ───────────────────────────────────────────────────────────────────
+# Opt-in, on top of guide_values. User (2026-10-06): at the guide prices (QIC 7, ore 4,
+# knowledge 4, credits 1.2 charges) a losing conversion is already priced as a loss, so the
+# frozen teacher's hand-written conversion bans are lifted and the value decides:
+#   - OreToCredit / KnowledgeToCredit were always blocked (current_actions.conservation.FORBIDDEN);
+#   - QicToOre was blocked unless the very next action completed a PI, Academy or federation
+#     with exactly that ore (four_factions.teacher.critical_proofs, conservation.critical_paths).
+# Existing proofs are still returned (and still commit the follow-up), so opening funding that
+# relied on them is unchanged. The quick timeout fallback keeps its QicToOre block.
+_NOT_BLOCKED = ''  # never equals a snapshot identity: "allowed, no required follow-up"
+
+
+def install_free_conversions():
+    import current_actions.conservation as conservation
+    import four_factions.teacher as native
+    import resource_plans.funding as funding
+    conservation.FORBIDDEN.clear()   # the same set object every importer holds
+    paths = getattr(conservation.critical_paths, '__wrapped__', conservation.critical_paths)
+    proofs = getattr(native.critical_proofs, '__wrapped__', native.critical_proofs)
+
+    def critical_paths(env, snapshot, index):
+        return paths(env, snapshot, index) or {_NOT_BLOCKED: set()}
+
+    def critical_proofs(env, snapshot, index, branch, after):
+        return proofs(env, snapshot, index, branch, after) or {_NOT_BLOCKED: set()}
+    critical_paths.__wrapped__ = paths
+    critical_proofs.__wrapped__ = proofs
+    conservation.critical_paths = critical_paths
+    funding.critical_paths = critical_paths
+    native.critical_proofs = critical_proofs
+
+
+def guide_values_openings_free(seed, **kwargs):
+    """Teacher factory: guide_values_openings without the hand-written conversion bans."""
+    teacher = guide_values_openings(seed, **kwargs)
+    install_free_conversions()
+    return teacher

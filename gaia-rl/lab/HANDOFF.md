@@ -233,6 +233,14 @@
      사용자(2026-10-06): 값으로 QIC 7충전 > 광석 4충전이라 손해는 값이 알아서 판단 → 손으로 막을 필요 없음.
      제안: guide_values 위에 이 차단을 푸는 바깥 패치(동결 폴더 수정 없음). 단, 아카데미 직전의 QIC→광석은 지금도 허용되므로
      1R 아카데미 미완성의 주원인은 4파워 광석 2 액션을 앞서 안 쓰는 쪽일 수 있음.
+     **구현(2026-10-06)**: `teacher_patches:install_free_conversions` / factory `guide_values_openings_free`, spec
+     `teacher-a-search4-h1-guide-values-openings-free-cap20.json`. FORBIDDEN 비움, critical_proofs·critical_paths는 증명이
+     없으면 "허용, 후속 강제 없음"을 돌려줌(증명이 있으면 그대로). quick 폴백의 QicToOre 차단은 유지.
+     확인(`explain_ab_decisions.py ... --spec <free>`): 프레임 52 기오덴 QicToOre가 차단 대신 −3.58로 평가됨(값이 거름).
+     프레임 17·50은 결정 변화 없음. 발견: QIC 1개가 값표(7충전) 외에 약 +1.33점을 더 받음 — 동결 값의
+     `expansion_value`·`gaia_value`가 QIC로 닿는 행성을 추가로 셈(`four_factions/value.py:68–133`). LF 가격에 이미 사거리 쓰임이
+     들어 있으므로 이중 계산 → 프레임 50의 QIC 선택(+0.67) 원인. 17프레임 AC 계획 진행은 연구소 뒤 과학 연구·7돈 파워 액션을
+     골라 광석 부족(광석 2 액션 미사용, QIC는 광산 사거리에 씀). 수정 제안 대기: guide_values에서 이 두 항의 QIC 사거리 몫 제거.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)

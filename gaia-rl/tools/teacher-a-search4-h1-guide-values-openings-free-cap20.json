@@ -1,0 +1,13 @@
+{
+  "description": "guide_values_openings (hard, 4 comparisons, 20 s cap) without the frozen teacher's conversion bans (QicToOre proof, OreToCredit, KnowledgeToCredit); the guide prices decide.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_values_openings_free",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}
