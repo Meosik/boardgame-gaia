@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "사용자 요청(2026-10-06, 새 시드 12쌍): A = 실서버 hard(geodens_guide), B = 034의 B(guide_values + 종족 1라운드 오프닝 순서) + 변환 금지 해제(QIC→광석·광석→돈·지식→돈, 값이 판단) + 1라운드 아카데미 목표면 새 광산보다 업그레이드 먼저(academy_first). 평가는 1·2라운드 플레이 위주(사용자).",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-values-openings-free-cap20.json",
+  "pairs": 12,
+  "comparisons": 2
+}
