@@ -228,6 +228,11 @@
      사용자: 1R 아카데미는 빠듯하다 — 4파워 광석 2 액션을 쓰고 QIC도 광석으로 바꿔야 하지만, 해내면 포텐이 크다.
      단서: 프레임 52 기오덴에서 QicToOre가 "conservation blocked: no minimum-cost paid critical completion"(−1e12)으로 막힘.
      이 보존 규칙이 계획 진행에서도 QIC→광석을 막아 AC 계획이 RL에서 멈추는지 먼저 본다.
+     위치: 동결 교사 `four_factions/teacher.py:99–117`(Ter·Tak), `current_actions/conservation.py`(그 외). QicToOre는
+     바로 다음에 PI·아카데미·연방이 정확히 그 광석 부족분으로 완성될 때만 허용, OreToCredit·KnowledgeToCredit는 항상 금지.
+     사용자(2026-10-06): 값으로 QIC 7충전 > 광석 4충전이라 손해는 값이 알아서 판단 → 손으로 막을 필요 없음.
+     제안: guide_values 위에 이 차단을 푸는 바깥 패치(동결 폴더 수정 없음). 단, 아카데미 직전의 QIC→광석은 지금도 허용되므로
+     1R 아카데미 미완성의 주원인은 4파워 광석 2 액션을 앞서 안 쓰는 쪽일 수 있음.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
