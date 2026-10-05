@@ -1,0 +1,13 @@
+{
+  "description": "guide_values_openings_free (hard, 4 comparisons, 20 s cap) plus opponent-adjacent setup placement first, Terrans Gaia research after round 3 and QIC priced once (guide_r1).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

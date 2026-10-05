@@ -702,6 +702,9 @@ def distinct_search_openings(seed, **kwargs):
 # Xenos (the legacy contextual teacher) gets the same resource prices at the 1.5 anchor.
 
 
+_guide = {'qic_reach': True}   # False: install_guide_r1 (QIC priced once)
+
+
 def guide_potential(state, actor, *, home=None, guide_tracks=False):
     import guide_value as gv
     v = _value
@@ -733,11 +736,16 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
                   if any(v.distance(c, s['hex']) <= 2 for s in player['structures'])
                   for b in cell['structures'] if b['owner'] != actor}
         result += horizon*min(2, len(owners))
+    reach = player
+    if not _guide['qic_reach']:
+        # The guide's QIC price already includes its range use; count planets reachable
+        # without spending QIC so a QIC is not paid twice (free_conversions note).
+        reach = {**player, 'resources': {**player['resources'], 'qic': 0}}
     if guide_tracks:
         from four_factions.track_guidance import expansion_potential
-        result += v.gaia_value(state, player) + expansion_potential(state, player)
+        result += v.gaia_value(state, reach) + expansion_potential(state, reach)
     else:
-        result += v.gaia_value(state, player) + (v.expansion_value(state, player, home=home) if horizon else 0)
+        result += v.gaia_value(state, reach) + (v.expansion_value(state, reach, home=home) if horizon else 0)
     result += v.research_options(state, player)
     result += sum(v.advanced_option(state, player, tile) for tile in player['advanced_tech_tiles'])
     active = set(player['tech_tiles'])-set(player['covered_tech_tiles'])
@@ -900,4 +908,88 @@ def guide_values_openings_free(seed, **kwargs):
     teacher = guide_values_openings(seed, **kwargs)
     install_free_conversions()
     install_academy_first()
+    return teacher
+
+
+# ── guide_r1 ───────────────────────────────────────────────────────────────────────────
+# User (2026-10-06), on top of guide_values_openings_free:
+# 1. Setup placement next to opponents (LF4-02 "파워를 받는 곳(교역소가 싼 곳)에 자리 잡는 게 함대만큼
+#    중요", B10-02 "시작은 남들과 붙는 게 최우선"): a starting structure within distance 2 of an
+#    opponent's structure (the engine's cheap trading station range) is preferred: when one
+#    exists, isolated starts are not compared (ordering alone lost to setup-comparison noise).
+# 2. Terrans Gaia track (B04 §4: 1단계로 두고 3-4라운드까지 상황을 보다가 4-5라운드부터 올려도 된다):
+#    in rounds 1-3 a Terrans Gaia research advance ranks below every other move and the Gaia
+#    research plans are proposed last. Order only.
+# 3. QIC priced once: planets reachable only by spending QIC no longer add to the expansion and
+#    Gaia opportunity terms (the guide price of a QIC already includes its range use).
+NEXT_TO_OPPONENT = 2
+TERRANS_GAIA_FROM_ROUND = 4
+
+
+def _next_to_opponent(state, actor, coord):
+    from strategy_teacher import distance
+    return any(distance(c, coord) <= NEXT_TO_OPPONENT and any(s['owner'] != actor for s in cell['structures'])
+               for c, cell in state['board']['hexes'].items() if cell['structures'])
+
+
+def _early_terrans_gaia(state, actor):
+    return (state['players'][actor]['faction'] == 'Terrans'
+            and state['round'] < TERRANS_GAIA_FROM_ROUND)
+
+
+def guide_r1_scores(snapshot, scores):
+    from current_actions.conservation import BLOCKED, PREFIX, blocked
+    state, actor = snapshot['state'], snapshot['player']
+    finite = [s[0] for s in scores if not blocked(s)]
+    if not finite:
+        return scores
+    bottom = min(finite)
+    result = list(scores)
+    near = {i for i, c in enumerate(snapshot['candidates'])
+            if c['action']['type'] == 'PlaceStartingStructure' and not blocked(scores[i])
+            and _next_to_opponent(state, actor, c['action']['coord'])}
+    for i, candidate in enumerate(snapshot['candidates']):
+        action = candidate['action']
+        if blocked(scores[i]):
+            continue
+        if action['type'] == 'PlaceStartingStructure' and near and i not in near:
+            # Setup comparisons end at the round-1/2 income and differ by noise (034: 154.3
+            # vs 153.5), so ordering alone let an isolated start win; compare only the near ones.
+            result[i] = (BLOCKED, PREFIX+'guide: start next to an opponent (LF4-02, B10-02)')
+        elif (action['type'] == 'ResearchAdvance' and action.get('track') == 'GaiaProject'
+              and _early_terrans_gaia(state, actor)):
+            result[i] = (scores[i][0]-abs(bottom)-1000, *scores[i][1:])
+    return result
+
+
+def install_guide_r1():
+    import four_factions.preparation as p
+    _guide['qic_reach'] = False
+    if not getattr(p.Policies.rank, '_guide_r1', False):
+        inner_rank = p.Policies.rank
+
+        def rank(self, env, snapshot):
+            return guide_r1_scores(snapshot, inner_rank(self, env, snapshot))
+        rank.__wrapped__ = getattr(inner_rank, '__wrapped__', inner_rank)
+        rank._guide_r1 = True
+        p.Policies.rank = rank
+    if not getattr(p.goals_for, '_guide_r1', False):
+        inner_goals_for = p.goals_for
+
+        def goals_for(snapshot, **kwargs):
+            goals = inner_goals_for(snapshot, **kwargs)
+            if not _early_terrans_gaia(snapshot['state'], snapshot['player']):
+                return goals
+            late = [g for g in goals if g.family == 'research' and g.target == 'GaiaProject']
+            return [g for g in goals if g not in late] + late
+        goals_for.__wrapped__ = getattr(inner_goals_for, '__wrapped__', inner_goals_for)
+        goals_for._guide_r1 = True
+        p.goals_for = goals_for
+
+
+def guide_r1(seed, **kwargs):
+    """Teacher factory: guide_values_openings_free plus opponent-adjacent setup, Terrans Gaia
+    research after round 3 and QIC priced once."""
+    teacher = guide_values_openings_free(seed, **kwargs)
+    install_guide_r1()
     return teacher
