@@ -23,19 +23,39 @@ use crate::{
 /// (`GAIA_REPLAY_DIR`, `GAIA_LIVE_DIR` in docker-compose.yml), so neither browsers nor the
 /// Cloudflare edge may reuse a stored copy without asking again. Cloudflare caches `.gz`
 /// by extension otherwise, which served a replaced replay's old bytes.
+///
+/// `/assets/` holds only Vite build output, whose file names carry a content hash, so a
+/// browser may keep them for a year without asking again. Without this Cloudflare's
+/// default sends a 4-hour max-age, and every visit after that refetches ~60 images —
+/// slow when the edge routes Korea through LAX. Only real files qualify: a missing
+/// asset falls back to index.html, which must not be pinned.
 pub async fn revalidate_recordings(
     req: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     let path = req.uri().path();
     let recording = path.starts_with("/ai-replays/") || path.starts_with("/ai-live/");
+    let asset = path.starts_with("/assets/");
     let mut response = next.run(req).await;
     if recording {
         response
             .headers_mut()
             .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+    } else if asset && response.status().is_success() && !is_html(&response) {
+        response.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("public, max-age=31536000, immutable"),
+        );
     }
     response
+}
+
+fn is_html(response: &axum::response::Response) -> bool {
+    response
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.starts_with("text/html"))
 }
 
 pub fn build_router(state: AppState) -> Router {
@@ -141,17 +161,25 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn recordings_must_be_revalidated_and_other_files_are_untouched() {
+    async fn recordings_revalidate_hashed_assets_are_immutable_and_html_is_untouched() {
         let app = Router::new()
             .route("/ai-replays/index.json", get(|| async { "{}" }))
             .route("/ai-live/index.json", get(|| async { "{}" }))
             .route("/assets/app.js", get(|| async { "" }))
+            .route(
+                "/assets/missing.webp",
+                get(|| async { axum::response::Html("<!doctype html>") }),
+            )
+            .route("/index.html", get(|| async { axum::response::Html("") }))
             .layer(axum::middleware::from_fn(revalidate_recordings));
         let server = axum_test::TestServer::new(app).expect("test server");
         for (path, expected) in [
             ("/ai-replays/index.json", Some("no-cache")),
             ("/ai-live/index.json", Some("no-cache")),
-            ("/assets/app.js", None),
+            ("/assets/app.js", Some("public, max-age=31536000, immutable")),
+            ("/assets/missing.webp", None),
+            ("/assets/nothing.js", None),
+            ("/index.html", None),
         ] {
             let response = server.get(path).await;
             let value = response

@@ -75,6 +75,9 @@
   - 레벨: geodens_guide 교사. easy는 비교 0, normal은 비교 2·5초, hard는 비교 4·20초(서버 대기 한도 60초).
   - AI 대전은 비딩으로 시작하고, 어려움 버튼이 있다.
   - `.env`의 `GAIA_AI_PARALLEL`, `GAIA_AI_WORKERS`가 적용된다.
+- **2026-10-05 이미지 느림**: 서버·터널은 정상, `cf-ray`가 `-LAX`(한국 요청이 LA 엣지로 우회, Cloudflare 무료 플랜).
+  체감 개선으로 `/assets/*`(Vite 해시 파일)에 `public, max-age=31536000, immutable`을 붙였다(`router.rs`).
+  코드는 푸시했고 **배포는 사용자 확인 대기**. 확인은 `curl -sI https://shgaia.com/assets/<파일>`의 `cache-control`, `cf-ray`.
 - **옛 폴더**: `~/projects/gaia`(git 아님), `~/gaia-ai-7f3e1a9`(이전 배포), 백업 폴더들. 새 배포가 안정적인지
   확인되면 사용자 확인 후 정리한다.
 - **`.env`에는 비밀번호와 터널 토큰이 있다.** 값을 출력하거나 커밋하지 않는다. 키 이름만 다룬다(`cut -d= -f1`).
