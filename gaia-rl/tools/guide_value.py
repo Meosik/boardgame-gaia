@@ -8,19 +8,17 @@ b03-tech-boosters-claims.md.
 Unit: one charge ("충전") = one power token moved one bowl up; spending a bowl-III token is
 two charges (LF01 free-action table: 3 power -> 1 ore is written "6충전").
 
-Rounds: LF01 prices 1 VP = 1.5 charges "at rounds 4-5", charges worth more before
-(1-4R charge better than VP) and VP worth more after (5-6R VP better, LF1-04, B01 §1).
-CHARGES_PER_VP interpolates those anchors; the end of the game is the rule's own
-conversion (3 credits/ore/knowledge = 1 VP), which `potential` already uses once the
-game has ended. The interpolated rounds (1-3, 6) are the only numbers here that are not
-read directly from a guide; they keep the guide's ordering and its 1.5 anchor.
+Rounds: LF01 prices 1 VP = 1.5 charges, stated for rounds 4-5; the guides give a direction
+for other rounds (charges better in 1-4R, VP better in 5-6R, LF1-04, B01 §1) but no number,
+so every round uses the one stated rate (user: no numbers of our own). A finished game uses
+the engine's final scores.
 """
 
 # LF01 / LF02 §1 (확장판 자원 가치).
 CHARGE = {'credits': 1.2, 'ore': 4.0, 'knowledge': 4.0, 'qic': 7.0}
 TOKEN = 3.2          # one power token while tokens are still needed (LF01; B02: 0 above need)
 PLANET = 6.0         # one more planet (structure) held (LF01)
-CHARGES_PER_VP = {0: 1.2, 1: 1.2, 2: 1.3, 3: 1.4, 4: 1.5, 5: 1.5, 6: 3.0}
+CHARGES_PER_VP = {r: 1.5 for r in range(7)}
 
 # B02 §1: about 5 tokens run the power actions; a Gaia-forming player needs 10-11 at
 # Gaia 1-2 and 8-9 from Gaia 3. Tokens beyond that are worth 0.
@@ -33,10 +31,17 @@ TOKENS_NEEDED_GAIA = {1: 11, 2: 11, 3: 9, 4: 9, 5: 9}
 BOOSTER = {9: 9.4, 12: 8.4, 8: 9.0, 5: 8.0, 13: 8.0, 2: 10.2, 4: 4.0, 3: 4.0, 7: 4.0,
            11: 4.8, 1: 4.0, 14: 3.6, 6: 4.0, 10: 4.0}
 
-# LF03 §2 / LF04: a fleet action is worth about 2 charges over a public one, and each of the
-# four ships gives one power/credit/knowledge action per round to its explorers only;
-# the 5 VP entry "is repaid after two or three uses". LF01 §2.3 gains: 1.4 to 5.2, 10.
-SHIP_ACTION_GAIN = 3.0
+# LF03 §2: a fleet power/knowledge/credit action gains "usually about 2 charges" of
+# resources, one action per round for the ship's explorers.
+SHIP_ACTION_GAIN = 2.0
+
+# LF01 §2.4: a tech tile is worth about 30 charges "including 16 charges for the research
+# advance" (4 knowledge). One research level = 16 charges.
+RESEARCH_STEP = 16.0
+
+# LF02 §1: the 4-charge tech tile (engine standard tile 10, an action) is 4 charges a round.
+CHARGE_TILE = 10
+CHARGE_TILE_PER_ROUND = 4.0
 
 
 def charges_per_vp(state):
@@ -58,19 +63,28 @@ def tokens_needed(player):
 
 
 def power_value(state, player):
-    """Charges held (bowl II = 1, bowl III = 2) plus tokens up to the need, in VP.
-
-    Tokens in the Gaia area come back next round (bowl I; bowl II for Terrans, one charge).
-    The Brainstone is spent as three power: three times a token's charges."""
+    """Normal tokens' charges held (bowl II = 1, bowl III = 2, B02) plus tokens up to the
+    need, in VP. Tokens in the Gaia area and the Brainstone keep the frozen teacher's own
+    terms in the caller (they differ by faction; no faction-specific change here)."""
     power = player['resources']['power']
     charges = power['bowl2'] + 2*power['bowl3']
-    stone = power.get('brainstone')
-    charges += {'Area2': 3, 'Area3': 6}.get(stone, 0)
-    returning = power.get('gaia_forming', 0)
-    if player['faction'] == 'Terrans':
-        charges += returning
-    tokens = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3')) + returning
+    tokens = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3'))
     return to_vp(state, charges + TOKEN*min(tokens, tokens_needed(player)))
+
+
+def research_value(state, player):
+    """Research levels held, 16 charges each (LF01). Final scoring's 4 VP per level beyond 2
+    is part of what an advance is worth, so it is not added again before the game ends."""
+    return to_vp(state, RESEARCH_STEP*sum(player['research_tracks'].values()))
+
+
+def charge_tile_value(state, player):
+    """The 4-charge action tile, once per round from now to round 6 (LF02 §1)."""
+    active = set(player['tech_tiles'])-set(player['covered_tech_tiles'])
+    if CHARGE_TILE not in active:
+        return 0.0
+    rounds = 7-max(state['round'], 1)
+    return to_vp(state, CHARGE_TILE_PER_ROUND*rounds)
 
 
 def income_value(state, income):

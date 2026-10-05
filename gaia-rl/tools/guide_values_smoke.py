@@ -24,6 +24,9 @@ def main():
     parser.add_argument('seed')
     parser.add_argument('--decisions', type=int, default=60)
     parser.add_argument('--baseline', action='store_true', help='play the live hard teacher instead')
+    parser.add_argument('--explain', type=int, nargs='*', default=[],
+                        help='decision numbers whose candidates are listed with new/old value deltas')
+    parser.add_argument('--rows', type=int, default=12)
     args = parser.parse_args()
     sys.setrecursionlimit(10000)
     import budget_teacher
@@ -54,6 +57,15 @@ def main():
         print(f'{n:3d} R{state["round"]} {faction:8s} old {old:7.1f} new {new:7.1f}  '
               f'{action["type"]} {json.dumps({k: v for k, v in action.items() if k != "type"})[:70]}',
               flush=True)
+        if n in args.explain:
+            base = teacher_patches.guide_potential(state, actor, home=home)
+            rows = []
+            for i, candidate in enumerate(snapshot['candidates']):
+                after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())['state']
+                rows.append((teacher_patches.guide_potential(after, actor, home=home)-base,
+                             teacher_patches._original(after, actor, home=home)-old, candidate['action']))
+            for new_delta, old_delta, action in sorted(rows, key=lambda r: -r[0])[:args.rows]:
+                print(f'      new {new_delta:+6.1f} old {old_delta:+6.1f}  {json.dumps(action)[:90]}')
         before = snapshot
         env.step(decision, index)
         snapshot = json.loads(env.snapshot_json())

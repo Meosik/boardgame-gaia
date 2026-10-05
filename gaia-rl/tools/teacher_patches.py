@@ -711,9 +711,13 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
     player = state['players'][actor]
     horizon = max(0, 6-state['round'])
     result = player['vp'] + v.standings(state, actor)
-    # Final scoring: 4 VP per research level beyond 2 (rule).
-    result += 4*sum(max(0, level-2) for level in player['research_tracks'].values())
+    result += gv.research_value(state, player)
     result += gv.materials(state, player['resources']) + gv.power_value(state, player)
+    power = player['resources']['power']
+    if horizon:
+        # The frozen teacher's own Brainstone and Gaia-area terms (faction-dependent, unchanged).
+        result += {'Area1': .5, 'Area2': 1.5, 'Area3': 4.2, 'Gaia': 0, None: 0}[power['brainstone']]
+        result += (.6 if player['faction'] == 'Terrans' else .2)*power['gaia_forming']
     result += gv.incomes_value(state, v.production(state, player, include_booster=False))
     if horizon and (player['passed'] or state['round'] == 0):
         result += gv.booster_value(state, player['booster'])
@@ -737,7 +741,8 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
     result += v.research_options(state, player)
     result += sum(v.advanced_option(state, player, tile) for tile in player['advanced_tech_tiles'])
     active = set(player['tech_tiles'])-set(player['covered_tech_tiles'])
-    result += .5*horizon*len(active - {2, 3, 5, 4, 7, 9, 11, 13})
+    result += .5*horizon*len(active - {2, 3, 5, 4, 7, 9, 11, 13, gv.CHARGE_TILE})
+    result += gv.charge_tile_value(state, player)
     return result
 
 
