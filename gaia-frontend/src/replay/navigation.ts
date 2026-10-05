@@ -27,7 +27,7 @@ export function replayScrollTarget(root: HTMLElement, frame: ReplayFrame, previo
   if (hotspot) return hotspot.closest('#game-research') ? researchTarget() : hotspot;
   const personalAction = find(`.player-action-tile${MARKED}`);
   if (personalAction && action.type !== 'Upgrade') return personalAction;
-  const hex = find('.replay-hex-highlight')?.closest('.hex-cell');
+  const hex = find('.replay-hex-highlight')?.closest('.hex-cell') ?? null;
   const map = () => find('#game-map .game-board-container') ?? find('#game-map') ?? hex;
   if (action.type.startsWith('RoundBooster')) {
     // A booster build or Gaia formation happens on the map; show where it landed.
