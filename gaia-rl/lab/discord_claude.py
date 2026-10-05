@@ -18,13 +18,17 @@ Environment (lab/discord_claude.env, git-ignored; see lab/discord_claude.env.exa
   CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json).
 """
 import asyncio
+import hashlib
 import json
 import re
 import os
 from pathlib import Path
+import py_compile
 import shutil
+import sys
 
-HERE = Path(__file__).resolve().parent
+SELF = Path(__file__).resolve()
+HERE = SELF.parent
 SETTINGS = HERE/'claude-bot-settings.json'
 SYSTEM = (
     'You are reached from Discord through an on-demand bot (one `claude -p` turn per message). '
@@ -124,6 +128,10 @@ def attachment_prompt(text, paths, skipped):
     return '\n'.join(lines)
 
 
+def source_digest():
+    return hashlib.sha256(SELF.read_bytes()).hexdigest()
+
+
 def load_state(path):
     try:
         return json.loads(path.read_text())
@@ -148,6 +156,8 @@ def main():
     state = load_state(state_path)  # {channel id: session id}
     lock = asyncio.Lock()
     running = {}
+    waiting = [0]  # turns requested and not yet finished
+    digest = [source_digest()]
 
     intents = discord.Intents.default()
     intents.message_content = True
@@ -165,8 +175,35 @@ def main():
         print(f'connected as {client.user}; channels {channels}; lab channel {lab_channel or "-"}; '
               f'workdir {workdir}', flush=True)
 
+    def restart_if_changed():
+        """Continue as the new version when a turn edited this file; only when no turn is pending.
+
+        A version that does not compile is not started: the running one keeps serving."""
+        if waiting[0]:
+            return
+        current = source_digest()
+        if current == digest[0]:
+            return
+        digest[0] = current
+        try:
+            py_compile.compile(str(SELF), doraise=True)
+        except py_compile.PyCompileError as error:
+            print(f'discord_claude.py changed but does not compile; keeping the running version: {error}',
+                  flush=True)
+            return
+        print('discord_claude.py changed: restarting', flush=True)
+        os.execv(sys.executable, [sys.executable, *sys.argv])
+
     async def run_turn(channel, key, prompt, resume=True):
         """One `claude -p` turn whose reply goes to `channel`; turns run one at a time."""
+        waiting[0] += 1
+        try:
+            await locked_turn(channel, key, prompt, resume)
+        finally:
+            waiting[0] -= 1
+        restart_if_changed()
+
+    async def locked_turn(channel, key, prompt, resume):
         async with lock:
             async with channel.typing():
                 proc = await asyncio.create_subprocess_exec(
