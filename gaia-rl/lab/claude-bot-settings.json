@@ -56,7 +56,10 @@
       "Bash(git -C /home/sohegi/projects/gaia-work status:*)",
       "Bash(git -C /home/sohegi/projects/gaia-work pull:*)",
       "Bash(git ls-files:*)",
-      "Bash(git stash list:*)"
+      "Bash(git stash list:*)",
+      "Bash(GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-20260917:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/explain_decision.py:*)",
+      "Bash(GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-20260917:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/explain_ab_decisions.py:*)",
+      "Bash(GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/ab_replays.py:*)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -75,6 +78,10 @@
       "Bash(sudo:*)",
       "Bash(cat **/.env)",
       "Bash(cat ~/.git-credentials)"
+    ],
+    "additionalDirectories": [
+      "~/projects/gaia-lab/gaia-rl/runs",
+      "~/gaia-media"
     ]
   }
 }
