@@ -1,0 +1,13 @@
+{
+  "description": "hard (geodens_guide, 4 comparisons, 20 s cap) with the uiqoo guide prices in the state value (tools/guide_value.py).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_values",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

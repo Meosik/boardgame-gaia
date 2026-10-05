@@ -689,3 +689,89 @@ def distinct_search_openings(seed, **kwargs):
     teacher = geodens_guide(seed, **kwargs)
     install_distinct_search(value_openings=False)
     return teacher
+
+
+# ── guide_values ───────────────────────────────────────────────────────────────────────
+# Opt-in, on top of geodens_guide. User decision (2026-10-05): the uiqoo guides' common
+# material is applied with its numbers. `potential` (Terrans, Taklons, Geodens: root
+# ranking and rollout leaves) keeps every term it had, but prices resources, power, income,
+# boosters, planets and explored ships with tools/guide_value.py (LF01/LF02 charge values,
+# 1 VP = 1.5 charges at rounds 4-5). Its old hand prices were: QIC 2.5 VP (guide 4.7),
+# knowledge 2.0 (2.7), credits 1.2 (0.8), income x0.7 per round left, a 2-VP structure /
+# ship term, and stock resources at 1/3 VP from the first decision of round 6.
+# Xenos (the legacy contextual teacher) gets the same resource prices at the 1.5 anchor.
+
+
+def guide_potential(state, actor, *, home=None, guide_tracks=False):
+    import guide_value as gv
+    v = _value
+    phase = state['phase']
+    if isinstance(phase, dict) and 'Ended' in phase:
+        return float(dict(phase['Ended']['final_scores'])[actor])
+    player = state['players'][actor]
+    horizon = max(0, 6-state['round'])
+    result = player['vp'] + v.standings(state, actor)
+    # Final scoring: 4 VP per research level beyond 2 (rule).
+    result += 4*sum(max(0, level-2) for level in player['research_tracks'].values())
+    result += gv.materials(state, player['resources']) + gv.power_value(state, player)
+    result += gv.incomes_value(state, v.production(state, player, include_booster=False))
+    if horizon and (player['passed'] or state['round'] == 0):
+        result += gv.booster_value(state, player['booster'])
+    elif horizon and _action_phase(state):
+        # Symmetric pass (cycle 017): an unpassed player also passes this round.
+        result += max((gv.booster_value(state, b) for b in state['boosters']), default=0)
+    if state['round'] >= 1 and not player['passed'] and _action_phase(state):
+        result += booster_pass_vp(state, player)
+    result += gv.planet_value(state)*len(player['structures'])
+    result += gv.ship_value(state)*len(player['explored_ships'])
+    if player['faction'] == 'Taklons' and any(s['kind'] == 'PlanetaryInstitute' for s in player['structures']):
+        owners = {b['owner'] for c, cell in state['board']['hexes'].items()
+                  if any(v.distance(c, s['hex']) <= 2 for s in player['structures'])
+                  for b in cell['structures'] if b['owner'] != actor}
+        result += horizon*min(2, len(owners))
+    if guide_tracks:
+        from four_factions.track_guidance import expansion_potential
+        result += v.gaia_value(state, player) + expansion_potential(state, player)
+    else:
+        result += v.gaia_value(state, player) + (v.expansion_value(state, player, home=home) if horizon else 0)
+    result += v.research_options(state, player)
+    result += sum(v.advanced_option(state, player, tile) for tile in player['advanced_tech_tiles'])
+    active = set(player['tech_tiles'])-set(player['covered_tech_tiles'])
+    result += .5*horizon*len(active - {2, 3, 5, 4, 7, 9, 11, 13})
+    return result
+
+
+guide_potential.__wrapped__ = _original
+
+_resource_value = {'original': None}
+
+
+def guide_resource_value(player, resources):
+    """integrated.features.resource_value at the guide's prices (1 VP = 1.5 charges)."""
+    import guide_value as gv
+    return sum(gv.CHARGE[k]*amount for k, amount in resources.items())/gv.CHARGES_PER_VP[4]
+
+
+def install_guide_values():
+    import sys
+    import integrated.features as features
+    known = (_original, symmetric_potential, guide_potential)
+    for module in list(sys.modules.values()):
+        if getattr(module, '__name__', '').split('.')[0] in ('four_factions', 'faction_teachers'):
+            if getattr(module, 'potential', None) in known:
+                module.potential = guide_potential
+    _value.potential = guide_potential
+    original = _resource_value['original'] or features.resource_value
+    _resource_value['original'] = original
+    for module in list(sys.modules.values()):
+        if getattr(module, 'resource_value', None) is original:
+            module.resource_value = guide_resource_value
+
+
+def guide_values(seed, **kwargs):
+    """Teacher factory: geodens_guide with the uiqoo guide prices in the state value."""
+    import current_actions.teacher    # noqa: F401  (import every user of resource_value first)
+    import research_plans.value       # noqa: F401
+    teacher = geodens_guide(seed, **kwargs)
+    install_guide_values()
+    return teacher
