@@ -780,3 +780,51 @@ def guide_values(seed, **kwargs):
     teacher = geodens_guide(seed, **kwargs)
     install_guide_values()
     return teacher
+
+
+# ── uiqoo_openings ─────────────────────────────────────────────────────────────────────
+# Opt-in, on top of guide_values. The faction guides' round-1 openings, as end-of-round-1
+# inventories (the BGG catalog's own notation), are compared first and in the guide's order;
+# the rollout still decides which is played (order only, no value). Geodens keeps
+# geodens_guide (B14). Labels count the starting mines (Terrans/Taklons 2, Xenos 3):
+#   B04 Terrans §4: 아카데미+광산 "최고의 오프닝" (1AC+1M), 행성 의회+광산+광산 "무난" (1PI+2M),
+#       행성 의회+교역소+광산+광산 (1PI+1TS+2M), 연구소+광산+광산 (1RL+2M).
+#   B10 Taklons §4: 아카데미+광산+광산 "기본 오프닝" (1AC+2M), 연구소+교역소+광산+광산 (1RL+1TS+2M),
+#       연구소+광산×5 (1RL+5M).
+#   B15 Xenos §4: 연구소+광산×5 "가장 무난하고 강력" (1RL+5M), 연구소+광산+광산+4정보 (1RL+2M),
+#       아카데미+광산+광산 (1AC+2M).
+UIQOO_OPENINGS = {
+    'Terrans': ('1AC+1M', '1PI+2M', '1PI+1TS+2M', '1RL+2M'),
+    'Taklons': ('1AC+2M', '1RL+1TS+2M', '1RL+5M'),
+    'Xenos': ('1RL+5M', '1RL+2M', '1AC+2M'),
+}
+
+
+def uiqoo_opening_order(snapshot, goals, remembered=None):
+    faction = snapshot['state']['players'][snapshot['player']]['faction']
+    order = UIQOO_OPENINGS.get(faction)
+    if not order:
+        return goals
+    rank = {label: i for i, label in enumerate(order)}
+
+    def key(item):
+        i, goal = item
+        return (goal.target != remembered, rank.get(goal.target, len(order)), i)
+    return [goal for _, goal in sorted(enumerate(goals), key=key)]
+
+
+def install_uiqoo_openings():
+    import bgg_openings.planning as planning
+    original = getattr(planning.goals, '__wrapped__', planning.goals)
+
+    def goals(snapshot, remembered=None):
+        return uiqoo_opening_order(snapshot, original(snapshot, remembered), remembered)
+    goals.__wrapped__ = original
+    planning.goals = goals
+
+
+def guide_values_openings(seed, **kwargs):
+    """Teacher factory: guide_values plus the faction guides' round-1 opening order."""
+    teacher = guide_values(seed, **kwargs)
+    install_uiqoo_openings()
+    return teacher

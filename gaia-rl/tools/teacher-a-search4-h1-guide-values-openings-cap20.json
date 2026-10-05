@@ -1,0 +1,13 @@
+{
+  "description": "hard (geodens_guide, 4 comparisons, 20 s cap) with the uiqoo guide prices (guide_values) and the faction guides' round-1 opening order (B04/B10/B15).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_values_openings",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

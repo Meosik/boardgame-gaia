@@ -27,16 +27,21 @@ def main():
     parser.add_argument('--explain', type=int, nargs='*', default=[],
                         help='decision numbers whose candidates are listed with new/old value deltas')
     parser.add_argument('--rows', type=int, default=12)
+    parser.add_argument('--factory', default='guide_values', help='teacher_patches factory to play')
+    parser.add_argument('--comparisons', type=int, default=0)
     args = parser.parse_args()
     sys.setrecursionlimit(10000)
     import budget_teacher
-    budget_teacher.install(0, max_seconds=5)
+    budget_teacher.install(args.comparisons, max_seconds=5 if not args.comparisons else 20)
+    if args.comparisons:
+        budget_teacher.set_horizon(1)
     import teacher_patches
     from gaia_rl import Environment
     from faction_teachers.clock import AdaptiveClock
     from faction_teachers.profiles import profiles
     clock = AdaptiveClock()
-    factory = teacher_patches.geodens_guide if args.baseline else teacher_patches.guide_values
+    factory = (teacher_patches.geodens_guide if args.baseline else
+               getattr(teacher_patches, args.factory))
     teacher = factory(args.seed, target_seconds=clock.target_seconds,
                                            maximum_seconds=clock.long_seconds, adaptive_clock=clock,
                                            bgg_openings=True, shared_factions=True)

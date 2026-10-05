@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "어잌후 자료 적용 첫 확인(사용자 요청 12쌍): A = 실서버 hard(geodens_guide), B = guide_values(LF01·LF02 충전 가격, 1점=1.5충전, 연구 1칸 16충전, 함대 액션 2충전) + 종족 공략 1라운드 오프닝 순서(B04 테란·B10 타클론·B15 제노스). 기오덴은 기존 geodens_guide.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-values-openings-cap20.json",
+  "pairs": 12,
+  "comparisons": 2
+}
