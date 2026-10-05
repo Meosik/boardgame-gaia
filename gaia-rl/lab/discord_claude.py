@@ -237,7 +237,9 @@ def main():
                 skipped.append(attachment.filename)
                 continue
             inbox.mkdir(parents=True, exist_ok=True)
-            path = inbox/attachment_name(attachment.filename)
+            # Discord replaces non-ASCII (e.g. Korean) letters in file names with '_', so
+            # different articles arrive with the same name; the attachment id keeps them apart.
+            path = inbox/f'{attachment.id}-{attachment_name(attachment.filename)}'
             await attachment.save(path)
             saved.append(path)
         prompt = attachment_prompt(text, saved, skipped) if message.attachments else text
