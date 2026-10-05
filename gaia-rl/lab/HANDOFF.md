@@ -183,8 +183,8 @@
      2(광석+파워 토큰 2 → 1라운드 가이아, 파워 4). 2는 기본 순위 3위라 **비교조차 안 됨**(비교 4개 중 3개가 같은 첫 수).
      셋업 결정은 hard에서 1라운드를 두지 않은 채 평가되고, 비교 예산도 같은 첫 수에 중복으로 쓰인다.
    - **어잌후 자료 전면 적용 (2026-10-05 시작, 사용자: "다 적용할 때까지 테스트 없음")**: 원문 PDF는
-     `docs/references/discord/`(git 제외). 정리 완료: `b03-tech-boosters-claims.md`, `lf01-lf02-value-table.md`.
-     남은 정리: LF03, LF04, B01, B02, B18–B20(공통 부분만). 그다음 구현: 자원 가격을 LF01 충전 환율로, 라운드별 점수
+     `docs/references/discord/`(git 제외). 정리 완료: `b03-tech-boosters-claims.md`, `lf01-lf02-value-table.md`,
+     `lf03-lf04-goals-round1.md`, `b01-b02-strategy-power-buildings.md`. 남은 정리: B18–B20(공통 부분만). 그다음 구현: 자원 가격을 LF01 충전 환율로, 라운드별 점수
      환율, 기술·고급 기술·부스터 값표, 1라운드 지침을 비교 후보에. 구현을 다 마친 뒤 hard와 한 번에 A/B.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
