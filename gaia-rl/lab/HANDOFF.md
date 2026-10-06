@@ -317,6 +317,8 @@
      hard 유지, 배포 제안 없음. `research_counts.py`는 디스코드 세션 권한 밖이라 못 돌림(Eco 비율 미확인).
      다음 제안(사용자 확인 대기, 큐에 넣지 않음): 부품 분리 — hard + guide_values만(나머지 없음) vs hard 6쌍으로 034부터의
      공통 원인인지 먼저 확인. 그 전에 036 Geodens B 최저 판(50점) 1·2라운드 확인 권장.
+     봇 권한 추가(사용자 2026-10-06): publish_replays·research_counts·list_decisions. 036 pair-003/game-1-A02(Geo B 50점,
+     좌석 1 초점)를 `~/gaia-media/ai-replays`에 게시함(`/tmp/ab-036-p003-g1-geo`).
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
