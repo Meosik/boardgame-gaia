@@ -118,5 +118,34 @@ def ship_value(state):
     return total
 
 
+# LF01 §2 fleet actions, net gain per use in charges (cost already deducted: e.g. Rebellion
+# 2 knowledge -> 2 credits + 1 QIC = 9.4 - 8 = +1.4). Engine ship ids (engine.rs
+# spaceship_id_to_ship_id). User (2026-10-07): assume a ship is used a lot -> its best listed
+# action once every round left. Situational figures left out: Twilight +10 only when exactly
+# 3 range is needed, Rebellion 3-QIC tech (stated as a 21-charge price, not a gain).
+SHIP_ACTION_NET = {0: 4.0,   # Twilight: research lab +4 (1 knowledge +3 range: +3 at 2 range)
+                   1: 5.2,   # Rebellion: expensive trading station +5.2 (cheap +1.6)
+                   2: 2.4,   # TF Mars: 3 credits 1 terraform +2.4 (instant Gaia-forming +2)
+                   3: 5.2}   # Eclipse: 6-credit asteroid mine +5.2 (advance +2)
+
+# User (2026-10-07): a green (flippable) federation token is worth the difference between the
+# open and the closed 12 VP token, taken as LF01's fleet tokens (21-22 charges) minus the base
+# tokens (18-19): 3 charges. Token 1 is the closed (gray) 12 VP token (engine.rs
+# flip_a_federation_token).
+GREEN_TOKEN = 3.0
+
+
+def ships_value(state, player):
+    """Each explored ship's best net action once for every round left including this one."""
+    rounds = 7-max(state['round'], 1)
+    return to_vp(state, rounds*sum(SHIP_ACTION_NET.get(ship, SHIP_ACTION_GAIN)
+                                   for ship in player['explored_ships']))
+
+
+def green_tokens_value(state, player):
+    green = [t for t in player['federation_tokens'] if t != 1]
+    return to_vp(state, GREEN_TOKEN*len(green)) if state['round'] < 6 else 0.0
+
+
 def planet_value(state):
     return to_vp(state, PLANET) if state['round'] < 6 else 0.0

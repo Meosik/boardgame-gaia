@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3 (hard, 4 comparisons, 20 s cap) with LF01/LF02 table values for explored ships, green federation tokens and pass advanced tiles (guide_r1_charge3_lf).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

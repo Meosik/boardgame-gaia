@@ -3,7 +3,8 @@
 User (2026-10-06): report A/B results by the power charges a seat collected in rounds 1-3, with
 buildings, resources, research and VP all converted to charges. Each seat is valued with the
 guide value (LF prices, guide_r1 settings: QIC and research levels priced once) at the first
-decision of round 1 and of round 4; VP held count at 1.5 charges each. Final-goal standings and
+decision of round 1 and of round 4 (LF table values for ships, green federation tokens and pass
+advanced tiles since 2026-10-07); VP held count at 1.5 charges each. Final-goal standings and
 the held booster's pass VP are left out (projections, not gains). Pairs are the two seat-swapped
 games of a seed, as in teacher_ab.
 
@@ -68,7 +69,7 @@ def main():
     parser.add_argument('--games', action='store_true', help='Also print every game')
     args = parser.parse_args()
     import teacher_patches as tp
-    tp._guide.update(qic_reach=False, track_income=False)
+    tp._guide.update(qic_reach=False, track_income=False, lf_tables=True)
     gained = defaultdict(dict)   # (pair, faction) -> {arm: charges gained}
     for game_dir in sorted(args.run_dir.expanduser().glob('pair-*/game-*')):
         result, values = game_charges(game_dir)

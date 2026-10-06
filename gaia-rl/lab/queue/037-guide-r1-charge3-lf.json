@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "사용자 지시(2026-10-07, 새 시드 6쌍): A = 실서버 hard(geodens_guide), B = guide_r1_charge3_lf = 036의 B(guide_r1_charge3) + LF 값표: 들어간 함선마다 매 라운드 가장 큰 순이득 액션 1회(LF01: 트와일라잇 연구소 +4, 리벨리온 비싼 교역소 +5.2, TF마스 3돈1테라 +2.4, 이클립스 6돈 소행성 +5.2), 초록 연방 토큰 1개 3충전(함대 21–22 − 기본 18–19), 패스형 고급 기술 = 점수 × (현재 개수 + 앞으로 1–2개) × 남은 패스(0.6 할인 없음). 결과는 1–3라운드 충전량(tools/charge_rounds.py)으로 보고.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-cap20.json",
+  "pairs": 6,
+  "comparisons": 2
+}

@@ -703,7 +703,23 @@ def distinct_search_openings(seed, **kwargs):
 
 
 _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced once)
-          'track_income': True}         # False: install_guide_r1 (research levels priced once)
+          'track_income': True,         # False: install_guide_r1 (research levels priced once)
+          'lf_tables': False}           # True: guide_r1_charge3_lf (ships, green tokens, pass tiles)
+
+
+def lf_advanced_option(state, player, tile):
+    """Pass tiles (user 2026-10-07): VP per pass x (current count + the one or two more the
+    player will still build) x passes left, without the frozen 0.6 discount. Other tiles keep
+    the frozen advanced_option."""
+    from integrated.features import counters, PASS
+    if tile not in PASS:
+        return _value.advanced_option(state, player, tile)
+    passes = max(0, 6-state['round']) + int(not player['passed'])
+    if not passes:
+        return 0.0
+    counter, vp = PASS[tile]
+    more = 2 if passes >= 3 else 1
+    return passes*vp*(counters(state, player)[counter]+more)
 
 
 def _track_income(state, player):
@@ -744,7 +760,10 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
     if state['round'] >= 1 and not player['passed'] and _action_phase(state):
         result += booster_pass_vp(state, player)
     result += gv.planet_value(state)*len(player['structures'])
-    result += gv.ship_value(state)*len(player['explored_ships'])
+    if _guide['lf_tables']:
+        result += gv.ships_value(state, player) + gv.green_tokens_value(state, player)
+    else:
+        result += gv.ship_value(state)*len(player['explored_ships'])
     if player['faction'] == 'Taklons' and any(s['kind'] == 'PlanetaryInstitute' for s in player['structures']):
         owners = {b['owner'] for c, cell in state['board']['hexes'].items()
                   if any(v.distance(c, s['hex']) <= 2 for s in player['structures'])
@@ -761,7 +780,8 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
     else:
         result += v.gaia_value(state, reach) + (v.expansion_value(state, reach, home=home) if horizon else 0)
     result += v.research_options(state, player)
-    result += sum(v.advanced_option(state, player, tile) for tile in player['advanced_tech_tiles'])
+    advanced = lf_advanced_option if _guide['lf_tables'] else v.advanced_option
+    result += sum(advanced(state, player, tile) for tile in player['advanced_tech_tiles'])
     active = set(player['tech_tiles'])-set(player['covered_tech_tiles'])
     result += .5*horizon*len(active - {2, 3, 5, 4, 7, 9, 11, 13, gv.CHARGE_TILE})
     result += gv.charge_tile_value(state, player)
@@ -1206,4 +1226,12 @@ def guide_r1_charge3(seed, **kwargs):
     """Teacher factory: guide_r1 with rounds 0-3 compared at round 4 in charges, not VP."""
     teacher = guide_r1(seed, **kwargs)
     install_charge_r3()
+    return teacher
+
+
+def guide_r1_charge3_lf(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3 with LF01/LF02 table values for explored ships (best
+    net action every round), green federation tokens (3 charges) and pass advanced tiles."""
+    teacher = guide_r1_charge3(seed, **kwargs)
+    _guide['lf_tables'] = True
     return teacher
