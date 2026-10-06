@@ -319,6 +319,12 @@
      공통 원인인지 먼저 확인. 그 전에 036 Geodens B 최저 판(50점) 1·2라운드 확인 권장.
      봇 권한 추가(사용자 2026-10-06): publish_replays·research_counts·list_decisions. 036 pair-003/game-1-A02(Geo B 50점,
      좌석 1 초점)를 `~/gaia-media/ai-replays`에 게시함(`/tmp/ab-036-p003-g1-geo`).
+     **보고 기준(사용자 2026-10-06)**: A/B 결과는 앞으로 1–3라운드에 얻은 충전량(건물·자원·연구·점수 전부 LF 가격 환산)으로
+     알린다. 도구 `tools/charge_rounds.py <run> [--games]`(gaia-rl에서 `.venv/bin/python`): 1R 첫 결정과 4R 첫 결정의 guide 값
+     차이(charge_value + 보유 VP, 1VP=1.5충전, 최종 목표 순위·부스터 패스 VP 제외). 주의: B(charge3)가 최적화하는 척도와 같아
+     B에 유리. 036: 전체 +24.2 [−0.5, +48.8], Tak +47.7 유의, Ter +25.2, Xen +21.6, Geo +2.2 — 최종 점수(−21.8)와 반대.
+     게임은 lab이 늘 6라운드 끝까지 둔다(charge3는 비교 평가만 바꿈). 사용자가 본 "아카데미 대신 광산" 타클론은
+     그 판(pair-003/game-1-A02)의 A팔(hard, 실서버)이었다.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
