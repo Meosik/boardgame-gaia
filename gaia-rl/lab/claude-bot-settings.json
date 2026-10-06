@@ -59,7 +59,10 @@
       "Bash(git stash list:*)",
       "Bash(GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-20260917:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/explain_decision.py:*)",
       "Bash(GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-20260917:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/explain_ab_decisions.py:*)",
-      "Bash(GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/ab_replays.py:*)"
+      "Bash(GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/ab_replays.py:*)",
+      "Bash(gaia-rl/.venv/bin/python gaia-rl/tools/publish_replays.py:*)",
+      "Bash(gaia-rl/.venv/bin/python gaia-rl/tools/research_counts.py:*)",
+      "Bash(PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-20260917:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/list_decisions.py:*)"
     ],
     "deny": [
       "Read(**/.env)",
