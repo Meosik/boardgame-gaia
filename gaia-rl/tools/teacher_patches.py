@@ -704,7 +704,20 @@ def distinct_search_openings(seed, **kwargs):
 
 _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced once)
           'track_income': True,         # False: install_guide_r1 (research levels priced once)
-          'lf_tables': False}           # True: guide_r1_charge3_lf (ships, green tokens, pass tiles)
+          'lf_tables': False,           # True: guide_r1_charge3_lf (ships, green tokens, pass tiles)
+          'lf_tiles': False}            # True: guide_r1_charge3_lf_tiles (standard tiles 6, 8, 12)
+
+
+def standard_tiles_value(state, player, active, horizon):
+    """User (2026-10-07): standard tiles 6 (big buildings' power +1) and 12 (+1 range) have no
+    standing value; their effect shows in the round-4 rollout. Tile 8 (3 VP per mine built on a
+    Gaia planet) pays only for mines built after it: the planets now being Gaia-formed plus the
+    one or two more the player will still form (as for pass tiles). Replaces the frozen
+    0.5 VP x rounds left for these three tiles."""
+    if 8 not in active or not horizon:
+        return 0.0
+    more = 2 if horizon >= 3 else 1
+    return 3*(player.get('gaiaformers_deployed', 0)+more)
 
 
 def lf_advanced_option(state, player, tile):
@@ -783,7 +796,10 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
     advanced = lf_advanced_option if _guide['lf_tables'] else v.advanced_option
     result += sum(advanced(state, player, tile) for tile in player['advanced_tech_tiles'])
     active = set(player['tech_tiles'])-set(player['covered_tech_tiles'])
-    result += .5*horizon*len(active - {2, 3, 5, 4, 7, 9, 11, 13, gv.CHARGE_TILE})
+    if _guide['lf_tiles']:
+        result += standard_tiles_value(state, player, active, horizon)
+    else:
+        result += .5*horizon*len(active - {2, 3, 5, 4, 7, 9, 11, 13, gv.CHARGE_TILE})
     result += gv.charge_tile_value(state, player)
     return result
 
@@ -1234,4 +1250,12 @@ def guide_r1_charge3_lf(seed, **kwargs):
     net action every round), green federation tokens (3 charges) and pass advanced tiles."""
     teacher = guide_r1_charge3(seed, **kwargs)
     _guide['lf_tables'] = True
+    return teacher
+
+
+def guide_r1_charge3_lf_tiles(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf with standard tiles 6 and 12 left to the search and
+    tile 8 valued by the Gaia mines still to come."""
+    teacher = guide_r1_charge3_lf(seed, **kwargs)
+    _guide['lf_tiles'] = True
     return teacher

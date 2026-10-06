@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "사용자 지시(2026-10-07, 새 시드 6쌍): A = 실서버 hard(geodens_guide), B = guide_r1_charge3_lf_tiles = 037의 B(guide_r1_charge3_lf) + 일반 기술 6(큰 건물 파워 +1)·12(+1사거리)는 고정값 없이 4라운드 rollout에 맡기고, 8(가이아 광산당 3점)은 3점 × (지금 가이아 포밍 중 + 앞으로 1–2개). 동결 0.5점×남은 라운드 공통항 제거. 결과는 1–3라운드 충전량(tools/charge_rounds.py)으로 보고.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-tiles-cap20.json",
+  "pairs": 6,
+  "comparisons": 2
+}
