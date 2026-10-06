@@ -705,7 +705,8 @@ def distinct_search_openings(seed, **kwargs):
 _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced once)
           'track_income': True,         # False: install_guide_r1 (research levels priced once)
           'lf_tables': False,           # True: guide_r1_charge3_lf (ships, green tokens, pass tiles)
-          'lf_tiles': False}            # True: guide_r1_charge3_lf_tiles (standard tiles 6, 8, 12)
+          'lf_tiles': False,            # True: guide_r1_charge3_lf_tiles (standard tiles 6, 8, 12)
+          'charge_vp': False}           # True: guide_r1_charge3_lf_tiles (VP held kept in charge_value)
 
 
 def standard_tiles_value(state, player, active, horizon):
@@ -1188,19 +1189,28 @@ def guide_r1(seed, **kwargs):
 # guide_potential minus VP held, final-scoring standings and the pass VP of the held booster.
 # Everything else stays in it at the LF prices: stock resources and power, every remaining income
 # (buildings, tracks, tech tiles), research levels, buildings, ships and the 4-charge tile per
-# round left. VP spent (e.g. fleet entry) is therefore not a cost here.
+# round left. VP spent (e.g. fleet entry) is therefore not a cost here, unless
+# _guide['charge_vp'] keeps the VP held (guide_r1_charge3_lf_tiles).
 CHARGE_LAST_ROUND = 3
 CHARGE_ROLLOUT_LIMIT = 720   # three rounds of four seats; the tree's 192 covers about one
 _charge = {'active': False}
 
 
-def charge_value(state, actor):
-    """Every faction, Xenos included, is valued by the same charge measure here."""
+def charge_value(state, actor, *, with_vp=None):
+    """Every faction, Xenos included, is valued by the same charge measure here.
+
+    with_vp (default _guide['charge_vp']): keep the VP held, at 1 VP = 1.5 charges like every
+    other value. User (2026-10-07): "모든 VP도 파워로 치환" — VP spent (fleet entry) is then a
+    cost and VP gained (federations, artifacts, round scoring) a gain."""
     from faction_teachers.profiles import profiles
     v = _value
     player = state['players'][actor]
     home = None if player['faction'] in v.HOME else profiles()[player['faction']].home
-    result = guide_potential(state, actor, home=home) - player['vp'] - v.standings(state, actor)
+    if with_vp is None:
+        with_vp = _guide['charge_vp']
+    result = guide_potential(state, actor, home=home) - v.standings(state, actor)
+    if not with_vp:
+        result -= player['vp']
     if state['round'] >= 1 and not player['passed'] and _action_phase(state):
         result -= booster_pass_vp(state, player)
     return result
@@ -1254,8 +1264,9 @@ def guide_r1_charge3_lf(seed, **kwargs):
 
 
 def guide_r1_charge3_lf_tiles(seed, **kwargs):
-    """Teacher factory: guide_r1_charge3_lf with standard tiles 6 and 12 left to the search and
-    tile 8 valued by the Gaia mines still to come."""
+    """Teacher factory: guide_r1_charge3_lf with standard tiles 6 and 12 left to the search,
+    tile 8 valued by the Gaia mines still to come, and VP held kept in the charge value."""
     teacher = guide_r1_charge3_lf(seed, **kwargs)
     _guide['lf_tiles'] = True
+    _guide['charge_vp'] = True
     return teacher

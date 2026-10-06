@@ -1,5 +1,5 @@
 {
-  "description": "guide_r1_charge3_lf (hard, 4 comparisons, 20 s cap) with standard tiles 6 and 12 left to the search and tile 8 valued by the Gaia mines still to come (guide_r1_charge3_lf_tiles).",
+  "description": "guide_r1_charge3_lf (hard, 4 comparisons, 20 s cap) with standard tiles 6 and 12 left to the search and tile 8 valued by the Gaia mines still to come, and VP held kept in the round-4 charge value at 1 VP = 1.5 charges (guide_r1_charge3_lf_tiles).",
   "source": "gaia-rl/baseline-teacher-20260917",
   "factory": "teacher_patches:guide_r1_charge3_lf_tiles",
   "kwargs": {

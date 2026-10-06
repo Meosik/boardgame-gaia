@@ -29,8 +29,7 @@ START_ROUND, END_ROUND = 1, 4
 def charges(state, seat):
     import guide_value as gv
     import teacher_patches as tp
-    vp = tp.charge_value(state, seat) + state['players'][seat]['vp']
-    return vp*gv.CHARGES_PER_VP[4]
+    return tp.charge_value(state, seat, with_vp=True)*gv.CHARGES_PER_VP[4]
 
 
 def game_charges(game_dir):
