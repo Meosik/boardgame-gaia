@@ -1098,3 +1098,68 @@ def guide_r1(seed, **kwargs):
     teacher = guide_values_openings_free(seed, **kwargs)
     install_guide_r1()
     return teacher
+
+
+# ── charge_r3 ──────────────────────────────────────────────────────────────────────────
+# Opt-in, on top of guide_r1. User (2026-10-06): "아직 점수 벌 타이밍이 아니다 — 3라운드까지 두고
+# 점수 대신 모은 파워로 비교. 건물·자원 전부 파워로 치환, 4파워 충전 기술처럼 3라운드 이후에 얻을
+# 파워도 같이 계산." A comparison started in rounds 0-3 rolls out to the start of round 4's
+# actions (not the next income) and its leaf is the guide value in charges without VP:
+# guide_potential minus VP held, final-scoring standings and the pass VP of the held booster.
+# Everything else stays in it at the LF prices: stock resources and power, every remaining income
+# (buildings, tracks, tech tiles), research levels, buildings, ships and the 4-charge tile per
+# round left. VP spent (e.g. fleet entry) is therefore not a cost here.
+CHARGE_LAST_ROUND = 3
+CHARGE_ROLLOUT_LIMIT = 720   # three rounds of four seats; the tree's 192 covers about one
+_charge = {'active': False}
+
+
+def charge_value(state, actor):
+    """Every faction, Xenos included, is valued by the same charge measure here."""
+    from faction_teachers.profiles import profiles
+    v = _value
+    player = state['players'][actor]
+    home = None if player['faction'] in v.HOME else profiles()[player['faction']].home
+    result = guide_potential(state, actor, home=home) - player['vp'] - v.standings(state, actor)
+    if state['round'] >= 1 and not player['passed'] and _action_phase(state):
+        result -= booster_pass_vp(state, player)
+    return result
+
+
+def install_charge_r3():
+    import four_factions.preparation as p
+    if getattr(p.rollout, '_charge_r3', False):
+        return
+    inner_rollout, inner_leaf = p.rollout, p.leaf_value
+    raw_horizon = getattr(p.reached_horizon, '__wrapped__', p.reached_horizon)
+
+    def to_round4(state, target_round):   # no __wrapped__: geodens_guide keeps it as is
+        return raw_horizon(state, CHARGE_LAST_ROUND+1)
+
+    def leaf_value(snapshot, actor, *args, **kwargs):
+        if _charge['active']:
+            return charge_value(snapshot['state'], actor)
+        return inner_leaf(snapshot, actor, *args, **kwargs)
+
+    def rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs):
+        if snapshot['state']['round'] > CHARGE_LAST_ROUND or _charge['active']:
+            return inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
+        if not args:
+            kwargs.setdefault('limit', CHARGE_ROLLOUT_LIMIT)
+        configured = p.reached_horizon
+        p.reached_horizon, _charge['active'] = to_round4, True
+        try:
+            return inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
+        finally:
+            p.reached_horizon, _charge['active'] = configured, False
+    rollout.__wrapped__ = getattr(inner_rollout, '__wrapped__', inner_rollout)
+    rollout._charge_r3 = True
+    leaf_value.__wrapped__ = getattr(inner_leaf, '__wrapped__', inner_leaf)
+    p.rollout, p.leaf_value = rollout, leaf_value
+
+
+def guide_r1_charge3(seed, **kwargs):
+    """Teacher factory: guide_r1 with rounds 0-3 compared at round 4 in charges, not VP."""
+    teacher = guide_r1(seed, **kwargs)
+    install_charge_r3()
+    return teacher

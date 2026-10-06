@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1 (hard, 4 comparisons, 20 s cap) with comparisons started in rounds 0-3 rolled out to round 4 and valued in LF charges without VP (guide_r1_charge3).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}
