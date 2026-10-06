@@ -1054,11 +1054,55 @@ def geodens_pi4_order(snapshot, goals):
     return first + [g for g in goals if g not in first]
 
 
+# 6. Geodens research order from the BGG opening articles (user 2026-10-06, "글 내용에 최대한 부합"):
+#    Part 1: "지오덴 HS 플레이어 중 19%는 AC 루트… 경제 또는 과학 트랙과 조합". Part 2: AC opening "대부분 경제
+#    트랙에서 단계를 밟으며 2/3라운드 PI를 준비", 2RL start "거의 항상 경제 트랙". With a PI the articles name
+#    no track ("기술 트랙을 조기에 발전"), so geodens_guide's Terraforming-3 / Navigation-2 plans lose
+#    their place at the front and follow the colony plans. Order only; the comparison decides.
+GEODENS_LATE_RESEARCH = ('Geodens-Terraforming-3', 'Geodens-Navigation-2')
+
+
+def geodens_r1_goals(snapshot, goals):
+    from four_factions.preparation import Goal
+    from strategy_teacher import kind
+    state, actor = snapshot['state'], snapshot['player']
+    player = state['players'][actor]
+    if player['faction'] != 'Geodens':
+        return goals
+    kinds = [kind(s['kind']) for s in player['structures']]
+    late = [g for g in goals if g.name in GEODENS_LATE_RESEARCH]
+    rest = [g for g in goals if g not in late]
+    first = []
+    if 'PlanetaryInstitute' not in kinds and ('Academy' in kinds or kinds.count('ResearchLab') >= 2):
+        tracks = player['research_tracks']
+        sources = ('BGG-O1', 'BGG-O2')
+        if tracks['economy'] < 5:
+            first.append(Goal(f'Geodens-Economy-{tracks["economy"]+1}', 'research', target='Economy',
+                              level=tracks['economy']+1, sources=sources))
+        if 'Academy' in kinds and tracks['science'] < 5:
+            first.append(Goal(f'Geodens-Science-{tracks["science"]+1}', 'research', target='Science',
+                              level=tracks['science']+1, sources=sources))
+    if not late and not first:
+        return goals
+    colonies = [g for g in rest if _target_coord(g)]
+    others = [g for g in rest if not _target_coord(g)]
+    return first + colonies + late + others
+
+
 def install_guide_r1():
     import bgg_openings.planning as planning
+    import faction_teachers.paths as paths
     import four_factions.preparation as p
     _guide['qic_reach'] = False
     _guide['track_income'] = False
+    if not getattr(paths.goals, '_guide_r1', False):
+        inner_paths_goals = paths.goals
+
+        def faction_goals(snapshot):
+            return geodens_r1_goals(snapshot, inner_paths_goals(snapshot))
+        faction_goals.__wrapped__ = getattr(inner_paths_goals, '__wrapped__', inner_paths_goals)
+        faction_goals._guide_r1 = True
+        paths.goals = faction_goals
     if not getattr(planning.goals, '_guide_r1', False):
         inner_opening_goals = planning.goals
 
