@@ -135,6 +135,18 @@ SHIP_ACTION_NET = {0: 4.0,   # Twilight: research lab +4 (1 knowledge +3 range: 
 GREEN_TOKEN = 3.0
 
 
+# LF02 §2 advanced special action tiles, resources per use in charges (no cost): "1정보 5돈이면
+# 자원 가치는 14충전", "3광석이나 3지식이면 자원 가치는 12충전". Engine advanced tile ids.
+SPECIAL_ACTION = {20: 12.0, 21: 12.0, 22: 14.0}
+
+# Our own numbers (user 2026-10-07: "없는 건 하면서 만들어야제"), not from the guides:
+EVENT_USES_PER_ROUND = 1.5   # advanced "VP when you do X" tiles: one or two triggers a round
+FEDERATION_TOKEN = 18.0      # LF01 lower bound of a base federation token (18-19 charges)
+FEDERATION_POWER = 7         # rulebook: a federation needs buildings of total power value 7
+LEECH_PER_NEIGHBOR = 2.0     # charges a round from each opponent with buildings within 2 hexes
+LEECH_NEIGHBORS_MAX = 3
+
+
 def ships_value(state, player):
     """Each explored ship's best net action once for every round left including this one."""
     rounds = 7-max(state['round'], 1)

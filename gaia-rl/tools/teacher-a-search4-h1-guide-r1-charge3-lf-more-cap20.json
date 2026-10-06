@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_tiles (hard, 4 comparisons, 20 s cap) with advanced event/special action tiles and research options at LF values, federation progress and neighbour charges (guide_r1_charge3_lf_more).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

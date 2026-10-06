@@ -706,7 +706,85 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'track_income': True,         # False: install_guide_r1 (research levels priced once)
           'lf_tables': False,           # True: guide_r1_charge3_lf (ships, green tokens, pass tiles)
           'lf_tiles': False,            # True: guide_r1_charge3_lf_tiles (standard tiles 6, 8, 12)
-          'charge_vp': False}           # True: guide_r1_charge3_lf_tiles (VP held kept in charge_value)
+          'charge_vp': False,           # True: guide_r1_charge3_lf_tiles (VP held kept in charge_value)
+          'lf_more': False}             # True: guide_r1_charge3_lf_more (see lf_more_value)
+
+
+_POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
+
+
+def _structure_power(structure):
+    kind = structure['kind']
+    kind = next(iter(kind)) if isinstance(kind, dict) else kind
+    return _POWER_VALUE.get(kind, 0)
+
+
+def federation_progress(state, player):
+    """User (2026-10-07): progress toward the next federation. The largest group of unfederated
+    buildings (chained within 2 hexes, one satellite apart) is worth its share of power value 7
+    of a base federation token (LF01, 18 charges). A formed federation moves those buildings out
+    and its token reward into VP/stock."""
+    import guide_value as gv
+    federated = set(map(str, player.get('federated_hexes') or []))
+    left = [s for s in player['structures'] if str(s['hex']) not in federated and _structure_power(s)]
+    best, seen = 0, set()
+    for i in range(len(left)):
+        if i in seen:
+            continue
+        group, todo = 0, [i]
+        seen.add(i)
+        while todo:
+            j = todo.pop()
+            group += _structure_power(left[j])
+            for k in range(len(left)):
+                if k not in seen and _value.distance(left[j]['hex'], left[k]['hex']) <= 2:
+                    seen.add(k)
+                    todo.append(k)
+        best = max(best, group)
+    return gv.to_vp(state, gv.FEDERATION_TOKEN*min(best, gv.FEDERATION_POWER)/gv.FEDERATION_POWER)
+
+
+def leech_value(state, player):
+    """User (2026-10-07): power charges still to come from neighbours — each opponent with a
+    building within 2 hexes of ours, LEECH_PER_NEIGHBOR charges for every round left."""
+    import guide_value as gv
+    mine = [s['hex'] for s in player['structures']]
+    neighbors = sum(any(_value.distance(a['hex'], b) <= 2 for a in other['structures'] for b in mine)
+                    for other in state['players'] if other is not player)
+    rounds = 7-max(state['round'], 1)
+    return gv.to_vp(state, gv.LEECH_PER_NEIGHBOR*min(neighbors, gv.LEECH_NEIGHBORS_MAX)*rounds)
+
+
+def lf_research_options(state, player):
+    """four_factions.value.research_options at the LF prices, with advanced tiles valued by
+    lf_advanced_option."""
+    import copy
+    import guide_value as gv
+    v = _value
+    horizon = max(0, 6-state['round'])
+    if not horizon:
+        return 0.0
+    result = 0.0
+    current = v.production(state, player, include_booster=False)
+    if player['resources']['knowledge']+current[2] >= 4:
+        for track in ('economy', 'science'):
+            if player['research_tracks'][track] != 1:
+                continue
+            after = copy.deepcopy(player)
+            after['research_tracks'][track] = 2
+            future = v.production(state, after, include_booster=False)
+            delta = {k: max(0, future[i]-current[i]) for i, k in enumerate(v.RESOURCE_KEYS)}
+            result += .5*horizon*gv.materials(state, delta)
+    active = set(player['tech_tiles'])-set(player['covered_tech_tiles'])
+    if player['federation_tokens'] and active:
+        tracks = ('terraforming', 'navigation', 'ai', 'gaia', 'economy', 'science')
+        options = []
+        for track, tile in zip(tracks, state['research_board']['advanced_tech_tiles']):
+            if tile is not None:
+                proximity = (0, 0, .1, .25, .4, .4)[player['research_tracks'][track]]
+                options.append(proximity*lf_advanced_option(state, player, tile))
+        result += max(options, default=0)
+    return result
 
 
 def standard_tiles_value(state, player, active, horizon):
@@ -725,10 +803,19 @@ def lf_advanced_option(state, player, tile):
     """Pass tiles (user 2026-10-07): VP per pass x (current count + the one or two more the
     player will still build) x passes left, without the frozen 0.6 discount. Other tiles keep
     the frozen advanced_option."""
-    from integrated.features import counters, PASS
+    import guide_value as gv
+    from integrated.features import counters, PASS, EVENT, RESOURCE_ACTIONS
+    horizon = max(0, 6-state['round'])
+    if _guide['lf_more'] and tile in EVENT:
+        # one or two triggers a round (EVENT_USES_PER_ROUND) for this round and those left
+        return gv.EVENT_USES_PER_ROUND*(horizon+int(not player['passed']))*EVENT[tile][1]
+    if _guide['lf_more'] and tile in RESOURCE_ACTIONS:
+        available = tile not in player['advanced_tech_tile_special_actions_used_this_round']
+        uses = horizon + int(available and not player['passed'])
+        return uses*gv.to_vp(state, gv.SPECIAL_ACTION[tile])
     if tile not in PASS:
         return _value.advanced_option(state, player, tile)
-    passes = max(0, 6-state['round']) + int(not player['passed'])
+    passes = horizon + int(not player['passed'])
     if not passes:
         return 0.0
     counter, vp = PASS[tile]
@@ -793,8 +880,12 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
         result += v.gaia_value(state, reach) + expansion_potential(state, reach)
     else:
         result += v.gaia_value(state, reach) + (v.expansion_value(state, reach, home=home) if horizon else 0)
-    result += v.research_options(state, player)
-    advanced = lf_advanced_option if _guide['lf_tables'] else v.advanced_option
+    if _guide['lf_more']:
+        result += lf_research_options(state, player)
+        result += federation_progress(state, player) + leech_value(state, player)
+    else:
+        result += v.research_options(state, player)
+    advanced =lf_advanced_option if _guide['lf_tables'] else v.advanced_option
     result += sum(advanced(state, player, tile) for tile in player['advanced_tech_tiles'])
     active = set(player['tech_tiles'])-set(player['covered_tech_tiles'])
     if _guide['lf_tiles']:
@@ -1269,4 +1360,12 @@ def guide_r1_charge3_lf_tiles(seed, **kwargs):
     teacher = guide_r1_charge3_lf(seed, **kwargs)
     _guide['lf_tiles'] = True
     _guide['charge_vp'] = True
+    return teacher
+
+
+def guide_r1_charge3_lf_more(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_tiles with advanced event/special action tiles and
+    the research options at LF values, plus federation progress and neighbour charges."""
+    teacher = guide_r1_charge3_lf_tiles(seed, **kwargs)
+    _guide['lf_more'] = True
     return teacher

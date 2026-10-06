@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "사용자 지시(2026-10-07 \"제안대로 해, 없는 건 하면서 만들어야제\", 새 시드 6쌍): A = 실서버 hard(geodens_guide), B = guide_r1_charge3_lf_more = 038의 B(lf_tiles + 보유 VP 포함) + 고급 기술 특수 액션형 LF02 값(광석3·지식3 12, 1QIC 5돈 14충전) × 남은 사용, 행동형 = 점수 × 라운드당 1.5회 × 남은 라운드, 연구 선택지 LF 가격 + 우리가 만든 값: 연방 진행도(묶인 미연방 건물 파워 합/7 × 18충전), 이웃 리치(2헥스 안 상대 1명당 라운드당 2충전, 최대 3명). 결과는 1–3라운드 충전량(tools/charge_rounds.py)으로 보고.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-cap20.json",
+  "pairs": 6,
+  "comparisons": 2
+}
