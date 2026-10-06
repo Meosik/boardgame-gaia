@@ -1005,10 +1005,71 @@ def guide_r1_scores(snapshot, scores):
     return result
 
 
+# 5. Geodens 1PI+4M first when its conditions hold (user 2026-10-06; BGG-O2 Geodens table:
+#    1PI+4M 153 avg over 228 games vs 1PI+2M 134, "effective only when the player gets 4 mines in
+#    round 1, ideally on different types: home, red, yellow, Gaia"). The PI's 3 knowledge per new
+#    planet type needs the three new mines on Oxide, Desert (1 terraforming step from Volcanic)
+#    and Gaia. Facts checked, order only:
+#    - an unoccupied Oxide, Desert and Gaia planet in range, the range QIC of all three plus the
+#      Gaia planet's own QIC within the QIC held (engine targets/path distance, one QIC = +2 range);
+#    - two terraforming steps from cheap sources: booster 12 held (1), power action 2 (2 steps,
+#      5 power) or 6 (1 step, 3 power) unused and payable from bowl III plus burning now,
+#      TF Mars explored or explorable now (1). Ore-paid steps are left to the comparison.
+GEODENS_PI4 = '1PI+4M'
+GEODENS_NEW_TYPES = ('Oxide', 'Desert')
+TERRAFORM_POWER_ACTIONS = {2: (5, 2), 6: (3, 1)}   # engine id: (power, free steps)
+
+
+def geodens_pi4_ready(snapshot):
+    from four_factions.value import targets
+    state, actor = snapshot['state'], snapshot['player']
+    player = state['players'][actor]
+    if player['faction'] != 'Geodens' or state['round'] != 1:
+        return False
+    unlimited = {**player, 'resources': {**player['resources'], 'qic': 99}}
+    need = 0
+    for planet_type in (*GEODENS_NEW_TYPES, 'Gaia'):
+        options = [qic for _, _, qic in targets(state, unlimited, (planet_type,))]
+        if not options:
+            return False
+        need += min(options) + (planet_type == 'Gaia')
+    if need > player['resources']['qic']:
+        return False
+    power = player['resources']['power']
+    spendable = power['bowl3'] + power['bowl2']//2
+    used = state.get('used_power_actions', [])
+    steps = int(player['booster'] == 12)
+    steps += max((free for i, (cost, free) in TERRAFORM_POWER_ACTIONS.items()
+                  if i not in used and cost <= spendable), default=0)
+    steps += int('TFMars' in player['explored_ships'] or any(
+        c['action']['type'] == 'ExploreSpaceship' and c['action'].get('ship') == 'TFMars'
+        for c in snapshot['candidates']))
+    return steps >= 2
+
+
+def geodens_pi4_order(snapshot, goals):
+    if not geodens_pi4_ready(snapshot):
+        return goals
+    first = [g for g in goals if g.family == 'bgg-opening' and g.target == GEODENS_PI4]
+    return first + [g for g in goals if g not in first]
+
+
 def install_guide_r1():
+    import bgg_openings.planning as planning
     import four_factions.preparation as p
     _guide['qic_reach'] = False
     _guide['track_income'] = False
+    if not getattr(planning.goals, '_guide_r1', False):
+        inner_opening_goals = planning.goals
+
+        def opening_goals(snapshot, remembered=None):
+            goals = inner_opening_goals(snapshot, remembered)
+            if remembered is not None:
+                return goals
+            return geodens_pi4_order(snapshot, goals)
+        opening_goals.__wrapped__ = getattr(inner_opening_goals, '__wrapped__', inner_opening_goals)
+        opening_goals._guide_r1 = True
+        planning.goals = opening_goals
     if not getattr(p.Policies.rank, '_guide_r1', False):
         inner_rank = p.Policies.rank
 
