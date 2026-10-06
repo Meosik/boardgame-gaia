@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "사용자 요청(2026-10-06, 새 시드 6쌍): A = 실서버 hard(geodens_guide), B = guide_r1_charge3 = 035의 B(guide_r1) + 셋업에서 아직 배치가 남은 상대의 빈 고향 행성 옆 + 연구 단계 이중 계산 제거(경제·과학 수입) + 기오덴 1PI+4M 조건부 우선 + 기오덴 연구 순서(BGG 오프닝 글: 아카데미면 경제·과학, 의회면 트랙 지정 없음) + 0–3라운드 비교를 4라운드 시작까지 두고 VP 대신 충전(LF 가격)으로 평가. 평가는 1·2라운드 플레이 위주(사용자).",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-cap20.json",
+  "pairs": 6,
+  "comparisons": 2
+}
