@@ -272,6 +272,17 @@
      `select_forecast`가 비교값을 무시하는 기존 약점이 그대로. 결정 46: Rebellion 함대 입장(VP 9→4)이 기본 순위 1위(+3.00),
      이후 3라운드 끝까지 VP 4. p001에서도 B팔 Xenos가 함대 입장으로 VP 13→1. B팔은 함대 입장 VP 비용을 남은 라운드 함대
      액션 가치(2충전/라운드)로 보상받는다고 보는 듯 — 확인 필요. Geodens B는 라운드마다 건설 1–2회로 적음.
+     **경제 트랙 편향(사용자 2026-10-06, "다들 경제 트랙 올린다, 기오덴마저. 확실히 고쳐야")**: `tools/research_counts.py`
+     (1–3R 연구 진보 수, 팔·종족·트랙별). 035 B: Eco+Sci가 연구의 64%(Geo Eco 8·Sci 9·TF 4). A(hard)도 Taklons Eco 19/23,
+     Xenos Eco 10(033 24쌍: Tak Eco 53, Xenos Eco 35) — A는 동결 값의 수입×남은 라운드 항 때문으로 추정, 아직 손대지 않음.
+     B 원인: `guide_potential`이 연구 1칸을 16충전(LF01 "연구 진보 몫 16충전")으로 세고, 경제·과학 칸의 수입도
+     `incomes_value`로 남은 라운드 전부 다시 셈(이중 계산). 테라포밍·항해는 16충전뿐 → Eco/Sci가 늘 이김.
+     예: 035 p003 결정 41 기오덴 기본 순위 Eco 18.83, Sci 18.33, TF 0.00.
+     **수정(guide_r1 4번)**: `_guide['track_income']=False`면 수입에서 경제·과학 트랙 몫을 뺌. 결정 41 재평가: Eco 7.50,
+     Gaia 6.40, Sci 5.00, TF 0.00, 비교에서 가이아(216.3) > Eco 계획(186.0)으로 바뀜. 비교 0 스모크(seed 402485)에서
+     첫 연구가 수정 전 Sci·Sci·Sci → 수정 후 TF·AI·TF. Eco가 기본 순위에 아직 7.5 남은 이유(동결 `research_options` 등)는 미확인.
+     다음 제안(사용자 확인 대기, 큐에 넣지 않음): 수정된 guide_r1(①-b 포함) vs hard 6쌍, `research_counts.py`로 Eco 비율도 같이 봄.
+     A(실서버) 경제 편향은 별도로 동결 값의 수입 항을 확인한 뒤 제안.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)

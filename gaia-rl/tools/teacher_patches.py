@@ -702,7 +702,16 @@ def distinct_search_openings(seed, **kwargs):
 # Xenos (the legacy contextual teacher) gets the same resource prices at the 1.5 anchor.
 
 
-_guide = {'qic_reach': True}   # False: install_guide_r1 (QIC priced once)
+_guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced once)
+          'track_income': True}         # False: install_guide_r1 (research levels priced once)
+
+
+def _track_income(state, player):
+    """The Economy and Science tracks' share of the income vector (four_factions.value.production)."""
+    from four_factions.value import INCOME
+    economy = INCOME['economy'][state['research_board']['economy_research_tile_side']][player['research_tracks']['economy']]
+    science = INCOME['science'][player['research_tracks']['science']]
+    return [a+b for a, b in zip(economy, science)]
 
 
 def guide_potential(state, actor, *, home=None, guide_tracks=False):
@@ -721,7 +730,12 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
         # The frozen teacher's own Brainstone and Gaia-area terms (faction-dependent, unchanged).
         result += {'Area1': .5, 'Area2': 1.5, 'Area3': 4.2, 'Gaia': 0, None: 0}[power['brainstone']]
         result += (.6 if player['faction'] == 'Terrans' else .2)*power['gaia_forming']
-    result += gv.incomes_value(state, v.production(state, player, include_booster=False))
+    income = v.production(state, player, include_booster=False)
+    if not _guide['track_income']:
+        # research_value already prices every level at 16 charges "for the research advance"
+        # (LF01 §2.4), so the Economy/Science levels' income is not counted a second time.
+        income = [a-b for a, b in zip(income, _track_income(state, player))]
+    result += gv.incomes_value(state, income)
     if horizon and (player['passed'] or state['round'] == 0):
         result += gv.booster_value(state, player['booster'])
     elif horizon and _action_phase(state):
@@ -922,6 +936,9 @@ def guide_values_openings_free(seed, **kwargs):
 #    research plans are proposed last. Order only.
 # 3. QIC priced once: planets reachable only by spending QIC no longer add to the expansion and
 #    Gaia opportunity terms (the guide price of a QIC already includes its range use).
+# 4. Research priced once (user 2026-10-06, "다들 경제 트랙만 올린다", 035: Economy+Science 64% of
+#    B research in rounds 1-3, Geodens included): every level is already 16 charges in
+#    research_value, so the Economy/Science levels' income no longer adds again in incomes_value.
 NEXT_TO_OPPONENT = 2
 TERRANS_GAIA_FROM_ROUND = 4
 
@@ -991,6 +1008,7 @@ def guide_r1_scores(snapshot, scores):
 def install_guide_r1():
     import four_factions.preparation as p
     _guide['qic_reach'] = False
+    _guide['track_income'] = False
     if not getattr(p.Policies.rank, '_guide_r1', False):
         inner_rank = p.Policies.rank
 
