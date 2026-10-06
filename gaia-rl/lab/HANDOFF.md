@@ -376,6 +376,9 @@
      AI 쏠림 지속 여부 미확인, charge_rounds도 권한 밖. 사이클 문서 `039-guide-r1-charge3-lf-more.md`. hard 유지, 배포 제안 없음.
      다음 제안(사용자 확인 대기, 큐에 넣지 않음): 값 추가는 멈추고 원인 분리 — ① hard + guide_values만 vs hard 6쌍
      (034부터의 공통 부품) ② hard + charge3(4R 충전 평가)만 vs hard 6쌍. 병행: 기오덴 B 32점 판 1·2R 결정 분석.
+     **사용자 지시(2026-10-07, 039 보고 뒤)**: "점수 체크하지 말라니까 다음부터는 충전량만 재" — A/B 결과·채택 판단은
+     최종 점수 없이 1–3R 충전량(`charge_rounds.py`)만으로 한다. 039 위 판정(점수 기준)은 무효, 충전량 측정 대기.
+     봇은 charge_rounds 권한이 없으므로 lab 결과에 충전표를 자동으로 넣거나 봇 허용 목록에 추가해야 함(사용자 결정 대기).
      사용자가 직접 돌릴 집계: `.venv/bin/python tools/research_counts.py ~/projects/gaia-lab/gaia-rl/runs/lab-039-guide-r1-charge3-lf-more`,
      `.venv/bin/python tools/charge_rounds.py <같은 run>`(gaia-rl에서).
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
