@@ -407,6 +407,14 @@
      그때 보유 VP, `charge_rounds`는 끊긴 판의 마지막 상태로 잼. 041부터 적용(약 2배 빠름). 최종 점수·4–6R 리플레이는 없어짐.
      **1R 아카데미(사용자 질문)**: 040 48좌석 중 1R AC 1번(Xenos A). RL은 거의 전부 1R. 주원인은 자원: 연구소 뒤 예) 테란 o3 c4 q1,
      타클론 o2 c5 — AC(6광석 6돈)에 광석 3–4 부족. 외톨이 교역소 6돈, 광산·가이아 포밍·연구에 먼저 씀, 4파워 광석 2 액션 미사용.
+     추가 원인: 1R 목표는 셋업 첫 배치 결정에서 정해져 끝까지 고정됨(`_bgg_targets`). 040 p005-g1 타클론 B는 셋업에서 1AC+2M을
+     비교했지만 rollout이 연구소 뒤 광석 3 부족(4파워 광석 액션은 남이 선점, QIC는 광산 사거리에 씀) → 1RL+2M으로 분류·고정.
+     **`guide_r1_charge3_lf_more_ac`(사용자 "일단 AC를 올릴 수 있게", 2026-10-07)**: `_guide['academy_r1']` — 1R AC 목표가
+     남아 있으면 업그레이드·자금 수(변환·파워·QIC·타일 액션)만 먼저(새 광산·연구·가이아·함선·패스는 진척 없을 때만), 광석/돈 파워
+     액션을 여는 태우기도 자금으로 침, 1R에 AC를 완성한 비교가 있으면 그 오프닝을 먼저 선택. 순서만, 값 없음.
+     spec `teacher-a-search4-h1-guide-r1-charge3-lf-more-ac-cap20.json`. 1R 스모크(`runs/smoke-academy-r1`, 작업 worktree,
+     A=lf_more, B=…_ac, 시드 465474·455894, ENGINE_FIXES_2 없이) 실행 중 → `tools/academy_rounds.py`로 1R AC 수 확인.
+     다음 제안(확인 대기): lf_more_ac vs lf_more 6쌍(3R 종료), 충전 + 1R AC 수로 판정.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
