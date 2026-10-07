@@ -106,7 +106,7 @@ async fn tutorial_rejects_mismatches_replays_and_recovers_without_public_records
                 index + 2
             }
         );
-        if index == 0 {
+        if index == 1 {
             assert!(!snapshot
                 .tutorial
                 .as_ref()

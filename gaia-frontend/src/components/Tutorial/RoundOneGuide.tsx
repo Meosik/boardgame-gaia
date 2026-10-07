@@ -81,7 +81,7 @@ export function RoundOneGuide({ state }: { state: GameState }) {
           <ul>
             {tutorial.introduction.map(line => <li key={line}>{line}</li>)}
           </ul>
-          <button type="button" onClick={() => setIntro(false)}>첫 광산 짓기</button>
+          <button type="button" onClick={() => setIntro(false)}>첫 수입 받기</button>
         </>
       ) : step ? (
         <>
@@ -93,6 +93,24 @@ export function RoundOneGuide({ state }: { state: GameState }) {
           )}
           <p><strong>{step.instruction}</strong></p>
           <p>{step.reason}</p>
+          <ul aria-label="효과 적용 시점">
+            {step.timings.map(timing => <li key={timing}>{timing}</li>)}
+          </ul>
+          {tutorial.step === 1 && (
+            <button
+              type="button"
+              data-tutorial-target="tutorial:income"
+              onClick={() => useGameStore.getState().actions.sendAction(step.action)}
+            >
+              수입 받기
+            </button>
+          )}
+          {step.action.type === 'Pass' && (
+            <p>
+              고급 기술 7: 연구소 {player.structures.filter(s => s.kind === 'ResearchLab').length}개 × 3점.
+              부스터 8을 반납하고 부스터 1을 선택합니다. 이번 패스로 마지막 순서가 됩니다.
+            </p>
+          )}
           {step.action.type === 'ChargePower' && charge && (
             <figure className="tutorial-power-flow" aria-label="파워 충전 전후">
               <div className="tutorial-power-bowls">
@@ -170,6 +188,54 @@ export function RoundOneGuide({ state }: { state: GameState }) {
           <a href="?tutorial=1">행동 설명 보기</a>
           {' · '}
           <button type="button" onClick={quit}>로비로</button>
+        </>
+      )}
+      {!intro && (
+        <>
+          {tutorial.feedback.scores.length > 0 && (
+            <ul aria-label="점수 출처" role="status">
+              {tutorial.feedback.scores.map((score, index) => (
+                <li key={index}>
+                  {score.amount > 0 ? '+' : ''}{score.amount}점 · {score.source}
+                </li>
+              ))}
+            </ul>
+          )}
+          {tutorial.feedback.pass.length > 0 && (
+            <ul aria-label="패스 계산 내역">
+              {tutorial.feedback.pass.map(line => <li key={line}>{line}</li>)}
+            </ul>
+          )}
+          {tutorial.income.filter(income => income.round === state.round).map(income => (
+            <details key={income.round} open>
+              <summary>{income.round}라운드 수입 내역 · 수입 때마다</summary>
+              <table>
+                <caption>출처별 실제 수입 (충전은 인쇄된 충전량)</caption>
+                <thead>
+                  <tr>
+                    <th>출처</th>
+                    {['광석', '크레딧', '지식', 'QIC', '충전', '새 토큰', '점수'].map(label => (
+                      <th key={label}>{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {income.rows.map(row => (
+                    <tr key={row.source}>
+                      <th>{row.source}</th>
+                      {row.amounts.map((amount, index) => <td key={index}>{amount}</td>)}
+                    </tr>
+                  ))}
+                  <tr>
+                    <th>합계</th>
+                    {Array.from({ length: 7 }, (_, index) => (
+                      <td key={index}>{income.rows.reduce((sum, row) => sum + row.amounts[index], 0)}</td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </details>
+          ))}
         </>
       )}
       {!intro && tutorial.opponents.length > 0 && (

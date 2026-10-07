@@ -119,7 +119,7 @@ export function WaitingRoomView({ onGameStart, onFactionSelect, onLeaveRoom }: P
           }
           // A `GameState` exists once all four seats ready up — that's
           // "faction selection started" until `phase` moves past `Setup`.
-          if (typeof state.phase === 'object' && 'Setup' in state.phase) {
+          if (!state.tutorial && typeof state.phase === 'object' && 'Setup' in state.phase) {
             actions.setRoomInfo({ roomState: 'faction_selection' });
             onFactionSelect();
           } else {

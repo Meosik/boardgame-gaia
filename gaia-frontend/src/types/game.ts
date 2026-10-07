@@ -374,11 +374,14 @@ export interface BiddingState {
 
 // ── Game State ────────────────────────────────────────────────────────────────
 
+export type TutorialTiming = '즉시 1회' | '수입 때마다' | '~할 때마다' | '패스할 때' | '라운드당 1회 행동';
+
 export interface TutorialStep {
   title: string;
   instruction: string;
   reason: string;
   target: string;
+  timings: TutorialTiming[];
   action: GameAction;
 }
 
@@ -401,6 +404,11 @@ export interface TutorialState {
   opponents: { player: PlayerId; action: GameAction; description: string }[];
   final_scores: TutorialFinalScore[] | null;
   final_tiles: { tile_id: number; scores: [PlayerId, number][] }[];
+  income: { round: number; rows: { source: string; amounts: number[] }[] }[];
+  feedback: {
+    scores: { amount: number; source: string; reason: Record<string, unknown> | string | null }[];
+    pass: string[];
+  };
 }
 
 export interface GameState {

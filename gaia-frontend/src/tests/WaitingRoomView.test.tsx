@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { WaitingRoomView } from '../components/GameLobby/WaitingRoomView';
+import fixture from './fixtures/tutorial-round1.json';
+import { decodeHexCoordinates } from '../api/websocket';
 import { useRoomStore } from '../store/roomStore';
 import type { GameSetup, GameState, ServerMessage } from '../types/game';
 
@@ -77,6 +79,29 @@ beforeEach(() => {
 });
 
 describe('WaitingRoomView message-batch handling', () => {
+  it('resumes the tutorial before first income directly on the game board', async () => {
+    socket.messages = [{
+      type: 'snapshot',
+      protocol_version: 1,
+      schema_hash: '0'.repeat(64),
+      revision: 1,
+      state: decodeHexCoordinates(structuredClone(fixture.initial)) as GameState,
+    }];
+    const onGameStart = vi.fn();
+    const onFactionSelect = vi.fn();
+    await act(async () => {
+      render(
+        <WaitingRoomView
+          onGameStart={onGameStart}
+          onFactionSelect={onFactionSelect}
+          onLeaveRoom={vi.fn()}
+        />,
+      );
+    });
+    expect(onGameStart).toHaveBeenCalledOnce();
+    expect(onFactionSelect).not.toHaveBeenCalled();
+  });
+
   it('still detects a snapshot carrying a real GameState even when a lobby_state broadcast arrives alongside it in the same batch', async () => {
     // Reproduces the reported bug: `handle_player_ready` (gaia-server)
     // broadcasts a `snapshot` immediately followed by a `lobby_state` for

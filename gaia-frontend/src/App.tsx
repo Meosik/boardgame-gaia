@@ -1666,7 +1666,11 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             <SidebarTurnControls
               player={me}
               isMyTurn={coach ? coach.enabled : isMyActionTurn}
-              onFreeAction={(kind) => gameActions.sendAction({ type: 'FreeAction', kind, count: 1 })}
+              onFreeAction={(kind) => {
+                const expected = gameState.tutorial && currentTutorialStep(gameState.tutorial)?.action;
+                const count = expected?.type === 'FreeAction' && expected.kind === kind ? expected.count : 1;
+                gameActions.sendAction({ type: 'FreeAction', kind, count });
+              }}
               rangePreviewQic={rangePreviewQic}
               onRangePreviewAdd={() => {
                 setGameNotice(null);

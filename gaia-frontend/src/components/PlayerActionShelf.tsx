@@ -43,6 +43,14 @@ interface ActionTile {
   factionAction?: 'FiraksDowngradeResearchLab' | 'IvitsPlaceSpaceStation';
 }
 
+function tutorialActionTarget(tile: ActionTile): string {
+  if (tile.key === 'booster') return 'booster';
+  if (tile.key.startsWith('standard-')) return `tech:${tile.key.slice(9)}`;
+  if (tile.key.startsWith('advanced-')) return `advanced:${tile.key.slice(9)}`;
+  if (tile.action?.type === 'AcademyQicAction') return 'academy';
+  return `action:${tile.action?.type ?? tile.key}`;
+}
+
 export function PlayerActionShelf({
   id,
   player,
@@ -187,7 +195,7 @@ export function PlayerActionShelf({
               {actionTiles.map((tile) => (
                 <button
                   key={tile.key}
-                  data-tutorial-target={tile.key === 'booster' ? 'booster' : tile.key.startsWith('standard-') ? `tech:${tile.key.slice(9)}` : tile.action?.type === 'AcademyQicAction' ? 'academy' : `action:${tile.action?.type ?? tile.key}`}
+                  data-tutorial-target={tutorialActionTarget(tile)}
                   type="button"
                   className="player-action-tile"
                   data-replay-highlight={replay?.player === player.player_id && (

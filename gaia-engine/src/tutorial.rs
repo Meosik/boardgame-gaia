@@ -16,6 +16,10 @@ pub struct TutorialState {
     pub opponents: Vec<TutorialMove>,
     pub final_scores: Option<[crate::FinalScoreBreakdown; 4]>,
     pub final_tiles: Vec<TutorialFinalTile>,
+    #[serde(default)]
+    pub feedback: TutorialFeedback,
+    #[serde(default)]
+    pub income: Vec<TutorialIncome>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,6 +42,213 @@ pub struct TutorialStep {
     pub reason: String,
     pub target: String,
     pub action: GameAction,
+    #[serde(default)]
+    pub timings: Vec<String>,
+}
+
+/// Amounts are ore, credits, knowledge, QIC, printed charge, new tokens, VP.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TutorialIncomeRow {
+    pub source: String,
+    pub amounts: [i32; 7],
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TutorialIncome {
+    pub round: u8,
+    pub rows: Vec<TutorialIncomeRow>,
+}
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TutorialFeedback {
+    pub scores: Vec<TutorialScore>,
+    pub pass: Vec<String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TutorialScore {
+    pub amount: i32,
+    pub source: String,
+    pub reason: Option<VpReason>,
+}
+
+fn effect_timings(action: &GameAction) -> Vec<String> {
+    use GameAction::*;
+    let labels: &[&str] = match action {
+        ChooseIncomeOrder { .. } => &["수입 때마다"],
+        Pass { .. } => &["패스할 때", "수입 때마다"],
+        PowerAction { .. }
+        | TechTileSpecialAction { .. }
+        | AcademyQicAction
+        | RoundBoosterRangeExploreSpaceship { .. }
+        | SpaceshipCreditTerraform { .. } => &["라운드당 1회 행동"],
+        TwilightReplayFederationToken { .. } => &["라운드당 1회 행동", "즉시 1회"],
+        Upgrade {
+            tech_tile_choice:
+                Some(TechTileChoice::Standard {
+                    tile: TechTile(10), ..
+                }),
+            ..
+        } => &["수입 때마다", "라운드당 1회 행동"],
+        Upgrade {
+            tech_tile_choice: Some(TechTileChoice::Advanced { .. }),
+            ..
+        } => &["즉시 1회", "라운드당 1회 행동", "수입 때마다"],
+        Upgrade {
+            tech_tile_choice: Some(TechTileChoice::LostFleetAdvanced { .. }),
+            ..
+        } => &["패스할 때", "수입 때마다"],
+        Upgrade {
+            to: StructureType::Academy(_),
+            ..
+        } => &["즉시 1회", "라운드당 1회 행동"],
+        Upgrade {
+            tech_tile_choice: Some(_),
+            ..
+        }
+        | ResearchAdvance { .. }
+        | ExamineArtifact { .. }
+        | FormFederation { .. } => &["즉시 1회"],
+        Build { .. } | Upgrade { .. } => &["수입 때마다"],
+        _ => &["즉시 1회"],
+    };
+    let mut timings: Vec<String> = labels.iter().map(|s| (*s).into()).collect();
+    // This scenario fixes round one to the mine scoring tile.
+    if matches!(action, Build { .. } | SpaceshipCreditTerraform { .. }) {
+        timings.push("~할 때마다".into());
+    }
+    timings
+}
+
+/// Read-only Terran income projection for this fixed script, in engine grant order.
+/// Base mine/lab production belongs to the faction board, exposed building slots
+/// to buildings. This deliberately does not execute actions on a modified state.
+pub fn income_breakdown(state: &GameState, round: u8) -> TutorialIncome {
+    let p = &state.players[0];
+    let mut rows = Vec::new();
+    let mut remaining = [
+        15 - i32::from(p.resources.ore),
+        30 - i32::from(p.resources.credits),
+        15 - i32::from(p.resources.knowledge),
+    ];
+    let mut add = |source: String, mut amounts: [i32; 7]| {
+        for i in 0..3 {
+            amounts[i] = amounts[i].min(remaining[i].max(0));
+            remaining[i] -= amounts[i];
+        }
+        rows.push(TutorialIncomeRow { source, amounts });
+    };
+    for track in [ResearchTrack::Economy, ResearchTrack::Science] {
+        let level = p.research_tracks.get(track);
+        if level > 0 && level < 5 {
+            if let Some(e) = crate::data::get_level_effect(track.as_str(), level) {
+                let mut amounts = [
+                    i32::from(e.ore),
+                    i32::from(e.credits),
+                    i32::from(e.knowledge),
+                    i32::from(e.qic),
+                    i32::from(e.power_charge),
+                    0,
+                    0,
+                ];
+                if track == ResearchTrack::Economy && matches!(level, 3 | 4) {
+                    if state.research_board.economy_research_tile_side
+                        == EconomyResearchTileSide::Power
+                    {
+                        amounts[1] = 2;
+                        amounts[4] = if level == 3 { 3 } else { 2 };
+                    } else {
+                        amounts[4] = 0;
+                        amounts[6] = 1;
+                    }
+                }
+                add(format!("연구 · {track:?} {level}단계"), amounts);
+            }
+        }
+    }
+    if let Some(Booster(id)) = p.booster {
+        let amounts = match id {
+            1 => [0, 0, 1, 0, 0, 0, 0],
+            8 => [0, 0, 0, 0, 2, 0, 0],
+            _ => [0; 7],
+        };
+        add(format!("부스터 {id}"), amounts);
+    }
+    add("종족 보드 · 기본 광석·지식".into(), [1, 0, 1, 0, 0, 0, 0]);
+    let count = |kind| p.structures.iter().filter(|s| s.kind == kind).count();
+    let mines: i32 = [1, 1, 0, 1, 1, 1, 1, 1]
+        .iter()
+        .take(count(StructureType::Mine))
+        .sum();
+    let credits: i32 = [3, 4, 4, 5]
+        .iter()
+        .take(count(StructureType::TradingStation))
+        .sum();
+    add("건물 · 광산".into(), [mines, 0, 0, 0, 0, 0, 0]);
+    add("건물 · 교역소".into(), [0, credits, 0, 0, 0, 0, 0]);
+    add(
+        "건물 · 연구소".into(),
+        [0, 0, count(StructureType::ResearchLab) as i32, 0, 0, 0, 0],
+    );
+    if count(StructureType::PlanetaryInstitute) > 0 {
+        add("건물 · 의회".into(), [0, 0, 0, 0, 4, 1, 0]);
+    }
+    TutorialIncome { round, rows }
+}
+
+fn score_feedback(
+    before: &GameState,
+    after: &GameState,
+    action: &GameAction,
+    events: &[GameEvent],
+) -> Vec<TutorialScore> {
+    let id = before.players[0].player_id;
+    let mut scores: Vec<_> = events
+        .iter()
+        .filter_map(|event| {
+            if let GameEvent::VpAwarded {
+                player,
+                amount,
+                reason,
+            } = event
+            {
+                if *player != id {
+                    return None;
+                }
+                let source = match reason {
+                    VpReason::RoundTile { tile_id } => {
+                        format!("라운드 목표 타일 {tile_id} · 광산마다 2점")
+                    }
+                    VpReason::TechTile { tile_id } => format!("기술 타일 {tile_id}"),
+                    VpReason::FederationToken { token_kind } => format!("연방 토큰 {token_kind}"),
+                    VpReason::RoundBooster { booster_id } => {
+                        format!("부스터 {booster_id} 패스 보너스")
+                    }
+                    _ => format!("{reason:?}"),
+                };
+                Some(TutorialScore {
+                    amount: *amount,
+                    source,
+                    reason: Some(reason.clone()),
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
+    let difference =
+        after.players[0].vp - before.players[0].vp - scores.iter().map(|s| s.amount).sum::<i32>();
+    if difference != 0 {
+        let source = match action {
+            GameAction::ChargePower { .. } => "파워 충전 비용",
+            GameAction::ExploreSpaceship { .. }
+            | GameAction::RoundBoosterRangeExploreSpaceship { .. } => "함선 탐사 비용",
+            _ => "수입 점수 (IncomeReceived)",
+        };
+        scores.push(TutorialScore {
+            amount: difference,
+            source: source.into(),
+            reason: None,
+        });
+    }
+    scores
 }
 
 fn coord(q: i32, r: i32) -> HexCoord {
@@ -58,6 +269,7 @@ fn tech(id: u8) -> Option<TechTileChoice> {
 pub fn steps() -> Vec<TutorialStep> {
     use GameAction::*;
     let actions = vec![
+        ("1라운드 수입", "수입 받기를 누르세요.", "건물·연구·부스터·종족 보드의 수입을 실제로 받습니다.", "tutorial:income", ChooseIncomeOrder { charge_first: true }),
         (
             "광산 짓기",
             "(-1, 1)에 광산을 지으세요.",
@@ -96,51 +308,23 @@ pub fn steps() -> Vec<TutorialStep> {
             },
         ),
         (
-            "자원 변환 묶음 · 광석 1/5",
+            "자원 변환 묶음 · 광석",
             "파워 3개를 광석 1개로 바꾸세요.",
-            "시작 광석은 상한 15입니다. 건설에 필요한 광석을 변환으로 보충하며 차례는 유지됩니다.",
-            "free:PowerToOre",
-            FreeAction { kind: FreeActionKind::PowerToOre, count: 1 },
-        ),
-        (
-            "자원 변환 묶음 · 광석 2/5",
-            "파워 3개를 광석 1개로 바꾸세요.",
-            "시작 광석은 상한 15입니다. 건설에 필요한 광석을 변환으로 보충하며 차례는 유지됩니다.",
-            "free:PowerToOre",
-            FreeAction { kind: FreeActionKind::PowerToOre, count: 1 },
-        ),
-        (
-            "자원 변환 묶음 · 광석 3/5",
-            "파워 3개를 광석 1개로 바꾸세요.",
-            "시작 광석은 상한 15입니다. 건설에 필요한 광석을 변환으로 보충하며 차례는 유지됩니다.",
-            "free:PowerToOre",
-            FreeAction { kind: FreeActionKind::PowerToOre, count: 1 },
-        ),
-        (
-            "자원 변환 묶음 · 광석 4/5",
-            "파워 3개를 광석 1개로 바꾸세요.",
-            "시작 광석은 상한 15입니다. 건설에 필요한 광석을 변환으로 보충하며 차례는 유지됩니다.",
-            "free:PowerToOre",
-            FreeAction { kind: FreeActionKind::PowerToOre, count: 1 },
-        ),
-        (
-            "자원 변환 묶음 · 광석 5/5",
-            "파워 3개를 광석 1개로 바꾸세요.",
-            "시작 광석은 상한 15입니다. 건설에 필요한 광석을 변환으로 보충하며 차례는 유지됩니다.",
+            "자유 행동으로 건설에 필요한 광석을 보충합니다.",
             "free:PowerToOre",
             FreeAction { kind: FreeActionKind::PowerToOre, count: 1 },
         ),
         (
             "자원 변환 묶음 · 지식",
-            "지식 1개를 크레딧 1개로 바꾸세요.",
+            "지식 2개를 크레딧 2개로 한 번에 바꾸세요.",
             "세 종류의 변환을 해 보았습니다. 오른쪽 자유 행동 목록에서 전체 변환 비율을 확인하세요.",
             "free:KnowledgeToCredit",
-            FreeAction { kind: FreeActionKind::KnowledgeToCredit, count: 1 },
+            FreeAction { kind: FreeActionKind::KnowledgeToCredit, count: 2 },
         ),
         (
             "연구소와 기술",
             "(-1, 1)을 연구소로 바꾸고 기술 10을 고르세요.",
-            "기술 타일 아래의 경제 연구도 한 칸 오릅니다.",
+            "기술 10은 라운드당 1회 파워 4 충전 행동입니다. 경제 1단계는 다음 수입부터 크레딧 2와 파워 1 충전을 줍니다. 연구소도 수입 지식을 늘립니다.",
             "hex:-1,1",
             Upgrade {
                 coord: coord(-1, 1),
@@ -167,6 +351,15 @@ pub fn steps() -> Vec<TutorialStep> {
             },
         ),
         (
+            "기술 특수 행동",
+            "기술 10의 파워 4 충전을 쓰세요.",
+            "이 특수 행동은 라운드마다 한 번 쓸 수 있습니다.",
+            "tech:10",
+            TechTileSpecialAction {
+                tile: TechTileRef::Standard { tile: TechTile(10) },
+            },
+        ),
+        (
             "파워 태우기",
             "2구역 파워를 한 번 태우세요.",
             "3구역은 3파워라 다음 4파워 행동을 못 합니다. 2구역 토큰 2개 중 하나를 영원히 버리고 하나를 3구역으로 옮겨 4파워를 만드세요.",
@@ -184,13 +377,26 @@ pub fn steps() -> Vec<TutorialStep> {
             PowerAction { id: 3, coord: None },
         ),
         (
-            "기술 특수 행동",
-            "기술 10의 파워 4 충전을 쓰세요.",
-            "이 특수 행동은 라운드마다 한 번 쓸 수 있습니다.",
-            "tech:10",
-            TechTileSpecialAction {
-                tile: TechTileRef::Standard { tile: TechTile(10) },
+            "연구판 고급 기술",
+            "(3, -5)을 연구소로 바꾸고 과학 고급 기술로 10을 덮은 뒤 테라포밍을 올리세요.",
+            "과학 4단계와 초록 토큰으로 고급 21을 받습니다. 테라포밍 1단계는 즉시 광석 2, 고급 21은 라운드당 1회 광석 3 행동입니다. 10을 덮어 충전 행동은 사라집니다.",
+            "hex:3,-5",
+            Upgrade {
+                coord: coord(3, -5),
+                to: StructureType::ResearchLab,
+                tech_tile_choice: Some(TechTileChoice::Advanced {
+                    track: ResearchTrack::Science,
+                    covered_tile: TechTile(10),
+                    advance_track: Some(ResearchTrack::Terraforming),
+                }),
             },
+        ),
+        (
+            "고급 기술 광석 행동",
+            "고급 기술 21의 광석 3 행동을 쓰세요.",
+            "라운드마다 한 번 광석 3개를 받습니다.",
+            "advanced:21",
+            TechTileSpecialAction { tile: TechTileRef::Advanced { tile: AdvancedTechTile(21) } },
         ),
         (
             "QIC로 거리 늘리기",
@@ -214,13 +420,13 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "QIC 아카데미",
-            "(-1, 1)을 QIC 아카데미로 바꾸고 기술 7을 고르세요.",
-            "지식 아카데미와 달리 매 라운드 QIC 행동을 얻습니다.",
+            "(-1, 1)을 QIC 아카데미로 바꾸고 기술 4를 고르세요.",
+            "기술 4로 즉시 광석 1·QIC 1을 받습니다. 아카데미는 라운드당 1회 QIC 행동을 엽니다.",
             "hex:-1,1",
             Upgrade {
                 coord: coord(-1, 1),
                 to: StructureType::Academy(AcademyType::Qic),
-                tech_tile_choice: tech(7),
+                tech_tile_choice: tech(4),
             },
         ),
         (
@@ -281,7 +487,7 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "연방 만들기",
-            "세 건물을 위성 2개로 잇고 연방 토큰 5을 고르세요.",
+            "세 건물을 위성 2개로 잇고 연방 토큰 5를 고르세요.",
             "의회 3 + 아카데미 3 + 광산 1 = 파워 7입니다. 위성마다 토큰 하나를 버립니다.",
             "federation",
             FormFederation {
@@ -295,7 +501,7 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "연방 보상 다시 받기",
-            "Twilight에서 연방 토큰 5을 다시 쓰세요.",
+            "Twilight에서 연방 토큰 5를 다시 쓰세요.",
             "QIC 3으로 보상을 다시 받고 토큰 색은 유지합니다.",
             "ship:Twilight",
             TwilightReplayFederationToken {
@@ -306,30 +512,15 @@ pub fn steps() -> Vec<TutorialStep> {
             },
         ),
         (
-            "연구판 고급 기술",
-            "(3, -5)을 연구소로 바꾸고 과학 고급 기술로 10을 덮은 뒤 테라포밍을 올리세요.",
-            "과학 4단계와 초록 연방 토큰이 필요합니다. 토큰은 회색이 됩니다.",
-            "hex:3,-5",
-            Upgrade {
-                coord: coord(3, -5),
-                to: StructureType::ResearchLab,
-                tech_tile_choice: Some(TechTileChoice::Advanced {
-                    track: ResearchTrack::Science,
-                    covered_tile: TechTile(10),
-                    advance_track: Some(ResearchTrack::Terraforming),
-                }),
-            },
-        ),
-        (
             "확장 고급 기술",
-            "(2, -4)를 연구소로 바꾸고 확장 고급 기술로 7을 덮은 뒤 테라포밍을 올리세요.",
-            "함선 3척과 초록 연방 토큰이 필요합니다. 두 번째 토큰도 회색이 됩니다.",
+            "(2, -4)를 연구소로 바꾸고 확장 고급 기술로 4를 덮은 뒤 테라포밍을 올리세요.",
+            "함선 3척과 초록 토큰으로 고급 7을 받습니다. 패스할 때 연구소마다 3점입니다. 두 번째 토큰도 회색이 됩니다.",
             "hex:2,-4",
             Upgrade {
                 coord: coord(2, -4),
                 to: StructureType::ResearchLab,
                 tech_tile_choice: Some(TechTileChoice::LostFleetAdvanced {
-                    covered_tile: TechTile(7),
+                    covered_tile: TechTile(4),
                     advance_track: Some(ResearchTrack::Terraforming),
                 }),
             },
@@ -352,6 +543,7 @@ pub fn steps() -> Vec<TutorialStep> {
                 instruction: instruction.into(),
                 reason: reason.into(),
                 target: target.into(),
+                timings: effect_timings(&action),
                 action,
             },
         )
@@ -381,34 +573,48 @@ pub fn initial_state(room_code: &str, ids: [PlayerId; 4]) -> Result<GameState, R
     ]) {
         RuleEngine::apply_setup_action(&mut state, id, SetupAction::SelectFaction { faction })?;
     }
-    state.phase = GamePhase::ActionPhase { active_player: 0 };
+    state.phase = GamePhase::Setup(SetupPhase::Complete);
     state.round = 1;
+    state.round_tiles[0] = RoundTile::from_id(1);
     state.boosters = vec![Booster(1), Booster(2), Booster(3)];
     state.tutorial = Some(TutorialState { script_id: SCRIPT_ID.into(), step: 1, steps: steps(), introduction: vec![
         "4인 + Lost Fleet, 테란으로 1라운드를 진행합니다. 종족·초기 배치·부스터 선택은 마쳤습니다.".into(),
-        "원래 규칙에서는 받지 않는 것: 광석 15, 크레딧 30, 지식 15, QIC 8, 파워 1·2·3구역 각각 2·2·19개, 30점으로 시작합니다.".into(),
+        "원래 규칙에서는 받지 않는 것: 광석 13, 크레딧 19, 지식 7, QIC 8, 파워 1·2·3구역 각각 4·5·4개 (테란 기본 4·4·0에 토큰 5개 추가), 30점으로 시작합니다.".into(),
         "원래 규칙에서는 받지 않는 것: 초록 연방 토큰 4번 1개와 과학 연구 4단계를 미리 받습니다. 지급 토큰의 보상은 시작 자원에 포함했습니다.".into(),
-        "원래 규칙에서는 받지 않는 것: 교역소 3개·광산 1개를 준비했습니다. 부스터 8과 고정 맵을 사용합니다.".into(),
+        "원래 규칙에서는 받지 않는 것: 교역소 3개·광산 1개를 준비했습니다. 부스터 8, 광산마다 2점인 라운드 목표, 과학 고급 21·확장 고급 7을 고정했습니다.".into(),
         "상대 A는 광산, B는 파워 행동을 한 번씩 하고 모두 일찍 패스합니다. 모든 좌석의 자원은 상한 안에서 시작합니다.".into(),
         "라운드 점수는 매 라운드 목표 타일로 바로 받습니다. 마지막에는 최종 점수 타일 2개도 계산해 봅니다.".into(),
-    ], opponents: Vec::new(), final_scores: None, final_tiles: Vec::new() });
+    ], opponents: Vec::new(), final_scores: None, final_tiles: Vec::new(), feedback: TutorialFeedback::default(), income: Vec::new() });
     for (index, player) in state.players.iter_mut().enumerate() {
         player.booster = Some(Booster([8, 4, 6, 7][index]));
         player.resources.ore = match index {
-            0 => 15,
+            0 => 13,
             1 => 10,
             _ => 4,
         };
-        player.resources.credits = if index == 0 { 30 } else { 15 };
-        player.resources.knowledge = if index == 0 { 15 } else { 3 };
+        player.resources.credits = if index == 0 { 19 } else { 15 };
+        player.resources.knowledge = if index == 0 { 7 } else { 3 };
         player.resources.qic = if index == 0 { 8 } else { 1 };
-        // Terrans need 19 charged tokens for conversions and the power action,
-        // plus four tokens to demonstrate charging and burning (23 total).
-        player.resources.power.bowl1 = 2;
-        player.resources.power.bowl2 = 2;
-        player.resources.power.bowl3 = if index == 0 { 19 } else { 4 };
+        player.resources.power.bowl1 = if index == 0 { 4 } else { 2 };
+        player.resources.power.bowl2 = if index == 0 { 5 } else { 2 };
+        player.resources.power.bowl3 = 4;
         player.vp = 30;
     }
+    // Place the replacement standard tile under the same Gaia track as the old tile.
+    for tile in state
+        .research_board
+        .tech_tiles
+        .iter_mut()
+        .chain(state.research_board.tech_tile_slots.iter_mut().flatten())
+    {
+        tile.0 = match tile.0 {
+            4 => 7,
+            7 => 4,
+            other => other,
+        };
+    }
+    state.research_board.advanced_tech_tiles[5] = Some(AdvancedTechTile(21));
+    state.research_board.lost_fleet_advanced_tech_tile = Some(AdvancedTechTile(7));
     state.players[0].research_tracks.science = 4;
     state.players[0].federation_tokens.push(FederationToken(4));
     if let Some(index) = state
@@ -466,12 +672,12 @@ pub fn initial_state(room_code: &str, ids: [PlayerId; 4]) -> Result<GameState, R
 
 /// Opponents demonstrate one action each, then pass at their next opportunity.
 fn opponent_action(_state: &GameState, seat: usize, step: usize) -> Result<GameAction, RuleError> {
-    if seat == 1 && step == 1 {
+    if seat == 1 && step == 2 {
         return Ok(GameAction::Build {
             coord: coord(-2, 0),
         });
     }
-    if seat == 2 && step <= 2 {
+    if seat == 2 && step <= 3 {
         return Ok(GameAction::PowerAction { id: 4, coord: None });
     }
     Ok(GameAction::Pass {
@@ -538,7 +744,34 @@ pub fn apply_step(
     }
     let mut next = state.clone();
     let mut opponents = Vec::new();
-    let mut events = RuleEngine::apply_action(&mut next, player, action)?;
+    let mut incomes = Vec::new();
+    if step == 1 {
+        incomes.push(income_breakdown(&next, 1));
+    }
+    let applied_action = action.clone();
+    let mut pass = Vec::new();
+    if let GameAction::Pass { booster_id } = &action {
+        let labs = next.players[0]
+            .structures
+            .iter()
+            .filter(|s| s.kind == StructureType::ResearchLab)
+            .count();
+        pass.push(format!(
+            "고급 기술 7: 연구소 {labs}개 × 3점 = {}점",
+            labs * 3
+        ));
+        pass.push(format!(
+            "부스터 8 반납 (패스 점수 없음) → 부스터 {} 선택",
+            booster_id.unwrap_or(0)
+        ));
+    }
+    // The first card uses ChooseIncomeOrder as its transport intent. Setup::Complete
+    // has no GameAction; the public transition validates the phase and applies income.
+    let mut events = if step == 1 {
+        RuleEngine::start_first_round(&mut next)?
+    } else {
+        RuleEngine::apply_action(&mut next, player, action)?
+    };
     for _ in 0..100 {
         let pending = match &next.phase {
             GamePhase::ChargePowerPending { queue, .. } => queue
@@ -558,6 +791,7 @@ pub fn apply_step(
                 }
             }
             GamePhase::RoundScoring { .. } => {
+                incomes.push(income_breakdown(&next, next.round + 1));
                 events.extend(RuleEngine::advance_to_next_round(&mut next)?);
                 continue;
             }
@@ -573,7 +807,7 @@ pub fn apply_step(
             _ => None,
         };
         let Some((id, action)) = pending else { break };
-        if step == 1 && id == player {
+        if step == 2 && id == player {
             break;
         }
         if next.round == 2 && matches!(next.phase, GamePhase::ActionPhase { .. }) {
@@ -608,7 +842,20 @@ pub fn apply_step(
     } else {
         Vec::new()
     };
+    if !pass.is_empty() {
+        pass.push(format!(
+            "다음 라운드 순서: {}",
+            next.turn_order
+                .iter()
+                .filter_map(|id| next.player(*id).map(|p| p.nickname.clone()))
+                .collect::<Vec<_>>()
+                .join(" → ")
+        ));
+    }
+    let scores = score_feedback(state, &next, &applied_action, &events);
     if let Some(tutorial) = &mut next.tutorial {
+        tutorial.feedback = TutorialFeedback { scores, pass };
+        tutorial.income.extend(incomes);
         tutorial.final_tiles = final_tiles;
         tutorial.step = if final_scores.is_some() {
             script.len() + 2
@@ -623,9 +870,129 @@ pub fn apply_step(
 }
 
 #[cfg(test)]
-#[allow(clippy::expect_used)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
+    #[test]
+    fn effect_timings_cover_actual_rewards_and_future_abilities() {
+        let script = steps();
+        let expected: &[&[&str]] = &[
+            &["수입 때마다"],
+            &["수입 때마다", "~할 때마다"],
+            &["즉시 1회"],
+            &["수입 때마다"],
+            &["즉시 1회"],
+            &["즉시 1회"],
+            &["즉시 1회"],
+            &["수입 때마다", "라운드당 1회 행동"],
+            &["즉시 1회"],
+            &["즉시 1회"],
+            &["라운드당 1회 행동"],
+            &["즉시 1회"],
+            &["라운드당 1회 행동"],
+            &["즉시 1회", "라운드당 1회 행동", "수입 때마다"],
+            &["라운드당 1회 행동"],
+            &["수입 때마다", "~할 때마다"],
+            &["수입 때마다"],
+            &["즉시 1회", "라운드당 1회 행동"],
+            &["라운드당 1회 행동"],
+            &["즉시 1회"],
+            &["즉시 1회"],
+            &["라운드당 1회 행동"],
+            &["라운드당 1회 행동", "~할 때마다"],
+            &["즉시 1회"],
+            &["즉시 1회"],
+            &["라운드당 1회 행동", "즉시 1회"],
+            &["패스할 때", "수입 때마다"],
+            &["패스할 때", "수입 때마다"],
+        ];
+        assert_eq!(script.len(), expected.len());
+        for (step, expected) in script.iter().zip(expected) {
+            assert_eq!(&step.timings, expected, "{}", step.title);
+        }
+        let mut kinds = Vec::new();
+        for step in script {
+            if let GameAction::FreeAction { kind, count } = step.action {
+                assert!(
+                    !kinds.contains(&kind),
+                    "repeated conversion must be grouped"
+                );
+                if kind == FreeActionKind::KnowledgeToCredit {
+                    assert_eq!(count, 2);
+                }
+                kinds.push(kind);
+            }
+        }
+    }
+
+    #[test]
+    fn income_and_score_feedback_match_engine_events() {
+        let mut state = initial_state("TUTOR", [0, 1, 2, 3]).expect("scenario");
+        let mut rounds = Vec::new();
+        let mut costs = 0;
+        for step in steps() {
+            let before = state.players[0].vp;
+            let events = apply_step(&mut state, 0, step.action.clone()).expect("step");
+            let tutorial = state.tutorial.as_ref().expect("tutorial");
+            assert_eq!(
+                tutorial
+                    .feedback
+                    .scores
+                    .iter()
+                    .map(|s| s.amount)
+                    .sum::<i32>(),
+                state.players[0].vp - before
+            );
+            for score in &tutorial.feedback.scores {
+                if score.reason.is_none() {
+                    assert!(matches!(
+                        step.action,
+                        GameAction::ChargePower { .. }
+                            | GameAction::ExploreSpaceship { .. }
+                            | GameAction::RoundBoosterRangeExploreSpaceship { .. }
+                    ));
+                    assert_eq!(score.amount, state.players[0].vp - before);
+                    costs += 1;
+                } else {
+                    assert!(events.iter().any(|event| matches!(event, GameEvent::VpAwarded { player: 0, amount, reason } if *amount == score.amount && serde_json::to_value(reason).unwrap() == serde_json::to_value(&score.reason).unwrap())));
+                }
+            }
+            for event in events {
+                if let GameEvent::IncomeReceived {
+                    player: 0,
+                    round,
+                    ore,
+                    credits,
+                    knowledge,
+                    qic,
+                    power_charge,
+                    power_tokens,
+                    vp,
+                } = event
+                {
+                    let income = tutorial
+                        .income
+                        .iter()
+                        .find(|i| i.round == round)
+                        .expect("income card");
+                    let total: [i32; 7] = std::array::from_fn(|index| {
+                        income.rows.iter().map(|r| r.amounts[index]).sum()
+                    });
+                    assert_eq!(
+                        total,
+                        [ore, credits, knowledge, qic, power_charge, power_tokens, vp]
+                            .map(i32::from),
+                        "round {round}"
+                    );
+                    rounds.push(round);
+                }
+            }
+        }
+        assert_eq!(rounds, vec![1, 2]);
+        assert_eq!(costs, 4);
+        assert!(state.tutorial.as_ref().unwrap().feedback.pass[0].contains("2개 × 3점 = 6점"));
+    }
+
     #[test]
     fn mismatched_actions_and_targets_leave_state_unchanged() {
         let mut state = initial_state("TUTOR", [0, 1, 2, 3]).expect("scenario");
@@ -725,8 +1092,12 @@ mod tests {
                 )
                 .is_err());
             }
-            RuleEngine::apply_action(&mut direct, 0, step.action.clone())
-                .expect("direct player action");
+            if index == 0 {
+                RuleEngine::start_first_round(&mut direct).expect("first income");
+            } else {
+                RuleEngine::apply_action(&mut direct, 0, step.action.clone())
+                    .expect("direct player action");
+            }
             assert_resource_caps(&direct);
 
             apply_step(&mut state, 0, step.action)
@@ -755,7 +1126,7 @@ mod tests {
                 RuleEngine::advance_to_next_round(&mut direct).expect("round transition");
             }
             assert_resource_caps(&state);
-            if index >= 2 && state.round == 1 {
+            if index >= 3 && state.round == 1 {
                 assert!(state.players[1..].iter().all(|p| p.passed));
             }
             let mut actual = state.clone();
@@ -775,7 +1146,7 @@ mod tests {
         assert_eq!(player.gray_federation_tokens.len(), 2);
         assert!(player.federation_tokens.is_empty());
         assert_eq!(player.explored_ships, vec![0, 2, 3]);
-        assert_eq!(player.covered_tech_tiles, vec![TechTile(10), TechTile(7)]);
+        assert_eq!(player.covered_tech_tiles, vec![TechTile(10), TechTile(4)]);
         assert!(state.research_board.advanced_tech_tiles[5].is_none());
         assert!(state.research_board.lost_fleet_advanced_tech_tile.is_none());
         assert_eq!(
