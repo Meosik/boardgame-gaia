@@ -301,6 +301,30 @@ def timing_table(stats):
     return '\n'.join(rows)
 
 
+def charges(run_dir, env):
+    """charge_rounds.py over the run: {'factions': {...}, 'games': [...]}, or {'error': ...}.
+
+    User (2026-10-07): A/B results are judged only by charges gained in rounds 1-3."""
+    out = run_dir/'charges.json'
+    done = subprocess.run([sys.executable, 'tools/charge_rounds.py', str(run_dir), '--json', str(out)],
+                          cwd=GAIA_RL, env=env, capture_output=True, text=True)
+    if done.returncode or not out.exists():
+        return {'error': (done.stderr or done.stdout).strip()[-800:]}
+    return json.loads(out.read_text())
+
+
+def charges_table(data):
+    if 'error' in data:
+        return f"충전량 계산 실패\n\n```\n{data['error']}\n```"
+    rows = ['| 종족 | 쌍 | B−A 충전 | 95% 신뢰구간 | A 평균 | B 평균 |', '|---|---:|---:|---|---:|---:|']
+    for faction, r in data['factions'].items():
+        low, high = r['ci95']
+        a, b = (f"{r[arm]:.1f}" if arm in r else '' for arm in 'AB')
+        name = '**전체 (좌석 평균)**' if faction == 'ALL' else faction
+        rows.append(f"| {name} | {r['pairs']} | {r['mean_B_minus_A']:+.1f} | [{low:+.1f}, {high:+.1f}] | {a} | {b} |")
+    return '\n'.join(rows)
+
+
 def fresh_dir(path):
     """A crashed earlier attempt leaves a partial directory; keep it aside, never reuse it."""
     if path.exists():
@@ -339,10 +363,12 @@ def run_ab(name, spec, jobs):
     data['summary'] = {k: v for k, v in summary.items() if k != 'pairs'}
     data['timing'] = timing(out)
     data['final_scores'] = final_scores(out)
+    data['charges'] = charges(out, env)
     body = (f"A: `{spec['teacher_a']}`\nB: `{spec['teacher_b']}`\n"
             f"시드 {len(seeds)}개 × 좌석 교대 2판 (비교 기본값 {spec.get('comparisons', 2)}, 스펙 파일에 있으면 그 값)\n\n"
-            f"{(out/'report.md').read_text().strip()}\n\n평균 총점 (같은 판의 상대와 겨룬 절대 점수)\n\n"
-            f"{scores_table(data['final_scores'])}\n\n결정 시간\n\n{timing_table(data['timing'])}")
+            f"**1–3라운드 충전량 (판정 기준)** — 1R 시작부터 4R 시작까지 얻은 충전, 1점 = 1.5충전\n\n"
+            f"{charges_table(data['charges'])}\n\n결정 시간\n\n{timing_table(data['timing'])}\n\n"
+            f"참고: 오류·미탐색 수와 최종 점수 차이 (판정에 쓰지 않음)\n\n{(out/'report.md').read_text().strip()}")
     return 'done', data, body
 
 

@@ -140,5 +140,15 @@ class FinalScoreTests(unittest.TestCase):
         self.assertIn('| **전체** | 102.5 | 67.5 | 120 |', text)
 
 
+class ChargeTableTests(unittest.TestCase):
+    def test_charge_table_lists_factions_then_seat_mean(self):
+        text = lab.charges_table({'factions': {
+            'Taklons': {'pairs': 6, 'A': 115.9, 'B': 158.5, 'mean_B_minus_A': 42.6, 'ci95': [10.2, 74.9]},
+            'ALL': {'pairs': 6, 'mean_B_minus_A': 29.7, 'ci95': [0.2, 59.2]}}})
+        self.assertIn('| Taklons | 6 | +42.6 | [+10.2, +74.9] | 115.9 | 158.5 |', text)
+        self.assertIn('| **전체 (좌석 평균)** | 6 | +29.7 | [+0.2, +59.2] |  |  |', text)
+        self.assertIn('충전량 계산 실패', lab.charges_table({'error': 'boom'}))
+
+
 if __name__ == '__main__':
     unittest.main()

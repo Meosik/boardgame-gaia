@@ -381,7 +381,9 @@
      **039 충전량(사용자가 돌림)**: +29.7 [+0.2, +59.2] 유의(겨우). Tak +42.6 [+10.2, +74.9] 유의, Geo +57.0(B 58–219로 편차 큼),
      Ter +18.0, Xenos +1.3. B에 유리한 척도(charge3가 최적화하는 값)지만 B 설정은 실행 전에 정해 공정한 시험. 6쌍이라 힘이 작음.
      다음 제안(사용자 확인 대기, 큐에 넣지 않음): 같은 A/B를 새 시드로 재확인(충전량으로 판정), 유의하면 hard 교사 교체 배포 제안.
-     봇은 charge_rounds 권한이 없으므로 lab 결과에 충전표를 자동으로 넣거나 봇 허용 목록에 추가해야 함(사용자 결정 대기).
+     봇은 charge_rounds 권한이 없어 사용자 결정으로 lab이 자동으로 넣게 함: `lab.py run_ab`가 끝나면 `charge_rounds.py --json
+     runs/lab-<이름>/charges.json`을 돌려 결과 md 맨 앞에 충전표(판정 기준), JSON `charges`에 저장. 최종 점수는 md 끝 "참고"로만.
+     봇 권한 밖이라 test_lab.py를 못 돌림 — 다음 실험 결과 md에 충전표가 나오는지 확인할 것.
      사용자가 직접 돌릴 집계: `.venv/bin/python tools/research_counts.py ~/projects/gaia-lab/gaia-rl/runs/lab-039-guide-r1-charge3-lf-more`,
      `.venv/bin/python tools/charge_rounds.py <같은 run>`(gaia-rl에서).
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).

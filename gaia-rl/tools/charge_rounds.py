@@ -66,10 +66,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('run_dir', type=Path)
     parser.add_argument('--games', action='store_true', help='Also print every game')
+    parser.add_argument('--json', type=Path, help='Also write the table and games here (lab.py reads it)')
     args = parser.parse_args()
     import teacher_patches as tp
     tp._guide.update(qic_reach=False, track_income=False, lf_tables=True)
     gained = defaultdict(dict)   # (pair, faction) -> {arm: charges gained}
+    games = []
     for game_dir in sorted(args.run_dir.expanduser().glob('pair-*/game-*')):
         result, values = game_charges(game_dir)
         if values is None:
@@ -84,11 +86,13 @@ def main():
             arm = 'A' if seat in result['a_seats'] else 'B'
             gained[(game_dir.parent.name, factions[seat])][arm] = r4-r1
             line.append(f'{factions[seat]}({arm}) {r4-r1:.0f}')
+        games.append(f'{game_dir.parent.name}/{game_dir.name}  ' + ', '.join(line))
         if args.games:
-            print(f'{game_dir.parent.name}/{game_dir.name}  ' + ', '.join(line))
+            print(games[-1])
     print('Charges gained, rounds 1-3 (round-1 start to round-4 start, 1 VP = 1.5 charges)')
     print(f"{'faction':<9} {'pairs':>5} {'A':>7} {'B':>7} {'B-A':>7}  95% CI")
     every = defaultdict(list)
+    table = {}
     for faction in sorted({f for _, f in gained}):
         rows = [arms for (_, f), arms in gained.items() if f == faction and len(arms) == 2]
         diffs = [arms['B']-arms['A'] for arms in rows]
@@ -98,10 +102,14 @@ def main():
         mean, (low, high) = ci95(diffs)
         a = sum(r['A'] for r in rows)/len(rows)
         b = sum(r['B'] for r in rows)/len(rows)
+        table[faction] = {'pairs': len(rows), 'A': a, 'B': b, 'mean_B_minus_A': mean, 'ci95': [low, high]}
         print(f'{faction:<9} {len(rows):>5} {a:>7.1f} {b:>7.1f} {mean:>+7.1f}  [{low:+.1f}, {high:+.1f}]')
     seat_means = [sum(d)/len(d) for d in every.values()]
     mean, (low, high) = ci95(seat_means)
+    table['ALL'] = {'pairs': len(seat_means), 'mean_B_minus_A': mean, 'ci95': [low, high]}
     print(f"{'ALL':<9} {len(seat_means):>5} {'':>7} {'':>7} {mean:>+7.1f}  [{low:+.1f}, {high:+.1f}]")
+    if args.json:
+        args.json.write_text(json.dumps({'factions': table, 'games': games}, indent=1)+'\n')
 
 
 if __name__ == '__main__':
