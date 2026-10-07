@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more (hard, 4 comparisons, 20 s cap) with round-1 openings ordered by sheden #4 (SH4-01..07, Geodens included) and Terraforming 0->1 (2 ore) researched when a round-1 academy chain is stuck short of ore (guide_r1_charge3_lf_more_sh).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_sh",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

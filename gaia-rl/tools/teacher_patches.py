@@ -710,7 +710,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'lf_tiles': False,            # True: guide_r1_charge3_lf_tiles (standard tiles 6, 8, 12)
           'charge_vp': False,           # True: guide_r1_charge3_lf_tiles (VP held kept in charge_value)
           'lf_more': False,             # True: guide_r1_charge3_lf_more (see lf_more_value)
-          'academy_r1': False}          # True: guide_r1_charge3_lf_more_ac (see academy_r1)
+          'academy_r1': False,          # True: guide_r1_charge3_lf_more_ac (see academy_r1)
+          'sheden_r1': False}           # True: guide_r1_charge3_lf_more_sh (see SHEDEN_OPENINGS)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -953,9 +954,26 @@ UIQOO_OPENINGS = {
 }
 
 
+# sheden_r1 (user 2026-10-07, "진행해"): SH4-01/03/05/06/07 (sheden #4 종족 별 추천 빌드, end-of-round-1
+# buildings) replace the uiqoo order, Geodens included. 연=RL, 의=PI, 아=AC, 교=TS, N광=N mines
+# ("연4광" = RL + 4 mines or more). Rank 1 then rank 2 then rank 3, each in the article's order:
+#   Terrans: 연4광, 연교2광 / 의교광광 (1R tech federation only), 연2광.
+#   Xenos: 연4광, 연교2광 / 의교광 (1R tech federation only).
+#   Taklons: 연4광 / 아2광, 연교2광.
+#   Geodens: 의4광, 의교2광 / 의2광 / 연4광, 연교2광 (no terraforming action at all).
+# Labels missing from the BGG catalog for a faction are simply never proposed.
+_RL4 = ('1RL+4M', '1RL+5M', '1RL+6M')
+SHEDEN_OPENINGS = {
+    'Terrans': (*_RL4, '1RL+1TS+2M', '1PI+1TS+2M', '1RL+2M'),
+    'Xenos': (*_RL4, '1RL+1TS+2M', '1PI+1TS+1M'),
+    'Taklons': (*_RL4, '1AC+2M', '1RL+1TS+2M'),
+    'Geodens': ('1PI+4M', '1PI+5M', '1PI+1TS+2M', '1PI+2M', *_RL4, '1RL+1TS+2M'),
+}
+
+
 def uiqoo_opening_order(snapshot, goals, remembered=None):
     faction = snapshot['state']['players'][snapshot['player']]['faction']
-    order = UIQOO_OPENINGS.get(faction)
+    order = (SHEDEN_OPENINGS if _guide.get('sheden_r1') else UIQOO_OPENINGS).get(faction)
     if not order:
         return goals
     rank = {label: i for i, label in enumerate(order)}
@@ -1070,6 +1088,33 @@ def _burn_for_funding(env, snapshot, scores):
     return None
 
 
+# sheden_r1: SH4-07 Bal'Tak "아2광 (테라포밍 트랙으로 2광석획득)" — the Terraforming level 1 reward is
+# 2 ore (gaia-engine/data/research_tracks.toml). When the academy chain is stuck short of ore,
+# research Terraforming 0→1 before the fallback. Ore still owed by the chain (rulebook costs):
+# academy 6, research lab 3, trading station 2.
+def _chain_ore(player, target):
+    from bgg_openings.inventory import building_counts
+    counts = building_counts(player)
+    if counts.research_lab > target.research_lab:
+        return 6
+    if counts.trading_station > target.trading_station:
+        return 9
+    return 11
+
+
+def _terraforming_ore(snapshot, scores, target):
+    from current_actions.conservation import blocked
+    player = snapshot['state']['players'][snapshot['player']]
+    if (player['research_tracks']['terraforming'] != 0
+            or player['resources']['ore'] >= _chain_ore(player, target)):
+        return None
+    for i, c in enumerate(snapshot['candidates']):
+        if (c['action']['type'] == 'ResearchAdvance' and c['action'].get('track') == 'Terraforming'
+                and not blocked(scores[i])):
+            return i
+    return None
+
+
 def install_academy_first():
     import bgg_openings.planning as planning
     from bgg_openings.inventory import building_counts
@@ -1090,6 +1135,10 @@ def install_academy_first():
                 return i
             if _guide.get('academy_r1'):
                 i = _burn_for_funding(env, snapshot, masked)
+                if i is not None:
+                    return i
+            if _guide.get('sheden_r1'):
+                i = _terraforming_ore(snapshot, masked, target)
                 if i is not None:
                     return i
         return original(env, snapshot, scores, target, policies, deadline)
@@ -1447,4 +1496,13 @@ def guide_r1_charge3_lf_more_ac(seed, **kwargs):
     other spending and selected first when a comparison completed one (academy_r1)."""
     teacher = guide_r1_charge3_lf_more(seed, **kwargs)
     install_academy_r1()
+    return teacher
+
+
+def guide_r1_charge3_lf_more_sh(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more with the round-1 openings ordered by sheden #4
+    (SHEDEN_OPENINGS, Geodens included) and Terraforming 0→1 (2 ore) researched when a round-1
+    academy chain is stuck short of ore. No academy_r1."""
+    teacher = guide_r1_charge3_lf_more(seed, **kwargs)
+    _guide['sheden_r1'] = True
     return teacher

@@ -425,6 +425,12 @@
      다음 제안(사용자 확인 대기, 큐에 넣지 않음): ① 1R AC를 못 지은 B 좌석 몇 개(예: 테란)에서 셋업·1R 결정을 explain으로 보고
      광석 부족이 셋업 배치(외톨이 6돈 교역소)·4파워 광석 액션 선점 중 무엇인지 확인 ② 039+040 12쌍 충전 합산(새 실험 없음)으로
      lf_more vs hard 배포 판단 마무리.
+     **사용자 자료(같은 날)**: sheden 5편(`docs/references/discord/155733…pdf`, 이미 claims SH 항목). #4 추천 빌드: AC 하나에
+     11광석·14원, 1R AC 권장은 4종족 중 타클론(2순위 아2광)뿐, 발타크 "아2광(테라포밍 트랙으로 2광석)". 엔진도 테라포밍 1·4레벨 즉시 광석 2.
+     **`guide_r1_charge3_lf_more_sh`(사용자 "진행해")**: `_guide['sheden_r1']` — 1R 오프닝 순서를 `SHEDEN_OPENINGS`(#4 표, 기오덴 포함,
+     연4광=1RL+4/5/6M)로, 1R AC 목표가 광석 부족으로 진척 없으면 테라포밍 0→1 연구(`_terraforming_ore`). academy_r1 없음, 순서만.
+     spec `teacher-a-search4-h1-guide-r1-charge3-lf-more-sh-cap20.json`. 봇 권한 밖이라 스모크·컴파일 확인 못 함.
+     연구소 기술 타일을 테라포밍 줄로 고르는 것은 미구현. **lab 042 큐**: A = lf_more, B = lf_more_sh, 새 시드 6쌍, stop_round 3.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)

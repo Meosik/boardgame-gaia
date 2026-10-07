@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자 지시(2026-10-07 \"진행해\"): sheden #4 1R 빌드 순서(SH4-01~07, 기오덴 포함) + 아카데미 사슬이 광석 부족으로 막히면 테라포밍 0→1(광석 2) — A = guide_r1_charge3_lf_more(039·040 B), B = guide_r1_charge3_lf_more_sh(academy_r1 없음), 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량, 같이 볼 것: 1R 건물(tools/academy_rounds.py).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-sh-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}
