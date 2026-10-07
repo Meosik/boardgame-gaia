@@ -16,6 +16,8 @@ term). The patch adds the same two terms to unpassed action-phase states: the he
 booster's pass VP at the current board, and the best booster still in the pool. Both
 are rule facts; no new coefficient is introduced (the income term reuses potential's own).
 """
+import json
+
 from four_factions import value as _value
 
 _original = getattr(_value.potential, '__wrapped__', _value.potential)
@@ -707,7 +709,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'lf_tables': False,           # True: guide_r1_charge3_lf (ships, green tokens, pass tiles)
           'lf_tiles': False,            # True: guide_r1_charge3_lf_tiles (standard tiles 6, 8, 12)
           'charge_vp': False,           # True: guide_r1_charge3_lf_tiles (VP held kept in charge_value)
-          'lf_more': False}             # True: guide_r1_charge3_lf_more (see lf_more_value)
+          'lf_more': False,             # True: guide_r1_charge3_lf_more (see lf_more_value)
+          'academy_r1': False}          # True: guide_r1_charge3_lf_more_ac (see academy_r1)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -1021,6 +1024,52 @@ def _new_mine(action):
     return action['type'] == 'Build' or action['type'].endswith('RangeBuild')
 
 
+# academy_r1 (user 2026-10-07, "AC 스타트는 지형 영향을 크게 안 받는다 — 할 수 있는데 자원을 허투루 써서
+# 못 짓는다"; 040: 1 round-1 academy in 48 seats, research labs in round 1 almost always). Order
+# only, no value:
+# 1. While a round-1 BGG target still lacks its academy, only the upgrade chain and the moves that
+#    can fund it are tried first (academy_first put only new mines later). Research, Gaia forming,
+#    ships and pass come after, when no academy progress is found; a power burn that opens an
+#    ore or credit power action counts as funding.
+# 2. An opening whose comparison completed round 1 with an academy is selected before the others;
+#    among them select_forecast decides as before.
+ACADEMY_FUNDING = ('Upgrade', 'FreeAction', 'PowerAction', 'AcademyQicAction', 'TechTileSpecialAction',
+                   'ChargePower', 'ChooseIncomeOrder')
+
+
+def _academy_later(action):
+    """Moves put after the academy: new mines, or with _guide['academy_r1'] every move that
+    neither upgrades nor funds the upgrade (research, Gaia forming, ships, pass, ...)."""
+    if _guide.get('academy_r1'):
+        return action['type'] not in ACADEMY_FUNDING
+    return _new_mine(action)
+
+
+def _burn_for_funding(env, snapshot, scores):
+    """A power burn that opens a power action paying ore or credits (the 4-power 2-ore action,
+    the 7-credit action), checked on the native forks; the smallest such burn."""
+    from current_actions.conservation import blocked
+    actor = snapshot['player']
+    held = snapshot['state']['players'][actor]['resources']
+    open_now = {json.dumps(c['action'], sort_keys=True) for c in snapshot['candidates']
+                if c['action']['type'] == 'PowerAction'}
+    burns = sorted((c['action'].get('count', 0), i) for i, c in enumerate(snapshot['candidates'])
+                   if c['action']['type'] == 'FreeAction' and c['action'].get('kind') == 'BurnPower'
+                   and not blocked(scores[i]))
+    for _, i in burns:
+        after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
+        if after.get('player') != actor:
+            continue
+        for j, c in enumerate(after['candidates']):
+            if c['action']['type'] != 'PowerAction' or json.dumps(c['action'], sort_keys=True) in open_now:
+                continue
+            paid = json.loads(env.fork(snapshot['decision_id'], i).fork(after['decision_id'], j)
+                              .snapshot_json())['state']['players'][actor]['resources']
+            if paid['ore'] > held['ore'] or paid['credits'] > held['credits']:
+                return i
+    return None
+
+
 def install_academy_first():
     import bgg_openings.planning as planning
     from bgg_openings.inventory import building_counts
@@ -1032,13 +1081,17 @@ def install_academy_first():
         player = snapshot['state']['players'][snapshot['player']]
         if (snapshot['state']['round'] == 1 and 'ActionPhase' in snapshot['state']['phase']
                 and target.academy > building_counts(player).academy):
-            masked = [(BLOCKED, PREFIX+'academy first: new mine after the academy')
-                      if _new_mine(c['action']) else score
+            masked = [(BLOCKED, PREFIX+'academy first: other spending after the academy')
+                      if _academy_later(c['action']) else score
                       for c, score in zip(snapshot['candidates'], scores)]
             i = original(env, snapshot, masked, target, policies, deadline)
             if i is not None and (i != best_index(masked, range(len(masked)))
                                   or snapshot['candidates'][i]['action']['type'] == 'Upgrade'):
                 return i
+            if _guide.get('academy_r1'):
+                i = _burn_for_funding(env, snapshot, masked)
+                if i is not None:
+                    return i
         return original(env, snapshot, scores, target, policies, deadline)
     select_action.__wrapped__ = original
     planning.select_action = select_action
@@ -1368,4 +1421,30 @@ def guide_r1_charge3_lf_more(seed, **kwargs):
     the research options at LF values, plus federation progress and neighbour charges."""
     teacher = guide_r1_charge3_lf_tiles(seed, **kwargs)
     _guide['lf_more'] = True
+    return teacher
+
+
+def academy_openings_first(original, rows, remembered, comparisons):
+    """Among completed comparisons, those that built an academy in round 1 first."""
+    built = [c for c in comparisons if c.get('complete') and (c.get('r1_buildings') or {}).get('academy')]
+    return original(rows, remembered, built) or original(rows, remembered, comparisons)
+
+
+def install_academy_r1():
+    import bgg_openings.planning as planning
+    _guide['academy_r1'] = True
+    if not getattr(planning.select_forecast, '_academy_r1', False):
+        inner_forecast = planning.select_forecast
+
+        def select_forecast(rows, remembered, comparisons):
+            return academy_openings_first(inner_forecast, rows, remembered, comparisons)
+        select_forecast._academy_r1 = True
+        planning.select_forecast = select_forecast
+
+
+def guide_r1_charge3_lf_more_ac(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more with round-1 academy openings funded before
+    other spending and selected first when a comparison completed one (academy_r1)."""
+    teacher = guide_r1_charge3_lf_more(seed, **kwargs)
+    install_academy_r1()
     return teacher

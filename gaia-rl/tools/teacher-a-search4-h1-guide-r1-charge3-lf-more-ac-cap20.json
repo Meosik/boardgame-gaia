@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more (hard, 4 comparisons, 20 s cap) with round-1 academy openings funded before other spending and selected first when a comparison completed one (guide_r1_charge3_lf_more_ac).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_ac",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}
