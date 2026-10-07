@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more (hard, 4 comparisons, 20 s cap) playing the completed comparison with the highest value whatever its family, and ranking a round 1-3 trading station before non-upgrades when the resources left pay the research lab or PI (guide_r1_charge3_lf_more_vm).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

@@ -1506,3 +1506,103 @@ def guide_r1_charge3_lf_more_sh(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more(seed, **kwargs)
     _guide['sheden_r1'] = True
     return teacher
+
+
+# ── value_max ──────────────────────────────────────────────────────────────────────────
+# User (2026-10-08, 042 pair-004/game-0-A01): the comparisons were right and the plan choice
+# threw them away. Geodens step 18: 1PI+4M 274.2 vs current-choice 212.5, but the opening plan
+# did not finish the PI in round 1, so `select_forecast` found no matching opening and the
+# search fell back to the best non-opening plan. Terrans step 47: an academy/Gaia plan 269.3
+# lost to the remembered BGG opening 256.1. Geodens step 54: upgrade plan 267.6 lost to a
+# pass plan 218.0 the same way. value_max plays the first move of the completed comparison
+# with the highest value, whatever its family; nothing is valued differently.
+#
+# ts_chain (same day): "연구소나 의회까지 바로 올라가는 업그레이드면 좋게 판단해야". At LF prices a
+# trading station alone is a loss (034), so the root ranking puts it below pass. When the
+# resources left after the trading station already pay the research lab or the planetary
+# institute (engine costs, preparation.funding_need), the trading station goes before every
+# move that is not an upgrade. Rounds 1-3 only, the span charge3 compares. Order only.
+
+def _value_max(snapshot, result):
+    import math
+    plans = [(plan['value'], -order, plan) for order, plan in enumerate(result.get('plans') or [])
+             if plan.get('complete') and isinstance(plan.get('value'), (int, float))
+             and math.isfinite(plan['value'])]
+    if not plans:
+        return
+    best = max(plans, key=lambda item: item[:2])[2]
+    if best['first'] == result.get('index'):
+        return
+    result['value_max'] = {'replaced': result.get('selected'), 'replaced_index': result.get('index')}
+    result.update(index=best['first'], selected=f'value-max {best["goal"]}')
+    target = (best.get('goal_spec') or {}).get('target')
+    if best.get('family') == 'bgg-opening' and target and isinstance(result.get('memory'), dict):
+        result['memory'].setdefault('_bgg_targets', {})[str(snapshot['player'])] = target
+
+
+def ts_chain_scores(env, snapshot, scores):
+    import json
+    from bgg_openings.catalog import LIMITS
+    from bgg_openings.inventory import building_counts
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if not 1 <= state['round'] <= 3 or 'ActionPhase' not in state['phase'] or actor is None:
+        return scores
+    counts = building_counts(state['players'][actor])
+    nexts = [cost for cost, kind in (((3, 5), 'research_lab'), ((4, 6), 'planetary_institute'))
+             if getattr(counts, kind) < LIMITS[kind]]
+    chained = []
+    for i, candidate in enumerate(snapshot['candidates']):
+        action = candidate['action']
+        if action.get('type') != 'Upgrade' or action.get('to') != 'TradingStation' or blocked(scores[i]):
+            continue
+        after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
+        left = after['state']['players'][actor]['resources']
+        if any(left['ore'] >= ore and left['credits'] >= credits for ore, credits in nexts):
+            chained.append(i)
+    if not chained:
+        return scores
+    others = [s[0] for i, s in enumerate(scores) if not blocked(s)
+              and snapshot['candidates'][i]['action'].get('type') != 'Upgrade']
+    floor = max(others, default=0.0)
+    lifted = list(scores)
+    for i in chained:
+        if scores[i][0] <= floor:
+            lifted[i] = (floor+1.0+scores[i][0]/1000.0, f'{scores[i][1]}; ts_chain: lab/PI paid next',
+                         *scores[i][2:])
+    return lifted
+
+
+def install_value_max():
+    import four_factions.preparation as p
+    _guide['value_max'] = True
+    if not getattr(p.search, '_value_max', False):
+        inner_search = p.search
+
+        def search(env, snapshot, memory, publish, *args, **kwargs):
+            def publish_value_max(result):
+                _value_max(snapshot, result)
+                publish(result)
+            result = inner_search(env, snapshot, memory, publish_value_max, *args, **kwargs)
+            _value_max(snapshot, result)
+            return result
+        search._value_max = True
+        search._parallel = getattr(inner_search, '_parallel', False)
+        p.search = search
+    if not getattr(p.Policies.rank, '_ts_chain', False):
+        inner_rank = p.Policies.rank
+
+        def rank(self, env, snapshot):
+            return ts_chain_scores(env, snapshot, inner_rank(self, env, snapshot))
+        rank.__wrapped__ = getattr(inner_rank, '__wrapped__', inner_rank)
+        rank._ts_chain = True
+        rank._parallel = getattr(inner_rank, '_parallel', False)
+        p.Policies.rank = rank
+
+
+def guide_r1_charge3_lf_more_vm(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more with the highest completed comparison played
+    (value_max) and trading stations whose lab/PI is already paid ranked before non-upgrades."""
+    teacher = guide_r1_charge3_lf_more(seed, **kwargs)
+    install_value_max()
+    return teacher

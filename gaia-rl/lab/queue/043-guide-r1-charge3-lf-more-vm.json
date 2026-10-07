@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자 지시(2026-10-08 \"그렇게 해봐\"): value_max(완성된 비교 중 값이 가장 높은 계획의 첫 수, 오프닝 일치·1R 완성 무시) + ts_chain(1–3R 교역소 뒤 남은 자원으로 연구소·의회를 낼 수 있으면 업그레이드 아닌 수보다 앞에, 순서만) — A = guide_r1_charge3_lf_more, B = guide_r1_charge3_lf_more_vm, 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}
