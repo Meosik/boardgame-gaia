@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자 지시(2026-10-08 \"진행\"): 043 재확인 — 같은 A/B(A = guide_r1_charge3_lf_more, B = guide_r1_charge3_lf_more_vm), 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(043: +17.4 [−20.3, +55.1]). 양수가 재현되면 hard vs lf_more_vm 직접 비교를 제안.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}
