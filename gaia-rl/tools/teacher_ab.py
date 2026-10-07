@@ -342,7 +342,9 @@ class WorkerTimeout(RuntimeError):
 
 # ── One game ────────────────────────────────────────────────────────────────
 
-def play(output, seed, teachers, a_seats, clock):
+def play(output, seed, teachers, a_seats, clock, stop_round=None):
+    """One game. With stop_round, the game ends when round stop_round+1 starts and 'scores' are the
+    VP held then (user 2026-10-07: A/B is judged by charges in rounds 1-3, later rounds are unused)."""
     from gaia_rl import Environment
     output.mkdir(parents=True)
     env = Environment(seed, MAX_DECISIONS)
@@ -363,7 +365,7 @@ def play(output, seed, teachers, a_seats, clock):
                 if hello.get('digest') != digest(snapshot):
                     raise RuntimeError(f'teacher {arm} started from a different native state')
             with gzip.open(output/'decisions.jsonl.gz', 'wt') as trace:
-                while not env.is_terminal():
+                while not env.is_terminal() and not (stop_round and snapshot['state']['round'] > stop_round):
                     seat, arm = snapshot['player'], arm_of[snapshot['player']]
                     faction = factions[seat]
                     limits = snapshot.get('candidate_generation') or {}
@@ -399,8 +401,12 @@ def play(output, seed, teachers, a_seats, clock):
                             raise RuntimeError(f'teacher {other} diverged after step {snapshot["steps"]}')
                     write_json(output/'progress.json', {'step': snapshot['steps'], 'round': snapshot['state']['round'],
                                                         'updated_at': now()})
-        result.update(complete=True, scores={str(k): v for k, v in dict(env.final_scores()).items()},
-                      steps=snapshot['steps'])
+        if env.is_terminal():
+            scores = {str(k): v for k, v in dict(env.final_scores()).items()}
+        else:
+            scores = {str(seat): p['vp'] for seat, p in enumerate(snapshot['state']['players'])}
+            result['stopped_at_round'] = snapshot['state']['round']
+        result.update(complete=True, scores=scores, steps=snapshot['steps'])
     except WorkerTimeout as error:
         result.update(failure_kind='timeout', error=str(error), step=snapshot['steps'])
     except Exception as error:
@@ -445,7 +451,7 @@ def run(args):
             if frozen_problems(teacher):
                 raise SystemExit(f'Frozen teacher {arm} changed during the match; stopping')
         path = output/f"pair-{pair['pair']:03d}"/f"game-{g}-A{''.join(map(str, game['a_seats']))}"
-        result = play(path, pair['seed'], teachers, set(game['a_seats']), clock)
+        result = play(path, pair['seed'], teachers, set(game['a_seats']), clock, args.stop_round)
         with lock:
             finished.append(str(path))
             write_json(output/'progress.json', {'games_done': len(finished), 'games_planned': len(jobs),
@@ -484,8 +490,10 @@ def main():
     match.add_argument('--jobs', type=int, default=1, help='Games played in parallel')
     match.add_argument('--fast-copy', action='store_true',
                        help='Decision-preserving teacher speedups in workers (tools/fast_teacher.py)')
+    match.add_argument('--stop-round', type=int,
+                       help='End each game when this round is over; scores are then the VP held')
     match.add_argument('--output', required=True)
-    plan = commands.add_parser('plan', help='Resolve teachers and print the schedule; plays nothing')
+    plan =commands.add_parser('plan', help='Resolve teachers and print the schedule; plays nothing')
     for name in ('--teacher-a', '--teacher-b'):
         plan.add_argument(name, required=True)
     plan.add_argument('--games', type=int, required=True)

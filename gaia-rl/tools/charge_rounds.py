@@ -48,6 +48,9 @@ def game_charges(game_dir):
         if state['round'] >= END_ROUND:
             return result, {s: (start[s], charges(state, s)) for s in seats}
         env.step(row['decision_id'], row['index'])
+    state = json.loads(env.snapshot_json())['state']  # a game stopped at round 4 (teacher_ab --stop-round 3)
+    if start is not None and state['round'] >= END_ROUND:
+        return result, {s: (start[s], charges(state, s)) for s in range(len(state['players']))}
     return result, None
 
 
