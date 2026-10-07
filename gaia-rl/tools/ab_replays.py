@@ -81,8 +81,14 @@ def replay_game(game_dir, focus, label):
             snapshot = json.loads(env.snapshot_json())
             frames.append(frame(snapshot, actor, before['candidates'][row['index']]['action'],
                                 before['candidates']))
-    scores = {str(k): v for k, v in env.final_scores()}
-    if not env.is_terminal() or scores != result['scores']:
+    if result.get('stopped_at_round'):
+        # teacher_ab --stop-round ends the game early; the recorded scores are the VP held then.
+        if snapshot['steps'] != result['steps']:
+            raise ValueError(f'{game_dir}: replay does not reach the recorded stop')
+        scores = result['scores']
+    else:
+        scores = {str(k): v for k, v in env.final_scores()}
+    if not result.get('stopped_at_round') and (not env.is_terminal() or scores != result['scores']):
         raise ValueError(f'{game_dir}: replay does not reproduce the recorded final scores')
     seat = focus_seat(result, focus)
     # The viewer requires the engine versions; teacher_ab's manifest records those of the match.
@@ -99,6 +105,8 @@ def replay_game(game_dir, focus, label):
         'policy': f'{label} · {arm(result, seat)}팔 (A 좌석 {a_seats})',
         'versions': versions, 'scores': scores, 'steps': snapshot['steps'], 'reproduced_original': True,
         'source': str(game_dir)}, 'frames': frames, 'events': []}
+    if result.get('stopped_at_round'):
+        replay['metadata']['stopped_at_round'] = result['stopped_at_round']
     replay = add_decision_log(replay)
     validate_replay(replay)
     return replay
