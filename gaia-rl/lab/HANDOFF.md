@@ -440,6 +440,16 @@
      #4 순서로 무엇이 됐는지 최악 쌍(pair-005, −55) 1R 결정 확인 ③ 결과가 그쪽을 가리키면 sheden_r1을 타클론만 남긴 변형은
      결과를 보고 고른 것이라 새 시드 확인 필요 — 지금은 lf_more(039 B) 기준 유지.
      명령(gaia-rl에서): `.venv/bin/python tools/academy_rounds.py ~/projects/gaia-lab/gaia-rl/runs/lab-042-guide-r1-charge3-lf-more-sh`
+     **042 최저 판 분석(2026-10-08, pair-004/game-0-A01, 리플레이 게시, `ab_replays`가 3R 종료 판도 내보내게 고침)**:
+     사용자 지적 → `explain_ab_decisions` 결과. ① 기오덴 B step 18: 1PI+4M 비교 274.2 > current-choice 212.5인데 1R PI 미완성
+     (TS1)이라 "fallback-no-verified-route"로 낮은 쪽 선택 → 광산 5 계획, 의회 없음. ② 테란 A step 47 패스: Terrans-academy-Gaia
+     계획 269.3 > 선택된 BGG 1RL+1M 256.1 — `select_forecast`가 비교값을 무시(027부터 알려진 약점, 아직 안 고침). 가이아 포밍은
+     기본 순위 −3.6(step 25에선 −6.9). ③ 테란 첫 기술(step 25): 기술 5+경제 21.3 vs 기술 10(4충전) 20.0 — 10은 트랙 진보 없이
+     나와 연구 1칸 몫(≈+17)을 못 받음, 차이 1.3이고 기술 선택은 비교 없이 기본 순위로 결정. (10에 트랙이 없는 이유 미확인.)
+     ④ 연구 분산: 트랙 1칸 = 일괄 16충전 + 즉시 보상이라 트랙을 정해 밀 이유가 값에 없음. ⑤ 타클론 A step 13 첫 광산 vs 업그레이드
+     먼저 계획 245.0 vs 244.5(잡음). `leech_value`는 이웃 수만 세고 내 건물 크기를 안 봐 업그레이드의 리치 이득이 없음.
+     수정 제안(사용자 확인 대기): ①② 계획 선택을 비교값 최대로(오프닝 일치·1R 완성 여부 무시) ③ 연구 트랙 몰기(순서 규칙)
+     ④ leech_value를 상대 근처 내 건물 파워값 기준으로.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
