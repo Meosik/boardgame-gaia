@@ -12,6 +12,24 @@ User asked for 6 pairs and reporting by charges gained in rounds 1–3; no deplo
 6 fresh seeds (geo-quartet-452137 … 458025) × 2 seat-swapped games, agentmaco, commit ffee793.
 Result: lab/results/039-guide-r1-charge3-lf-more.md.
 
+**Verdict measure (user, 2026-10-07): charges gained in rounds 1–3 only** (`charge_rounds.py`, round-1
+start to round-4 start, 1 VP = 1.5 charges; run by the owner). Final VP below is kept for the record
+but is not used to judge.
+
+| Faction | Pairs | A charges | B charges | B−A | 95% CI |
+|---|---:|---:|---:|---:|---|
+| Geodens | 6 | 85.0 | 142.0 | +57.0 | [−16.4, +130.3] |
+| Taklons | 6 | 115.9 | 158.5 | +42.6 | [+10.2, +74.9] |
+| Terrans | 6 | 127.8 | 145.8 | +18.0 | [−20.7, +56.8] |
+| Xenos | 6 | 152.9 | 154.2 | +1.3 | [−67.0, +69.6] |
+| **All** | 6 | | | **+29.7** | **[+0.2, +59.2]** |
+
+B gains more charges in rounds 1–3, just significant overall; Taklons is significant on its own.
+Geodens varies most (B 58–219, A 64–133). This is the measure the charge3 arm optimizes, so it favours B.
+B's settings were fixed before the run, so this is a fair test, but 6 pairs is small.
+
+Final VP (not used for the verdict):
+
 | Faction | Pairs | B−A VP | 95% CI | A mean | B mean |
 |---|---:|---:|---|---:|---:|
 | Geodens | 6 | −28.2 | [−68.3, +12.0] | 95.5 | 67.3 |
@@ -41,4 +59,4 @@ Both arms exceeded the 20 s cap (max 37.9 s / 42.5 s), inside the hard server wa
 Not measured here: research advances per track (`research_counts.py` was refused by the Discord bot
 this time), charges gained in rounds 1–3 (`charge_rounds.py` is outside the bot's allowed tools) and
 fleet entries / ship actions per arm. Whether the AI-track lean of 037–038 persists is unknown.
-The live hard teacher stays; no deploy proposal.
+The live hard teacher stays for now; a deploy is not proposed before a fresh-seed recheck.
