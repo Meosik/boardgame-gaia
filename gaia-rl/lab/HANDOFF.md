@@ -384,6 +384,9 @@
      봇은 charge_rounds 권한이 없어 사용자 결정으로 lab이 자동으로 넣게 함: `lab.py run_ab`가 끝나면 `charge_rounds.py --json
      runs/lab-<이름>/charges.json`을 돌려 결과 md 맨 앞에 충전표(판정 기준), JSON `charges`에 저장. 최종 점수는 md 끝 "참고"로만.
      봇 권한 밖이라 test_lab.py를 못 돌림 — 다음 실험 결과 md에 충전표가 나오는지 확인할 것.
+     (테스트는 gaia-rl에서 `.venv/bin/python tools/test_lab.py`. `-m unittest tools/test_lab.py`는 `lab` 폴더를 잡아 전부 실패.)
+     039 충전 최고 판(제노스 A 235, pair-001/game-0-A23)을 `~/gaia-media/ai-replays`에 게시함.
+     **lab 040 큐(사용자 "다음 테스트 진행해", 2026-10-07)**: 039 재확인, 같은 A/B·새 시드 6쌍, 충전량으로 판정. 유의하면 배포 제안.
      사용자가 직접 돌릴 집계: `.venv/bin/python tools/research_counts.py ~/projects/gaia-lab/gaia-rl/runs/lab-039-guide-r1-charge3-lf-more`,
      `.venv/bin/python tools/charge_rounds.py <같은 run>`(gaia-rl에서).
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).

@@ -1,0 +1,8 @@
+{
+  "kind": "ab",
+  "note": "사용자 지시(2026-10-07 \"다음 테스트 진행해\"): 039 재확인 — 같은 A/B(A = 실서버 hard, B = guide_r1_charge3_lf_more), 새 시드 6쌍. 판정은 1–3라운드 충전량만(039: +29.7 [+0.2, +59.2]). 유의하면 hard 교사 교체 배포 제안.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-cap20.json",
+  "pairs": 6,
+  "comparisons": 2
+}
