@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자 지시(2026-10-07 \"일단 테스트 해봐\"): 1R 아카데미 순서(academy_r1) 효과 — A = guide_r1_charge3_lf_more(039·040 B), B = guide_r1_charge3_lf_more_ac, 새 시드 6쌍, 3라운드에서 종료(stop_round 3, 첫 적용). 판정은 1–3라운드 충전량, 같이 볼 것: 1R 아카데미 수(tools/academy_rounds.py, 040은 48좌석 중 1).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-ac-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}

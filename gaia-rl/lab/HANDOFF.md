@@ -414,7 +414,9 @@
      액션을 여는 태우기도 자금으로 침, 1R에 AC를 완성한 비교가 있으면 그 오프닝을 먼저 선택. 순서만, 값 없음.
      spec `teacher-a-search4-h1-guide-r1-charge3-lf-more-ac-cap20.json`. 1R 스모크(`runs/smoke-academy-r1`, 작업 worktree,
      A=lf_more, B=…_ac, 시드 465474·455894, ENGINE_FIXES_2 없이) 실행 중 → `tools/academy_rounds.py`로 1R AC 수 확인.
-     다음 제안(확인 대기): lf_more_ac vs lf_more 6쌍(3R 종료), 충전 + 1R AC 수로 판정.
+     스모크는 세션 종료로 셋업 중 중단됨(결과 없음). **lab 041 큐(사용자 "일단 테스트 해봐")**: A = lf_more, B = lf_more_ac,
+     새 시드 6쌍, stop_round 3(첫 적용 — 결과 md에 충전표가 나오는지, 판이 4R 시작에서 끝났는지 확인). 판정은 충전량,
+     함께 `academy_rounds.py`로 1R AC 수.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
