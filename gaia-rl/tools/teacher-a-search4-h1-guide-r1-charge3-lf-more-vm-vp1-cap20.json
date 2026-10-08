@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm (hard, 4 comparisons, 20 s cap) with 1 VP = 1 charge and the leech rule: accept a leech costing at most 2 VP, decline 3 VP or more (guide_r1_charge3_lf_more_vm_vp1).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_vp1",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

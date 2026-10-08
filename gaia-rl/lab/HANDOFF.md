@@ -482,6 +482,16 @@
      다음 제안(사용자 확인 대기, 큐에 넣지 않음): ① 배포 판단의 기준선 정리 — lf_more vs hard(039+040, 각 +30 안팎)를 12쌍 합산
      (각 run의 charges.json, 새 실험 없음) ② Xenos B 하락 확인 — 044 pair-003(Xen −50)·pair-004(−44) 1R 결정에서 value_max가
      고른 계획이 rollout과 다르게 흘렀는지 explain_ab_decisions로 ③ vm은 기오덴 전용으로 남기는 안은 결과를 보고 고른 것이라 새 시드 필요.
+     **점수 환율·리치(사용자 2026-10-08)**: 1점=1.5충전이면 3충전 리치가 본전, 함대 입장 점수 비용이 큼 → "1점을 1로 혹은 그 아래로",
+     "4단계는 안 받는다". 단일 환율로는 큰 건물 리치가 더 좋게 안 나옴(순이득 N−(N−1)k는 k≥1이면 N에 따라 감소) → 리치는 규칙으로.
+     `guide_r1_charge3_lf_more_vm_vp1`(`install_vp1_leech`, spec `...-lf-more-vm-vp1-cap20.json`): `CHARGES_PER_VP` 전부 1.0(사용자 결정,
+     LF01 원문은 1.5), ChargePower에서 점수 비용 ≤2(충전 ≤3)면 거절을, ≥3이면 수락을 BLOCKED(비교도 못 고름). 봇 권한 밖이라 컴파일·스모크 못 함.
+     `charge_rounds.py --vp-rate R`(0 = 보유 점수 제외), lab 큐 키 `vp_rate`(판정표를 그 환율로, 1.5 표는 참고로 함께).
+     **lab 045 큐(사용자 "결과 보고 다음 단계에 전부 바꿔보던지")**: A = lf_more_vm, B = vm_vp1, 새 시드 6쌍, stop_round 3, vp_rate 0.
+     다음 단계(045 결과 뒤): 남은 동결 식을 가이드 값으로 — expansion_value(4/(비용+QIC+1)) → 닿는 광산 순가치 LF 계산,
+     gaia_value 손 상수 → 같은 계산, 셋업 placement 손 계수 → 상대 인접 규칙+닿는 행성, 타클론 의회 항 → leech_value(건물 파워값 기준),
+     가이아 구역 토큰 0.6/0.2 → B02 토큰 값, 제노스 리치 손 식(integrated/teacher.py:281) → 같은 규칙. 유지: standings, 브레인스톤, 프리 액션 −0.25.
+     튜토리얼 "로컬 패치"(사용자 질문): 브랜치에 9/13 이후 튜토리얼 커밋 없음, 위치 확인 대기(패치 파일 받으면 적용).
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)

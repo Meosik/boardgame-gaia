@@ -1606,3 +1606,58 @@ def guide_r1_charge3_lf_more_vm(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more(seed, **kwargs)
     install_value_max()
     return teacher
+
+
+# ── vp1 + leech rule ───────────────────────────────────────────────────────────────────
+# User (2026-10-08): at 1 VP = 1.5 charges a 3-charge leech is already break-even and a fleet
+# entry's VP cost is too large; "1점을 1로 혹은 그 아래로", and "4단계는 안 받는다". A single VP
+# rate cannot also make bigger leeches better (net N-(N-1)k falls with N for k >= 1), so the
+# leech choice is a rule, not a value: a leech costing at most 2 VP (charge <= 3) is accepted,
+# one costing 3 VP or more (charge >= 4) is declined. The other answer is blocked, so neither the
+# root ranking nor a comparison can pick it. User decision, not an LF number (LF01 states 1.5).
+VP_RATE_USER = 1.0
+LEECH_MAX_VP = 2
+
+
+def leech_rule_scores(env, snapshot, scores):
+    import json
+    from current_actions.conservation import BLOCKED, PREFIX
+    actor = snapshot.get('player')
+    answers = {c['action'].get('accept'): i for i, c in enumerate(snapshot['candidates'])
+               if c['action'].get('type') == 'ChargePower'}
+    if actor is None or True not in answers or False not in answers:
+        return scores
+    accept = answers[True]
+    after = json.loads(env.fork(snapshot['decision_id'], accept).snapshot_json())
+    cost = snapshot['state']['players'][actor]['vp'] - after['state']['players'][actor]['vp']
+    refused = answers[False] if cost <= LEECH_MAX_VP else accept
+    lifted = list(scores)
+    lifted[refused] = (BLOCKED, PREFIX+f'leech rule: accept up to {LEECH_MAX_VP} VP, cost {cost}',
+                       *scores[refused][2:])
+    return lifted
+
+
+def install_vp1_leech(rate=VP_RATE_USER):
+    import guide_value as gv
+    import four_factions.preparation as p
+    _guide['vp_rate'] = rate
+    for r in gv.CHARGES_PER_VP:
+        gv.CHARGES_PER_VP[r] = rate
+    if not getattr(p.Policies.rank, '_leech_rule', False):
+        inner_rank = p.Policies.rank
+
+        def rank(self, env, snapshot):
+            return leech_rule_scores(env, snapshot, inner_rank(self, env, snapshot))
+        rank.__wrapped__ = getattr(inner_rank, '__wrapped__', inner_rank)
+        rank._leech_rule = True
+        rank._ts_chain = getattr(inner_rank, '_ts_chain', False)
+        rank._parallel = getattr(inner_rank, '_parallel', False)
+        p.Policies.rank = rank
+
+
+def guide_r1_charge3_lf_more_vm_vp1(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm with 1 VP = 1 charge and the leech rule
+    (accept a leech costing at most 2 VP, decline 3 VP or more)."""
+    teacher = guide_r1_charge3_lf_more_vm(seed, **kwargs)
+    install_vp1_leech()
+    return teacher

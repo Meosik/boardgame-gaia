@@ -9,7 +9,8 @@ nobody copies commands or pastes reports.
 Experiment kinds (`"kind"` in the queue file):
   ab        teacher_ab match. Keys: teacher_a, teacher_b, pairs (default 12; fresh seeds come
             from lab/seeds.txt) or seeds (explicit list), comparisons (default 2), note,
-            stop_round (default 3: games end when round 4 starts; 0 or null plays to the end).
+            stop_round (default 3: games end when round 4 starts; 0 or null plays to the end),
+            vp_rate (charges per VP held in the verdict table; default 1.5, 0 leaves VP out).
   command   any command run from gaia-rl/ (e.g. a future PPO-checkpoint evaluation). Keys: run
             (argv list), metrics (optional JSON file the command writes), timeout_hours, note.
   external  run elsewhere (e.g. Seraph PPO). Never run here; its result is added with
@@ -302,12 +303,14 @@ def timing_table(stats):
     return '\n'.join(rows)
 
 
-def charges(run_dir, env):
+def charges(run_dir, env, vp_rate=None):
     """charge_rounds.py over the run: {'factions': {...}, 'games': [...]}, or {'error': ...}.
 
-    User (2026-10-07): A/B results are judged only by charges gained in rounds 1-3."""
-    out = run_dir/'charges.json'
-    done = subprocess.run([sys.executable, 'tools/charge_rounds.py', str(run_dir), '--json', str(out)],
+    User (2026-10-07): A/B results are judged only by charges gained in rounds 1-3.
+    vp_rate: charges per VP held (None = the guide rate 1.5, 0 = VP left out)."""
+    out = run_dir/('charges.json' if vp_rate is None else f'charges-vp{vp_rate:g}.json')
+    extra = [] if vp_rate is None else ['--vp-rate', str(vp_rate)]
+    done = subprocess.run([sys.executable, 'tools/charge_rounds.py', str(run_dir), '--json', str(out), *extra],
                           cwd=GAIA_RL, env=env, capture_output=True, text=True)
     if done.returncode or not out.exists():
         return {'error': (done.stderr or done.stdout).strip()[-800:]}
@@ -367,13 +370,19 @@ def run_ab(name, spec, jobs):
     data['summary'] = {k: v for k, v in summary.items() if k != 'pairs'}
     data['timing'] = timing(out)
     data['final_scores'] = final_scores(out)
-    data['charges'] = charges(out, env)
+    vp_rate = spec.get('vp_rate')  # user 2026-10-08: judge by charges with VP held left out (0)
+    data['charges'] = charges(out, env, vp_rate)
+    reference = ''
+    if vp_rate is not None:
+        data['charges_vp1.5'] = charges(out, env)
+        reference = f"참고: 1점 = 1.5충전으로 잰 충전량\n\n{charges_table(data['charges_vp1.5'])}\n\n"
+    rate = 1.5 if vp_rate is None else vp_rate
     scores_note = (f"{stop_round}라운드 종료 시점 VP 차이" if stop_round else "최종 점수 차이")
     body = (f"A: `{spec['teacher_a']}`\nB: `{spec['teacher_b']}`\n"
             f"시드 {len(seeds)}개 × 좌석 교대 2판 (비교 기본값 {spec.get('comparisons', 2)}, 스펙 파일에 있으면 그 값)"
             f"{f', {stop_round}라운드에서 종료' if stop_round else ''}\n\n"
-            f"**1–3라운드 충전량 (판정 기준)** — 1R 시작부터 4R 시작까지 얻은 충전, 1점 = 1.5충전\n\n"
-            f"{charges_table(data['charges'])}\n\n결정 시간\n\n{timing_table(data['timing'])}\n\n"
+            f"**1–3라운드 충전량 (판정 기준)** — 1R 시작부터 4R 시작까지 얻은 충전, 1점 = {rate:g}충전\n\n"
+            f"{charges_table(data['charges'])}\n\n{reference}결정 시간\n\n{timing_table(data['timing'])}\n\n"
             f"참고: 오류·미탐색 수와 {scores_note} (판정에 쓰지 않음)\n\n{(out/'report.md').read_text().strip()}")
     return 'done', data, body
 
