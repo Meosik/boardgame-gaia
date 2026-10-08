@@ -283,6 +283,43 @@ fn full_board_has_no_placeholder_hex_map_regressions() {
     }
 }
 
+/// Base rulebook p.19 (Variable Game Board): "two planets of the same type can never be directly
+/// adjacent". Checked for the seven colors and Gaia across the whole assembled board; Transdim is
+/// exempt (printed side by side on the tiles), and Lost Fleet's Asteroid/ProtoPlanet are not rotatable.
+#[test]
+fn no_two_same_type_base_planets_are_adjacent() {
+    use gaia_engine::game_state::PlanetType;
+    let mut failures = Vec::new();
+    for seed in 0..200 {
+        let seed_str = format!("lf-map-{seed}");
+        let setup = setup(&seed_str);
+        let state = MapEngine::init_game_state(&seed_str, &seed_str, &four_players(), &setup);
+        for hex in state.board.hexes.values() {
+            let Some(planet) = &hex.planet else { continue };
+            if matches!(
+                planet.planet_type,
+                PlanetType::Transdim
+                    | PlanetType::LostPlanet
+                    | PlanetType::Asteroid
+                    | PlanetType::ProtoPlanet
+            ) {
+                continue;
+            }
+            for nb in hex.coord.neighbors() {
+                if (nb.q, nb.r) <= (hex.coord.q, hex.coord.r) {
+                    continue;
+                }
+                let same = state.board.hexes.get(&nb).and_then(|h| h.planet.as_ref())
+                    .is_some_and(|p| p.planet_type == planet.planet_type);
+                if same {
+                    failures.push(format!("{seed}:{:?}@{:?}", planet.planet_type, hex.coord));
+                }
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{} adjacent same-type pairs: {failures:?}", failures.len());
+}
+
 /// Each Deep Space sector should sit in the gap "between" exactly 2 distinct Standard sectors —
 /// the project owner's explicit ask ("각 번호 우주 보드 사이에 위치하면 되는걸": it should just
 /// sit between each numbered sector) after two earlier attempts (unconstrained first-valid, then

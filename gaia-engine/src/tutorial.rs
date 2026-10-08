@@ -544,8 +544,10 @@ pub fn steps() -> Vec<TutorialStep> {
 }
 
 pub fn initial_state(room_code: &str, ids: [PlayerId; 4]) -> Result<GameState, RuleError> {
-    let setup =
-        Randomizer::generate_setup(SEED).map_err(|e| RuleError::ActionNotAllowed(e.to_string()))?;
+    // The script's coordinates were written against this seed's drawn rotations, which put two
+    // same-type planets side by side; keep that map until the script is re-authored.
+    let setup = Randomizer::generate_setup_with_drawn_rotations(SEED)
+        .map_err(|e| RuleError::ActionNotAllowed(e.to_string()))?;
     let names = [
         "나",
         "튜토리얼 상대 A",

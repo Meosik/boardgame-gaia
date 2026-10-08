@@ -61,6 +61,14 @@ impl Randomizer {
     /// Generate game setup from seed string.
     /// Returns `Err(InvalidSeed)` for empty or whitespace-only seeds.
     pub fn generate_setup(seed: &str) -> Result<GameSetup, SetupError> {
+        let mut setup = Self::generate_setup_with_drawn_rotations(seed)?;
+        separate_same_type_planets(&mut setup.sector_layout);
+        Ok(setup)
+    }
+
+    /// `generate_setup` without the same-type adjacency fix: sector rotations exactly as drawn.
+    /// Only for content scripted against a pre-fix map (the round-one tutorial).
+    pub fn generate_setup_with_drawn_rotations(seed: &str) -> Result<GameSetup, SetupError> {
         if seed.trim().is_empty() {
             return Err(SetupError::InvalidSeed(
                 "seed must not be empty".to_string(),
@@ -81,6 +89,7 @@ impl Randomizer {
         }
         let mut rng = Self::new(seed);
         let mut setup = rng.build_setup(seed);
+        separate_same_type_planets(&mut setup.sector_layout);
         let mut candidates = FactionId::all();
         rng.shuffle(&mut candidates);
 
@@ -240,6 +249,100 @@ impl Randomizer {
                 }
             })
             .collect()
+    }
+}
+
+/// Base rulebook p.19 (Variable Game Board): "two planets of the same type can never be directly
+/// adjacent"; Lost Fleet p.4 keeps the final player's free rotation of the Space Sector tiles. Re-
+/// rotates sectors so no two planets of the same color type (or two Gaia planets) on different
+/// sectors touch. Transdim planets are exempt: the printed tiles themselves put them side by side.
+/// A layout that is already legal is returned unchanged, and the search is deterministic (each
+/// sector tries its drawn rotation first, then the next ones), so it draws nothing from the PRNG
+/// stream and later setup components stay the same for every seed.
+fn separate_same_type_planets(layout: &mut [SectorPlacement]) {
+    use crate::game_state::{HexCoord, PlanetType};
+    use std::collections::HashMap;
+
+    let sector_file = crate::data::load_sectors();
+    // Per sector, its planets (relative coordinate, type) that fall under the rule.
+    let planets: Vec<Vec<(HexCoord, PlanetType)>> = layout
+        .iter()
+        .map(|placement| {
+            let template = sector_file
+                .sectors
+                .iter()
+                .find(|s| s.id == placement.sector_id && s.side == placement.side)
+                .or_else(|| sector_file.sectors.iter().find(|s| s.id == placement.sector_id));
+            template
+                .map(|t| {
+                    t.hexes
+                        .iter()
+                        .filter_map(|h| {
+                            let planet = PlanetType::from_name(h.planet.as_deref()?)?;
+                            let ruled = !matches!(
+                                planet,
+                                PlanetType::Transdim
+                                    | PlanetType::LostPlanet
+                                    | PlanetType::Asteroid
+                                    | PlanetType::ProtoPlanet
+                            );
+                            ruled.then_some((HexCoord::new(h.rel_q, h.rel_r), planet))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+        })
+        .collect();
+
+    let world = |index: usize, rotation: u8| -> Vec<(HexCoord, PlanetType)> {
+        planets[index]
+            .iter()
+            .map(|(rel, planet)| (rel.rotate_n(rotation).add(&layout[index].origin), *planet))
+            .collect()
+    };
+    let drawn: Vec<u8> = layout.iter().map(|p| p.rotation).collect();
+    let mut chosen: Vec<u8> = drawn.clone();
+
+    fn search(
+        index: usize,
+        drawn: &[u8],
+        chosen: &mut [u8],
+        placed: &mut HashMap<HexCoord, PlanetType>,
+        world: &dyn Fn(usize, u8) -> Vec<(HexCoord, PlanetType)>,
+    ) -> bool {
+        if index == drawn.len() {
+            return true;
+        }
+        for step in 0..6u8 {
+            let rotation = (drawn[index] + step) % 6;
+            let cells = world(index, rotation);
+            let clash = cells.iter().any(|(coord, planet)| {
+                coord.neighbors().iter().any(|n| placed.get(n) == Some(planet))
+            });
+            if clash {
+                continue;
+            }
+            for (coord, planet) in &cells {
+                placed.insert(*coord, *planet);
+            }
+            chosen[index] = rotation;
+            if search(index + 1, drawn, chosen, placed, world) {
+                return true;
+            }
+            for (coord, _) in &cells {
+                placed.remove(coord);
+            }
+        }
+        false
+    }
+
+    let mut placed = HashMap::new();
+    if search(0, &drawn, &mut chosen, &mut placed, &world) {
+        for (placement, rotation) in layout.iter_mut().zip(chosen) {
+            placement.rotation = rotation;
+        }
+    } else {
+        log::error!("no sector rotation keeps same-type planets apart; using drawn rotations");
     }
 }
 
