@@ -714,7 +714,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'sheden_r1': False,           # True: guide_r1_charge3_lf_more_sh (see SHEDEN_OPENINGS)
           'lf_frozen': False,           # True: guide_r1_charge3_lf_more_vm_lf (see install_lf_frozen)
           'ts_chain_direct': False,     # True: guide_r1_charge3_lf_more_vm_lf_ts (see ts_chain_scores)
-          'knowledge_spend': False}     # True: guide_r1_charge3_lf_more_vm_lf_ts (see knowledge_spend_scores)
+          'knowledge_spend': False,     # True: guide_r1_charge3_lf_more_vm_lf_ts (see knowledge_spend_scores)
+          'ship_setup': False}          # True: guide_r1_charge3_lf_more_vm_lf_ts (see ship_setup_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -1628,20 +1629,79 @@ def knowledge_spend_scores(env, snapshot, scores):
     return lifted
 
 
-def install_knowledge_spend():
+def _wrap_rank(flag, adjust):
+    """Wrap Policies.rank once with adjust(env, snapshot, scores), keeping the earlier wrappers'
+    install flags so a second factory call does not stack them."""
     import four_factions.preparation as p
-    _guide['knowledge_spend'] = True
-    if not getattr(p.Policies.rank, '_knowledge_spend', False):
-        inner_rank = p.Policies.rank
+    inner_rank = p.Policies.rank
+    if getattr(inner_rank, flag, False):
+        return
 
-        def rank(self, env, snapshot):
-            return knowledge_spend_scores(env, snapshot, inner_rank(self, env, snapshot))
-        rank.__wrapped__ = getattr(inner_rank, '__wrapped__', inner_rank)
-        rank._knowledge_spend = True
-        rank._ts_chain = getattr(inner_rank, '_ts_chain', False)
-        rank._leech_rule = getattr(inner_rank, '_leech_rule', False)
-        rank._parallel = getattr(inner_rank, '_parallel', False)
-        p.Policies.rank = rank
+    def rank(self, env, snapshot):
+        return adjust(env, snapshot, inner_rank(self, env, snapshot))
+    for name, value in vars(inner_rank).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(rank, name, value)
+    rank.__wrapped__ = getattr(inner_rank, '__wrapped__', inner_rank)
+    setattr(rank, flag, True)
+    p.Policies.rank = rank
+
+
+def install_knowledge_spend():
+    _guide['knowledge_spend'] = True
+    _wrap_rank('_knowledge_spend', knowledge_spend_scores)
+
+
+# ship_setup (user 2026-10-08, lab 046 p001-g1: nearest ship 2-5 hexes from the starting mines):
+# among the starting places the guide_r1 filter leaves, those within SHIP_SETUP_RANGE of a Lost
+# Fleet ship tile go first, and among them the ship that fits the faction (LF03 L3-7: QIC left
+# over → Rebellion, credits → Eclipse, power tokens → Twilight, terraforming → TF Mars; average
+# strength Rebellion ≥ Twilight > Eclipse ≥ TF Mars breaks ties). The fit is the resource with the
+# largest share of the player's income at the guide prices, not a per-faction table. Order only:
+# the comparison still decides.
+SHIP_SETUP_RANGE = 3
+SHIP_STRENGTH = ('Rebellion', 'Twilight', 'Eclipse', 'TFMars')
+SHIP_FOR_INCOME = {'qic': 'Rebellion', 'credits': 'Eclipse', 'tokens': 'Twilight', 'ore': 'TFMars'}
+
+
+def _ship_fit(state, player):
+    import guide_value as gv
+    income = _value.production(state, player, include_booster=False)
+    shares = {'ore': gv.CHARGE['ore']*income[0], 'credits': gv.CHARGE['credits']*income[1],
+              'qic': gv.CHARGE['qic']*income[3], 'tokens': income[4] + gv.TOKEN*income[5]}
+    best = max(shares, key=lambda k: (shares[k], -SHIP_STRENGTH.index(SHIP_FOR_INCOME[k])))
+    fitted = SHIP_FOR_INCOME[best]
+    return (fitted,) + tuple(s for s in SHIP_STRENGTH if s != fitted)
+
+
+def ship_setup_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    from strategy_teacher import distance
+    state, actor = snapshot['state'], snapshot.get('player')
+    ships = state['board'].get('spaceship_tiles') or {}
+    places = [i for i, c in enumerate(snapshot['candidates'])
+              if c['action'].get('type') == 'PlaceStartingStructure' and not blocked(scores[i])]
+    if actor is None or not ships or not places:
+        return scores
+    order = _ship_fit(state, state['players'][actor])
+    finite = [s[0] for s in scores if not blocked(s)]
+    top = max(finite)
+    lifted = list(scores)
+    for i in places:
+        coord = snapshot['candidates'][i]['action']['coord']
+        near = [(order.index(ship), distance(coord, at)) for ship, at in ships.items()
+                if ship in order and distance(coord, at) <= SHIP_SETUP_RANGE]
+        if not near:
+            continue
+        rank, gap = min(near)
+        lifted[i] = (top + 1 + (len(order)-rank) + (SHIP_SETUP_RANGE-gap)/10 + scores[i][0]/1000,
+                     f'{scores[i][1]}; ship setup: {order[rank]} at {gap}', *scores[i][2:])
+    return lifted
+
+
+def install_ship_setup():
+    _guide['ship_setup'] = True
+    _wrap_rank('_ship_setup', ship_setup_scores)
 
 
 def install_value_max():
@@ -1913,8 +1973,9 @@ def guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs):
     """Teacher factory: guide_r1_charge3_lf_more_vm_lf whose ts_chain lifts no trading station
     while a research lab or planetary institute upgrade is legal or on a federated building
     (ts_chain_direct), and which researches before passing while holding 4 knowledge
-    (knowledge_spend)."""
+    (knowledge_spend), and which compares starting places near a fitting ship first (ship_setup)."""
     teacher = guide_r1_charge3_lf_more_vm_lf(seed, **kwargs)
     _guide['ts_chain_direct'] = True
     install_knowledge_spend()
+    install_ship_setup()
     return teacher
