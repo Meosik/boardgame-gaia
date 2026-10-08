@@ -24,12 +24,15 @@ os.environ.setdefault('GAIA_ENGINE_FIXES_2', '1')
 sys.path[:0] = [str(ROOT/'python'), str(ROOT/'baseline-teacher-20260917'), str(ROOT/'tools')]
 
 START_ROUND, END_ROUND = 1, 4
+VP_RATE = None   # --vp-rate: charges per VP held (None = the guide rate, 1.5; 0 = VP left out)
 
 
 def charges(state, seat):
     import guide_value as gv
     import teacher_patches as tp
-    return tp.charge_value(state, seat, with_vp=True)*gv.CHARGES_PER_VP[4]
+    if VP_RATE is None:
+        return tp.charge_value(state, seat, with_vp=True)*gv.CHARGES_PER_VP[4]
+    return tp.charge_value(state, seat, with_vp=False)*gv.CHARGES_PER_VP[4] + VP_RATE*state['players'][seat]['vp']
 
 
 def game_charges(game_dir):
@@ -70,7 +73,12 @@ def main():
     parser.add_argument('run_dir', type=Path)
     parser.add_argument('--games', action='store_true', help='Also print every game')
     parser.add_argument('--json', type=Path, help='Also write the table and games here (lab.py reads it)')
+    parser.add_argument('--vp-rate', type=float,
+                        help='Charges per VP held (default the guide rate 1.5; 0 leaves VP out). '
+                             'Only the measure changes, not what the teachers played.')
     args = parser.parse_args()
+    global VP_RATE
+    VP_RATE = args.vp_rate
     import teacher_patches as tp
     tp._guide.update(qic_reach=False, track_income=False, lf_tables=True)
     gained = defaultdict(dict)   # (pair, faction) -> {arm: charges gained}
@@ -92,7 +100,8 @@ def main():
         games.append(f'{game_dir.parent.name}/{game_dir.name}  ' + ', '.join(line))
         if args.games:
             print(games[-1])
-    print('Charges gained, rounds 1-3 (round-1 start to round-4 start, 1 VP = 1.5 charges)')
+    rate = 1.5 if VP_RATE is None else VP_RATE
+    print(f'Charges gained, rounds 1-3 (round-1 start to round-4 start, 1 VP = {rate:g} charges)')
     print(f"{'faction':<9} {'pairs':>5} {'A':>7} {'B':>7} {'B-A':>7}  95% CI")
     every = defaultdict(list)
     table = {}
