@@ -34,7 +34,7 @@ const boardTour = [
   {
     title: '자원 트랙·파워 순환·교환',
     panel: 'game-factions',
-    description: '자원은 광석·크레딧·지식·QIC입니다. 종족판의 자원 트랙과 현재 수치를 보세요. 파워는 보라색 토큰이며 1→2→3구역으로 충전됩니다. 3구역 토큰만 쓸 수 있고, 쓴 토큰은 1구역으로 돌아갑니다.',
+    description: '자원은 광석·크레딧·지식·QIC입니다. 광석·크레딧·지식은 종족판 위 트랙, QIC는 옆 보관 랙에 있습니다. 파워는 보라색 토큰이며 1→2→3구역으로 충전됩니다. 3구역 토큰만 쓸 수 있고, 쓴 토큰은 1구역으로 돌아갑니다.',
     cue: '급할 때 자유 행동으로 자원을 교환할 수 있지만 비율이 비쌉니다. 파워 3 → 광석 1, 공용 행동은 파워 4 → 광석 2입니다.',
   },
   {
@@ -45,7 +45,7 @@ const boardTour = [
   },
 ] as const;
 
-const tourTargets = [[], [], [], [], ['resource:track', 'power:I', 'power:II', 'power:III'], []] as const;
+const tourTargets = [[], [], [], [], ['resource:track', 'resource:qic', 'power:I', 'power:II', 'power:III'], []] as const;
 
 const incomeLabels = ['광석', '크레딧', '지식', 'QIC', '충전', '새 토큰', '점수'] as const;
 
@@ -77,9 +77,10 @@ export function RoundOneGuide({ state }: { state: GameState }) {
     function highlight() {
       document.querySelectorAll<HTMLElement | SVGElement>('[data-tutorial-target]').forEach(node => {
         const key = node.dataset.tutorialTarget ?? '';
-        const ownPower = !key.startsWith('power:') || !['power:I', 'power:II', 'power:III', 'power:G'].includes(key)
-          || !!node.closest('.game-table-player-card--me');
-        node.classList.toggle('tutorial-highlight', wanted.has(key) && ownPower);
+        const personal = key === 'resource:track' || key === 'resource:qic' || key === 'income:building' || key === 'income:booster'
+          || key.startsWith('cost:') || ['power:I', 'power:II', 'power:III', 'power:G'].includes(key);
+        const ownBoard = !personal || !!node.closest('.game-table-player-card--me');
+        node.classList.toggle('tutorial-highlight', wanted.has(key) && ownBoard);
       });
     }
     highlight();

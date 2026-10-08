@@ -63,6 +63,7 @@
 [data-tutorial-target="income:research"].tutorial-highlight { outline-color: #9bb9ff !important; }
 [data-tutorial-target="income:booster"].tutorial-highlight { outline-color: #9ce7bd !important; }
 [data-tutorial-target="resource:track"].tutorial-highlight { outline-color: #d9a8ef !important; }
+[data-tutorial-target^="cost:"].tutorial-highlight { background: #ffcf5033; }
 .round-one-income-rows li strong { color: #f2cd63; font-size: 12px; }
 .round-one-income-rows li span { overflow-wrap: anywhere; }
 .round-one-income-total { border-top: 2px solid #f2cd63; font-weight: 800; }

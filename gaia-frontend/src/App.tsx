@@ -1486,6 +1486,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             <h2>연구 트랙</h2>
             <ResearchBoard
               players={gameState.players}
+              tutorialIncomeResearch={gameState.tutorial?.step === 1 ? { playerId: myId, track: 'Science' } : undefined}
               board={gameState.research_board}
               usedPowerActions={gameState.used_power_actions}
               isMyTurn={coach ? coach.enabled : isMyActionTurn}

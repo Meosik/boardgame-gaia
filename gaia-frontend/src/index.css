@@ -2318,6 +2318,15 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   pointer-events: none;
 }
 
+.faction-board-cost-highlight {
+  position: absolute;
+  width: 6.2%;
+  height: 5.5%;
+  transform: translate(-50%, -50%);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
 .faction-board-resource-marker {
   position: absolute;
   width: 3.25%;

@@ -30,10 +30,15 @@ export function tutorialTargets(state: GameState): string[] {
   if (!step) return [];
   const action = step.action;
   const targets = [step.target, `action:${action.type}`];
-  if (action.type === 'ChooseIncomeOrder') targets.push('income:building', 'income:research', 'income:booster', 'resource:track');
+  if (action.type === 'ChooseIncomeOrder') targets.push('income:building', 'income:research', 'income:booster');
+  if (action.type === 'Build') targets.push('cost:Mine');
   if (action.type === 'ChargePower') targets.push('power:I', 'power:II', 'power:III', 'hex:-2,0', 'hex:-1,-1');
   if (action.type === 'FreeAction' && action.kind.startsWith('PowerTo')) targets.push('power:III', 'power:I');
-  if (action.type === 'Upgrade' && action.to === 'TradingStation') targets.push('hex:-2,0', 'income:building');
+  if (action.type === 'Upgrade') {
+    const to = typeof action.to === 'string' ? action.to : 'Academy';
+    targets.push(`cost:${to}`);
+    if (to === 'TradingStation') targets.push('hex:-2,0');
+  }
   if (action.type === 'GaiaFormation') targets.push('power:G');
   if (action.type === 'PowerAction') targets.push('power:III', 'power:I');
   if (action.type === 'FreeAction' && action.kind === 'KnowledgeToCredit') targets.push('free-actions');

@@ -38,6 +38,15 @@ const POWER_BOWLS = [
   { key: 'gaia_bowl', label: 'G', centerX: 7.5, centerY: 24.5, columns: 3 },
 ] as const;
 
+// Centers of the printed resource costs on the normalized Terrans board (2323 × 1489).
+const TUTORIAL_COSTS = [
+  { target: 'cost:Mine', label: '광산 비용 광석 1·크레딧 2', x: 103, y: 1316 },
+  { target: 'cost:TradingStation', label: '교역소 비용 광석 2·크레딧 3 또는 6', x: 105, y: 1023 },
+  { target: 'cost:ResearchLab', label: '연구소 비용 광석 3·크레딧 5', x: 892, y: 1023 },
+  { target: 'cost:PlanetaryInstitute', label: '의회 비용 광석 4·크레딧 6', x: 106, y: 700 },
+  { target: 'cost:Academy', label: '아카데미 비용 광석 6·크레딧 6', x: 1004, y: 700 },
+] as const;
+
 const GAIAFORMER_SLOTS = [
   { x: 1869, y: 519 },
   { x: 2056, y: 519 },
@@ -220,10 +229,20 @@ export function FactionBoard({
                 style={marker.position}
                 decorative={false}
                 label={marker.label}
+                data-tutorial-target="resource:track"
               />
             ))}
           </>
         )}
+        {faction === 'Terrans' && TUTORIAL_COSTS.map(cost => (
+          <span
+            key={cost.target}
+            className="faction-board-cost-highlight"
+            data-tutorial-target={cost.target}
+            aria-label={cost.label}
+            style={{ left: `${cost.x * 100 / FACTION_BOARD_WIDTH}%`, top: `${cost.y * 100 / FACTION_BOARD_HEIGHT}%` }}
+          />
+        ))}
         {power && POWER_BOWLS.map(bowl => (
           <span
             key={`power-region-${bowl.key}`}

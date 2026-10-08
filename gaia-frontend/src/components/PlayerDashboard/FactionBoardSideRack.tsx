@@ -43,7 +43,7 @@ export function FactionBoardSideRack({
 
   return (
     <aside className="faction-board-side-rack" aria-label="개인 컴포넌트 보관 랙">
-      <RackSection label="정보 큐브" className="faction-board-side-rack-qic">
+      <RackSection label="정보 큐브" className="faction-board-side-rack-qic" tutorialTarget="resource:qic">
         {qic > 0 ? (
           <div className="faction-board-side-rack-qic-tokens">
             {Array.from({ length: qic }, (_, index) => (
@@ -142,13 +142,15 @@ function RackSection({
   label,
   className,
   children,
+  tutorialTarget,
 }: {
   label: string;
   className: string;
   children: ReactNode;
+  tutorialTarget?: string;
 }) {
   return (
-    <section className={`faction-board-side-rack-section ${className}`}>
+    <section className={`faction-board-side-rack-section ${className}`} data-tutorial-target={tutorialTarget}>
       <strong>{label}</strong>
       <div className="faction-board-side-rack-content">{children}</div>
     </section>

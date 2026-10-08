@@ -119,7 +119,7 @@ describe('shared round-one tutorial', () => {
 
   it('highlights income sources, the charging neighbor, Gaia area, and the shared power slot', () => {
     const states = frames();
-    expect(tutorialTargets(states[0])).toEqual(expect.arrayContaining(['income:building', 'income:research', 'income:booster', 'resource:track']));
+    expect(tutorialTargets(states[0])).toEqual(expect.arrayContaining(['income:building', 'income:research', 'income:booster']));
     expect(tutorialTargets(states[2])).toEqual(expect.arrayContaining(['hex:-2,0', 'hex:-1,-1', 'power:I', 'power:III']));
     expect(tutorialTargets(states[7])).toContain('power:G');
     useGameStore.setState({ gameState: states[0], myPlayerId: 0 });
@@ -128,6 +128,10 @@ describe('shared round-one tutorial', () => {
     finishBoardTour();
     for (const key of ['income:building', 'income:research', 'income:booster']) expect(target(key)).toHaveClass('tutorial-highlight');
     expect(target('income:building')).toHaveClass('faction-board-exposed-income');
+    expect(document.querySelectorAll('.research-board-token[data-tutorial-target="income:research"]')).toHaveLength(1);
+    expect(target('income:research')).toHaveAttribute('aria-label', expect.stringMatching(/과학 4레벨/));
+    expect(document.querySelectorAll('.game-table-player-card:not(.game-table-player-card--me) .tutorial-highlight[data-tutorial-target="income:building"]')).toHaveLength(0);
+    expect(document.querySelectorAll('.game-table-player-card:not(.game-table-player-card--me) .tutorial-highlight[data-tutorial-target="income:booster"]')).toHaveLength(0);
     act(() => useGameStore.getState().actions.setGameState(states[2]));
     expect(document.querySelector('.tutorial-charge-source')).toBeInTheDocument();
     expect(document.querySelector('.tutorial-charge-range')).toHaveAttribute('aria-label', '파워 충전 거리 2칸');
@@ -135,6 +139,28 @@ describe('shared round-one tutorial', () => {
     expect(document.querySelector('.game-table-player-card--me [data-tutorial-target="power:G"]')).toHaveClass('tutorial-highlight');
     act(() => useGameStore.getState().actions.setGameState(states[11]));
     expect(target('power:3')).toHaveClass('tutorial-highlight');
+  });
+
+  it('marks the actual resource track and printed building costs on my faction board', () => {
+    const states = frames();
+    useGameStore.setState({ gameState: states[0], myPlayerId: 0 });
+    render(<App />);
+    fireEvent.click(screen.getByText('테스트 입장'));
+    for (let page = 0; page < 4; page++) fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+    const mine = document.querySelector('.game-table-player-card--me');
+    expect(mine?.querySelectorAll('.faction-board-resource-marker[data-tutorial-target="resource:track"]')).toHaveLength(4);
+    expect(mine?.querySelectorAll('.faction-board-resource-marker.tutorial-highlight')).toHaveLength(4);
+    expect(mine?.querySelector('.faction-board-side-rack-qic')).toHaveClass('tutorial-highlight');
+    expect(document.querySelectorAll('.game-table-player-card:not(.game-table-player-card--me) .faction-board-resource-marker.tutorial-highlight')).toHaveLength(0);
+    expect(document.querySelectorAll('.game-table-player-card:not(.game-table-player-card--me) .faction-board-side-rack-qic.tutorial-highlight')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+    fireEvent.click(screen.getByRole('button', { name: '첫 수입 받기' }));
+    for (const [frame, cost] of [[1, 'Mine'], [3, 'TradingStation'], [5, 'ResearchLab'], [15, 'PlanetaryInstitute'], [16, 'Academy']] as const) {
+      act(() => useGameStore.getState().actions.setGameState(states[frame]));
+      const marked = mine?.querySelector(`.faction-board-cost-highlight[data-tutorial-target="cost:${cost}"]`);
+      expect(marked, cost).toHaveClass('tutorial-highlight');
+      expect(document.querySelectorAll(`.game-table-player-card:not(.game-table-player-card--me) .tutorial-highlight[data-tutorial-target="cost:${cost}"]`)).toHaveLength(0);
+    }
   });
 
   it('keeps the guide beside the board and introduces each area before play', () => {
@@ -152,7 +178,7 @@ describe('shared round-one tutorial', () => {
     expect(document.querySelector('.game-table-player-card--me')).toHaveClass('tutorial-tour-highlight');
     fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
     expect(screen.getByText('자원 트랙·파워 순환·교환')).toBeInTheDocument();
-    expect(target('resource:track')).toHaveClass('tutorial-highlight');
+    expect(document.querySelector('.game-table-player-card--me .faction-board-resource-marker[data-tutorial-target="resource:track"]')).toHaveClass('tutorial-highlight');
     expect(target('power:III')).toHaveClass('tutorial-highlight');
     fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
     expect(screen.getByText('한 라운드의 네 단계')).toBeInTheDocument();
