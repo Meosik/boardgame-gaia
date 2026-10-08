@@ -8,6 +8,12 @@ import './roundOne.css';
 
 const boardTour = [
   {
+    title: '가이아 프로젝트의 목표',
+    panel: null,
+    description: '당신은 테란을 이끌고 우주의 행성을 평화롭게 개척합니다. 다른 환경의 행성은 테라포밍해 살 수 있게 만들고, 건물을 키우고 연구하며 연방을 만듭니다.',
+    cue: '게임은 6라운드입니다. 플레이 중과 게임 종료 때 승점(VP)을 얻고, 마지막에 VP가 가장 많은 사람이 승리합니다.',
+  },
+  {
     title: '라운드 목표와 부스터',
     panel: 'game-overview',
     description: '맨 위에는 이번 라운드에 점수를 얻는 방법과 게임 종료 목표가 있습니다. 부스터는 이번 라운드의 능력이며, 패스할 때 다음 부스터를 고릅니다.',
@@ -45,7 +51,7 @@ const boardTour = [
   },
 ] as const;
 
-const tourTargets = [[], [], [], [], ['resource:track', 'resource:qic', 'power:I', 'power:II', 'power:III'], []] as const;
+const tourTargets = [[], [], [], [], [], ['resource:track', 'resource:qic', 'power:I', 'power:II', 'power:III'], []] as const;
 
 const incomeLabels = ['광석', '크레딧', '지식', 'QIC', '충전', '새 토큰', '점수'] as const;
 
@@ -95,8 +101,10 @@ export function RoundOneGuide({ state }: { state: GameState }) {
 
   useEffect(() => {
     if (!intro) return;
-    const section = document.getElementById(boardTour[tourPage].panel);
-    const panel = boardTour[tourPage].panel === 'game-factions'
+    const panelId = boardTour[tourPage].panel;
+    if (!panelId) return;
+    const section = document.getElementById(panelId);
+    const panel = panelId === 'game-factions'
       ? section?.querySelector<HTMLElement>('.game-table-player-card--me') ?? section
       : section;
     if (!panel) return;
@@ -158,7 +166,7 @@ export function RoundOneGuide({ state }: { state: GameState }) {
             {tourPage < boardTour.length - 1 ? (
               <button type="button" className="round-one-primary" onClick={() => setTourPage(page => page + 1)}>다음 영역</button>
             ) : (
-              <button type="button" className="round-one-primary" onClick={() => setIntro(false)}>첫 수입 받기</button>
+              <button type="button" className="round-one-primary" onClick={() => setIntro(false)}>둘러보기 마치기</button>
             )}
           </div>
         </div>

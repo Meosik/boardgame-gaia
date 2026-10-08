@@ -35,10 +35,10 @@ function target(value: string) {
 }
 
 function finishBoardTour() {
-  for (let page = 0; page < 5; page++) {
+  for (let page = 0; page < 6; page++) {
     fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
   }
-  fireEvent.click(screen.getByRole('button', { name: '첫 수입 받기' }));
+  fireEvent.click(screen.getByRole('button', { name: '둘러보기 마치기' }));
 }
 
 beforeEach(() => {
@@ -55,15 +55,19 @@ describe('shared round-one tutorial', () => {
       render(<><button data-tutorial-target={step.target}>대상</button><button data-tutorial-target="unrelated">다른 대상</button><RoundOneGuide state={state} /></>);
       if (number === 1) {
         expect(screen.getByText('0 / 29 · 판과 목표')).toBeInTheDocument();
-        for (let page = 0; page < 5; page++) {
-          expect(screen.getByText(`판 둘러보기 ${page + 1} / 6`)).toBeInTheDocument();
+        expect(screen.getByText('가이아 프로젝트의 목표')).toBeInTheDocument();
+        expect(screen.getByText(/마지막에 VP가 가장 많은 사람이 승리합니다/)).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '수입 받기' })).not.toBeInTheDocument();
+        for (let page = 0; page < 6; page++) {
+          expect(screen.getByText(`판 둘러보기 ${page + 1} / 7`)).toBeInTheDocument();
           fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
         }
         expect(screen.getByText('한 라운드의 네 단계')).toBeInTheDocument();
         expect(screen.getByText('연습이라 자원·건물·연구를 미리 받았습니다.')).toBeInTheDocument();
         fireEvent.click(screen.getByText('이번 연습의 특별 설정과 시작 자원'));
         expect(screen.getAllByText(/원래 규칙에서는 받지 않는 것/)).toHaveLength(3);
-        fireEvent.click(screen.getByRole('button', { name: '첫 수입 받기' }));
+        fireEvent.click(screen.getByRole('button', { name: '둘러보기 마치기' }));
+        expect(screen.getByRole('button', { name: '수입 받기' })).toBeInTheDocument();
       }
       expect(screen.getByText(`${number} / 29 · ${step.title}`)).toBeInTheDocument();
       expect(screen.getByText(step.instruction)).toBeInTheDocument();
@@ -146,7 +150,7 @@ describe('shared round-one tutorial', () => {
     useGameStore.setState({ gameState: states[0], myPlayerId: 0 });
     render(<App />);
     fireEvent.click(screen.getByText('테스트 입장'));
-    for (let page = 0; page < 4; page++) fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+    for (let page = 0; page < 5; page++) fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
     const mine = document.querySelector('.game-table-player-card--me');
     expect(mine?.querySelectorAll('.faction-board-resource-marker[data-tutorial-target="resource:track"]')).toHaveLength(4);
     expect(mine?.querySelectorAll('.faction-board-resource-marker.tutorial-highlight')).toHaveLength(4);
@@ -154,7 +158,7 @@ describe('shared round-one tutorial', () => {
     expect(document.querySelectorAll('.game-table-player-card:not(.game-table-player-card--me) .faction-board-resource-marker.tutorial-highlight')).toHaveLength(0);
     expect(document.querySelectorAll('.game-table-player-card:not(.game-table-player-card--me) .faction-board-side-rack-qic.tutorial-highlight')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
-    fireEvent.click(screen.getByRole('button', { name: '첫 수입 받기' }));
+    fireEvent.click(screen.getByRole('button', { name: '둘러보기 마치기' }));
     for (const [frame, cost] of [[1, 'Mine'], [3, 'TradingStation'], [5, 'ResearchLab'], [15, 'PlanetaryInstitute'], [16, 'Academy']] as const) {
       act(() => useGameStore.getState().actions.setGameState(states[frame]));
       const marked = mine?.querySelector(`.faction-board-cost-highlight[data-tutorial-target="cost:${cost}"]`);
@@ -169,6 +173,10 @@ describe('shared round-one tutorial', () => {
     fireEvent.click(screen.getByText('테스트 입장'));
     const guide = screen.getByLabelText('1라운드 따라 하기');
     expect(guide.closest('aside')).toHaveClass('game-sidebar--tutorial');
+    expect(screen.getByText('가이아 프로젝트의 목표')).toBeInTheDocument();
+    expect(document.querySelector('.tutorial-tour-highlight')).toBeNull();
+    expect(screen.queryByRole('button', { name: '도움말' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
     expect(document.getElementById('game-overview')).toHaveClass('tutorial-tour-highlight');
     fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
     expect(document.getElementById('game-map')).toHaveClass('tutorial-tour-highlight');
@@ -182,7 +190,7 @@ describe('shared round-one tutorial', () => {
     expect(target('power:III')).toHaveClass('tutorial-highlight');
     fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
     expect(screen.getByText('한 라운드의 네 단계')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '첫 수입 받기' })).toHaveClass('round-one-primary');
+    expect(screen.getByRole('button', { name: '둘러보기 마치기' })).toHaveClass('round-one-primary');
   });
 
   it('reveals each step board and reopens the free action list after the log tab', async () => {
