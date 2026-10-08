@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자 확인(2026-10-08 \"그렇게 해\", 045 뒤): A = guide_r1_charge3_lf_more_vm, B = A + lf_frozen(남은 동결 손 식을 가이드 가격 계산으로: 확장·가이아 기회 → 닿는 광산 순가치, 가이아 구역 토큰 → B02 토큰 값, 타클론 의회 항·이웃 리치 → 내 건물 파워값 기준 리치, 셋업 placement 손 계수 → 0, 제노스 리치 손 식 → 가이드 가격). vp1·리치 규칙 없음. 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전, 두 팔 환율 같음).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}

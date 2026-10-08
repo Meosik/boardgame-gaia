@@ -711,7 +711,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'charge_vp': False,           # True: guide_r1_charge3_lf_tiles (VP held kept in charge_value)
           'lf_more': False,             # True: guide_r1_charge3_lf_more (see lf_more_value)
           'academy_r1': False,          # True: guide_r1_charge3_lf_more_ac (see academy_r1)
-          'sheden_r1': False}           # True: guide_r1_charge3_lf_more_sh (see SHEDEN_OPENINGS)
+          'sheden_r1': False,           # True: guide_r1_charge3_lf_more_sh (see SHEDEN_OPENINGS)
+          'lf_frozen': False}           # True: guide_r1_charge3_lf_more_vm_lf (see install_lf_frozen)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -845,12 +846,16 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
     horizon = max(0, 6-state['round'])
     result = player['vp'] + v.standings(state, actor)
     result += gv.research_value(state, player)
-    result += gv.materials(state, player['resources']) + gv.power_value(state, player)
     power = player['resources']['power']
+    if _guide['lf_frozen']:
+        result += gv.materials(state, player['resources']) + lf_power_value(state, player)
+    else:
+        result += gv.materials(state, player['resources']) + gv.power_value(state, player)
     if horizon:
-        # The frozen teacher's own Brainstone and Gaia-area terms (faction-dependent, unchanged).
+        # The frozen teacher's own Brainstone term (kept); its Gaia-area term unless lf_frozen.
         result += {'Area1': .5, 'Area2': 1.5, 'Area3': 4.2, 'Gaia': 0, None: 0}[power['brainstone']]
-        result += (.6 if player['faction'] == 'Terrans' else .2)*power['gaia_forming']
+        if not _guide['lf_frozen']:
+            result += (.6 if player['faction'] == 'Terrans' else .2)*power['gaia_forming']
     income = v.production(state, player, include_booster=False)
     if not _guide['track_income']:
         # research_value already prices every level at 16 charges "for the research advance"
@@ -869,11 +874,17 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
         result += gv.ships_value(state, player) + gv.green_tokens_value(state, player)
     else:
         result += gv.ship_value(state)*len(player['explored_ships'])
-    if player['faction'] == 'Taklons' and any(s['kind'] == 'PlanetaryInstitute' for s in player['structures']):
+    if (not _guide['lf_frozen'] and player['faction'] == 'Taklons'
+            and any(s['kind'] == 'PlanetaryInstitute' for s in player['structures'])):
         owners = {b['owner'] for c, cell in state['board']['hexes'].items()
                   if any(v.distance(c, s['hex']) <= 2 for s in player['structures'])
                   for b in cell['structures'] if b['owner'] != actor}
         result += horizon*min(2, len(owners))
+    if _guide['lf_frozen']:
+        result += colony_options(state, player, home=home)
+        result += lf_research_options(state, player) + federation_progress(state, player)
+        result += lf_leech_value(state, player)
+        return result + _guide_tiles(state, player, horizon)
     reach = player
     if not _guide['qic_reach']:
         # The guide's QIC price already includes its range use; count planets reachable
@@ -889,8 +900,14 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
         result += federation_progress(state, player) + leech_value(state, player)
     else:
         result += v.research_options(state, player)
-    advanced =lf_advanced_option if _guide['lf_tables'] else v.advanced_option
-    result += sum(advanced(state, player, tile) for tile in player['advanced_tech_tiles'])
+    return result + _guide_tiles(state, player, horizon)
+
+
+def _guide_tiles(state, player, horizon):
+    """Advanced and standard tech tiles held (the tail of guide_potential)."""
+    import guide_value as gv
+    advanced = lf_advanced_option if _guide['lf_tables'] else _value.advanced_option
+    result = sum(advanced(state, player, tile) for tile in player['advanced_tech_tiles'])
     active = set(player['tech_tiles'])-set(player['covered_tech_tiles'])
     if _guide['lf_tiles']:
         result += standard_tiles_value(state, player, active, horizon)
@@ -1660,4 +1677,179 @@ def guide_r1_charge3_lf_more_vm_vp1(seed, **kwargs):
     (accept a leech costing at most 2 VP, decline 3 VP or more)."""
     teacher = guide_r1_charge3_lf_more_vm(seed, **kwargs)
     install_vp1_leech()
+    return teacher
+
+
+# ── lf_frozen ──────────────────────────────────────────────────────────────────────────
+# User (2026-10-08, after 045 "그렇게 해"): the frozen teacher's remaining hand formulas are
+# replaced by calculations at the guide prices, on top of lf_more_vm (no vp1, no leech rule):
+# 1. Colony options (frozen expansion_value 4/(cost+QIC+1) top 3, gaia_value 6+2·rounds per
+#    colony ×0.65, both capped by hand): every planet in range now is priced as a mine built next
+#    round — planet (LF01 6 charges) + the mine's income from the round after — minus its cost
+#    at LF prices (1 ore + terraforming ore, 2 credits, range QIC, 1 QIC on a Gaia planet). Transdim
+#    planets count when a Gaia former and its tokens are free (rulebook Gaia project); Terrans'
+#    returning tokens land in bowl II (one charge each). Positive options only, best first, within
+#    the ore/credits/QIC held plus the next income and the 8-mine limit. QIC is paid here, so
+#    planets are reached with the QIC really held (qic_reach no longer applies).
+# 2. Gaia-area tokens (frozen 0.6 Terrans / 0.2 others): tokens, B02 value up to the need,
+#    counted with the bowl tokens since they come back at the next Gaia phase.
+# 3. Neighbour charges (frozen Taklons PI term horizon·min(2, owners); lf_more 2 charges per
+#    neighbour): each opponent within 2 hexes charges, once a round, the highest power value of
+#    our buildings near theirs (rulebook leech amount); with the Taklons PI one more token
+#    (rulebook PI ability, B02 token value while needed).
+# 4. Setup placement (frozen 3/d home, 1.5/d near colours, 2·owners, −0.25·ship distance): 0.
+#    The placed structure's reachable planets and neighbours are now in the state value (1, 3) and
+#    guide_r1 still compares only starts next to an opponent.
+# 5. Xenos leech (integrated teacher: charge·1.1 − cost·(1.5 or 0.7), −4 without ships): the
+#    charge at the guide price minus its VP cost, accepted when positive.
+# Kept: standings, Brainstone, the −0.25 free-action term.
+
+
+def lf_power_value(state, player):
+    """guide_value.power_value with the Gaia-area tokens counted as tokens held (item 2)."""
+    import guide_value as gv
+    power = player['resources']['power']
+    charges = power['bowl2'] + 2*power['bowl3']
+    if player['faction'] == 'Terrans':
+        charges += power['gaia_forming']
+    tokens = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3')) + power['gaia_forming']
+    return gv.to_vp(state, charges + gv.TOKEN*min(tokens, gv.tokens_needed(player)))
+
+
+GAIA_TOKENS = (255, 6, 6, 4, 3, 3)   # rulebook: tokens per Gaia former by Gaia track level
+MINE_COST = {'ore': 1, 'credits': 2}
+MINE_LIMIT = 8
+
+
+def _colony_costs(state, player, home):
+    """(cost, extra charges) of each colony option (item 1), before pricing."""
+    from economy.teacher import ORE_PER_STEP, RING
+    v = _value
+    options = []
+    if home in RING:
+        step_ore = ORE_PER_STEP[player['research_tracks']['terraforming']]
+        for _, planet, qic in v.targets(state, player, (*RING, 'Gaia')):
+            if planet['planet_type'] == 'Gaia':
+                options.append(({**MINE_COST, 'qic': qic+1}, 0))
+                continue
+            gap = abs(RING.index(home)-RING.index(planet['planet_type']))
+            ore = MINE_COST['ore'] + min(gap, 7-gap)*step_ore
+            options.append(({**MINE_COST, 'ore': ore, 'qic': qic}, 0))
+    level = player['research_tracks']['gaia']
+    terrans = player['faction'] == 'Terrans'
+    reserved = sum(cell['planet'] is not None and cell['planet']['owner'] == player['player_id']
+                   and cell['planet']['planet_type'] == 'Transdim' and not cell['structures']
+                   for cell in state['board']['hexes'].values())
+    options += [(dict(MINE_COST), 0)]*reserved
+    if level:
+        power = player['resources']['power']
+        tokens = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3'))
+        formers = max(0, player['gaiaformers_total'] - player['gaiaformers_deployed']
+                      - player['gaiaformers_in_gaia_area'] - player['resources']['spent_gaia_formers'])
+        room = min(formers, tokens//GAIA_TOKENS[level])
+        transdim = sorted((qic for _, _, qic in v.targets(state, player, ('Transdim',))))[:room]
+        options += [({**MINE_COST, 'qic': qic}, GAIA_TOKENS[level]*terrans) for qic in transdim]
+    return options
+
+
+def colony_options(state, player, *, home=None):
+    import guide_value as gv
+    v = _value
+    if state['round'] >= 6:
+        return 0.0
+    home = v.HOME.get(player['faction']) if home is None else home
+    current = v.production(state, player, include_booster=False)
+    built = {**player, 'structures': [*player['structures'], {'kind': 'Mine', 'hex': None}]}
+    delta = [b-a for a, b in zip(current, v.production(state, built, include_booster=False))]
+    gain = gv.planet_value(state) + gv.incomes_value(dict(state, round=state['round']+1), delta)
+    recurring = v.production(state, player, include_booster=player['passed'])
+    resources = player['resources']
+    budget = {'ore': resources['ore']+recurring[0], 'credits': resources['credits']+recurring[1],
+              'qic': resources['qic']+recurring[3]}
+    priced = []
+    for cost, charges in _colony_costs(state, player, home):
+        net = gain + gv.to_vp(state, charges - sum(gv.CHARGE[k]*n for k, n in cost.items()))
+        if net > 0:
+            priced.append((net, cost))
+    room = max(0, MINE_LIMIT - sum(v.kind(s['kind']) == 'Mine' for s in player['structures']))
+    total = 0.0
+    for net, cost in sorted(priced, key=lambda item: -item[0]):
+        if not room:
+            break
+        if all(budget[k] >= n for k, n in cost.items()):
+            for k, n in cost.items():
+                budget[k] -= n
+            total += net
+            room -= 1
+    return total
+
+
+def lf_leech_value(state, player):
+    """Item 3: per opponent, the highest power value among our buildings within 2 hexes of
+    theirs, once for every round left; the Taklons PI adds a token per leech."""
+    import guide_value as gv
+    v = _value
+    power = player['resources']['power']
+    tokens = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3'))
+    pi_token = (player['faction'] == 'Taklons'
+                and any(v.kind(s['kind']) == 'PlanetaryInstitute' for s in player['structures'])
+                and tokens < gv.tokens_needed(player))
+    per_round = []
+    for other in state['players']:
+        if other is player:
+            continue
+        near = [_structure_power(s) for s in player['structures']
+                if any(v.distance(s['hex'], b['hex']) <= 2 for b in other['structures'])]
+        if near:
+            per_round.append(max(near) + gv.TOKEN*pi_token)
+    rounds = 7-max(state['round'], 1)
+    best = sorted(per_round, reverse=True)[:gv.LEECH_NEIGHBORS_MAX]
+    return gv.to_vp(state, sum(best)*rounds)
+
+
+def lf_charge_score(teacher, snapshot, action):
+    """Item 5 for the integrated (Xenos) teacher; None when no charge is pending."""
+    import guide_value as gv
+    state, player, resources = teacher.context(snapshot)
+    phase = state['phase']
+    queue = phase.get('ChargePowerPending', {}).get('queue', []) if isinstance(phase, dict) else []
+    entry = next((q for q in queue if q['player'] == player['player_id']), None)
+    if not entry:
+        return None
+    p = resources['power']
+    charge = min(entry['max_power'], 2*p['bowl1']+p['bowl2'], max(0, player['vp'])+1)
+    value = gv.to_vp(state, charge) - max(0, charge-1)
+    return (value if action['accept'] else 0), f'charge: {charge} at the guide price minus its VP cost'
+
+
+def _no_placement(state, player, coord, *, home=None):
+    return 0.0
+
+
+def install_lf_frozen():
+    import four_factions.quick as quick
+    import four_factions.teacher as ff_teacher
+    import integrated.teacher as integrated
+    _guide['lf_frozen'] = True
+    ff_teacher.placement = quick.placement = _no_placement
+    cls = integrated.IntegratedTeacher
+    if not getattr(cls.score, '_lf_frozen', False):
+        inner_score = cls.score
+
+        def score(self, snapshot, action):
+            if action['type'] == 'ChargePower':
+                result = lf_charge_score(self, snapshot, action)
+                if result is not None:
+                    return result
+            return inner_score(self, snapshot, action)
+        score._lf_frozen = True
+        cls.score = score
+
+
+def guide_r1_charge3_lf_more_vm_lf(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm with the frozen hand formulas (colony
+    options, Gaia-area tokens, neighbour charges, setup placement, Xenos leech) computed at the
+    guide prices (lf_frozen)."""
+    teacher = guide_r1_charge3_lf_more_vm(seed, **kwargs)
+    install_lf_frozen()
     return teacher

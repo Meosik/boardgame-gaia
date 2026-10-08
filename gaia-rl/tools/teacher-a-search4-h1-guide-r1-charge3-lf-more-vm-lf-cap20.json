@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm (hard, 4 comparisons, 20 s cap) with the frozen hand formulas computed at the guide prices: colony options (expansion/Gaia), Gaia-area tokens, neighbour charges by building power (Taklons PI included), no setup placement term, Xenos leech at the guide price (guide_r1_charge3_lf_more_vm_lf).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}
