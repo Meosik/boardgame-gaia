@@ -313,6 +313,7 @@ export function ResearchBoard({
               <span
                 key={`${key}-${player.player_id}`}
                 data-research-level={level}
+                data-tutorial-target={player.player_id === active[0]?.player_id ? 'income:research' : undefined}
                 data-replay-highlight={replay?.player === player.player_id && replay.research.has(key) || undefined}
                 className={`research-board-token${chooseTrack ? ' research-board-token--clickable' : ''}`}
                 style={{ top: `${yPct}%`, left: `${xPct + fanOffset}%` }}

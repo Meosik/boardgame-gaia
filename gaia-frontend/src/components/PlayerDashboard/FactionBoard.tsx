@@ -11,7 +11,7 @@ import { factionDisplayName, planetTypeDisplayName } from '../../displayNames';
 import { GamePieceIcon, type GamePieceIconKind } from '../GamePieceIcon';
 import { ResourcePanel } from './ResourcePanel';
 import { SatelliteToken } from './SatelliteToken';
-import { remainingFactionBoardStructureSlots } from './factionBoardStructureSlots';
+import { exposedFactionBoardStructureSlots, remainingFactionBoardStructureSlots } from './factionBoardStructureSlots';
 import { FactionBoardSideRack } from './FactionBoardSideRack';
 
 interface Props {
@@ -201,6 +201,15 @@ export function FactionBoard({
             aria-label={slot.label}
           />
         ))}
+        {exposedFactionBoardStructureSlots(structures, faction).map(slot => (
+          <span
+            key={`income-${slot.id}`}
+            className="faction-board-exposed-income"
+            data-tutorial-target="income:building"
+            aria-label={`${slot.label} 자리의 수입 아이콘`}
+            style={{ left: `${slot.xPct}%`, top: `${slot.yPct}%`, width: `${slot.widthPct}%` }}
+          />
+        ))}
         {resources && (
           <>
             {resourceTrackMarkers(resources).map((marker) => (
@@ -215,7 +224,7 @@ export function FactionBoard({
             ))}
           </>
         )}
-        {power && POWER_BOWLS.filter(bowl => bowl.key !== 'gaia_bowl').map(bowl => (
+        {power && POWER_BOWLS.map(bowl => (
           <span
             key={`power-region-${bowl.key}`}
             data-tutorial-target={`power:${bowl.label}`}

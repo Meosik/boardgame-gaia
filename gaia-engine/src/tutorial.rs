@@ -273,7 +273,7 @@ pub fn steps() -> Vec<TutorialStep> {
         (
             "광산 짓기",
             "(-1, 1)에 광산을 지으세요.",
-            "얼음 행성을 테라포밍 1단계로 바꾸며 광석을 냅니다.",
+            "얼음 행성: 삽 1단계 × 광석 3, 내 건물에서 2칸이라 QIC 1, 광산 건설 광석 1·크레딧 2를 냅니다.",
             "hex:-1,1",
             Build {
                 coord: coord(-1, 1),
@@ -289,7 +289,7 @@ pub fn steps() -> Vec<TutorialStep> {
         (
             "교역소",
             "(-1, 1)의 광산을 교역소로 바꾸세요.",
-            "상대 건물이 가까워 크레딧 비용이 할인됩니다.",
+            "상대 광산까지 1칸입니다. 2칸 이내라 교역소 비용이 광석 2·크레딧 6에서 광석 2·크레딧 3으로 줄어듭니다.",
             "hex:-1,1",
             Upgrade {
                 coord: coord(-1, 1),
@@ -300,7 +300,7 @@ pub fn steps() -> Vec<TutorialStep> {
         (
             "파워로 크레딧",
             "파워 1개를 크레딧으로 바꾸세요.",
-            "자유 행동은 차례를 넘기지 않습니다.",
+            "3구역 파워를 쓰면 1구역으로 돌아갑니다. 자유 행동은 차례를 넘기지 않지만 교환 비율이 비쌉니다.",
             "free:PowerToCredit",
             FreeAction {
                 kind: FreeActionKind::PowerToCredit,
@@ -308,23 +308,9 @@ pub fn steps() -> Vec<TutorialStep> {
             },
         ),
         (
-            "자원 변환 묶음 · 광석",
-            "파워 3개를 광석 1개로 바꾸세요.",
-            "자유 행동으로 건설에 필요한 광석을 보충합니다.",
-            "free:PowerToOre",
-            FreeAction { kind: FreeActionKind::PowerToOre, count: 1 },
-        ),
-        (
-            "자원 변환 묶음 · 지식",
-            "지식 2개를 크레딧 2개로 한 번에 바꾸세요.",
-            "세 종류의 변환을 해 보았습니다. 오른쪽 자유 행동 목록에서 전체 변환 비율을 확인하세요.",
-            "free:KnowledgeToCredit",
-            FreeAction { kind: FreeActionKind::KnowledgeToCredit, count: 2 },
-        ),
-        (
             "연구소와 기술",
-            "(-1, 1)을 연구소로 바꾸고 기술 10을 고르세요.",
-            "기술 10은 라운드당 1회 파워 4 충전 행동입니다. 경제 1단계는 다음 수입부터 크레딧 2와 파워 1 충전을 줍니다. 연구소도 수입 지식을 늘립니다.",
+            "(-1, 1)을 연구소로 바꾸고 파워 4 충전 기술(10)을 고르세요.",
+            "연구소는 광석 3·크레딧 5. 위 줄 표준 기술은 바로 위 트랙만 올립니다. 이 기술은 경제 아래라 경제가 오릅니다. 아래 줄 3장은 아무 트랙이나 고릅니다. 연구소는 수입 지식을 늘립니다.",
             "hex:-1,1",
             Upgrade {
                 coord: coord(-1, 1),
@@ -352,7 +338,7 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "기술 특수 행동",
-            "기술 10의 파워 4 충전을 쓰세요.",
+            "파워 4 충전 기술(10)의 행동을 쓰세요.",
             "이 특수 행동은 라운드마다 한 번 쓸 수 있습니다.",
             "tech:10",
             TechTileSpecialAction {
@@ -362,7 +348,7 @@ pub fn steps() -> Vec<TutorialStep> {
         (
             "파워 태우기",
             "2구역 파워를 한 번 태우세요.",
-            "3구역은 3파워라 다음 4파워 행동을 못 합니다. 2구역 토큰 2개 중 하나를 영원히 버리고 하나를 3구역으로 옮겨 4파워를 만드세요.",
+            "지금 3구역은 6파워입니다. 3파워를 광석 1로 바꾸면 3만 남아 공용 4파워 칸을 못 씁니다. 2구역 토큰 하나를 영원히 버려 하나를 3구역으로 보내면 교환 뒤 4가 남습니다.",
             "free:BurnPower",
             FreeAction {
                 kind: FreeActionKind::BurnPower,
@@ -370,16 +356,23 @@ pub fn steps() -> Vec<TutorialStep> {
             },
         ),
         (
+            "자원 변환 묶음 · 광석",
+            "파워 3개를 광석 1개로 바꾸세요.",
+            "급할 때만 쓰는 비싼 교환입니다. 파워 3 → 광석 1, 바로 다음 공용 칸은 파워 4 → 광석 2입니다.",
+            "free:PowerToOre",
+            FreeAction { kind: FreeActionKind::PowerToOre, count: 1 },
+        ),
+        (
             "공용 파워 행동",
-            "공용 파워 행동 3번을 쓰세요.",
-            "공용 칸은 한 라운드에 한 명만 쓸 수 있습니다. 상대 B가 먼저 쓴 4번은 이번 라운드에 다시 쓸 수 없습니다.",
+            "파워 4로 광석 2를 받는 공용 칸(3)을 쓰세요.",
+            "공용 칸은 한 라운드에 한 명만 쓸 수 있습니다. 상대 B가 먼저 쓴 파워 4 → 크레딧 7 칸(4)은 이번 라운드에 다시 쓸 수 없습니다.",
             "power:3",
             PowerAction { id: 3, coord: None },
         ),
         (
             "연구판 고급 기술",
             "(3, -5)을 연구소로 바꾸고 과학 고급 기술로 10을 덮은 뒤 테라포밍을 올리세요.",
-            "과학 4단계와 초록 토큰으로 고급 21을 받습니다. 테라포밍 1단계는 즉시 광석 2, 고급 21은 라운드당 1회 광석 3 행동입니다. 10을 덮어 충전 행동은 사라집니다.",
+            "고급 기술 조건은 과학 4단계, 초록 연방 토큰 뒤집기, 표준 기술 덮기입니다. 덮는 타일과 무관하게 테라포밍을 올립니다. 광석 3 행동 기술(21)은 라운드당 1회입니다.",
             "hex:3,-5",
             Upgrade {
                 coord: coord(3, -5),
@@ -393,7 +386,7 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "고급 기술 광석 행동",
-            "고급 기술 21의 광석 3 행동을 쓰세요.",
+            "광석 3 행동 기술(21)을 쓰세요.",
             "라운드마다 한 번 광석 3개를 받습니다.",
             "advanced:21",
             TechTileSpecialAction { tile: TechTileRef::Advanced { tile: AdvancedTechTile(21) } },
@@ -401,7 +394,7 @@ pub fn steps() -> Vec<TutorialStep> {
         (
             "QIC로 거리 늘리기",
             "(5, -6)에 광산을 지으세요.",
-            "기본 거리 밖이라 필요한 QIC를 자동으로 냅니다.",
+            "항법 기본 거리를 넘으면 부족한 거리 2칸마다 QIC 1개를 냅니다. 광산 기본 비용 광석 1·크레딧 2도 냅니다.",
             "hex:5,-6",
             Build {
                 coord: coord(5, -6),
@@ -420,8 +413,8 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "QIC 아카데미",
-            "(-1, 1)을 QIC 아카데미로 바꾸고 기술 4를 고르세요.",
-            "기술 4로 즉시 광석 1·QIC 1을 받습니다. 아카데미는 라운드당 1회 QIC 행동을 엽니다.",
+            "(-1, 1)을 QIC 아카데미로 바꾸고 광석 1·QIC 1 즉시 기술(4)을 고르세요.",
+            "아카데미 비용은 광석 6·크레딧 6. 즉시 광석 1·QIC 1을 받고 라운드당 1회 QIC 행동을 엽니다.",
             "hex:-1,1",
             Upgrade {
                 coord: coord(-1, 1),
@@ -447,8 +440,8 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "아티팩트 조사",
-            "아티팩트 6을 고르세요.",
-            "Twilight를 탐사했으므로 파워 토큰 6개를 버리고 조사할 수 있습니다.",
+            "광석 3·크레딧 3 아티팩트(6)를 고르세요.",
+            "Twilight를 탐사했으므로 파워 토큰 6개를 버리고 조사해 즉시 광석 3·크레딧 3을 받습니다.",
             "artifact:6",
             ExamineArtifact {
                 artifact: ArtifactId(6),
@@ -460,7 +453,7 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "부스터 함선 탐사",
-            "부스터 8로 T F Mars를 탐사하세요.",
+            "+3 거리 탐사 부스터(8)로 T F Mars를 탐사하세요.",
             "+3 거리로 탐사합니다. 상대들은 이미 패스했습니다.",
             "ship:TFMars",
             RoundBoosterRangeExploreSpaceship {
@@ -487,7 +480,7 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "연방 만들기",
-            "세 건물을 위성 2개로 잇고 연방 토큰 5를 고르세요.",
+            "세 건물을 위성 2개로 잇고 7점·크레딧 6 연방 토큰(5)을 고르세요.",
             "의회 3 + 아카데미 3 + 광산 1 = 파워 7입니다. 위성마다 토큰 하나를 버립니다.",
             "federation",
             FormFederation {
@@ -501,7 +494,7 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "연방 보상 다시 받기",
-            "Twilight에서 연방 토큰 5를 다시 쓰세요.",
+            "Twilight에서 7점·크레딧 6 연방 토큰(5)의 효과를 다시 쓰세요.",
             "QIC 3으로 보상을 다시 받고 토큰 색은 유지합니다.",
             "ship:Twilight",
             TwilightReplayFederationToken {
@@ -513,8 +506,8 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "확장 고급 기술",
-            "(2, -4)를 연구소로 바꾸고 확장 고급 기술로 4를 덮은 뒤 테라포밍을 올리세요.",
-            "함선 3척과 초록 토큰으로 고급 7을 받습니다. 패스할 때 연구소마다 3점입니다. 두 번째 토큰도 회색이 됩니다.",
+            "(2, -4)를 연구소로 바꾸고 연구소마다 패스 3점 기술(7)로 즉시 보상 기술(4)을 덮은 뒤 테라포밍을 올리세요.",
+            "확장 고급 기술은 함선 3척, 초록 연방 토큰 뒤집기, 덮을 표준 기술이 필요합니다. 원하는 연구 트랙을 올립니다. 패스할 때 연구소마다 3점입니다.",
             "hex:2,-4",
             Upgrade {
                 coord: coord(2, -4),
@@ -527,7 +520,7 @@ pub fn steps() -> Vec<TutorialStep> {
         ),
         (
             "패스",
-            "패스하고 부스터 1을 고르세요.",
+            "패스하고 지식 1 수입 부스터(1)를 고르세요.",
             "상대들은 이미 패스했습니다. 다음 라운드는 패스한 순서로 시작합니다.",
             "pass",
             Pass {
@@ -579,7 +572,7 @@ pub fn initial_state(room_code: &str, ids: [PlayerId; 4]) -> Result<GameState, R
     state.boosters = vec![Booster(1), Booster(2), Booster(3)];
     state.tutorial = Some(TutorialState { script_id: SCRIPT_ID.into(), step: 1, steps: steps(), introduction: vec![
         "4인 + Lost Fleet, 테란으로 1라운드를 진행합니다. 종족·초기 배치·부스터 선택은 마쳤습니다.".into(),
-        "원래 규칙에서는 받지 않는 것: 광석 13, 크레딧 19, 지식 7, QIC 8, 파워 1·2·3구역 각각 4·5·4개 (테란 기본 4·4·0에 토큰 5개 추가), 30점으로 시작합니다.".into(),
+        "원래 규칙에서는 받지 않는 것: 광석 13, 크레딧 19, 지식 7, QIC 8, 파워 1·2·3구역 각각 4·5·3개 (테란 기본 4·4·0에 토큰 4개 추가), 30점으로 시작합니다.".into(),
         "원래 규칙에서는 받지 않는 것: 초록 연방 토큰 4번 1개와 과학 연구 4단계를 미리 받습니다. 지급 토큰의 보상은 시작 자원에 포함했습니다.".into(),
         "원래 규칙에서는 받지 않는 것: 교역소 3개·광산 1개를 준비했습니다. 부스터 8, 광산마다 2점인 라운드 목표, 과학 고급 21·확장 고급 7을 고정했습니다.".into(),
         "상대 A는 광산, B는 파워 행동을 한 번씩 하고 모두 일찍 패스합니다. 모든 좌석의 자원은 상한 안에서 시작합니다.".into(),
@@ -597,7 +590,7 @@ pub fn initial_state(room_code: &str, ids: [PlayerId; 4]) -> Result<GameState, R
         player.resources.qic = if index == 0 { 8 } else { 1 };
         player.resources.power.bowl1 = if index == 0 { 4 } else { 2 };
         player.resources.power.bowl2 = if index == 0 { 5 } else { 2 };
-        player.resources.power.bowl3 = 4;
+        player.resources.power.bowl3 = if index == 0 { 3 } else { 4 };
         player.vp = 30;
     }
     // Place the replacement standard tile under the same Gaia track as the old tile.
@@ -713,6 +706,7 @@ fn describe_move(state: &GameState, id: PlayerId, action: &GameAction) -> String
             "({}, {})에 광산을 지었습니다 → 파워 충전 기회",
             coord.q, coord.r
         ),
+        GameAction::PowerAction { id: 4, .. } => "파워 4 → 크레딧 7 공용 칸을 사용했습니다".into(),
         GameAction::PowerAction { id, .. } => format!("공용 파워 {id}번을 사용했습니다"),
         GameAction::Pass { booster_id } => {
             format!("패스하고 부스터 {}을 골랐습니다", booster_id.unwrap_or(0))
@@ -882,12 +876,11 @@ mod tests {
             &["즉시 1회"],
             &["수입 때마다"],
             &["즉시 1회"],
-            &["즉시 1회"],
-            &["즉시 1회"],
             &["수입 때마다", "라운드당 1회 행동"],
             &["즉시 1회"],
             &["즉시 1회"],
             &["라운드당 1회 행동"],
+            &["즉시 1회"],
             &["즉시 1회"],
             &["라운드당 1회 행동"],
             &["즉시 1회", "라운드당 1회 행동", "수입 때마다"],
@@ -1083,8 +1076,14 @@ mod tests {
                     ..
                 }
             ) {
-                assert_eq!(state.players[0].resources.power.bowl3, 3);
+                assert_eq!(state.players[0].resources.power.bowl3, 6);
                 let mut attempt = state.clone();
+                RuleEngine::apply_action(
+                    &mut attempt,
+                    0,
+                    GameAction::FreeAction { kind: FreeActionKind::PowerToOre, count: 1 },
+                )
+                .expect("ore conversion before burning");
                 assert!(RuleEngine::apply_action(
                     &mut attempt,
                     0,

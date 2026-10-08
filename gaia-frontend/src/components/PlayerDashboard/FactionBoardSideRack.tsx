@@ -118,7 +118,7 @@ export function FactionBoardSideRack({
       </RackSection>
 
       <RackSection label="부스터" className="faction-board-side-rack-booster">
-        {boosterSrc ? <img data-replay-highlight={actor && replay?.booster === booster || undefined} src={boosterSrc} alt={`라운드 부스터 ${booster}`} /> : <EmptyRackSlot />}
+        {boosterSrc ? <img data-tutorial-target="income:booster" data-replay-highlight={actor && replay?.booster === booster || undefined} src={boosterSrc} alt={`라운드 부스터 ${booster}`} /> : <EmptyRackSlot />}
       </RackSection>
 
       <RackSection label="아티팩트" className="faction-board-side-rack-artifact">

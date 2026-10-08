@@ -35,7 +35,7 @@ function target(value: string) {
 }
 
 function finishBoardTour() {
-  for (let page = 0; page < 3; page++) {
+  for (let page = 0; page < 5; page++) {
     fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
   }
   fireEvent.click(screen.getByRole('button', { name: '첫 수입 받기' }));
@@ -54,17 +54,18 @@ describe('shared round-one tutorial', () => {
       state.tutorial!.step = number;
       render(<><button data-tutorial-target={step.target}>대상</button><button data-tutorial-target="unrelated">다른 대상</button><RoundOneGuide state={state} /></>);
       if (number === 1) {
-        expect(screen.getByText('0 / 30 · 판과 목표')).toBeInTheDocument();
-        for (let page = 0; page < 3; page++) {
-          expect(screen.getByText(`판 둘러보기 ${page + 1} / 4`)).toBeInTheDocument();
+        expect(screen.getByText('0 / 29 · 판과 목표')).toBeInTheDocument();
+        for (let page = 0; page < 5; page++) {
+          expect(screen.getByText(`판 둘러보기 ${page + 1} / 6`)).toBeInTheDocument();
           fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
         }
-        expect(screen.getByText('내 종족판과 자원')).toBeInTheDocument();
+        expect(screen.getByText('한 라운드의 네 단계')).toBeInTheDocument();
+        expect(screen.getByText('연습이라 자원·건물·연구를 미리 받았습니다.')).toBeInTheDocument();
         fireEvent.click(screen.getByText('이번 연습의 특별 설정과 시작 자원'));
         expect(screen.getAllByText(/원래 규칙에서는 받지 않는 것/)).toHaveLength(3);
         fireEvent.click(screen.getByRole('button', { name: '첫 수입 받기' }));
       }
-      expect(screen.getByText(`${number} / 30 · ${step.title}`)).toBeInTheDocument();
+      expect(screen.getByText(`${number} / 29 · ${step.title}`)).toBeInTheDocument();
       expect(screen.getByText(step.instruction)).toBeInTheDocument();
       expect(screen.getByText(step.reason)).toBeInTheDocument();
       await waitFor(() => expect(target(step.target)).toHaveClass('tutorial-highlight'));
@@ -81,6 +82,61 @@ describe('shared round-one tutorial', () => {
     expect(tutorialTargets(state)).toEqual(expect.arrayContaining(['power:I', 'power:II', 'power:III']));
   });
 
+  it('shows the spending flow when power is used for the first time', () => {
+    render(<RoundOneGuide state={frames()[4]} />);
+    expect(screen.getByLabelText('파워 사용 순환')).toHaveTextContent('1구역');
+    expect(screen.getByLabelText('파워 사용 순환')).toHaveTextContent('3구역');
+    expect(screen.getByLabelText('파워 사용 순환')).toHaveTextContent('3구역의 토큰 1개를 써서 1구역으로 되돌립니다.');
+  });
+
+  it('teaches costs, power, tiles, federation, and scoring at their first use', () => {
+    const states = frames();
+    const checks: [number, RegExp][] = [
+      [2, /삽: 얼음 행성 1단계 × 광석 3.*QIC 1개.*광석 1·크레딧 2/],
+      [3, /내 교역소 파워값 2/],
+      [4, /광석 2·크레딧 6.*크레딧 3/],
+      [5, /3구역 토큰이 1구역으로/],
+      [6, /표준 기술은 바로 위 연구 트랙만/],
+      [8, /가이아 구역.*테란은 2구역/],
+      [11, /파워 3 → 광석 1.*바로 다음 공용 칸은 파워 4 → 광석 2/],
+      [12, /파워 4 → 광석 2/],
+      [13, /연방.*파워값 합이 7 이상/],
+      [15, /목표 \(5, -6\)까지 2칸.*QIC 1개/],
+      [16, /교역소 → 의회: 광석 4·크레딧 6/],
+      [17, /연구소 → 아카데미: 광석 6·크레딧 6/],
+      [24, /위성 2개.*위성마다 파워 토큰 1개/],
+      [26, /초록 연방 토큰을 회색으로/],
+    ];
+    for (const [number, copy] of checks) {
+      const { unmount, container } = render(<RoundOneGuide state={states[number - 1]} />);
+      expect(container).toHaveTextContent(copy);
+      unmount();
+    }
+    const { container } = render(<RoundOneGuide state={states[states.length - 1]} />);
+    expect(container).toHaveTextContent(/일곱 색 행성.*테라포밍/);
+    expect(container).toHaveTextContent(/최종 점수 타일 2개.*연구 점수와 남은 자원 환산/);
+  });
+
+  it('highlights income sources, the charging neighbor, Gaia area, and the shared power slot', () => {
+    const states = frames();
+    expect(tutorialTargets(states[0])).toEqual(expect.arrayContaining(['income:building', 'income:research', 'income:booster', 'resource:track']));
+    expect(tutorialTargets(states[2])).toEqual(expect.arrayContaining(['hex:-2,0', 'hex:-1,-1', 'power:I', 'power:III']));
+    expect(tutorialTargets(states[7])).toContain('power:G');
+    useGameStore.setState({ gameState: states[0], myPlayerId: 0 });
+    render(<App />);
+    fireEvent.click(screen.getByText('테스트 입장'));
+    finishBoardTour();
+    for (const key of ['income:building', 'income:research', 'income:booster']) expect(target(key)).toHaveClass('tutorial-highlight');
+    expect(target('income:building')).toHaveClass('faction-board-exposed-income');
+    act(() => useGameStore.getState().actions.setGameState(states[2]));
+    expect(document.querySelector('.tutorial-charge-source')).toBeInTheDocument();
+    expect(document.querySelector('.tutorial-charge-range')).toHaveAttribute('aria-label', '파워 충전 거리 2칸');
+    act(() => useGameStore.getState().actions.setGameState(states[7]));
+    expect(document.querySelector('.game-table-player-card--me [data-tutorial-target="power:G"]')).toHaveClass('tutorial-highlight');
+    act(() => useGameStore.getState().actions.setGameState(states[11]));
+    expect(target('power:3')).toHaveClass('tutorial-highlight');
+  });
+
   it('keeps the guide beside the board and introduces each area before play', () => {
     useGameStore.setState({ gameState: initial(), myPlayerId: 0 });
     render(<App />);
@@ -94,6 +150,12 @@ describe('shared round-one tutorial', () => {
     expect(document.getElementById('game-research-section')).toHaveClass('tutorial-tour-highlight');
     fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
     expect(document.querySelector('.game-table-player-card--me')).toHaveClass('tutorial-tour-highlight');
+    fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+    expect(screen.getByText('자원 트랙·파워 순환·교환')).toBeInTheDocument();
+    expect(target('resource:track')).toHaveClass('tutorial-highlight');
+    expect(target('power:III')).toHaveClass('tutorial-highlight');
+    fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+    expect(screen.getByText('한 라운드의 네 단계')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '첫 수입 받기' })).toHaveClass('round-one-primary');
   });
 
@@ -118,7 +180,7 @@ describe('shared round-one tutorial', () => {
         const panel = document.getElementById(tutorialPanel(state)!);
         expect(panel).toBeVisible();
         if (state.tutorial!.steps[state.tutorial!.step - 1].action.type === 'ChargePower') {
-          const bowls = document.querySelectorAll('.game-table-player-card--me .faction-board-image-wrap [data-tutorial-target^="power:"]');
+          const bowls = document.querySelectorAll('.game-table-player-card--me .faction-board-image-wrap [data-tutorial-target="power:I"], .game-table-player-card--me .faction-board-image-wrap [data-tutorial-target="power:II"], .game-table-player-card--me .faction-board-image-wrap [data-tutorial-target="power:III"]');
           expect(bowls).toHaveLength(3);
           bowls.forEach(bowl => expect(bowl).toHaveClass('tutorial-highlight'));
         }
@@ -131,10 +193,10 @@ describe('shared round-one tutorial', () => {
 
   it('uses ship coordinates and every federation satellite as highlight targets', () => {
     const state = initial();
-    state.tutorial!.step = 22;
+    state.tutorial!.step = 21;
     expect(tutorialTargets(state)).toContain('hex:-1,3');
     expect(tutorialTargets(state)).toContain('booster');
-    state.tutorial!.step = 25;
+    state.tutorial!.step = 24;
     expect(tutorialTargets(state)).toEqual(expect.arrayContaining(['hex:-1,-3', 'hex:-1,-1', 'hex:-1,1', 'hex:-1,-2', 'hex:-1,0', 'federation:5']));
   });
 
@@ -170,7 +232,7 @@ describe('shared round-one tutorial', () => {
   });
 
   it.each([0, 1])('selects advanced technology through the actual board flow (%s)', index => {
-    const state = frames()[index === 0 ? 13 : 26];
+    const state = frames()[index === 0 ? 12 : 25];
     const expected = state.tutorial!.steps[state.tutorial!.step - 1].action;
     useGameStore.setState({ gameState: state, myPlayerId: 0 });
     const client = new GaiaWebSocket('TUTOR');
@@ -260,7 +322,7 @@ describe('shared round-one tutorial', () => {
         useGameStore.getState().actions.setGameState(states[index + 1]);
       });
     }
-    expect(screen.getByText('30 / 30 · 지금 게임이 끝난다면')).toBeInTheDocument();
+    expect(screen.getByText('29 / 29 · 지금 게임이 끝난다면')).toBeInTheDocument();
   });
 
   it('renders income, effect timings, score sources and pass arithmetic from the server', () => {
@@ -288,8 +350,8 @@ describe('shared round-one tutorial', () => {
   it('shows the round transition and all four final-score totals without ending the game', () => {
     const state = frames()[fixture.changes.length];
     render(<RoundOneGuide state={state} />);
-    expect(screen.getByText('29 / 30 · 2라운드 수입과 가이아')).toBeInTheDocument();
-    expect(screen.getByText('30 / 30 · 지금 게임이 끝난다면')).toBeInTheDocument();
+    expect(screen.getByText('28 / 29 · 2라운드 수입과 가이아')).toBeInTheDocument();
+    expect(screen.getByText('29 / 29 · 지금 게임이 끝난다면')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: /종료 점수 미리보기/ })).toHaveTextContent('연구 트랙');
     expect(screen.getByRole('table', { name: /종료 점수 미리보기/ })).toHaveTextContent('자원 환산');
     expect(screen.getByRole('table', { name: /종료 점수 미리보기/ }).querySelectorAll('thead th')).toHaveLength(5);

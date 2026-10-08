@@ -142,10 +142,12 @@ interface Props {
   rangePlayerId?: PlayerId;
   /** Read-only preview bonus, normally +2 for one QIC. */
   rangePreviewBonus?: number;
+  tutorialChargeCue?: boolean;
 }
 
 export function GameBoard({
   board,
+  tutorialChargeCue = false,
   players = [],
   validTargets = [],
   federationSelectableHexes = [],
@@ -627,6 +629,8 @@ export function GameBoard({
             <HexCell
               key={key}
               hex={hex}
+              chargeRangeOrigin={tutorialChargeCue && key === '-1,-1'}
+              chargeSource={tutorialChargeCue && key === '-2,0'}
               cx={cx}
               cy={cy}
               size={HEX_SIZE}

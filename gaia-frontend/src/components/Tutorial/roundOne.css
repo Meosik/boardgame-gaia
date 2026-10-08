@@ -31,6 +31,7 @@
 .round-one-instruction { color: #fff; font-size: 16px; font-weight: 750; line-height: 1.5; }
 .round-one-cue { padding: 9px 11px; border-left: 3px solid #f2cd63; border-radius: 4px; background: #f2cd631a; color: #ffe9a4; font-weight: 650; }
 .round-one-reason { color: #d4deed; }
+.round-one-rule { padding: 9px 11px; border-left: 3px solid #8ab3ee; border-radius: 4px; background: #203854; color: #eff6ff; }
 .round-one-tour-actions { display: flex; gap: 9px; margin-top: 16px; }
 .round-one-primary, .round-one-secondary { min-height: 46px; padding: 10px 15px; border-radius: 9px; font: inherit; font-weight: 850; cursor: pointer; }
 .round-one-primary { display: block; width: 100%; margin: 12px 0; border: 2px solid #ffdc79; background: #f2cd63; color: #172033; box-shadow: 0 4px 14px #0005; }
@@ -54,6 +55,14 @@
 .round-one-income-note { color: #b8c7da; font-size: 12px; }
 .round-one-income-rows { margin: 8px 0 0; padding: 0 !important; list-style: none; }
 .round-one-income-rows li { display: grid; gap: 2px; padding: 7px 0; border-bottom: 1px solid #53627a; }
+.round-one-income-rows .round-one-income-source--building { border-left: 3px solid #ffcf50; padding-left: 7px; }
+.round-one-income-rows .round-one-income-source--research { border-left: 3px solid #9bb9ff; padding-left: 7px; }
+.round-one-income-rows .round-one-income-source--booster { border-left: 3px solid #9ce7bd; padding-left: 7px; }
+.round-one-income-rows .round-one-income-source--faction { border-left: 3px solid #d9a8ef; padding-left: 7px; }
+[data-tutorial-target="income:building"].tutorial-highlight { outline-color: #ffcf50 !important; }
+[data-tutorial-target="income:research"].tutorial-highlight { outline-color: #9bb9ff !important; }
+[data-tutorial-target="income:booster"].tutorial-highlight { outline-color: #9ce7bd !important; }
+[data-tutorial-target="resource:track"].tutorial-highlight { outline-color: #d9a8ef !important; }
 .round-one-income-rows li strong { color: #f2cd63; font-size: 12px; }
 .round-one-income-rows li span { overflow-wrap: anywhere; }
 .round-one-income-total { border-top: 2px solid #f2cd63; font-weight: 800; }
@@ -61,15 +70,20 @@
 .round-one-success { color: #a8f5bc; font-weight: 750; }
 .round-one-guide > ul[aria-label="점수 출처"], .round-one-guide > ul[aria-label="패스 계산 내역"] { padding: 10px 10px 10px 28px; border-radius: 8px; background: #26364f; }
 .tutorial-highlight { outline: 3px solid #ffcf50 !important; outline-offset: 3px; box-shadow: 0 0 16px #ffd04b99; }
+.research-board-action-space.tutorial-highlight { z-index: 20; border: 3px solid #ffcf50 !important; outline: none !important; background: #ffd04b88 !important; box-shadow: inset 0 0 0 2px #fff5c2; }
 g.tutorial-highlight { outline: none !important; filter: drop-shadow(0 0 6px #ffcf50); }
 g.tutorial-highlight > polygon:first-child { stroke: #ffcf50; stroke-width: 4px; }
+.tutorial-charge-source > polygon:first-child { animation: tutorial-charge-flash 1.2s ease-in-out infinite; }
+.tutorial-charge-range { animation: tutorial-charge-range 1.8s ease-in-out infinite; }
+@keyframes tutorial-charge-flash { 50% { fill: #ffcf50; fill-opacity: .65; stroke-width: 5px; } }
+@keyframes tutorial-charge-range { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .tutorial-charge-source > polygon:first-child, .tutorial-charge-range { animation: none; } }
 .tutorial-tour-highlight { outline: 4px solid #ffcf50; outline-offset: 4px; box-shadow: 0 0 22px #ffd04b66; }
 
 .tutorial-power-flow { margin: 12px 0; }
-.tutorial-power-bowls { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-.tutorial-power-bowls > span { border: 2px solid #b89ae8; border-radius: 50%; padding: 10px; text-align: center; }
-.tutorial-power-bowls > b { text-align: center; }
-.tutorial-power-bowls small { display: block; font-size: 10px; white-space: nowrap; }
+.tutorial-power-bowls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tutorial-power-bowls > span { display: grid; place-items: center; min-height: 72px; border: 2px solid #b89ae8; border-radius: 9px; padding: 7px; text-align: center; font: inherit; }
+.tutorial-power-bowls > span strong { display: block; font-size: 19px; white-space: nowrap; }
 .tutorial-power-flow figcaption { margin-top: 8px; }
 
 @media (max-width: 800px) {

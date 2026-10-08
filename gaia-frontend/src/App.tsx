@@ -1427,6 +1427,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
           </header>
           <GameBoard
             board={gameState.board}
+            tutorialChargeCue={gameState.tutorial?.step === 3}
             players={gameState.players}
             validTargets={coach ? coach.targets : isMyLostPlanetPlacement ? lostPlanetTargets : bonusMineTargets}
             federationSelectableHexes={federationSelectableHexes}

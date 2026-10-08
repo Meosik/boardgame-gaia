@@ -2310,6 +2310,14 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   pointer-events: none;
 }
 
+.faction-board-exposed-income {
+  position: absolute;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
 .faction-board-resource-marker {
   position: absolute;
   width: 3.25%;

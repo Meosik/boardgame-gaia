@@ -15,6 +15,8 @@ import { GamePieceIcon } from '../GamePieceIcon';
 
 interface Props {
   hex: Hex;
+  chargeRangeOrigin?: boolean;
+  chargeSource?: boolean;
   cx: number;
   cy: number;
   size: number;
@@ -36,6 +38,8 @@ interface Props {
 
 export function HexCell({
   hex,
+  chargeRangeOrigin = false,
+  chargeSource = false,
   cx,
   cy,
   size,
@@ -163,7 +167,7 @@ export function HexCell({
   return (
     <g
       data-tutorial-target={`hex:${hex.coord.q},${hex.coord.r}`}
-      className="hex-cell"
+      className={`hex-cell${chargeSource ? ' tutorial-charge-source' : ''}`}
       role="button"
       aria-label={`hex ${hex.coord.q},${hex.coord.r}`}
       onClick={onClick}
@@ -177,6 +181,7 @@ export function HexCell({
         strokeWidth={strokeWidth}
         filter={isHighlighted ? 'url(#hex-glow)' : undefined}
       />
+      {chargeRangeOrigin && <circle className="tutorial-charge-range" cx={cx} cy={cy} r={size * 3.5} fill="none" stroke="#ffcf50" strokeWidth="3" strokeDasharray="7 5" pointerEvents="none" aria-label="파워 충전 거리 2칸" />}
       {isInNavigationRange && (
         <polygon
           className="game-board-range-outline"

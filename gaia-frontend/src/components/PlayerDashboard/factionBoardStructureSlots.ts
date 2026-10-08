@@ -163,3 +163,18 @@ export function remainingFactionBoardStructureSlots(
     ...remainingAcademies,
   ];
 }
+
+export function exposedFactionBoardStructureSlots(
+  structures: Structure[],
+  faction: FactionId,
+): FactionBoardStructureSlot[] {
+  const allSlots = [
+    ...MINE_SLOTS,
+    ...TRADING_STATION_SLOTS,
+    ...RESEARCH_LAB_SLOTS,
+    faction === 'Bescods' ? BESCODS_PLANETARY_INSTITUTE_SLOT : PLANETARY_INSTITUTE_SLOT,
+    ...(faction === 'Bescods' ? BESCODS_ACADEMY_SLOTS : ACADEMY_SLOTS),
+  ];
+  const covered = new Set(remainingFactionBoardStructureSlots(structures, faction).map(slot => slot.id));
+  return allSlots.filter(slot => !covered.has(slot.id));
+}

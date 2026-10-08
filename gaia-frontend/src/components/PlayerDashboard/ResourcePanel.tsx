@@ -10,6 +10,7 @@ export function ResourcePanel({ resources, placement = 'summary' }: Props) {
   return (
     <div
       className={`resource-panel resource-panel--${placement}`}
+      data-tutorial-target={placement === 'faction-board' ? 'resource:track' : undefined}
       aria-label={placement === 'faction-board' ? '현재 자원' : undefined}
     >
       <ResourceRow kind="ore" label="광석" value={resources.ore} icon="ore" />
