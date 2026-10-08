@@ -712,7 +712,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'lf_more': False,             # True: guide_r1_charge3_lf_more (see lf_more_value)
           'academy_r1': False,          # True: guide_r1_charge3_lf_more_ac (see academy_r1)
           'sheden_r1': False,           # True: guide_r1_charge3_lf_more_sh (see SHEDEN_OPENINGS)
-          'lf_frozen': False}           # True: guide_r1_charge3_lf_more_vm_lf (see install_lf_frozen)
+          'lf_frozen': False,           # True: guide_r1_charge3_lf_more_vm_lf (see install_lf_frozen)
+          'ts_chain_direct': False}     # True: guide_r1_charge3_lf_more_vm_lf_ts (see ts_chain_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -1539,6 +1540,11 @@ def guide_r1_charge3_lf_more_sh(seed, **kwargs):
 # resources left after the trading station already pay the research lab or the planetary
 # institute (engine costs, preparation.funding_need), the trading station goes before every
 # move that is not an upgrade. Rounds 1-3 only, the span charge3 compares. Order only.
+#
+# ts_chain_direct (user 2026-10-08, lab 046 p001-g1): the lift also put a second trading station
+# ahead of upgrading an existing one straight to the research lab (Terrans step 27: 20.91 vs 20.80,
+# Xenos step 30: 82.97 vs 80.94). When a research lab or planetary institute upgrade is already
+# legal, the chain it would prepare is available now, so no trading station is lifted.
 
 def _value_max(snapshot, result):
     import math
@@ -1565,8 +1571,13 @@ def ts_chain_scores(env, snapshot, scores):
     state, actor = snapshot['state'], snapshot.get('player')
     if not 1 <= state['round'] <= 3 or 'ActionPhase' not in state['phase'] or actor is None:
         return scores
+    if _guide['ts_chain_direct'] and any(
+            candidate['action'].get('type') == 'Upgrade'
+            and candidate['action'].get('to') in ('ResearchLab', 'PlanetaryInstitute')
+            and not blocked(scores[i]) for i, candidate in enumerate(snapshot['candidates'])):
+        return scores
     counts = building_counts(state['players'][actor])
-    nexts = [cost for cost, kind in (((3, 5), 'research_lab'), ((4, 6), 'planetary_institute'))
+    nexts =[cost for cost, kind in (((3, 5), 'research_lab'), ((4, 6), 'planetary_institute'))
              if getattr(counts, kind) < LIMITS[kind]]
     chained = []
     for i, candidate in enumerate(snapshot['candidates']):
@@ -1852,4 +1863,12 @@ def guide_r1_charge3_lf_more_vm_lf(seed, **kwargs):
     guide prices (lf_frozen)."""
     teacher = guide_r1_charge3_lf_more_vm(seed, **kwargs)
     install_lf_frozen()
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm_lf whose ts_chain lifts no trading station
+    while a research lab or planetary institute upgrade is legal (ts_chain_direct)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf(seed, **kwargs)
+    _guide['ts_chain_direct'] = True
     return teacher

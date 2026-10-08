@@ -528,6 +528,10 @@
      좌표가 옛 맵 기준이라 `generate_setup_with_drawn_rotations`로 옛 맵 유지(튜토리얼 맵도 위반 — 대본을 다시 쓸 때 바꿀 것).
      엔진·서버 테스트 통과. lab은 다음 실험부터 새 맵(자동 재빌드), 위반 시드는 맵이 바뀌므로 045 이전과 같은 시드라도 판이 다름.
      실서버 반영은 배포 필요(사용자 확인 대기). 진행 중 게임은 DB 스냅샷이라 영향 없음.
+     **B 구현(사용자 "B는 진행", 2026-10-08)**: `_guide['ts_chain_direct']`, factory `guide_r1_charge3_lf_more_vm_lf_ts`, spec
+     `...-lf-more-vm-lf-ts-cap20.json` — 연구소·의회 업그레이드가 지금 합법이면 ts_chain이 교역소를 올리지 않음(순서만).
+     확인(explain --spec): 046 p001-g1 테란 A step 27이 두 번째 교역소 → 연구소(-5,5). 제노스 step 30은 미확인. lab 큐에 안 넣음.
+     A(연구 트랙별 값)·C(함선 1–3칸·종족 궁합 셋업)는 설계 질문 답변 대기.
      사용자(같은 날): 맵 규칙은 "같은 종류 행성 2개 인접 금지"만으로 끝. "행성 5개 직선" 같은 비공식 규칙은 넣지 않음.
      옛 run(046까지) 재생: 위반 시드는 새 엔진에서 맵이 달라 재생이 깨짐 → `GAIA_DRAWN_ROTATIONS=1`(gaia-rl/src/env.rs)을 붙여
      explain·ab_replays·list_decisions를 돌릴 것. gaia-work .venv는 아직 옛 빌드라 지금은 없어도 됨(maturin 재빌드 후 필요).
