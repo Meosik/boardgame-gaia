@@ -82,7 +82,13 @@ impl Environment {
     }
 
     fn initial(seed: &str) -> Result<(GameState, Vec<AiDecision>, AiCandidateDiagnostics), EnvError> {
-        let setup = Randomizer::generate_setup(seed)?;
+        // Runs recorded before the same-type adjacency fix (engine 7d012a0) replay only on the
+        // drawn sector rotations; GAIA_DRAWN_ROTATIONS=1 rebuilds those maps.
+        let setup = if std::env::var_os("GAIA_DRAWN_ROTATIONS").is_some_and(|value| value == "1") {
+            Randomizer::generate_setup_with_drawn_rotations(seed)?
+        } else {
+            Randomizer::generate_setup(seed)?
+        };
         let players: Vec<_> = (0..4).map(|i| (i, format!("AI-{i}"))).collect();
         let mut state = MapEngine::init_game_state("RL", seed, &players, &setup);
         // Wall-clock metadata is not part of an offline simulation.
