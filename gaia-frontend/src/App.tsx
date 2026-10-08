@@ -339,7 +339,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     setRangePreviewQic(0);
     const action = currentTutorialStep(gameState.tutorial)?.action;
     gameActions.selectAction(action?.type === 'FormFederation' ? 'FormFederation' : null);
-    const panel = tutorialPanel(gameState);
+    const panel = gameState.tutorial.step === 1 ? null : tutorialPanel(gameState);
     if (panel) {
       scrollToGameBoard(panel);
       window.requestAnimationFrame(() => {
@@ -1280,7 +1280,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
 
   return (
     <LiveHighlightScope highlight={activityHighlight} enabled={!replay}>
-    <div className="app app--game app--game-table" onClickCapture={(event) => {
+    <div className={`app app--game app--game-table${gameState.tutorial ? ' app--tutorial' : ''}`} onClickCapture={(event) => {
       const target = event.target;
       if (gameState.tutorial && target instanceof Element) {
         const marked = target.closest<HTMLElement>('[data-tutorial-target]');
@@ -1299,7 +1299,6 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
         actionAnchorRef.current = target.closest('button, [role="button"]') ?? target;
       }
     }}>
-      {!replay && gameState.tutorial && <RoundOneGuide key={roomCode} state={gameState} />}
       {!replay && <RewardMotion batch={rewardBatch} />}
       {!replay && <TurnBanner status={turnBannerStatus} />}
       {!replay && <ActionToast entry={toastAction} myPlayerId={myId} />}
@@ -1614,7 +1613,8 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
         </section>
       </main>
       </GameCommandControls>
-      <aside className="game-sidebar">
+      <aside className={`game-sidebar${gameState.tutorial ? ' game-sidebar--tutorial' : ''}`}>
+        {!replay && gameState.tutorial && <RoundOneGuide key={roomCode} state={gameState} />}
         {sidePanel ?? <>
         <div className="game-sidebar-tabs" role="tablist" aria-label="오른쪽 패널">
           <button

@@ -34,6 +34,13 @@ function target(value: string) {
   return element!;
 }
 
+function finishBoardTour() {
+  for (let page = 0; page < 3; page++) {
+    fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+  }
+  fireEvent.click(screen.getByRole('button', { name: '첫 수입 받기' }));
+}
+
 beforeEach(() => {
   useGameStore.getState().actions.reset();
   useRoomStore.getState().actions.reset();
@@ -48,6 +55,12 @@ describe('shared round-one tutorial', () => {
       render(<><button data-tutorial-target={step.target}>대상</button><button data-tutorial-target="unrelated">다른 대상</button><RoundOneGuide state={state} /></>);
       if (number === 1) {
         expect(screen.getByText('0 / 30 · 판과 목표')).toBeInTheDocument();
+        for (let page = 0; page < 3; page++) {
+          expect(screen.getByText(`판 둘러보기 ${page + 1} / 4`)).toBeInTheDocument();
+          fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+        }
+        expect(screen.getByText('내 종족판과 자원')).toBeInTheDocument();
+        fireEvent.click(screen.getByText('이번 연습의 특별 설정과 시작 자원'));
         expect(screen.getAllByText(/원래 규칙에서는 받지 않는 것/)).toHaveLength(3);
         fireEvent.click(screen.getByRole('button', { name: '첫 수입 받기' }));
       }
@@ -68,6 +81,22 @@ describe('shared round-one tutorial', () => {
     expect(tutorialTargets(state)).toEqual(expect.arrayContaining(['power:I', 'power:II', 'power:III']));
   });
 
+  it('keeps the guide beside the board and introduces each area before play', () => {
+    useGameStore.setState({ gameState: initial(), myPlayerId: 0 });
+    render(<App />);
+    fireEvent.click(screen.getByText('테스트 입장'));
+    const guide = screen.getByLabelText('1라운드 따라 하기');
+    expect(guide.closest('aside')).toHaveClass('game-sidebar--tutorial');
+    expect(document.getElementById('game-overview')).toHaveClass('tutorial-tour-highlight');
+    fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+    expect(document.getElementById('game-map')).toHaveClass('tutorial-tour-highlight');
+    fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+    expect(document.getElementById('game-research-section')).toHaveClass('tutorial-tour-highlight');
+    fireEvent.click(screen.getByRole('button', { name: '다음 영역' }));
+    expect(document.querySelector('.game-table-player-card--me')).toHaveClass('tutorial-tour-highlight');
+    expect(screen.getByRole('button', { name: '첫 수입 받기' })).toHaveClass('round-one-primary');
+  });
+
   it('reveals each step board and reopens the free action list after the log tab', async () => {
     const states = frames();
     useGameStore.setState({ gameState: states[0], myPlayerId: 0 });
@@ -77,7 +106,7 @@ describe('shared round-one tutorial', () => {
     try {
       render(<App />);
       fireEvent.click(screen.getByText('테스트 입장'));
-      fireEvent.click(screen.getByText('첫 수입 받기'));
+      finishBoardTour();
       fireEvent.click(screen.getByRole('tab', { name: /로그/ }));
       act(() => useGameStore.getState().actions.setGameState(states[3]));
       expect(screen.getByRole('tab', { name: /정보/ })).toHaveAttribute('aria-selected', 'true');
@@ -168,7 +197,7 @@ describe('shared round-one tutorial', () => {
     useGameStore.setState({ wsClient: client, connectionReady: true });
     render(<App />);
     fireEvent.click(screen.getByText('테스트 입장'));
-    fireEvent.click(screen.getByText('첫 수입 받기'));
+    finishBoardTour();
     const click = (key: string) => fireEvent.click(target(key));
     const planet = (key: string, gaia = false) => {
       click(key);

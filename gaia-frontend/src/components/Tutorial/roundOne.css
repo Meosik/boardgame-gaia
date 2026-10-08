@@ -1,15 +1,69 @@
-.round-one-guide { position: fixed; z-index: 85; left: 14px; bottom: 14px; width: min(390px, calc(100vw - 28px)); max-height: 48vh; overflow-y: auto; padding: 14px; border: 2px solid #f2cd63; border-radius: 12px; background: #152035; color: #edf2fa; box-shadow: 0 8px 30px #0008; font-size: 13px; line-height: 1.5; }
+.app--game-table.app--tutorial { --game-sidebar-width: clamp(350px, 26vw, 430px); }
+
+.round-one-guide {
+  position: relative;
+  z-index: 85;
+  flex: 0 0 auto;
+  width: 100%;
+  max-height: min(56vh, 600px);
+  overflow: auto;
+  padding: 18px;
+  border: 2px solid #f2cd63;
+  border-radius: 14px;
+  background: #152035;
+  color: #edf2fa;
+  box-shadow: 0 8px 30px #0008;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.round-one-guide--complete { max-height: 75vh; }
 .round-one-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.round-one-guide h2 { font-size: 16px; margin: 12px 0 6px; }
+.round-one-controls strong { flex: 1 1 100%; font-size: 15px; }
+.round-one-controls button { padding: 3px 8px; border: 0; background: transparent; color: #cbd5e1; text-decoration: underline; cursor: pointer; }
+.round-one-controls button:hover, .round-one-controls button:focus-visible { color: #fff; }
+.round-one-progress { display: block; width: 100%; height: 8px; margin: 12px 0 14px; accent-color: #f2cd63; }
+.round-one-guide h2 { margin: 0 0 10px; color: #fff; font-size: 20px; line-height: 1.3; }
+.round-one-guide h3 { margin: 4px 0 8px; color: #fff; font-size: 18px; }
 .round-one-guide p { margin: 8px 0; }
 .round-one-guide ul { padding-left: 20px; }
-.round-one-guide button, .round-one-guide a { color: #f2cd63; }
-.round-one-guide table { border-collapse: collapse; font-size: 11px; width: 100%; }
-.round-one-guide td, .round-one-guide th { padding: 4px; border: 1px solid #5b6473; text-align: right; }
-.round-one-success { color: #96ebae; }
+.round-one-kicker { color: #f2cd63; font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+.round-one-instruction { color: #fff; font-size: 16px; font-weight: 750; line-height: 1.5; }
+.round-one-cue { padding: 9px 11px; border-left: 3px solid #f2cd63; border-radius: 4px; background: #f2cd631a; color: #ffe9a4; font-weight: 650; }
+.round-one-reason { color: #d4deed; }
+.round-one-tour-actions { display: flex; gap: 9px; margin-top: 16px; }
+.round-one-primary, .round-one-secondary { min-height: 46px; padding: 10px 15px; border-radius: 9px; font: inherit; font-weight: 850; cursor: pointer; }
+.round-one-primary { display: block; width: 100%; margin: 12px 0; border: 2px solid #ffdc79; background: #f2cd63; color: #172033; box-shadow: 0 4px 14px #0005; }
+.round-one-primary:hover, .round-one-primary:focus-visible { background: #ffdf87; outline: 3px solid #fff4c2; outline-offset: 2px; }
+.round-one-tour-actions .round-one-primary { margin: 0; }
+.round-one-secondary { flex: 0 0 auto; border: 1px solid #8c9aaf; background: #26364f; color: #fff; }
+.round-one-secondary:hover, .round-one-secondary:focus-visible { border-color: #f2cd63; }
+.round-one-extra { margin-top: 12px; padding: 9px 10px; border: 1px solid #52647c; border-radius: 8px; }
+.round-one-extra summary { color: #f2cd63; cursor: pointer; font-weight: 750; }
+.round-one-extra li + li { margin-top: 7px; }
+.round-one-timings { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; padding: 0 !important; list-style: none; }
+.round-one-timings li { padding: 3px 8px; border: 1px solid #7690b4; border-radius: 999px; color: #d6e5f8; font-size: 12px; }
+.round-one-guide table { border-collapse: collapse; font-size: 12px; min-width: 100%; }
+.round-one-table-scroll { max-width: 100%; overflow-x: auto; }
+.round-one-table-scroll table { min-width: 520px; }
+.round-one-guide td, .round-one-guide th { padding: 6px; border: 1px solid #5b6473; text-align: right; }
+.round-one-guide th:first-child { text-align: left; }
+.round-one-guide caption { padding: 6px 0; text-align: left; color: #f2cd63; font-weight: 800; }
+.round-one-guide details { margin-top: 10px; }
+.round-one-guide details > summary { cursor: pointer; }
+.round-one-income-note { color: #b8c7da; font-size: 12px; }
+.round-one-income-rows { margin: 8px 0 0; padding: 0 !important; list-style: none; }
+.round-one-income-rows li { display: grid; gap: 2px; padding: 7px 0; border-bottom: 1px solid #53627a; }
+.round-one-income-rows li strong { color: #f2cd63; font-size: 12px; }
+.round-one-income-rows li span { overflow-wrap: anywhere; }
+.round-one-income-total { border-top: 2px solid #f2cd63; font-weight: 800; }
+.round-one-guide a { color: #f2cd63; }
+.round-one-success { color: #a8f5bc; font-weight: 750; }
+.round-one-guide > ul[aria-label="점수 출처"], .round-one-guide > ul[aria-label="패스 계산 내역"] { padding: 10px 10px 10px 28px; border-radius: 8px; background: #26364f; }
 .tutorial-highlight { outline: 3px solid #ffcf50 !important; outline-offset: 3px; box-shadow: 0 0 16px #ffd04b99; }
 g.tutorial-highlight { outline: none !important; filter: drop-shadow(0 0 6px #ffcf50); }
 g.tutorial-highlight > polygon:first-child { stroke: #ffcf50; stroke-width: 4px; }
+.tutorial-tour-highlight { outline: 4px solid #ffcf50; outline-offset: 4px; box-shadow: 0 0 22px #ffd04b66; }
 
 .tutorial-power-flow { margin: 12px 0; }
 .tutorial-power-bowls { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
@@ -17,3 +71,9 @@ g.tutorial-highlight > polygon:first-child { stroke: #ffcf50; stroke-width: 4px;
 .tutorial-power-bowls > b { text-align: center; }
 .tutorial-power-bowls small { display: block; font-size: 10px; white-space: nowrap; }
 .tutorial-power-flow figcaption { margin-top: 8px; }
+
+@media (max-width: 800px) {
+  .round-one-guide { position: fixed; right: 0; bottom: 0; left: 0; width: 100%; max-height: 52vh; border-radius: 16px 16px 0 0; }
+  .round-one-guide--complete { max-height: 70vh; }
+  .game-sidebar--tutorial { padding-bottom: 52vh; }
+}
