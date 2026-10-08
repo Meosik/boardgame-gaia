@@ -713,7 +713,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'academy_r1': False,          # True: guide_r1_charge3_lf_more_ac (see academy_r1)
           'sheden_r1': False,           # True: guide_r1_charge3_lf_more_sh (see SHEDEN_OPENINGS)
           'lf_frozen': False,           # True: guide_r1_charge3_lf_more_vm_lf (see install_lf_frozen)
-          'ts_chain_direct': False}     # True: guide_r1_charge3_lf_more_vm_lf_ts (see ts_chain_scores)
+          'ts_chain_direct': False,     # True: guide_r1_charge3_lf_more_vm_lf_ts (see ts_chain_scores)
+          'knowledge_spend': False}     # True: guide_r1_charge3_lf_more_vm_lf_ts (see knowledge_spend_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -1544,7 +1545,12 @@ def guide_r1_charge3_lf_more_sh(seed, **kwargs):
 # ts_chain_direct (user 2026-10-08, lab 046 p001-g1): the lift also put a second trading station
 # ahead of upgrading an existing one straight to the research lab (Terrans step 27: 20.91 vs 20.80,
 # Xenos step 30: 82.97 vs 80.94). When a research lab or planetary institute upgrade is already
-# legal, the chain it would prepare is available now, so no trading station is lifted.
+# legal, the chain it would prepare is available now, so no trading station is lifted. A
+# building already in a federation is not lifted either (user, same day): its power is spent.
+#
+# knowledge_spend (user, same day): "지식은 무조건 쓰는 방향으로". Held knowledge only pays when
+# a level-5 advance lacks it, and by then the knowledge income is in place, so while the actor
+# holds 4 knowledge and a research advance is legal, passing is blocked. Rule, not a value.
 
 def _value_max(snapshot, result):
     import math
@@ -1576,13 +1582,16 @@ def ts_chain_scores(env, snapshot, scores):
             and candidate['action'].get('to') in ('ResearchLab', 'PlanetaryInstitute')
             and not blocked(scores[i]) for i, candidate in enumerate(snapshot['candidates'])):
         return scores
+    federated = set(map(str, state['players'][actor].get('federated_hexes') or []))
     counts = building_counts(state['players'][actor])
-    nexts =[cost for cost, kind in (((3, 5), 'research_lab'), ((4, 6), 'planetary_institute'))
+    nexts = [cost for cost, kind in (((3, 5), 'research_lab'), ((4, 6), 'planetary_institute'))
              if getattr(counts, kind) < LIMITS[kind]]
     chained = []
     for i, candidate in enumerate(snapshot['candidates']):
         action = candidate['action']
         if action.get('type') != 'Upgrade' or action.get('to') != 'TradingStation' or blocked(scores[i]):
+            continue
+        if _guide['ts_chain_direct'] and str(action.get('coord')) in federated:
             continue
         after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
         left = after['state']['players'][actor]['resources']
@@ -1599,6 +1608,40 @@ def ts_chain_scores(env, snapshot, scores):
             lifted[i] = (floor+1.0+scores[i][0]/1000.0, f'{scores[i][1]}; ts_chain: lab/PI paid next',
                          *scores[i][2:])
     return lifted
+
+
+def knowledge_spend_scores(env, snapshot, scores):
+    from current_actions.conservation import BLOCKED, PREFIX, blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if 'ActionPhase' not in state['phase'] or actor is None:
+        return scores
+    if state['players'][actor]['resources']['knowledge'] < 4:
+        return scores
+    candidates = snapshot['candidates']
+    if not any(c['action'].get('type') == 'ResearchAdvance' and not blocked(scores[i])
+               for i, c in enumerate(candidates)):
+        return scores
+    lifted = list(scores)
+    for i, candidate in enumerate(candidates):
+        if candidate['action'].get('type') == 'Pass':
+            lifted[i] = (BLOCKED, PREFIX+'knowledge spend: research before passing', *scores[i][2:])
+    return lifted
+
+
+def install_knowledge_spend():
+    import four_factions.preparation as p
+    _guide['knowledge_spend'] = True
+    if not getattr(p.Policies.rank, '_knowledge_spend', False):
+        inner_rank = p.Policies.rank
+
+        def rank(self, env, snapshot):
+            return knowledge_spend_scores(env, snapshot, inner_rank(self, env, snapshot))
+        rank.__wrapped__ = getattr(inner_rank, '__wrapped__', inner_rank)
+        rank._knowledge_spend = True
+        rank._ts_chain = getattr(inner_rank, '_ts_chain', False)
+        rank._leech_rule = getattr(inner_rank, '_leech_rule', False)
+        rank._parallel = getattr(inner_rank, '_parallel', False)
+        p.Policies.rank = rank
 
 
 def install_value_max():
@@ -1868,7 +1911,10 @@ def guide_r1_charge3_lf_more_vm_lf(seed, **kwargs):
 
 def guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs):
     """Teacher factory: guide_r1_charge3_lf_more_vm_lf whose ts_chain lifts no trading station
-    while a research lab or planetary institute upgrade is legal (ts_chain_direct)."""
+    while a research lab or planetary institute upgrade is legal or on a federated building
+    (ts_chain_direct), and which researches before passing while holding 4 knowledge
+    (knowledge_spend)."""
     teacher = guide_r1_charge3_lf_more_vm_lf(seed, **kwargs)
     _guide['ts_chain_direct'] = True
+    install_knowledge_spend()
     return teacher
