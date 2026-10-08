@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자 확인(2026-10-08 \"일단 테스트해\"): A = guide_r1_charge3_lf_more_vm_lf(046 B), B = A + ts_chain_direct(연구소·의회로 바로 올릴 수 있거나 연방 건물이면 교역소를 앞에 두지 않음) + knowledge_spend(지식 4 이상이고 연구 가능하면 패스 차단) + ship_setup(상대 인접 필터 안에서 함선 3칸 이내·수입 기반 궁합 함선 자리 먼저). 맵 규칙 수정 엔진(같은 종류 행성 인접 금지) 첫 적용. 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}
