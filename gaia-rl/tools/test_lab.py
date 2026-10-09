@@ -149,6 +149,17 @@ class ChargeTableTests(unittest.TestCase):
         self.assertIn('| **전체 (좌석 평균)** | 6 | +29.7 | [+0.2, +59.2] |  |  |', text)
         self.assertIn('충전량 계산 실패', lab.charges_table({'error': 'boom'}))
 
+    def test_watch_replay_is_the_lower_game_of_the_largest_gap(self):
+        def row(faction, arm, charges):
+            return {'faction': faction, 'arm': arm, 'charges': charges}
+        seats = {'pair-000/game-0-A02': [row('Xenos', 'A', 262), row('Terrans', 'B', 123)],
+                 'pair-000/game-1-A13': [row('Xenos', 'B', 79), row('Terrans', 'A', 118)],
+                 'pair-001/game-0-A01': [row('Xenos', 'A', 100)]}
+        game, seat, label = lab.watch_pick(seats)
+        self.assertEqual((game, seat), ('pair-000/game-1-A13', 0))
+        self.assertEqual(label, 'Xenos B팔 충전 79 (상대 팔 262)')
+        self.assertIsNone(lab.watch_pick({}))
+
 
 if __name__ == '__main__':
     unittest.main()

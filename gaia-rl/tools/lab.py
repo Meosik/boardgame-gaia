@@ -329,6 +329,46 @@ def charges_table(data):
     return '\n'.join(rows)
 
 
+REPLAY_DIR = Path(os.environ.get('GAIA_LAB_REPLAY_DIR') or '~/gaia-media/ai-replays').expanduser()
+
+
+def watch_pick(seats):
+    """The game to watch: the (pair, faction) with the largest charge gap between the arms, in the
+    game where that faction gained less. -> (game, seat, label) or None.
+
+    User (2026-10-09): every experiment publishes one replay worth looking at."""
+    by_key = {}
+    for game, rows in seats.items():
+        for seat, row in enumerate(rows):
+            by_key.setdefault((game.split('/')[0], row['faction']), {})[row['arm']] = (row['charges'], game, seat)
+    gaps = [(abs(arms['B'][0]-arms['A'][0]), faction, arms)
+            for (_, faction), arms in by_key.items() if len(arms) == 2]
+    if not gaps:
+        return None
+    _, faction, arms = max(gaps, key=lambda g: g[0])
+    low, high = sorted(arms.values(), key=lambda v: v[0])
+    low_arm = 'A' if arms['A'] is low else 'B'
+    label = f'{faction} {low_arm}팔 충전 {low[0]:.0f} (상대 팔 {high[0]:.0f})'
+    return low[1], low[2], label
+
+
+def publish_watch_replay(name, run_dir, env, data):
+    """Export and publish the watch_pick game; a failure is reported, never fatal."""
+    pick = watch_pick(data.get('seats') or {})
+    if pick is None:
+        return '다시보기: 고를 판 없음'
+    game, seat, label = pick
+    source = run_dir/'watch-replay'
+    steps = [['tools/ab_replays.py', 'export', str(run_dir/game), '--output', str(source),
+              '--focus', str(seat), '--label', f'{name} · {label}'],
+             ['tools/publish_replays.py', '--source', str(source), '--destination', str(REPLAY_DIR)]]
+    for argv in steps:
+        done = subprocess.run([sys.executable, *argv], cwd=GAIA_RL, env=env, capture_output=True, text=True)
+        if done.returncode:
+            return f"다시보기 게시 실패 ({game})\n\n```\n{(done.stderr or done.stdout).strip()[-600:]}\n```"
+    return f'다시보기 게시: {game} 좌석 {seat} — {label}'
+
+
 def fresh_dir(path):
     """A crashed earlier attempt leaves a partial directory; keep it aside, never reuse it."""
     if path.exists():
@@ -376,6 +416,8 @@ def run_ab(name, spec, jobs):
     if vp_rate is not None:
         data['charges_vp1.5'] = charges(out, env)
         reference = f"참고: 1점 = 1.5충전으로 잰 충전량\n\n{charges_table(data['charges_vp1.5'])}\n\n"
+    data['watch_replay'] = publish_watch_replay(name, out, env, data['charges'])
+    reference += f"{data['watch_replay']}\n\n"
     rate = 1.5 if vp_rate is None else vp_rate
     scores_note = (f"{stop_round}라운드 종료 시점 VP 차이" if stop_round else "최종 점수 차이")
     body = (f"A: `{spec['teacher_a']}`\nB: `{spec['teacher_b']}`\n"

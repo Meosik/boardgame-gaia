@@ -562,6 +562,11 @@
      다음 제안(사용자 확인 대기, 큐에 넣지 않음): ① p000 제노스 B(79) 셋업·1R 결정 확인 — ship_setup이 제노스 시작 자리를 바꿨는지
      (046 확인 땐 필터가 자리 하나만 남겨 효과 없었음), A 262가 이례적으로 높은 판인지 ② 그다음 046 제안 ①(hard vs 현재 스택
      12쌍 직접 비교)로 배포 판단. 작은 순서 패치 6쌍 A/B는 041–047 모두 검출력 밖이라 더 쌓지 않는 쪽 권장.
+     **볼 판 자동 게시(사용자 2026-10-09 "매번 봐야 할 리플레이 하나씩 자동으로")**: `lab.py run_ab`가 충전 계산 뒤
+     `watch_pick` — 두 팔 충전 차이가 가장 큰 (쌍, 종족)에서 그 종족이 덜 얻은 판·좌석을 골라 `ab_replays export --focus <좌석>`
+     → `publish_replays`로 `~/gaia-media/ai-replays`(`GAIA_LAB_REPLAY_DIR`로 변경 가능)에 올림. 실패해도 실험은 계속, 결과 md 충전표
+     아래와 JSON `watch_replay`에 한 줄로 남김. `charge_rounds.py --json`에 좌석별 `seats` 추가. 봇 권한 밖이라 test_lab 미실행
+     (`watch_pick` 테스트 추가함) — 048 결과 md에 "다시보기 게시" 줄이 나오는지 확인할 것. 047이면 p000/game-1-A13 Xenos B(79)가 뽑힘.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)

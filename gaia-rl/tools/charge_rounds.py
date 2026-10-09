@@ -83,6 +83,7 @@ def main():
     tp._guide.update(qic_reach=False, track_income=False, lf_tables=True)
     gained = defaultdict(dict)   # (pair, faction) -> {arm: charges gained}
     games = []
+    seats = {}   # 'pair-000/game-0-A02' -> [{'faction', 'arm', 'charges'} per seat] (lab.py picks a replay)
     for game_dir in sorted(args.run_dir.expanduser().glob('pair-*/game-*')):
         result, values = game_charges(game_dir)
         if values is None:
@@ -97,6 +98,8 @@ def main():
             arm = 'A' if seat in result['a_seats'] else 'B'
             gained[(game_dir.parent.name, factions[seat])][arm] = r4-r1
             line.append(f'{factions[seat]}({arm}) {r4-r1:.0f}')
+            seats.setdefault(f'{game_dir.parent.name}/{game_dir.name}', []).append(
+                {'faction': factions[seat], 'arm': arm, 'charges': r4-r1})
         games.append(f'{game_dir.parent.name}/{game_dir.name}  ' + ', '.join(line))
         if args.games:
             print(games[-1])
@@ -121,7 +124,7 @@ def main():
     table['ALL'] = {'pairs': len(seat_means), 'mean_B_minus_A': mean, 'ci95': [low, high]}
     print(f"{'ALL':<9} {len(seat_means):>5} {'':>7} {'':>7} {mean:>+7.1f}  [{low:+.1f}, {high:+.1f}]")
     if args.json:
-        args.json.write_text(json.dumps({'factions': table, 'games': games}, indent=1)+'\n')
+        args.json.write_text(json.dumps({'factions': table, 'games': games, 'seats': seats}, indent=1)+'\n')
 
 
 if __name__ == '__main__':
