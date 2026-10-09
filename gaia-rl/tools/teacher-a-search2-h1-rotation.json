@@ -1,9 +1,0 @@
-{
-  "description": "geodens_guide teacher plus tools/teacher_patches.py family_rotation: the first proposal family (the only plan the normal level examines) rotates per decision instead of always being an Academy/PI upgrade. Geodens keeps its guide order.",
-  "source": "gaia-rl/baseline-teacher-20260917",
-  "factory": "teacher_patches:family_rotation",
-  "kwargs": {"bgg_openings": true, "shared_factions": true},
-  "comparisons": 2,
-  "horizon_incomes": 1,
-  "frozen": true
-}

@@ -1,9 +1,0 @@
-{
-  "description": "geodens_guide teacher plus family rotation for Xenos only (cycle 021 confirmation run).",
-  "source": "gaia-rl/baseline-teacher-20260917",
-  "factory": "teacher_patches:xenos_rotation",
-  "kwargs": {"bgg_openings": true, "shared_factions": true},
-  "comparisons": 2,
-  "horizon_incomes": 1,
-  "frozen": true
-}

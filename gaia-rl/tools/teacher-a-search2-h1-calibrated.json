@@ -1,9 +1,0 @@
-{
-  "description": "geodens_guide teacher with tools/teacher_patches.py calibrated_value: potential's terms weighted per round by the weights tools/value_baseline.py fitted to final results (tools/value-weights.json unless GAIA_VALUE_WEIGHTS is set).",
-  "source": "gaia-rl/baseline-teacher-20260917",
-  "factory": "teacher_patches:calibrated_value",
-  "kwargs": {"bgg_openings": true, "shared_factions": true},
-  "comparisons": 2,
-  "horizon_incomes": 1,
-  "frozen": true
-}
