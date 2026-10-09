@@ -50,8 +50,6 @@ def main():
     parser.add_argument('--top', type=int, default=5)
     parser.add_argument('--symmetric-pass', action='store_true',
                         help='Apply tools/teacher_patches.py symmetric_pass')
-    parser.add_argument('--calibrated', action='store_true',
-                        help='Apply tools/teacher_patches.py calibrated_value (GAIA_VALUE_WEIGHTS)')
     parser.add_argument('--geodens-guide', action='store_true',
                         help='Apply tools/teacher_patches.py geodens_guide (includes symmetric_pass)')
     args = parser.parse_args()
@@ -66,9 +64,7 @@ def main():
     budget_teacher.install(comparisons)
     budget_teacher.set_horizon(horizon)
     env = Environment(args.seed, 2000)
-    if args.calibrated:
-        from teacher_patches import calibrated_value as factory
-    elif args.geodens_guide:
+    if args.geodens_guide:
         from teacher_patches import geodens_guide as factory
     elif args.symmetric_pass:
         from teacher_patches import symmetric_pass as factory
