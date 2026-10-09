@@ -535,7 +535,11 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'lf_frozen': False,           # True: guide_r1_charge3_lf_more_vm_lf (see install_lf_frozen)
           'ts_chain_direct': False,     # True: guide_r1_charge3_lf_more_vm_lf_ts (see ts_chain_scores)
           'knowledge_spend': False,     # True: guide_r1_charge3_lf_more_vm_lf_ts (see knowledge_spend_scores)
-          'ship_setup': False}          # True: guide_r1_charge3_lf_more_vm_lf_ts (see ship_setup_scores)
+          'ship_setup': False,          # True: guide_r1_charge3_lf_more_vm_lf_ts (see ship_setup_scores)
+          'reach_plus': False,          # True: ..._vm_lf_ts_reach (see install_reach)
+          'setup_roots': False,         # True: ..._vm_lf_ts_reach (see setup_search)
+          'setup_soft': False,          # True: ..._vm_lf_ts_reach (opponent-adjacent starts first, none blocked)
+          'research_focus': False}      # True: ..._vm_lf_ts_reach (see research_focus_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -686,10 +690,10 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
         income = [a-b for a, b in zip(income, _track_income(state, player))]
     result += gv.incomes_value(state, income)
     if horizon and (player['passed'] or state['round'] == 0):
-        result += gv.booster_value(state, player['booster'])
+        result += _booster_value(state, player, player['booster'])
     elif horizon and _action_phase(state):
         # Symmetric pass (cycle 017): an unpassed player also passes this round.
-        result += max((gv.booster_value(state, b) for b in state['boosters']), default=0)
+        result += max((_booster_value(state, player, b) for b in state['boosters']), default=0)
     if state['round'] >= 1 and not player['passed'] and _action_phase(state):
         result += booster_pass_vp(state, player)
     result += gv.planet_value(state)*len(player['structures'])
@@ -1045,6 +1049,20 @@ def _early_terrans_gaia(state, actor):
             and state['round'] < TERRANS_GAIA_FROM_ROUND)
 
 
+def _near_places(snapshot, scores):
+    """Unblocked starting places within NEXT_TO_OPPONENT of an opponent's structure, or (nobody
+    placed nearby yet) of a free home planet of an opponent with placements left."""
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot['player']
+    places = [i for i, c in enumerate(snapshot['candidates'])
+              if c['action']['type'] == 'PlaceStartingStructure' and not blocked(scores[i])]
+    near = {i for i in places if _next_to_opponent(state, actor, snapshot['candidates'][i]['action']['coord'])}
+    if not near and places:
+        sites = _future_opponent_sites(state, actor)
+        near = {i for i in places if _near_sites(state, actor, snapshot['candidates'][i]['action']['coord'], sites)}
+    return near
+
+
 def guide_r1_scores(snapshot, scores):
     from current_actions.conservation import BLOCKED, PREFIX, blocked
     state, actor = snapshot['state'], snapshot['player']
@@ -1053,19 +1071,12 @@ def guide_r1_scores(snapshot, scores):
         return scores
     bottom = min(finite)
     result = list(scores)
-    places = [i for i, c in enumerate(snapshot['candidates'])
-              if c['action']['type'] == 'PlaceStartingStructure' and not blocked(scores[i])]
-    near = {i for i in places if _next_to_opponent(state, actor, snapshot['candidates'][i]['action']['coord'])}
-    if not near and places:
-        # Nobody placed nearby yet (e.g. the first placements): next to where an opponent
-        # can still place, i.e. a free home planet of an opponent with placements left.
-        sites = _future_opponent_sites(state, actor)
-        near = {i for i in places if _near_sites(state, actor, snapshot['candidates'][i]['action']['coord'], sites)}
+    near = _near_places(snapshot, scores)
     for i, candidate in enumerate(snapshot['candidates']):
         action = candidate['action']
         if blocked(scores[i]):
             continue
-        if action['type'] == 'PlaceStartingStructure' and near and i not in near:
+        if action['type'] == 'PlaceStartingStructure' and near and i not in near and not _guide['setup_soft']:
             # Setup comparisons end at the round-1/2 income and differ by noise (034: 154.3
             # vs 153.5), so ordering alone let an isolated start win; compare only the near ones.
             result[i] = (BLOCKED, PREFIX+'guide: start next to an opponent (LF4-02, B10-02)')
@@ -1655,35 +1666,56 @@ MINE_COST = {'ore': 1, 'credits': 2}
 MINE_LIMIT = 8
 
 
-def _colony_costs(state, player, home):
-    """(cost, extra charges) of each colony option (item 1), before pricing."""
-    from economy.teacher import ORE_PER_STEP, RING
+def _reach_targets(state, player, planet_types):
+    """[(coord, planet, qic, nav)]: v.targets, plus (reach_plus) the planets that the next range
+    step on the Navigation track brings closer; nav = the knowledge those levels cost (0 = none)."""
     v = _value
+    found = {coord: (planet, qic, 0) for coord, planet, qic in v.targets(state, player, planet_types)}
+    plus = _nav_plus(player) if _guide['reach_plus'] else None
+    if plus is not None:
+        plus, knowledge = plus
+        for coord, planet, qic in v.targets(state, plus, planet_types):
+            if coord not in found or qic < found[coord][1]:
+                found[coord] = (planet, qic, knowledge)
+    return [(coord, *rest) for coord, rest in found.items()]
+
+
+def _colony_costs(state, player, home):
+    """(cost, extra charges, Navigation knowledge needed) of each colony option (item 1), before pricing."""
+    from economy.teacher import ORE_PER_STEP, RING
     options = []
     if home in RING:
         step_ore = ORE_PER_STEP[player['research_tracks']['terraforming']]
-        for _, planet, qic in v.targets(state, player, (*RING, 'Gaia')):
+        for _, planet, qic, nav in _reach_targets(state, player, (*RING, 'Gaia')):
             if planet['planet_type'] == 'Gaia':
-                options.append(({**MINE_COST, 'qic': qic+1}, 0))
+                options.append(({**MINE_COST, 'qic': qic+1}, 0, nav))
                 continue
             gap = abs(RING.index(home)-RING.index(planet['planet_type']))
             ore = MINE_COST['ore'] + min(gap, 7-gap)*step_ore
-            options.append(({**MINE_COST, 'ore': ore, 'qic': qic}, 0))
+            options.append(({**MINE_COST, 'ore': ore, 'qic': qic}, 0, nav))
     level = player['research_tracks']['gaia']
     terrans = player['faction'] == 'Terrans'
     reserved = sum(cell['planet'] is not None and cell['planet']['owner'] == player['player_id']
                    and cell['planet']['planet_type'] == 'Transdim' and not cell['structures']
                    for cell in state['board']['hexes'].values())
-    options += [(dict(MINE_COST), 0)]*reserved
-    if level:
-        power = player['resources']['power']
-        tokens = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3'))
-        formers = max(0, player['gaiaformers_total'] - player['gaiaformers_deployed']
-                      - player['gaiaformers_in_gaia_area'] - player['resources']['spent_gaia_formers'])
-        room = min(formers, tokens//GAIA_TOKENS[level])
-        transdim = sorted((qic for _, _, qic in v.targets(state, player, ('Transdim',))))[:room]
-        options += [({**MINE_COST, 'qic': qic}, GAIA_TOKENS[level]*terrans) for qic in transdim]
+    options += [(dict(MINE_COST), 0, 0)]*reserved
+    room = _gaia_room(player)
+    if room:
+        transdim = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Transdim',)))[:room]
+        options += [({**MINE_COST, 'qic': qic}, GAIA_TOKENS[level]*terrans, nav) for qic, nav in transdim]
     return options
+
+
+def _gaia_room(player):
+    """Gaia formers that can start now: free formers, each with its tokens in the bowls."""
+    level = player['research_tracks']['gaia']
+    if not level:
+        return 0
+    power = player['resources']['power']
+    tokens = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3'))
+    formers = max(0, player['gaiaformers_total'] - player['gaiaformers_deployed']
+                  - player['gaiaformers_in_gaia_area'] - player['resources']['spent_gaia_formers'])
+    return min(formers, tokens//GAIA_TOKENS[level])
 
 
 def colony_options(state, player, *, home=None):
@@ -1699,22 +1731,26 @@ def colony_options(state, player, *, home=None):
     recurring = v.production(state, player, include_booster=player['passed'])
     resources = player['resources']
     budget = {'ore': resources['ore']+recurring[0], 'credits': resources['credits']+recurring[1],
-              'qic': resources['qic']+recurring[3]}
+              'qic': resources['qic']+recurring[3], 'knowledge': resources['knowledge']+recurring[2]}
     priced = []
-    for cost, charges in _colony_costs(state, player, home):
+    for cost, charges, nav in _colony_costs(state, player, home):
         net = gain + gv.to_vp(state, charges - sum(gv.CHARGE[k]*n for k, n in cost.items()))
         if net > 0:
-            priced.append((net, cost))
+            priced.append((net, cost, nav))
     room = max(0, MINE_LIMIT - sum(v.kind(s['kind']) == 'Mine' for s in player['structures']))
-    total = 0.0
-    for net, cost in sorted(priced, key=lambda item: -item[0]):
+    total, nav_paid = 0.0, False
+    for net, cost, nav in sorted(priced, key=lambda item: -item[0]):
         if not room:
             break
-        if all(budget[k] >= n for k, n in cost.items()):
-            for k, n in cost.items():
+        # reach_plus: the Navigation levels are paid once, in knowledge (rulebook: 4 a level);
+        # each level is worth the same 16 charges (LF01), so they add no price here.
+        need = {**cost, 'knowledge': nav} if nav and not nav_paid else cost
+        if all(budget[k] >= n for k, n in need.items()):
+            for k, n in need.items():
                 budget[k] -= n
             total += net
             room -= 1
+            nav_paid = nav_paid or nav
     return total
 
 
@@ -1798,4 +1834,161 @@ def guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs):
     _guide['ts_chain_direct'] = True
     install_knowledge_spend()
     install_ship_setup()
+    return teacher
+
+
+# ── reach (user 2026-10-09, lab 047 pair-000/game-1) ───────────────────────────────────
+# A. Setup search. Both comparisons of a setup decision started with the same move (Geodens
+#    start -2,-2; Geodens booster 2, so booster 8 never rolled out; Terrans booster 13, so 5 never),
+#    because the BGG/plan proposals all begin with the ranking's first choice and a rollout to
+#    round 4 takes ~10 s against the 20 s cap. User: "셋업은 내 모행성만 건설 가능" (few places) and
+#    boosters "4턴부터 고르니까 2턴이면 최소 3위까지". Setup decisions now compare the current choice
+#    and the next-ranked distinct places or boosters only (no plan proposals; the round-1 opening is
+#    chosen at the first round-1 decision), up to the comparison budget (4: at least the top 3),
+#    with SETUP_SECONDS instead of the cap.
+# B. Opponent-adjacent starts (guide_r1 1) are ordered first instead of blocking the others
+#    (user: "거리 2 이내는 중요한데 가중치를 살짝만 낮추거나"), so isolated places can be compared.
+# C. Range +1 (user: "앞으로 모든 행동은 사거리 +1(항해술 2렙을 찍고 시작하는 경우)까지 고민해야지, 즉시
+#    포밍을 qic 쓰면서 쓸 수도 있잖아"): colony options also count the planets that the next range step
+#    on the Navigation track brings within reach (QIC included), paying its knowledge once; booster 5
+#    (immediate Gaia forming) is worth its table price only when a free Gaia former can reach a
+#    Transdim planet that way, otherwise its income alone (Terrans 047 took it and returned it unused).
+# D. Research focus (user: "한 트랙 집중해서 타라니까 아니면 항해술 2렙 찍고 확장 한다음 트랙 고르던지"):
+#    the research advances' own root scores are reassigned, best score to the preferred track: the
+#    highest track already at level 2 or more; with none, Navigation below level 2; then the higher
+#    level first. Order among research moves only; research against other moves is unchanged.
+SETUP_SECONDS = 50
+SETUP_TYPES = frozenset({'PlaceStartingStructure', 'SelectStartingBooster'})
+IMMEDIATE_GAIA_BOOSTER = 5
+NAV_KNOWLEDGE = 4   # rulebook: one research level costs 4 knowledge
+FOCUS_FROM = 2
+TRACK_KEYS = {'Terraforming': 'terraforming', 'Navigation': 'navigation', 'ArtificialIntelligence': 'ai',
+              'GaiaProject': 'gaia', 'Economy': 'economy', 'Science': 'science'}
+
+
+def _nav_plus(player):
+    """(player with Navigation at the next level that adds range, knowledge for those levels), or None."""
+    from economy.teacher import NAV_RANGE
+    level = player['research_tracks']['navigation']
+    nxt = next((n for n in range(level+1, len(NAV_RANGE)) if NAV_RANGE[n] > NAV_RANGE[level]), None)
+    if nxt is None:
+        return None
+    plus = {**player, 'research_tracks': {**player['research_tracks'], 'navigation': nxt}}
+    return plus, NAV_KNOWLEDGE*(nxt-level)
+
+
+def _immediate_gaia_usable(state, player):
+    if not _gaia_room(player):
+        return False
+    knowledge = player['resources']['knowledge']
+    return any(nav <= knowledge for _, _, _, nav in _reach_targets(state, player, ('Transdim',)))
+
+
+def _booster_value(state, player, booster):
+    import guide_value as gv
+    if (_guide['reach_plus'] and booster == IMMEDIATE_GAIA_BOOSTER
+            and not _immediate_gaia_usable(state, player)):
+        income = [*_value.INCOME['boosters'].get(str(booster), []), *[0]*7][:7]
+        return gv.income_value(state, income)
+    return gv.booster_value(state, booster)
+
+
+def _setup_choice(snapshot):
+    kinds = {c['action'].get('type') for c in snapshot['candidates']}
+    return bool(kinds) and kinds <= SETUP_TYPES
+
+
+def install_setup_search():
+    import time
+    import bgg_openings.planning as planning
+    import four_factions.preparation as p
+    _guide['setup_roots'] = True
+    if getattr(p.search, '_setup_roots', False):
+        return
+    inner_search = p.search
+
+    def no_goals(snapshot, *args, **kwargs):
+        return []
+
+    def search(env, snapshot, *args, **kwargs):
+        if not _setup_choice(snapshot):
+            return inner_search(env, snapshot, *args, **kwargs)
+        if 'hard_deadline' in kwargs:
+            kwargs['hard_deadline'] = max(kwargs['hard_deadline'], time.monotonic()+SETUP_SECONDS)
+        goals_for, opening_goals = p.goals_for, planning.goals
+        p.goals_for = planning.goals = no_goals
+        try:
+            return inner_search(env, snapshot, *args, **kwargs)
+        finally:
+            p.goals_for, planning.goals = goals_for, opening_goals
+    for name, value in vars(inner_search).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(search, name, value)
+    search._setup_roots = True
+    p.search = search
+
+
+def setup_near_scores(env, snapshot, scores):
+    """B: every opponent-adjacent start above every other start; order kept inside each group."""
+    from current_actions.conservation import blocked
+    near = _near_places(snapshot, scores)
+    places = [i for i, c in enumerate(snapshot['candidates'])
+              if c['action'].get('type') == 'PlaceStartingStructure' and not blocked(scores[i])]
+    far = [i for i in places if i not in near]
+    if not near or not far:
+        return scores
+    gap = max(scores[i][0] for i in far) - min(scores[i][0] for i in near) + 1
+    if gap <= 0:
+        return scores
+    lifted = list(scores)
+    for i in near:
+        lifted[i] = (scores[i][0]+gap, f'{scores[i][1]}; next to an opponent first', *scores[i][2:])
+    return lifted
+
+
+def _focus_key(tracks):
+    focus = [t for t in tracks if t != 'navigation' and tracks[t] >= FOCUS_FROM]
+    if focus:
+        best = max(tracks[t] for t in focus)
+        return lambda t: (0 if t in focus and tracks[t] == best else 1, -tracks[t])
+    return lambda t: (0 if t == 'navigation' and tracks[t] < FOCUS_FROM else 1, -tracks[t])
+
+
+def research_focus_scores(env, snapshot, scores):
+    """D: the research moves' scores, best first, handed to the tracks in focus order."""
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    research = [i for i, c in enumerate(snapshot['candidates'])
+                if c['action'].get('type') == 'ResearchAdvance' and not blocked(scores[i])
+                and c['action'].get('track') in TRACK_KEYS
+                and not (c['action']['track'] == 'GaiaProject' and _early_terrans_gaia(state, actor))]
+    if len(research) < 2:
+        return scores
+    tracks = state['players'][actor]['research_tracks']
+    key = _focus_key(tracks)
+    by_score = sorted(research, key=lambda i: -scores[i][0])
+    order = sorted(research, key=lambda i: (key(TRACK_KEYS[snapshot['candidates'][i]['action']['track']]),
+                                            by_score.index(i)))
+    lifted = list(scores)
+    for i, source in zip(order, by_score):
+        if i != source:
+            lifted[i] = (scores[source][0], f'{scores[i][1]}; research focus', *scores[i][2:])
+    return lifted
+
+
+def install_reach():
+    _guide['reach_plus'] = _guide['setup_soft'] = _guide['research_focus'] = True
+    _wrap_rank('_setup_near', setup_near_scores)
+    _wrap_rank('_research_focus', research_focus_scores)
+    install_setup_search()
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_reach(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts plus distinct setup comparisons,
+    opponent-adjacent starts ordered first (not blocking), range +1 in colony options and booster 5,
+    and research focus order (install_reach)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
+    install_reach()
     return teacher

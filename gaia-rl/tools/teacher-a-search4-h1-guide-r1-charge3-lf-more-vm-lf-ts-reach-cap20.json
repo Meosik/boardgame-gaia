@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts (hard, 4 comparisons, 20 s cap; setup decisions 50 s) plus distinct setup comparisons, opponent-adjacent starts ordered first instead of blocking, range +1 in colony options and booster 5, and research focus order (guide_r1_charge3_lf_more_vm_lf_ts_reach).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_reach",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}
