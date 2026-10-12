@@ -657,6 +657,10 @@
      (6쌍은 041–050 내내 검출력 밖) — spec·factory는 `install_reach(setup=True, plus=True, focus=False)`로 새로 만들어야 함
      ② 그 전에 p003(Tak B 100 vs A 166) 1–2R 결정을 `explain_ab_decisions`로 확인 — 사거리 +1이 타클론을 먼 행성으로 끌었는지
      ③ 052 결과가 배포 판단의 본선이므로 ①은 052 뒤에 정해도 됨.
+     **사용자 요청(2026-10-12 "권장 끝나고 리플레이 2개 띄워 보게")**: 051·052가 끝나면 052 결과 기록 턴에서 리플레이 2개를
+     `~/gaia-media/ai-replays`에 게시한다(5b의 `ab_replays.py export` → `publish_replays.py --destination ~/gaia-media/ai-replays`).
+     고를 판(봇 해석): 052에서 B(vm_lf_ts)가 hard보다 충전을 가장 많이 앞선 좌석의 판 1개, 가장 많이 뒤진 좌석의 판 1개.
+     선행 조건: `replay_income` 바이너리(048부터 없어 게시 실패 중, 위 cargo 명령을 사용자가 실행해야 함).
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
