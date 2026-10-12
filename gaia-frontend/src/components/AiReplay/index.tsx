@@ -233,27 +233,32 @@ export function AiReplay() {
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       if (!record || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return;
-      const target = event.target;
-      if (target instanceof Element && target.closest('input, select, textarea, button, a, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"]')) return;
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(event.key)) return;
+      const target = event.target;
+      const arrow = event.key !== ' ';
+      // User (2026-10-13): the arrows always mean previous/next action and nothing else — also
+      // while the slider, a select or a button has focus. Only text entry keeps its own arrows.
+      const own = arrow
+        ? 'textarea, input:not([type="range"]), [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"]'
+        : 'input, select, textarea, button, a, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"]';
+      if (target instanceof Element && target.closest(own)) return;
       event.preventDefault();
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      if (arrow) {
+        const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown';
         setFollowLive(false);
         setPlaying(false);
-        const targetFrame = event.key === 'ArrowRight' ? nextAction : previousAction;
+        const targetFrame = forward ? nextAction : previousAction;
         if (targetFrame !== null) {
-          if (event.key === 'ArrowRight') advance(targetFrame);
+          if (forward) advance(targetFrame);
           else seek(targetFrame);
         }
-      } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-        setMotion(null);
-        setSpeed(value => SPEEDS[Math.max(0, Math.min(SPEEDS.indexOf(value) + (event.key === 'ArrowUp' ? 1 : -1), SPEEDS.length - 1))]);
       } else if (!event.repeat && canPlay) {
         togglePlaying();
       }
     }
-    window.addEventListener('keydown', keydown);
-    return () => window.removeEventListener('keydown', keydown);
+    // Capture, so a focused slider or select never also handles the arrow itself.
+    window.addEventListener('keydown', keydown, true);
+    return () => window.removeEventListener('keydown', keydown, true);
   }, [record, cursor, previousAction, nextAction, canPlay, playing, liveGame, liveStatus, actionPlayer]);
 
   const actor = frame?.state.players.find(p => p.player_id === frame.player);
@@ -296,7 +301,7 @@ export function AiReplay() {
               </ReplayHighlightContext.Provider>
             </ReplayBoundary>}
       </div>
-      <footer className="ai-replay-controls" aria-label="AI 리플레이 재생바" title="←/→ 이전·다음 행동 · ↑/↓ 재생 속도 · Space 재생·정지">
+      <footer className="ai-replay-controls" aria-label="AI 리플레이 재생바" title="화살표 이전·다음 행동 · Space 재생·정지">
         <div className="ai-replay-buttons">
           <strong>AI 복기 · 읽기 전용</strong>
           <label>종족 <select aria-label="종족 필터" value={factionFilter} disabled={!games.length}

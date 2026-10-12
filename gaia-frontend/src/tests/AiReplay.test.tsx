@@ -301,12 +301,16 @@ describe('AI replay controls', () => {
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
     expect(screen.getByRole('slider')).toHaveValue('0');
     expect(screen.getByRole('button', { name: '재생' })).toHaveAttribute('aria-pressed', 'false');
-    for (let i = 0; i < 5; i++) fireEvent.keyDown(window, { key: 'ArrowUp' });
-    expect(screen.getByLabelText('재생 배속')).toHaveValue('4');
-    for (let i = 0; i < 5; i++) fireEvent.keyDown(window, { key: 'ArrowDown' });
-    expect(screen.getByLabelText('재생 배속')).toHaveValue('0.5');
+    // Arrows only ever step actions: up/down too, and also from a focused select or the slider.
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(screen.getByRole('slider')).toHaveValue('1');
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+    expect(screen.getByRole('slider')).toHaveValue('0');
+    expect(screen.getByLabelText('재생 배속')).toHaveValue('1');
     fireEvent.keyDown(screen.getByLabelText('재생 배속'), { key: 'ArrowRight' });
-    fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowRight' });
+    expect(screen.getByRole('slider')).toHaveValue('1');
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowLeft' });
+    expect(screen.getByRole('slider')).toHaveValue('0');
     fireEvent.keyDown(window, { key: 'ArrowRight', ctrlKey: true });
     expect(screen.getByRole('slider')).toHaveValue('0');
     for (let i = 0; i < 5; i++) fireEvent.keyDown(window, { key: 'ArrowRight' });
