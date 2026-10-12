@@ -335,7 +335,7 @@ describe('AI replay controls', () => {
     expect(screen.getByRole('button', { name: '재생' })).toBeDisabled();
   });
 
-  it('narrows the game list to the selected faction and switches off a game that no longer matches', async () => {
+  it('lists every game without a faction filter', async () => {
     const otherFaction = fixture.metadata.faction === 'Terrans' ? 'Xenos' : 'Terrans';
     const twoFactionCatalog = { schema_version: 1, games: [
       { id: 'one', file: 'one.json.gz', policy: fixture.metadata.policy, faction: fixture.metadata.faction, seed: fixture.metadata.seed, vp: 56, steps: 2 },
@@ -347,9 +347,6 @@ describe('AI replay controls', () => {
 
     const gameSelect = screen.getByLabelText('리플레이 게임') as HTMLSelectElement;
     expect(gameSelect.options).toHaveLength(2);
-
-    fireEvent.change(screen.getByLabelText('종족 필터'), { target: { value: otherFaction } });
-    await waitFor(() => expect(gameSelect.options).toHaveLength(1));
-    expect(gameSelect.value).toBe('two');
+    expect(screen.queryByLabelText('종족 필터')).not.toBeInTheDocument();
   });
 });

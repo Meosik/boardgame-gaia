@@ -57,7 +57,6 @@ function gameLabel(game: ReplayGame, registeredAt?: string): string {
 export function AiReplay() {
   const [savedGames, setGames] = useState<ReplayGame[]>([]);
   const [registeredAt, setRegisteredAt] = useState<ReadonlyMap<string, string>>(() => new Map());
-  const [factionFilter, setFactionFilter] = useState('all');
   const [selected, setSelected] = useState('');
   const [followLive, setFollowLive] = useState(true);
   const live = useLiveReplays(selected);
@@ -108,7 +107,6 @@ export function AiReplay() {
 
   useEffect(() => {
     if (followLive && latestLiveGame && selected !== latestLiveGame.id) {
-      setFactionFilter('all');
       setSelected(latestLiveGame.id);
     }
   }, [selected, latestLiveGame, followLive]);
@@ -177,7 +175,6 @@ export function AiReplay() {
   function goLive() {
     if (!latestLiveGame) return;
     setFollowLive(true);
-    setFactionFilter('all');
     setActionPlayer(null);
     setMotion(null);
     if (selected !== latestLiveGame.id) {
@@ -283,23 +280,10 @@ export function AiReplay() {
   const action = frame?.action;
   const ended = cursor === maxCursor && !!frame && typeof frame.state.phase === 'object' && 'Ended' in frame.state.phase;
   const replayPlayers = record?.frames[record.frames.length - 1].state.players ?? [];
-  const factions = [...new Set(games.map(g => g.faction))].sort(
-    (a, b) => (FACTION_DISPLAY_NAMES[a as FactionId] ?? a).localeCompare(FACTION_DISPLAY_NAMES[b as FactionId] ?? b),
-  );
-  const filteredGames = factionFilter === 'all' ? games : games.filter(g => g.faction === factionFilter);
   function optionLabel(game: ReplayGame) {
     const status = live.games.find(item => item.id === game.id)?.status;
     const prefix = status === 'running' ? 'LIVE · ' : status === 'complete' ? '완료 · ' : status === 'failed' ? '중단 · ' : '';
     return prefix + gameLabel(game, registeredAt.get(game.id));
-  }
-
-  function selectFaction(faction: string) {
-    setFollowLive(false);
-    setFactionFilter(faction);
-    const nextGames = faction === 'all' ? games : games.filter(g => g.faction === faction);
-    if (nextGames.length && !nextGames.some(g => g.id === selected)) {
-      setPlaying(false); setRecord(null); setSelected(nextGames[0].id);
-    }
   }
 
   return (
@@ -331,16 +315,9 @@ export function AiReplay() {
             </button>
             <button type="button" onClick={() => { setFollowLive(false); setPlaying(false); if (nextAction !== null) advance(nextAction); }} disabled={nextAction === null}>다음 행동</button>
           </div>
-          <label>종족 <select aria-label="종족 필터" value={factionFilter} disabled={!games.length}
-            onChange={event => selectFaction(event.target.value)}>
-            <option value="all">전체</option>
-            {factions.map(faction => (
-              <option key={faction} value={faction}>{FACTION_DISPLAY_NAMES[faction as FactionId] ?? faction}</option>
-            ))}
-          </select></label>
-          <label>게임 <select aria-label="리플레이 게임" value={selected} disabled={!filteredGames.length}
+          <label>게임 <select aria-label="리플레이 게임" value={selected} disabled={!games.length}
             onChange={event => { setFollowLive(false); setPlaying(false); setRecord(null); setSelected(event.target.value); }}>
-            {filteredGames.map(game => <option key={game.id} value={game.id}>
+            {games.map(game => <option key={game.id} value={game.id}>
               {optionLabel(game)}
             </option>)}
           </select></label>
