@@ -707,6 +707,18 @@
      ② 병행: ai_worker에 hard용 spec 교사 연결 구현(배포는 하지 않음) ③ 그 뒤 051 셋업 부품 재확인
      (vm_lf_ts vs vm_lf_ts_reach_setup, 새 시드 12쌍) — 052에서 vm_lf_ts가 양수였으므로 이 B가 다음 배포 후보.
      사용자가 ① 없이 바로 교체를 원하면 ②만 하고 배포 명령(3장)을 제안.
+     **정정**: 리플레이 2개는 사용자가 게시함(`~/gaia-media/ai-replays`에 052 세 판). 봇 거부는 명령 꼴 때문 — 허용 목록은
+     작업 폴더 루트 기준 꼴만 받는다: `GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/ab_replays.py …`,
+     `gaia-rl/.venv/bin/python gaia-rl/tools/publish_replays.py …`, explain·list_decisions·research_counts도 같은 꼴
+     (`lab/claude-bot-settings.json` 60–65행). gaia-rl로 cd해서 돌리면 거부된다.
+     **052 p006-g1 분석(2026-10-12, 사용자 지적, explain_ab_decisions --arm A; 이 판 기오덴·테란은 A팔 = 실서버 hard)**:
+     ① 기오덴 두 번째 광산(step 6): 기본 순위는 -3,0(20.7) > -9,3(19.1)인데 비교 147.3 vs 144.9(차이 2.4, 1R 수입에서 끝나는
+     rollout 잡음)로 -9,3 선택 — 033 타클론 -12,2와 같은 약점. ② 시작 부스터(step 9·11): hard 기본 순위는 즉시 자원만 봐
+     8(사거리+3) 0.70으로 꼴찌, 12(1삽) 1.68. 기오덴은 14·6만 비교(6 = 156.1 vs 147.3), 테란은 9·2만 비교 — 8·12는 비교조차 안 됨.
+     ③ 프레임 17 기오덴 광산 -4,4: BGG 1RL+2M 계획의 첫 수(166.6)로 선택, 대안은 가이아 연구(145.6)·의회 계획(130.8)뿐.
+     ④ 테란 연구소 기술 2의 트랙(step 31): 경제 계획 168.3 < "Terrans-academy-Gaia" 계획(가이아 트랙) 182.3 — hard 테란은
+     1–3R 연구의 21/39가 가이아. **같은 시드의 B(vm_lf_ts, p006-g0)**는 기오덴 -7,5·-3,0 배치, 부스터 8, 1R 의회, 함선 2개
+     (이클립스·리벨리온), 테란 연구소 + 경제 — 사용자가 짚은 네 가지를 모두 다르게 둠(기오덴 충전 307 vs 87).
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
