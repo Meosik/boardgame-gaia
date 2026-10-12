@@ -17,6 +17,11 @@
 .ai-replay-status span { color: #cbd5e1; }
 .ai-replay .game-log-entry[aria-current="step"], .ai-replay .game-log-list li[aria-current="step"] { outline: 1px solid #60a5fa; background: #172554; }
 .game-log-seek { float: right; color: #93c5fd; background: transparent; border: 0; cursor: pointer; font: inherit; font-size: .75rem; }
+/* User (2026-10-13): on a phone the shortcut bar stacks to three rows and covers the board while
+   watching; the playback bar already carries the replay's controls, so drop it there. */
+@media (max-width: 800px) {
+  .ai-replay .game-table-top-nav { display: none; }
+}
 @media (max-width: 720px) {
   .ai-replay .app--game-table { height: auto; min-height: 100%; }
   .ai-replay-controls { padding: .5rem; }
