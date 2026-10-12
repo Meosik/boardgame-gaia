@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자 확인(2026-10-12 \"진행해\"): A = guide_r1_charge3_lf_more_vm_lf_ts(047 B), B = A + reach(셋업 결정은 서로 다른 자리·부스터를 최대 4개 비교·셋업만 50초, 상대 인접 자리는 차단 대신 먼저 비교, 확장 가치·부스터 5에 항해 다음 사거리 단계 반영, 연구는 한 트랙 집중 또는 항해 2 먼저 순서). 볼 판 자동 게시 첫 적용. 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-reach-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}
