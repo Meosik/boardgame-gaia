@@ -301,12 +301,18 @@ describe('AI replay controls', () => {
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
     expect(screen.getByRole('slider')).toHaveValue('0');
     expect(screen.getByRole('button', { name: '재생' })).toHaveAttribute('aria-pressed', 'false');
-    // Arrows only ever step actions: up/down too, and also from a focused select or the slider.
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
-    expect(screen.getByRole('slider')).toHaveValue('1');
+    // Up/down step the select touched last: the speed until another one is touched.
+    for (let i = 0; i < 5; i++) fireEvent.keyDown(window, { key: 'ArrowUp' });
+    expect(screen.getByLabelText('재생 배속')).toHaveValue('4');
+    for (let i = 0; i < 5; i++) fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(screen.getByLabelText('재생 배속')).toHaveValue('0.5');
+    fireEvent.focus(screen.getByLabelText('행동 종족'));
+    fireEvent.keyDown(screen.getByLabelText('행동 종족'), { key: 'ArrowDown' });
+    expect(screen.getByLabelText('행동 종족')).not.toHaveValue('all');
+    expect(screen.getByLabelText('재생 배속')).toHaveValue('0.5');
     fireEvent.keyDown(window, { key: 'ArrowUp' });
-    expect(screen.getByRole('slider')).toHaveValue('0');
-    expect(screen.getByLabelText('재생 배속')).toHaveValue('1');
+    expect(screen.getByLabelText('행동 종족')).toHaveValue('all');
+    // Left/right step actions from a focused select or the slider as well.
     fireEvent.keyDown(screen.getByLabelText('재생 배속'), { key: 'ArrowRight' });
     expect(screen.getByRole('slider')).toHaveValue('1');
     fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowLeft' });

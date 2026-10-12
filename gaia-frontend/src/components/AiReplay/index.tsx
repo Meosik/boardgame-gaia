@@ -72,6 +72,8 @@ export function AiReplay() {
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
+  // Which select the up/down arrows step: the one touched last (speed until one is touched).
+  const [arrowControl, setArrowControl] = useState<'player' | 'round' | 'speed'>('speed');
   const [motion, setMotion] = useState<{ cursor: number; id: number } | null>(null);
   const [motionReady, setMotionReady] = useState<{ frame: ReplayRecord['frames'][number]; cursor: number } | null>(null);
   const motionSequence = useRef(0);
@@ -236,15 +238,31 @@ export function AiReplay() {
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(event.key)) return;
       const target = event.target;
       const arrow = event.key !== ' ';
-      // User (2026-10-13): the arrows always mean previous/next action and nothing else — also
-      // while the slider, a select or a button has focus. Only text entry keeps its own arrows.
+      // User (2026-10-13): left/right always mean previous/next action, and up/down step whichever
+      // of "행동 보기", "라운드" and "배속" was touched last — also while the slider, a select or a
+      // button has focus. Only text entry keeps its own arrows.
       const own = arrow
         ? 'textarea, input:not([type="range"]), [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"]'
         : 'input, select, textarea, button, a, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"]';
       if (target instanceof Element && target.closest(own)) return;
       event.preventDefault();
-      if (arrow) {
-        const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown';
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        const up = event.key === 'ArrowUp';
+        if (arrowControl === 'player') {
+          // Down walks the list as the select shows it: all actions first, then each faction.
+          const options: (PlayerId | null)[] = [null, ...record.frames[record.frames.length - 1].state.players.map(p => p.player_id)];
+          const next = options[options.indexOf(actionPlayer) + (up ? -1 : 1)];
+          if (next !== undefined) { setFollowLive(false); setPlaying(false); setMotion(null); setActionPlayer(next); }
+        } else if (arrowControl === 'round') {
+          const current = roundStarts.findIndex(item => item.round === frame?.state.round);
+          const start = roundStarts[current + (up ? 1 : -1)];
+          if (start) seek(start.cursor);
+        } else {
+          setMotion(null);
+          setSpeed(value => SPEEDS[Math.max(0, Math.min(SPEEDS.indexOf(value) + (up ? 1 : -1), SPEEDS.length - 1))]);
+        }
+      } else if (arrow) {
+        const forward = event.key === 'ArrowRight';
         setFollowLive(false);
         setPlaying(false);
         const targetFrame = forward ? nextAction : previousAction;
@@ -259,7 +277,7 @@ export function AiReplay() {
     // Capture, so a focused slider or select never also handles the arrow itself.
     window.addEventListener('keydown', keydown, true);
     return () => window.removeEventListener('keydown', keydown, true);
-  }, [record, cursor, previousAction, nextAction, canPlay, playing, liveGame, liveStatus, actionPlayer]);
+  }, [record, cursor, previousAction, nextAction, canPlay, playing, liveGame, liveStatus, actionPlayer, arrowControl, roundStarts, frame]);
 
   const actor = frame?.state.players.find(p => p.player_id === frame.player);
   const action = frame?.action;
@@ -301,7 +319,7 @@ export function AiReplay() {
               </ReplayHighlightContext.Provider>
             </ReplayBoundary>}
       </div>
-      <footer className="ai-replay-controls" aria-label="AI 리플레이 재생바" title="화살표 이전·다음 행동 · Space 재생·정지">
+      <footer className="ai-replay-controls" aria-label="AI 리플레이 재생바" title="←/→ 이전·다음 행동 · ↑/↓ 마지막에 고른 행동 보기·라운드·배속 · Space 재생·정지">
         <div className="ai-replay-buttons">
           <strong>AI 복기 · 읽기 전용</strong>
           {/* Ahead of the selects: their width changes with the game label, which used to push
@@ -327,14 +345,17 @@ export function AiReplay() {
             </option>)}
           </select></label>
           <label>행동 보기 <select aria-label="행동 종족" value={actionPlayer ?? 'all'} disabled={!record}
-            onChange={event => { setFollowLive(false); setPlaying(false); setMotion(null); setActionPlayer(event.target.value === 'all' ? null : Number(event.target.value)); }}>
+            onFocus={() => setArrowControl('player')}
+            onChange={event => { setArrowControl('player'); setFollowLive(false); setPlaying(false); setMotion(null); setActionPlayer(event.target.value === 'all' ? null : Number(event.target.value)); }}>
             <option value="all">전체 행동</option>
             {replayPlayers.map(player => <option key={player.player_id} value={player.player_id}>
               {FACTION_DISPLAY_NAMES[player.faction as FactionId] ?? player.nickname}
             </option>)}
           </select></label>
           <label>라운드 <select aria-label="라운드 선택" value={frame?.state.round || ''} disabled={!record || !roundStarts.length}
+            onFocus={() => setArrowControl('round')}
             onChange={event => {
+              setArrowControl('round');
               const start = roundStarts.find(item => item.round === Number(event.target.value));
               if (start) seek(start.cursor);
             }}>
@@ -351,7 +372,8 @@ export function AiReplay() {
                 : cursor === lastAction ? playing ? '최신 수 · 새 행동 대기' : '최신 수 · 정지'
                   : `${lastAction - Math.min(cursor, lastAction)}수 뒤`)}</span>
           </>}
-          <label>배속 <select aria-label="재생 배속" value={speed} onChange={event => changeSpeed(Number(event.target.value))}>
+          <label>배속 <select aria-label="재생 배속" value={speed} onFocus={() => setArrowControl('speed')}
+            onChange={event => { setArrowControl('speed'); changeSpeed(Number(event.target.value)); }}>
             {SPEEDS.map(value => <option key={value} value={value}>{value}×</option>)}
           </select></label>
         </div>
