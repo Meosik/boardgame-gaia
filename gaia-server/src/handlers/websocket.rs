@@ -23,6 +23,8 @@ use crate::{
     state::AppState,
 };
 
+const KEEPALIVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
+
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     Path(room_code): Path<String>,
@@ -192,9 +194,21 @@ async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) 
         _ => return,
     };
 
+    // Cloudflare closes a proxied WebSocket after about 100 s without traffic, which shows up
+    // as the room pausing and the client reconnecting while a player thinks. Browsers answer
+    // a ping with a pong on their own, so the client needs no change.
+    let mut keepalive = tokio::time::interval(KEEPALIVE_INTERVAL);
+    keepalive.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    keepalive.tick().await;
+
     // Main message loop — interleave incoming client messages and room broadcasts.
     loop {
         select! {
+            _ = keepalive.tick() => {
+                if socket.send(Message::Ping(Vec::new())).await.is_err() {
+                    break;
+                }
+            }
             // Incoming from this client
             msg = socket.recv() => {
                 match msg {

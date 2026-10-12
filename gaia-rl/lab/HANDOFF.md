@@ -100,6 +100,12 @@
 - **2026-10-05 이미지 느림**: 서버·터널은 정상, `cf-ray`가 `-LAX`(한국 요청이 LA 엣지로 우회, Cloudflare 무료 플랜).
   체감 개선으로 `/assets/*`(Vite 해시 파일)에 `public, max-age=31536000, immutable`을 붙였다(`router.rs`).
   코드는 푸시했고 **배포는 사용자 확인 대기**. 확인은 `curl -sI https://shgaia.com/assets/<파일>`의 `cache-control`, `cf-ray`.
+- **2026-10-12 "일정 시간 되면 꺼졌다 켜진다"(사용자)**: 서버 컨테이너는 10-09 14:37 배포 뒤 재시작 없음, 호스트 14일 가동,
+  서버 로그에 오류 없음. 터널은 10-08·10-09 02:03–02:05 KST에 연결 1–2개(4개 중)가 "no recent network activity"로 끊겼다가
+  20초 안에 복구(10-10 이후 없음). 원인 후보: 웹소켓에 keepalive가 없음(서버·클라이언트 모두 ping 없음) — Cloudflare는 약 100초
+  무통신 웹소켓을 끊고, 클라이언트는 자동 재접속, 그 사이 방은 `RoomPaused`. 증상과 일치하는지는 사용자 확인 대기.
+  수정: `handlers/websocket.rs`에 30초마다 서버 ping(클라이언트 변경 없음). **봇에서 cargo가 거부되어 컴파일·테스트 미실행** —
+  사용자가 `cd ~/projects/gaia-work && cargo test -p gaia-server` 확인 뒤 배포(배포는 사용자 확인 대기).
 - **옛 폴더**: `~/projects/gaia`(git 아님), `~/gaia-ai-7f3e1a9`(이전 배포), 백업 폴더들. 새 배포가 안정적인지
   확인되면 사용자 확인 후 정리한다.
 - **`.env`에는 비밀번호와 터널 토큰이 있다.** 값을 출력하거나 커밋하지 않는다. 키 이름만 다룬다(`cut -d= -f1`).
