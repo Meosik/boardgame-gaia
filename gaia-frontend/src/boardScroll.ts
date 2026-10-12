@@ -79,6 +79,21 @@ function box(element: Element): ScrollBox {
   return { top: rect.top, bottom: rect.bottom, height: rect.height };
 }
 
+/**
+ * The visible part of the page when the page itself scrolls (the narrow layout): the sticky
+ * shortcut bar covers the top of the window, so a board is only visible below the bar's bottom
+ * edge. Null when there is no bar to measure.
+ */
+function pageViewport(): ScrollBox | null {
+  const bar = document.querySelector('.game-table-top-nav');
+  if (!bar) return null;
+  const rect = bar.getBoundingClientRect();
+  if (rect.height <= 0) return null;
+  const top = Math.max(0, rect.bottom);
+  const bottom = window.visualViewport?.height ?? window.innerHeight;
+  return { top, bottom, height: bottom - top };
+}
+
 export function scrollBoardIntoView(
   target: Element,
   options: {
@@ -93,7 +108,17 @@ export function scrollBoardIntoView(
   const viewport = scrollViewportFor(target, options.fallbackViewport ?? null);
   const behavior = options.behavior ?? 'instant';
   if (!viewport || typeof (viewport as HTMLElement).scrollBy !== 'function') {
-    target.scrollIntoView?.({ behavior, block: 'nearest', inline: 'nearest' });
+    const page = viewport ? null : pageViewport();
+    if (!page) {
+      target.scrollIntoView?.({ behavior, block: 'nearest', inline: 'nearest' });
+      return;
+    }
+    const pageDelta = boardScrollDelta(box(target), page, {
+      preferred: options.preferred,
+      keepVisible: options.keepVisible ? box(options.keepVisible) : null,
+      allowBottomAlign: options.allowBottomAlign,
+    });
+    if (pageDelta !== 0) window.scrollBy({ top: pageDelta, behavior });
     return;
   }
 

@@ -107,6 +107,13 @@
   무통신 웹소켓을 끊고, 클라이언트는 자동 재접속, 그 사이 방은 `RoomPaused`. 증상과 일치하는지는 사용자 확인 대기.
   수정: `handlers/websocket.rs`에 30초마다 서버 ping(클라이언트 변경 없음). **봇에서 cargo가 거부되어 컴파일·테스트 미실행** —
   사용자가 `cd ~/projects/gaia-work && cargo test -p gaia-server` 확인 뒤 배포(배포는 사용자 확인 대기).
+- **2026-10-13 모바일 "위가 잘린다"(사용자: 연구·함선/종족/패스 버튼 밑을 공간으로 간주)**: 800px 이하에서는 페이지 전체가
+  스크롤되고 바로가기 바(`.game-table-top-nav`)가 sticky로 위를 덮는데, `boardScroll.ts`가 스크롤 조상을 못 찾아 기본
+  `scrollIntoView`로 떨어져 바 뒤쪽까지 보이는 영역으로 계산 → 보드 위쪽이 바에 가려짐. 수정: 스크롤 조상이 없으면
+  바 아래 ~ 화면 아래를 보이는 영역으로 재서 `window.scrollBy`(바를 못 재면 기존 동작). **봇에서 npm이 거부되어 테스트·빌드
+  미실행** — 사용자가 `cd ~/projects/gaia-work/gaia-frontend && npm run test -- --run` 확인 뒤 배포(사용자 확인 대기).
+  남은 것: 튜토리얼·AI 코치의 기본 `scrollIntoView` 호출(App.tsx 348, AiCoach 129, RoundOneGuide 112)은 그대로라 모바일에서
+  같은 가림이 있을 수 있음. 사용자 뜻이 이 증상이 맞는지는 폰에서 확인 대기(다르면 스크린샷 요청).
 - **옛 폴더**: `~/projects/gaia`(git 아님), `~/gaia-ai-7f3e1a9`(이전 배포), 백업 폴더들. 새 배포가 안정적인지
   확인되면 사용자 확인 후 정리한다.
 - **`.env`에는 비밀번호와 터널 토큰이 있다.** 값을 출력하거나 커밋하지 않는다. 키 이름만 다룬다(`cut -d= -f1`).
