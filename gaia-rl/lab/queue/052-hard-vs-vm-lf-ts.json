@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자 확인(2026-10-12 \"진행 하고\"): 046부터 미룬 배포 판단. A = 실서버 hard(geodens_guide), B = vm_lf_ts(047 B, 현재 기준 스택 — 연구 집중 D 없음). 새 시드 12쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전). 039·040(lf_more vs hard, 각 +30 안팎)의 이득이 현재 스택에서도 유지되는지 본다. 유의하면 hard 교사 교체 배포를 제안(배포는 사용자 확인 뒤).",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-cap20.json",
+  "pairs": 12,
+  "comparisons": 2,
+  "stop_round": 3
+}

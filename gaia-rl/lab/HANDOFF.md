@@ -640,6 +640,10 @@
      (연구 트랙별 값)으로 다시 다룰지 사용자 결정 ③ 046부터 미룬 배포 판단(hard vs vm_lf_ts 새 시드 12쌍)은 여전히 권장.
      사용자가 돌릴 명령(gaia-rl에서): `.venv/bin/python tools/academy_rounds.py ~/projects/gaia-lab/gaia-rl/runs/lab-049-vm-lf-ts-reach-focus`,
      `.venv/bin/python tools/action_counts.py ~/projects/gaia-lab/gaia-rl/runs/lab-049-vm-lf-ts-reach-focus --rounds 1-3`.
+     **lab 052 큐(사용자 "진행 하고 리플 확인할게", 2026-10-12)**: 위 ③으로 해석해 넣음 — A = 실서버 hard, B = vm_lf_ts, 새 시드 12쌍,
+     stop_round 3, 1.5 충전 판정(`052-hard-vs-vm-lf-ts`). 050·051 뒤에 돌아감. 유의한 양수면 hard 교체 배포 제안(배포는 사용자 확인 뒤).
+     사용자가 다른 뜻(①·②)이었으면 결과 전에 큐 파일을 빼면 됨. 리플레이는 사용자가 직접 확인 예정 — 자동 게시는 replay_income
+     바이너리가 없어 아직 실패 중(위 cargo 명령을 사용자가 한 번 실행해야 함).
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
