@@ -736,6 +736,17 @@
      코드 원인: B는 연구 1칸 = 일괄 16충전 + 경제·과학 수입 제외(guide_r1 4번) → 기본 순위 Gaia 6.4 > TF 5.3 > AI·Nav 4.7 >
      Eco·Sci 0.0(step 46). 가이아만 `colony_options`의 차원 변형 광산 기회(`_gaia_room`)가 더해져 1위. 포머를 안 써도 기회 값은 남음.
      052 1–3R 가이아 연구(12좌석 합): B Tak 19·Geo 15·Ter 6·Xen 2, hard Ter 21·Geo 8·Tak 2. C022는 claims "코드반영" N.
+     **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
+     ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
+     가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
+     포머를 거의 안 씀, 확인됨**. Build A/B: Geo 22/25, Tak 11/17, Ter 12/10, Xen 30/30(소행성 포머 광산은 일반 Build라 구분 안 됨).
+     EclipseAsteroidMine A 7 vs B 16, ExploreSpaceship A 29 vs B 73(Geo 5 → 23, Ter 5 → 17, Xen 19 → 33, Tak 0·0).
+     **코드 원인(`teacher_patches.py` lf_frozen `_colony_costs`)**: ① 빈 포머 + 토큰이 있으면 닿는 차원 변형 행성을 이미
+     "다음 라운드 광산"으로 값에 넣음(`_gaia_room`), 포밍 뒤에는 `reserved`로 같은 값 → 포밍 수 자체의 값 증가가 거의 0
+     (가이아 구역 토큰도 보유로 셈). 가이아 연구는 16충전 + 이 기회가 새로 생겨 높고, 정작 포밍은 낮음(p006-g1 step 38: 5.0).
+     ② 소행성은 `_colony_costs`에 없음(RING·Gaia·Transdim만) → 소행성 광산 기회는 값에 0.
+     수정 후보(사용자 확인 대기): ⓓ 차원 변형 기회는 포밍을 한 뒤(`reserved`)에만 셈 — 빈 포머만으로는 0(값 계산 변경, 새 수치 없음)
+     ⓔ 빈 포머가 있고 사거리 안 소행성이 있으면 소행성 광산을 colony 옵션에(비용 = 포머 1개, 수치 없음: 포머 값이 필요하면 사용자 결정).
      수정 후보(사용자 확인 대기): ⓐ 포머가 놀고 있으면(빈 포머 있음) 가이아 연구보다 포밍·소행성을 먼저(순서만)
      ⓑ 가이아 2 이상 진보는 빈 포머가 없을 때만 앞 순위(순서만) ⓒ 경제·과학 0.0은 guide_r1 4번의 부작용이라 따로 검토.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
