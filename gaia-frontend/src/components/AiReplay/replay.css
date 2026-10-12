@@ -4,6 +4,7 @@
 .ai-replay-message { padding: 2rem; }
 .ai-replay-controls { flex: none; position: relative; z-index: 100; border-top: 2px solid #475569; padding: .65rem 1rem; background: #111827; box-shadow: 0 -4px 18px #0006; }
 .ai-replay-buttons { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.ai-replay-transport { display: grid; grid-template-columns: repeat(3, minmax(5.5rem, 1fr)); gap: .5rem; flex: none; }
 .ai-replay-controls label { display: flex; align-items: center; gap: .4rem; font-weight: 700; }
 .ai-replay-controls button, .ai-replay-controls select { background: #1e293b; color: #e2e8f0; border: 1px solid #64748b; border-radius: 999px; padding: .45rem .8rem; font: inherit; font-weight: 700; min-height: 38px; }
 .ai-replay-controls select { max-width: min(390px, 70vw); }
@@ -21,6 +22,7 @@
   .ai-replay-controls { padding: .5rem; }
   .ai-replay-buttons { gap: .3rem; }
   .ai-replay-buttons > strong { font-size: .85rem; }
+  .ai-replay-transport { flex: 1 1 100%; gap: .3rem; }
   .ai-replay-controls button, .ai-replay-controls select { padding: .35rem .55rem; font-size: .8rem; }
   .ai-replay-status { font-size: .75rem; }
 }

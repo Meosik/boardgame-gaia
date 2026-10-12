@@ -304,6 +304,15 @@ export function AiReplay() {
       <footer className="ai-replay-controls" aria-label="AI 리플레이 재생바" title="화살표 이전·다음 행동 · Space 재생·정지">
         <div className="ai-replay-buttons">
           <strong>AI 복기 · 읽기 전용</strong>
+          {/* Ahead of the selects: their width changes with the game label, which used to push
+              these three around the wrapped row. */}
+          <div className="ai-replay-transport">
+            <button type="button" onClick={() => previousAction !== null && seek(previousAction)} disabled={previousAction === null}>이전 행동</button>
+            <button type="button" onClick={togglePlaying} disabled={!canPlay} aria-pressed={playing}>
+              {playing ? '정지' : '재생'}
+            </button>
+            <button type="button" onClick={() => { setFollowLive(false); setPlaying(false); if (nextAction !== null) advance(nextAction); }} disabled={nextAction === null}>다음 행동</button>
+          </div>
           <label>종족 <select aria-label="종족 필터" value={factionFilter} disabled={!games.length}
             onChange={event => selectFaction(event.target.value)}>
             <option value="all">전체</option>
@@ -332,11 +341,6 @@ export function AiReplay() {
             <option value="" disabled>{record ? '초기 배치' : '라운드'}</option>
             {roundStarts.map(item => <option key={item.round} value={item.round}>{item.round}라운드</option>)}
           </select></label>
-          <button type="button" onClick={() => previousAction !== null && seek(previousAction)} disabled={previousAction === null}>이전 행동</button>
-          <button type="button" onClick={togglePlaying} disabled={!canPlay} aria-pressed={playing}>
-            {playing ? '정지' : '재생'}
-          </button>
-          <button type="button" onClick={() => { setFollowLive(false); setPlaying(false); if (nextAction !== null) advance(nextAction); }} disabled={nextAction === null}>다음 행동</button>
           {liveGame && <>
             <button type="button" onClick={goLive} disabled={!record}
               aria-pressed={playing && cursor === lastAction && actionPlayer === null}>
