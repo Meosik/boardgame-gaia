@@ -35,9 +35,9 @@ describe('AI replay controls', () => {
       return replay;
     });
     render(<AiReplay />);
-    await screen.findByRole('option', { name: 'AT · 제노스 56점 · 9/12 17:51' });
+    await screen.findByRole('option', { name: 'AT · 초점 제노스 56점 · 9/12 17:51' });
     for (const name of ['AT', 'RP', 'XP', 'T', '일반 PPO', 'FuturePolicy']) {
-      expect(screen.getByRole('option', { name: `${name} · 제노스 56점 · 9/12 17:51` })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: `${name} · 초점 제노스 56점 · 9/12 17:51` })).toBeInTheDocument();
     }
     const select = screen.getByLabelText('리플레이 게임') as HTMLSelectElement;
     expect(Array.from(select.options, option => option.value)).toEqual(games.map(game => game.id));
@@ -56,7 +56,7 @@ describe('AI replay controls', () => {
     fireEvent.click(screen.getByRole('button', { name: '다음 행동' }));
     expect(screen.getByRole('slider')).toHaveValue('1');
     await act(async () => { resolveTimes({ 'eval-one': Date.parse('2026-09-11T15:00:00Z') / 1000 }); });
-    expect(screen.getByRole('option', { name: '일반 PPO · 제노스 56점 · 9/12 00:00' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '일반 PPO · 초점 제노스 56점 · 9/12 00:00' })).toBeInTheDocument();
     expect(screen.getByRole('slider')).toHaveValue('1');
     expect(loadReplay).toHaveBeenCalledTimes(1);
   });
@@ -68,7 +68,7 @@ describe('AI replay controls', () => {
         url.endsWith('publication-times.json') ? times : datedCatalog })));
       render(<AiReplay />);
       await screen.findByRole('button', { name: '기록 시점 이동' });
-      expect(screen.getByRole('option', { name: '일반 PPO · 제노스 56점' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: '일반 PPO · 초점 제노스 56점' })).toBeInTheDocument();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     },
   );
@@ -83,7 +83,7 @@ describe('AI replay controls', () => {
     await screen.findByRole('button', { name: '기록 시점 이동' });
     fireEvent.click(screen.getByRole('button', { name: '다음 행동' }));
     expect(screen.getByRole('slider')).toHaveValue('1');
-    expect(screen.getByRole('option', { name: '일반 PPO · 제노스 56점' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '일반 PPO · 초점 제노스 56점' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -92,7 +92,7 @@ describe('AI replay controls', () => {
       url.endsWith('publication-times.json') ? { one: Date.parse('2026-09-12T08:51:00Z') / 1000 } : catalog })));
     render(<AiReplay />);
     await screen.findByRole('button', { name: '기록 시점 이동' });
-    expect(screen.getByRole('option', { name: '일반 PPO · 제노스 56점' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '일반 PPO · 초점 제노스 56점' })).toBeInTheDocument();
   });
 
   it('places round selection after the actor filter and seeks every round globally, paused', async () => {

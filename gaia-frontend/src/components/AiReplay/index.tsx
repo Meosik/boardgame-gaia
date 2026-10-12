@@ -50,7 +50,8 @@ function publicationLabels(value: unknown): Map<string, string> {
 function gameLabel(game: ReplayGame, registeredAt?: string): string {
   const policy = SHORT_POLICY_NAMES[game.policy] ?? POLICY_NAMES[game.policy] ?? game.policy;
   const faction = FACTION_DISPLAY_NAMES[game.faction as FactionId] ?? game.faction;
-  const name = `${policy} · ${faction} ${game.vp}점`;
+  // "초점": every game has all its factions; this one is only the seat the replay was picked for.
+  const name = `${policy} · 초점 ${faction} ${game.vp}점`;
   return registeredAt ? `${name} · ${registeredAt}` : name;
 }
 
