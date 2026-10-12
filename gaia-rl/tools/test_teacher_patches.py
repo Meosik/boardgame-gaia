@@ -153,3 +153,18 @@ class BoosterLookaheadTests(unittest.TestCase):
             else:
                 self.assertIsNone(tp.decision_horizon(fresh))
         self.assertGreater(seen, 0)
+
+
+class ResearchFocusTests(unittest.TestCase):
+    def order(self, **levels):
+        tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | levels
+        return sorted(tracks, key=tp._focus_key(tracks))
+
+    def test_navigation_leads_only_until_level_two(self):
+        self.assertEqual(self.order(ai=1)[0], 'navigation')
+        self.assertEqual(self.order(navigation=1, ai=1)[0], 'navigation')
+        after = self.order(navigation=2, ai=1)
+        self.assertEqual((after[0], after[-1]), ('ai', 'navigation'))
+
+    def test_a_track_at_level_two_is_the_focus(self):
+        self.assertEqual(self.order(navigation=3, economy=2, ai=1)[:2], ['economy', 'navigation'])

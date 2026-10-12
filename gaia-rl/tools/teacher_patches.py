@@ -1951,7 +1951,12 @@ def _focus_key(tracks):
     if focus:
         best = max(tracks[t] for t in focus)
         return lambda t: (0 if t in focus and tracks[t] == best else 1, -tracks[t])
-    return lambda t: (0 if t == 'navigation' and tracks[t] < FOCUS_FROM else 1, -tracks[t])
+    if tracks['navigation'] < FOCUS_FROM:
+        return lambda t: (0 if t == 'navigation' else 1, -tracks[t])
+    # Navigation 2 reached and no track chosen yet: the other tracks by level, Navigation after
+    # them. Lab 048 ranked Navigation first here too (it was the highest level), so the focus never
+    # left it: rounds 1-3 Taklons 18 of 25 advances on Navigation, Terrans 13 of 23 (A: 0, 0).
+    return lambda t: (1 if t == 'navigation' else 0, -tracks[t])
 
 
 def research_focus_scores(env, snapshot, scores):
@@ -1978,11 +1983,17 @@ def research_focus_scores(env, snapshot, scores):
     return lifted
 
 
-def install_reach():
-    _guide['reach_plus'] = _guide['setup_soft'] = _guide['research_focus'] = True
-    _wrap_rank('_setup_near', setup_near_scores)
-    _wrap_rank('_research_focus', research_focus_scores)
-    install_setup_search()
+def install_reach(setup=True, plus=True, focus=True):
+    """setup: A and B; plus: C; focus: D. Lab 048 ran all four together."""
+    if setup:
+        _guide['setup_soft'] = True
+        _wrap_rank('_setup_near', setup_near_scores)
+        install_setup_search()
+    if plus:
+        _guide['reach_plus'] = True
+    if focus:
+        _guide['research_focus'] = True
+        _wrap_rank('_research_focus', research_focus_scores)
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_reach(seed, **kwargs):
@@ -1991,4 +2002,27 @@ def guide_r1_charge3_lf_more_vm_lf_ts_reach(seed, **kwargs):
     and research focus order (install_reach)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
     install_reach()
+    return teacher
+
+
+# Lab 048 parts, one at a time on guide_r1_charge3_lf_more_vm_lf_ts (cause of the Taklons and
+# Terrans loss).
+def guide_r1_charge3_lf_more_vm_lf_ts_reach_setup(seed, **kwargs):
+    """Teacher factory: reach parts A and B only (setup comparisons, opponent-adjacent starts first)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
+    install_reach(plus=False, focus=False)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_reach_plus(seed, **kwargs):
+    """Teacher factory: reach part C only (range +1 in colony options and booster 5)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
+    install_reach(setup=False, focus=False)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_reach_focus(seed, **kwargs):
+    """Teacher factory: reach part D only (research focus order)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
+    install_reach(setup=False, plus=False)
     return teacher

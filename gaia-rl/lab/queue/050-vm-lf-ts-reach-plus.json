@@ -1,0 +1,16 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-12 \"부품 분리해서 원인 파악해\"): 048 부품 분리 2/3. A = vm_lf_ts, B = A + 사거리 +1(C)만(확장 가치·부스터 5에 항해 다음 사거리 단계 반영). 048과 같은 시드 6쌍(쌍별 비교용, 새 시드 확인 아님), 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-reach-plus-cap20.json",
+  "seeds": [
+    "geo-quartet-534437",
+    "geo-quartet-534759",
+    "geo-quartet-535299",
+    "geo-quartet-536268",
+    "geo-quartet-536801",
+    "geo-quartet-536873"
+  ],
+  "comparisons": 2,
+  "stop_round": 3
+}
