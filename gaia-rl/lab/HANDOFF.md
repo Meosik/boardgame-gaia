@@ -817,6 +817,8 @@
      "053 start" 알림을 100번 넘게 보냄(봇이 큐에 넣기 전에 남은 시드를 확인하지 않은 실수). 큐 파일의 `kind`를 `"external"`로
      바꿔 보류(lab은 external을 건너뜀; 봇은 큐 파일 이름 변경·삭제 권한이 없음). 다시 돌리려면 시드 추가가 먼저: 사용자가 gaia-rl에서
      `.venv/bin/python tools/find_seeds.py 560000 640000 >> lab/seeds.txt`(봇 권한 밖) 실행 → 커밋·푸시 → `kind`를 `"ab"`로 되돌림.
+     **재개(같은 날)**: 사용자가 `find_seeds.py 560000 640000` 실행 → 시드 42개 추가(남은 새 시드 43개, 12쌍 실험 3번 분량),
+     053의 `kind`를 `"ab"`로 되돌려 다시 큐에 올림.
      **앞으로: 실험을 큐에 넣기 전에 `lab/seeds.txt`의 남은 시드 수를 확인한다**(lab 로그 `journalctl --user -u gaia-lab`).
      결과에서 볼 것: 오류 중단 판(새 코드 첫 리그 실행), 타클론 충전·함대 입장 횟수
      (`action_counts.py <run> --types ExploreSpaceship GaiaFormation Build --rounds 1-3`, 봇 권한 밖이면 사용자 실행), 다른 3종족은 0 근처여야 함.

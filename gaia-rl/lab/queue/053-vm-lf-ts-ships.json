@@ -1,6 +1,5 @@
 {
-  "kind": "external",
-  "hold": "seeds.txt에 새 시드가 1개뿐이라 보류. 시드를 추가한 뒤 kind를 \"ab\"로 되돌리면 lab이 실행한다.",
+  "kind": "ab",
   "note": "사용자(2026-10-13 \"바꾸고 진행해야지\"): 타클론 함선 입장. A = vm_lf_ts(기준 스택), B = A + brainstone_ships — 동결 교사의 '브레인스톤 가이아 금지'가 타클론 함선 입장을 전부 막던 것을, 브레인스톤이 1그릇일 때는 허용. 입장 시점은 아직 충전을 줄 수 있는 이웃(패스 안 한 상대의 건물이 2칸 안)이 있으면 패스 바로 앞 순위, 없으면 제 점수(순서만). 새 시드 12쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전), 특히 타클론. 함께 볼 것: 타클론 함대 입장 횟수(052는 양팔 0회).",
   "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-cap20.json",
   "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
