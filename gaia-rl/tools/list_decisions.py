@@ -19,6 +19,23 @@ sys.path[:0] = [str(ROOT/'python'), str(ROOT/'tools')]
 from explain_decision import short  # noqa: E402
 
 
+def _qr(coord):
+    if isinstance(coord, str):
+        q, r = coord.split(',')
+        return int(q), int(r)
+    return coord['q'], coord['r']
+
+
+def sector_of(state, coord):
+    """Sector tile number of a hex (the user's "N번 스타트" = a start on sector N's home planet)."""
+    q, r = _qr(coord)
+    for sector in state['board'].get('sectors', []):
+        oq, or_ = _qr(sector['origin'])
+        if (abs(q-oq)+abs(r-or_)+abs(q+r-oq-or_))//2 <= 2:
+            return sector['id']
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('game_dir', type=Path)
@@ -43,8 +60,14 @@ def main():
             player = state['players'][seat]
             arm = 'A' if seat in result['a_seats'] else 'B'
             action = snapshot['candidates'][row['index']]['action']
-            print(f"{step:4d} R{state['round']} s{seat} {player['faction']:<8} {arm} "
-                  f"vp{player['vp']:<4} {short(action, 120)}")
+            line = (f"{step:4d} R{state['round']} s{seat} {player['faction']:<8} {arm} "
+                    f"vp{player['vp']:<4} {short(action, 120)}")
+            if action.get('type') == 'PlaceStartingStructure':
+                options = sorted((sector_of(state, c['action']['coord']) or 0, c['action']['coord'])
+                                 for c in snapshot['candidates'] if c['action'].get('type') == 'PlaceStartingStructure')
+                line += (f"  sector {sector_of(state, action['coord'])} (open: "
+                         + ', '.join(f'{sector}={coord}' for sector, coord in options) + ')')
+            print(line)
         env.step(row['decision_id'], row['index'])
 
 
