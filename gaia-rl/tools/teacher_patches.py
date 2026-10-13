@@ -2096,9 +2096,43 @@ def former_first_scores(env, snapshot, scores):
 # arms of lab 052. User: "1단계 브레인스톤만 턴 마지막에 쓰면 손해가 없는데" — a Brainstone in bowl I
 # loses nothing by waiting there. Ship entry is allowed while the Brainstone is in bowl I; the
 # policy stands for everything else.
+# Timing (user, same day: "더이상 파워를 안 받겠다 싶은 때, 혹은 덜 받더라도 꼭 필요한 게 있을 때"): while an
+# opponent who has not passed has a building within 2 hexes of ours (it can still give a charge),
+# the entry ranks just above passing, so it comes after every move worth making; a plan whose
+# rollout needs the ship earlier can still win the comparison. With no such opponent the entry
+# keeps its own score. Order only.
+SHIP_ENTRIES = frozenset({'ExploreSpaceship', 'RoundBoosterRangeExploreSpaceship', 'TwilightRangeExploreSpaceship'})
+ENTRY_BEFORE_PASS = 0.001
+
+
+def taklons_ship_timing_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if player['faction'] != 'Taklons':
+        return scores
+    entries = [i for i, c in enumerate(snapshot['candidates']) if c['action'].get('type') in SHIP_ENTRIES
+               and not blocked(scores[i]) and scores[i][0] > ENTRY_BEFORE_PASS]
+    if not entries:
+        return scores
+    charging = any(not other['passed'] and any(_value.distance(s['hex'], b['hex']) <= 2
+                                                for s in player['structures'] for b in other['structures'])
+                   for other in state['players'] if other is not player)
+    if not charging:
+        return scores
+    lifted = list(scores)
+    for i in entries:
+        lifted[i] = (ENTRY_BEFORE_PASS, f'{scores[i][1]}; Taklons ship entry after the moves worth making '
+                     '(a neighbour can still charge the Brainstone)', *scores[i][2:])
+    return lifted
+
+
 def install_brainstone_ships():
     import four_factions.quick as quick
     import four_factions.teacher as ff_teacher
+    _wrap_rank('_taklons_ship_timing', taklons_ship_timing_scores)
     inner = ff_teacher.brainstone_committed
     if getattr(inner, '_ships', False):
         return
