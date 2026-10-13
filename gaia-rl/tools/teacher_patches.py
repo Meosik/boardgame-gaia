@@ -542,7 +542,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'research_focus': False,      # True: ..._vm_lf_ts_reach (see research_focus_scores)
           'former_use': False,          # True: ..._vm_lf_ts_former (see install_former_use)
           'research_when': False,       # True: ..._vm_lf_ts_when (see research_when_track)
-          'contested_first': False}     # True: ..._vm_lf_ts_when (see contested_first_scores)
+          'contested_first': False,     # True: ..._vm_lf_ts_when (see contested_first_scores)
+          'ship_when': False}           # True: ..._vm_lf_ts_when (see ship_when_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2303,7 +2304,11 @@ def contested_first_scores(env, snapshot, scores):
                  and not blocked(scores[i]) and scores[i][0] > passing]
         return max(found, key=lambda i: scores[i][0]) if found else None
 
-    contested, anytime = best(CONTESTED), best(ANYTIME)
+    # Rule 3: in rounds 1-2 a ship entry is a move to make early too. An entry held back to
+    # just above passing (Taklons timing) is not above `passing` here and stays where it is.
+    early_entry = _guide['ship_when'] and state['round'] in SHIP_EARLY_ROUNDS
+    passing = max(passing, ENTRY_BEFORE_PASS) if early_entry else passing
+    contested, anytime = best(CONTESTED | SHIP_ENTRIES if early_entry else CONTESTED), best(ANYTIME)
     if contested is None or anytime is None or scores[contested][0] >= scores[anytime][0]:
         return scores
     # "Later" must stay possible: what the upgrade or advance costs is still held after the
@@ -2319,6 +2324,45 @@ def contested_first_scores(env, snapshot, scores):
     lifted = list(scores)
     lifted[contested] = (scores[anytime][0]+CONTESTED_AHEAD, f'{scores[contested][1]}; contested first',
                          *scores[contested][2:])
+    return lifted
+
+
+# 3. ship_when — when to enter which ship.
+#    - Which ship, by round (order among the entry moves only; their scores are handed out again
+#      in this order, so entry against other moves is unchanged): rounds 1-2 Rebellion first
+#      (C027, LF4-06: its 3-QIC tech action is the second best move of round 1 and "1–2R 두 번 다
+#      놓치면 입장 의미 없음"); round 1 Eclipse last (C031: "하드쉬 외엔 1R부터 6돈을 쓸 여유가 없어 보통
+#      2R부터"); from round 3 TF Mars last (C028: "3–4R이면 가장 안 좋은 함대").
+#    - Early (LF3-04 "들어갈 거면 일찍", LF4-04 "입장 턴을 미리 없애 우선권 확보", LF3-05 upgrades are
+#      delayed for the entry points): in rounds 1-2 an entry counts among the moves of rule 2 that
+#      go before upgrades and research. The Taklons timing (brainstone_ships, user) stands.
+SHIP_EARLY_ROUNDS = (1, 2)
+
+
+def _ship_when_key(ship, round_):
+    if round_ in SHIP_EARLY_ROUNDS and ship == 'Rebellion':
+        return 0
+    if (round_ == 1 and ship == 'Eclipse') or (round_ >= 3 and ship == 'TFMars'):
+        return 2
+    return 1
+
+
+def ship_when_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    entries = [i for i, c in enumerate(snapshot['candidates']) if c['action'].get('type') in SHIP_ENTRIES
+               and not blocked(scores[i])]
+    if len({snapshot['candidates'][i]['action'].get('ship') for i in entries}) < 2:
+        return scores
+    by_score = sorted(entries, key=lambda i: -scores[i][0])
+    order = sorted(entries, key=lambda i: (_ship_when_key(snapshot['candidates'][i]['action'].get('ship'),
+                                                         state['round']), by_score.index(i)))
+    lifted = list(scores)
+    for i, source in zip(order, by_score):
+        if i != source:
+            lifted[i] = (scores[source][0], f'{scores[i][1]}; ship when', *scores[i][2:])
     return lifted
 
 
@@ -2342,10 +2386,13 @@ def _install_when_root():
     p.search = search
 
 
-def install_when(research=True, contested=True):
+def install_when(research=True, contested=True, ships=True):
     if research:
         _guide['research_when'] = True
         _wrap_rank('_research_when', research_when_scores)
+    if ships:
+        _guide['ship_when'] = True
+        _wrap_rank('_ship_when', ship_when_scores)
     if contested:
         _guide['contested_first'] = True
         _install_when_root()
@@ -2354,8 +2401,8 @@ def install_when(research=True, contested=True):
 
 def guide_r1_charge3_lf_more_vm_lf_ts_when(seed, **kwargs):
     """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts plus the guides' timing rules added so
-    far (install_when): the track of a round 1-3 research advance, and moves an opponent can take
-    away before upgrades and research."""
+    far (install_when): the track of a round 1-3 research advance, moves an opponent can take
+    away before upgrades and research, and which ship to enter in which round."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
     install_when()
     return teacher

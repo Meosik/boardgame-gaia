@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-14 \"계속해. 테스트는 안돌리나?\"): 자료의 '언제 무엇을' 규칙 첫 묶음. A = vm_lf_ts(기준 스택), B = A + install_when 1–3번(순서만) — ① 1–3R 연구 트랙: 2사거리로 모행성 종류·가이아 행성이 새로 닿으면 항해, 아니면 닿는 소행성(가이아 0)·차원 변형 2개면 가이아, 아니면 경제 2까지 ② 뺏길 수 있는 수(파워·QIC 액션, 광산, 함선 공용 액션)를 업그레이드·연구 앞에(지금 두는 결정만, 미룬 수를 낼 수 있을 때만) ③ 함선: 1–2R 리벨리온 먼저·1R 이클립스 뒤·3R부터 TF마스 뒤, 1–2R 입장은 업그레이드·연구 앞에. 새 시드 12쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전). 주의: 척도는 경제 1칸을 본전으로 잼. 함께 볼 것: 연구 트랙 수(research_counts), 비교 미탐색 결정 수(B가 20초에 비교를 덜 끝내는지), 리플레이.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-when-cap20.json",
+  "pairs": 12,
+  "comparisons": 2,
+  "stop_round": 3
+}

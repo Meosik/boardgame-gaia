@@ -170,6 +170,25 @@ class ResearchFocusTests(unittest.TestCase):
         self.assertEqual(self.order(navigation=3, economy=2, ai=1)[:2], ['economy', 'navigation'])
 
 
+class ShipWhenTests(unittest.TestCase):
+    def order(self, round_):
+        return sorted(('Twilight', 'Eclipse', 'TFMars', 'Rebellion'), key=lambda s: tp._ship_when_key(s, round_))
+
+    def test_ship_order_by_round(self):
+        self.assertEqual(self.order(1), ['Rebellion', 'Twilight', 'TFMars', 'Eclipse'])
+        self.assertEqual(self.order(2), ['Rebellion', 'Twilight', 'Eclipse', 'TFMars'])
+        self.assertEqual(self.order(3), ['Twilight', 'Eclipse', 'Rebellion', 'TFMars'])
+
+    def test_scores_are_handed_out_in_that_order(self):
+        snapshot = {'player': 0, 'state': {'round': 1, 'phase': {'ActionPhase': {}}},
+                    'candidates': [{'action': {'type': 'ExploreSpaceship', 'ship': 'Eclipse'}},
+                                   {'action': {'type': 'ExploreSpaceship', 'ship': 'Rebellion'}},
+                                   {'action': {'type': 'Pass', 'booster_id': 1}}]}
+        scores = [(5.0, 'a'), (3.0, 'b'), (0.0, 'c')]
+        lifted = tp.ship_when_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [3.0, 5.0, 0.0])
+
+
 class ResearchWhenTests(unittest.TestCase):
     def test_groups_hold_moves_that_differ_only_in_the_track(self):
         def lab(tile, track):
