@@ -539,7 +539,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'reach_plus': False,          # True: ..._vm_lf_ts_reach (see install_reach)
           'setup_roots': False,         # True: ..._vm_lf_ts_reach (see setup_search)
           'setup_soft': False,          # True: ..._vm_lf_ts_reach (opponent-adjacent starts first, none blocked)
-          'research_focus': False}      # True: ..._vm_lf_ts_reach (see research_focus_scores)
+          'research_focus': False,      # True: ..._vm_lf_ts_reach (see research_focus_scores)
+          'former_use': False}          # True: ..._vm_lf_ts_former (see install_former_use)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -1700,10 +1701,24 @@ def _colony_costs(state, player, home):
                    for cell in state['board']['hexes'].values())
     options += [(dict(MINE_COST), 0, 0)]*reserved
     room = _gaia_room(player)
-    if room:
+    if room and not _guide['former_use']:
         transdim = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Transdim',)))[:room]
         options += [({**MINE_COST, 'qic': qic}, GAIA_TOKENS[level]*terrans, nav) for qic, nav in transdim]
+    # Formers on a planet or in the Gaia area come back, so every former not yet used up counts.
+    formers = (max(0, player['gaiaformers_total'] - player['resources']['spent_gaia_formers'])
+               if _guide['former_use'] else 0)
+    if formers:
+        # Lost Fleet rulebook: a mine on an Asteroid costs no ore or credits, only the range QIC,
+        # and uses up one Gaia former.
+        asteroids = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Asteroid',)))[:formers]
+        options += [({'qic': qic}, 0, nav) for qic, nav in asteroids]
     return options
+
+
+def _idle_formers(player):
+    """Gaia formers neither on a planet, in the Gaia area nor used up on an Asteroid."""
+    return max(0, player['gaiaformers_total'] - player['gaiaformers_deployed']
+               - player['gaiaformers_in_gaia_area'] - player['resources']['spent_gaia_formers'])
 
 
 def _gaia_room(player):
@@ -2025,4 +2040,64 @@ def guide_r1_charge3_lf_more_vm_lf_ts_reach_focus(seed, **kwargs):
     """Teacher factory: reach part D only (research focus order)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
     install_reach(setup=False, plus=False)
+    return teacher
+
+
+# ── former_use (user 2026-10-13, lab 052 pair-006/game-1 Taklons) ──────────────────────
+# "1라운드에 가이아 포머를 먹었으면 적어도 즉시 포밍 1회 + 소행성 던지기는 해야지." In 052 the stack
+# advanced the Gaia track 19 times with Taklons and formed twice (Geodens 15 and 3). Causes in the
+# lf_frozen colony options:
+# 1. A free former with its tokens already priced the Transdim planet in reach as a mine built next
+#    round, and a formed planet priced the same, so forming itself gained nothing while the Gaia
+#    advance that brought the former gained the whole option. Now the option is counted only for a
+#    planet actually being formed (the `reserved` ones).
+# 2. Asteroids were not colony options at all. With an idle former each Asteroid in reach is one
+#    (rulebook cost: range QIC only; the former is used up, at no price of its own — an idle former
+#    has no other value after 1).
+# 3. Order only: while a former is idle and forming or an Asteroid mine is legal, the best of those
+#    goes ahead of a Gaia track advance that outranks it.
+def former_first_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    if not _idle_formers(state['players'][actor]):
+        return scores
+    hexes = state['board']['hexes']
+
+    def uses_former(action):
+        if action.get('type') == 'GaiaFormation':
+            return True
+        if action.get('type') != 'Build':
+            return False
+        planet = (hexes.get(str(action.get('coord'))) or {}).get('planet')
+        return bool(planet) and planet['planet_type'] == 'Asteroid' and not planet['is_gaia_formed']
+
+    candidates = snapshot['candidates']
+    uses = [i for i, c in enumerate(candidates) if uses_former(c['action']) and not blocked(scores[i])]
+    gaia = [i for i, c in enumerate(candidates) if c['action'].get('type') == 'ResearchAdvance'
+            and c['action'].get('track') == 'GaiaProject' and not blocked(scores[i])]
+    if not uses or not gaia:
+        return scores
+    best = max(uses, key=lambda i: scores[i][0])
+    top = max(scores[i][0] for i in gaia)
+    if scores[best][0] > top:
+        return scores
+    lifted = list(scores)
+    lifted[best] = (top+0.001, f'{scores[best][1]}; former_use: idle former before the Gaia track',
+                    *scores[best][2:])
+    return lifted
+
+
+def install_former_use():
+    _guide['former_use'] = True
+    _wrap_rank('_former_use', former_first_scores)
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_former(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts whose colony options count a Transdim
+    planet only once it is being formed and an Asteroid per idle former, and which uses an idle
+    former before advancing the Gaia track again (former_use)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
+    install_former_use()
     return teacher
