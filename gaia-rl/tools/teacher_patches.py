@@ -541,7 +541,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'setup_soft': False,          # True: ..._vm_lf_ts_reach (opponent-adjacent starts first, none blocked)
           'research_focus': False,      # True: ..._vm_lf_ts_reach (see research_focus_scores)
           'former_use': False,          # True: ..._vm_lf_ts_former (see install_former_use)
-          'research_when': False}       # True: ..._vm_lf_ts_when (see research_when_track)
+          'research_when': False,       # True: ..._vm_lf_ts_when (see research_when_track)
+          'contested_first': False}     # True: ..._vm_lf_ts_when (see contested_first_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2190,23 +2191,27 @@ WHEN_TRANSDIM = 2
 
 
 def _in_reach(state, player, planet_types):
-    return {coord for coord, _, qic in _value.targets(state, player, planet_types) if not qic}
+    """{coord: planet type} of the free planets of those types in range without a QIC."""
+    return {coord: planet['planet_type']
+            for coord, planet, qic in _value.targets(state, player, planet_types) if not qic}
 
 
 def research_when_track(state, actor):
     """The action name of the track the guides advance now, or None."""
     player = state['players'][actor]
     tracks = player['research_tracks']
+    home = _value.HOME.get(player['faction'])
+    wide = tuple(k for k in (home, 'Gaia') if k)
+    now = _in_reach(state, player, (*wide, 'Asteroid', 'Transdim'))
     if tracks['navigation'] < WHEN_LEVEL:
         plus = _nav_plus(player)
-        home = _value.HOME.get(player['faction'])
-        kinds = tuple(k for k in (home, 'Gaia') if k)
-        if plus is not None and _in_reach(state, plus[0], kinds) - _in_reach(state, player, kinds):
+        if plus is not None and set(_in_reach(state, plus[0], wide)) - set(now):
             return 'Navigation'
     if not _early_terrans_gaia(state, actor):
-        if not tracks['gaia'] and _in_reach(state, player, ('Asteroid',)):
+        kinds = list(now.values())
+        if not tracks['gaia'] and 'Asteroid' in kinds:
             return 'GaiaProject'
-        if tracks['gaia'] < WHEN_LEVEL and len(_in_reach(state, player, ('Transdim',))) >= WHEN_TRANSDIM:
+        if tracks['gaia'] < WHEN_LEVEL and kinds.count('Transdim') >= WHEN_TRANSDIM:
             return 'GaiaProject'
     if tracks['economy'] < WHEN_LEVEL and tracks['navigation'] < WHEN_LEVEL:
         return 'Economy'
@@ -2235,11 +2240,14 @@ def research_when_scores(env, snapshot, scores):
     state, actor = snapshot['state'], snapshot.get('player')
     if actor is None or 'ActionPhase' not in state['phase'] or state['round'] not in WHEN_ROUNDS:
         return scores
+    groups = [g for g in _when_groups(snapshot['candidates']).values() if len(g) > 1]
+    if not groups:
+        return scores
     track = research_when_track(state, actor)
     if track is None:
         return scores
     lifted = list(scores)
-    for group in _when_groups(snapshot['candidates']).values():
+    for group in groups:
         open_moves = [i for i in group.values() if not blocked(scores[i])]
         want = group.get(track)
         if want not in open_moves:
@@ -2251,15 +2259,103 @@ def research_when_scores(env, snapshot, scores):
     return lifted
 
 
-def install_when(research=True):
+# 2. contested_first — the order of the moves inside a round (SH3-07 "빼앗길 수 있는 액션(QIC 액션·
+#    파워 액션·행성에 광산)을 먼저, 언제든 할 수 있는 액션(업그레이드·4지식 진보)은 최대한 뒤로"; SH1-07:
+#    the ship actions are shared too, "내가 안 누르면 남이 먹음"). While an opponent has not passed,
+#    the best move another player can take away that still ranks above passing goes just ahead of
+#    the best upgrade or research advance ranked above it (their scores stay, so the tile and track
+#    order of rule 1 holds), provided the upgrade or advance can still be paid afterwards — without
+#    that the rollouts built mines until nothing else was affordable (053 p006-g1 step 16: 8 mines
+#    and 15 ore left by round 4) and no comparison finished inside the 20 s cap.
+#    Ship entries are not in the list (their
+#    timing is its own rule). Order only: both moves stay worth making, and a plan whose rollout
+#    needs the upgrade first can still win the comparison (the guide's "예외 있음").
+CONTESTED = frozenset({
+    'PowerAction', 'Build', 'GaiaFormation', 'RoundBoosterRangeBuild', 'RoundBoosterRangeGaiaFormation',
+    'RoundBoosterTerraformBuild', 'RoundBoosterImmediateGaiaFormation', 'ExamineArtifact',
+    'SpaceshipCreditTerraform', 'TwilightFreeResearchLab', 'TwilightReplayFederationToken',
+    'TwilightRangeBuild', 'TwilightRangeGaiaFormation', 'RebellionFreeTradingStation',
+    'RebellionCreditsAndQic', 'RebellionGainTechTile', 'TFMarsTechBonus', 'TFMarsGaiaFormation',
+    'EclipsePlanetTypeBonus', 'EclipseResearchBoost', 'EclipseAsteroidMine'})
+ANYTIME = frozenset({'Upgrade', 'ResearchAdvance'})
+CONTESTED_AHEAD = 0.001
+WHEN_STOCK = ('ore', 'credits', 'knowledge', 'qic')
+_when_root = []   # decision ids of the searches in progress (see _install_when_root)
+
+
+def contested_first_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    # Only the decision being made: inside a search every other ranking is a rollout step, and
+    # with the rule there the rollouts ran so long that no comparison finished in the 20 s cap.
+    if _when_root and _when_root[-1] != snapshot['decision_id']:
+        return scores
+    if all(other['passed'] for i, other in enumerate(state['players']) if i != actor):
+        return scores
+    candidates = snapshot['candidates']
+    passing = max((scores[i][0] for i, c in enumerate(candidates)
+                   if c['action'].get('type') == 'Pass' and not blocked(scores[i])), default=0.0)
+
+    def best(kinds):
+        found = [i for i, c in enumerate(candidates) if c['action'].get('type') in kinds
+                 and not blocked(scores[i]) and scores[i][0] > passing]
+        return max(found, key=lambda i: scores[i][0]) if found else None
+
+    contested, anytime = best(CONTESTED), best(ANYTIME)
+    if contested is None or anytime is None or scores[contested][0] >= scores[anytime][0]:
+        return scores
+    # "Later" must stay possible: what the upgrade or advance costs is still held after the
+    # contested move (engine fork of both moves, no price table).
+    held = state['players'][actor]['resources']
+
+    def after(index):
+        branch = env.fork(snapshot['decision_id'], index)
+        return json.loads(branch.snapshot_json())['state']['players'][actor]['resources']
+    paid, left = after(anytime), after(contested)
+    if any(left[k] < held[k]-paid[k] for k in WHEN_STOCK):
+        return scores
+    lifted = list(scores)
+    lifted[contested] = (scores[anytime][0]+CONTESTED_AHEAD, f'{scores[contested][1]}; contested first',
+                         *scores[contested][2:])
+    return lifted
+
+
+def _install_when_root():
+    """Record the decision a search is deciding (contested_first applies to that one only)."""
+    import four_factions.preparation as p
+    inner_search = p.search
+    if getattr(inner_search, '_when_root', False):
+        return
+
+    def search(env, snapshot, *args, **kwargs):
+        _when_root.append(snapshot['decision_id'])
+        try:
+            return inner_search(env, snapshot, *args, **kwargs)
+        finally:
+            _when_root.pop()
+    for name, value in vars(inner_search).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(search, name, value)
+    search._when_root = True
+    p.search = search
+
+
+def install_when(research=True, contested=True):
     if research:
         _guide['research_when'] = True
         _wrap_rank('_research_when', research_when_scores)
+    if contested:
+        _guide['contested_first'] = True
+        _install_when_root()
+        _wrap_rank('_contested_first', contested_first_scores)
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_when(seed, **kwargs):
     """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts plus the guides' timing rules added so
-    far (install_when): the track of a round 1-3 research advance."""
+    far (install_when): the track of a round 1-3 research advance, and moves an opponent can take
+    away before upgrades and research."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
     install_when()
     return teacher
