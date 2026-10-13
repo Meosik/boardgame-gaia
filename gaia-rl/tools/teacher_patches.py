@@ -2089,6 +2089,38 @@ def former_first_scores(env, snapshot, scores):
     return lifted
 
 
+# ── brainstone_ships (user 2026-10-13) ─────────────────────────────────────────────────
+# Lost Fleet: when Taklons explore a spaceship the Brainstone goes to the Gaia area until the next
+# Gaia phase (engine apply_explore_spaceship_impl). The frozen "no Brainstone Gaia commitment"
+# policy, written for Gaia projects, therefore blocked every Taklons ship entry: 0 entries in both
+# arms of lab 052. User: "1단계 브레인스톤만 턴 마지막에 쓰면 손해가 없는데" — a Brainstone in bowl I
+# loses nothing by waiting there. Ship entry is allowed while the Brainstone is in bowl I; the
+# policy stands for everything else.
+def install_brainstone_ships():
+    import four_factions.quick as quick
+    import four_factions.teacher as ff_teacher
+    inner = ff_teacher.brainstone_committed
+    if getattr(inner, '_ships', False):
+        return
+
+    def brainstone_committed(before, after, actor):
+        if not inner(before, after, actor):
+            return False
+        was, now = before['state']['players'][actor], after['state']['players'][actor]
+        explored = len(now.get('explored_ships') or []) > len(was.get('explored_ships') or [])
+        return not (explored and was['resources']['power']['brainstone'] == 'Area1')
+    brainstone_committed._ships = True
+    ff_teacher.brainstone_committed = quick.brainstone_committed = brainstone_committed
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts where Taklons may explore a spaceship
+    while the Brainstone is in bowl I (brainstone_ships)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
+    install_brainstone_ships()
+    return teacher
+
+
 def install_former_use():
     _guide['former_use'] = True
     _wrap_rank('_former_use', former_first_scores)

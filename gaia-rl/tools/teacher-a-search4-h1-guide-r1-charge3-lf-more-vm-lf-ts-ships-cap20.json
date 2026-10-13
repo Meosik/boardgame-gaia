@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts (hard, 4 comparisons, 20 s cap) where Taklons may explore a Lost Fleet spaceship while the Brainstone is in bowl I; the frozen no-Brainstone-in-Gaia policy blocked every Taklons ship entry (guide_r1_charge3_lf_more_vm_lf_ts_ships).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}
