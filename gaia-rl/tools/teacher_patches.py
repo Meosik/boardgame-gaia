@@ -540,7 +540,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'setup_roots': False,         # True: ..._vm_lf_ts_reach (see setup_search)
           'setup_soft': False,          # True: ..._vm_lf_ts_reach (opponent-adjacent starts first, none blocked)
           'research_focus': False,      # True: ..._vm_lf_ts_reach (see research_focus_scores)
-          'former_use': False}          # True: ..._vm_lf_ts_former (see install_former_use)
+          'former_use': False,          # True: ..._vm_lf_ts_former (see install_former_use)
+          'research_when': False}       # True: ..._vm_lf_ts_when (see research_when_track)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2166,4 +2167,99 @@ def guide_r1_charge3_lf_more_vm_lf_ts_former(seed, **kwargs):
     former before advancing the Gaia track again (former_use)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
     install_former_use()
+    return teacher
+
+
+# ── when (user 2026-10-13: "경제는 값을 따지기 전에 먼저 언제 올리는지 아나", "전부 넣을 때까지 반복") ──
+# The guides' timing rules, one at a time, as order only (HANDOFF lists them with their claim ids).
+# 1. research_when — which track a round 1-3 advance takes (lab 053 pair-006/game-1: Terrans took
+#    Terraforming with the lab's tile and Science next, Economy ranked last at 0.0):
+#    - Navigation while below level 2, when range 2 brings a home-type or Gaia planet within reach
+#      that is out of reach now (B18-03 "2사거리로 이득이 있으면 항해 2가 가장 좋음");
+#    - else the Gaia track: from level 0 with an Asteroid in reach (SH3-03 "소행성에 지을 수 있으면
+#      가이아"), or below level 2 with two Transdim planets in reach (B18-03);
+#    - else Economy up to level 2 while Navigation is below 2 (B18-03 "메리트가 없으면 경제 2",
+#      SH3-03, B19-06 "항해 2를 먼저 찍었으면 경제는 굳이 안 감");
+#    - else no preference.
+#    The preferred track swaps scores with the best research move, and among the tech-tile
+#    choices of one upgrade with the best track of the same tile. Research against other moves
+#    and the tile itself are unchanged. The Terrans' early Gaia rule (guide_r1 2) stands.
+WHEN_ROUNDS = (1, 2, 3)
+WHEN_LEVEL = 2
+WHEN_TRANSDIM = 2
+
+
+def _in_reach(state, player, planet_types):
+    return {coord for coord, _, qic in _value.targets(state, player, planet_types) if not qic}
+
+
+def research_when_track(state, actor):
+    """The action name of the track the guides advance now, or None."""
+    player = state['players'][actor]
+    tracks = player['research_tracks']
+    if tracks['navigation'] < WHEN_LEVEL:
+        plus = _nav_plus(player)
+        home = _value.HOME.get(player['faction'])
+        kinds = tuple(k for k in (home, 'Gaia') if k)
+        if plus is not None and _in_reach(state, plus[0], kinds) - _in_reach(state, player, kinds):
+            return 'Navigation'
+    if not _early_terrans_gaia(state, actor):
+        if not tracks['gaia'] and _in_reach(state, player, ('Asteroid',)):
+            return 'GaiaProject'
+        if tracks['gaia'] < WHEN_LEVEL and len(_in_reach(state, player, ('Transdim',))) >= WHEN_TRANSDIM:
+            return 'GaiaProject'
+    if tracks['economy'] < WHEN_LEVEL and tracks['navigation'] < WHEN_LEVEL:
+        return 'Economy'
+    return None
+
+
+def _when_groups(candidates):
+    """Candidate indices that differ only in the track advanced: {key: {track: index}}."""
+    groups = {}
+    for i, candidate in enumerate(candidates):
+        action = candidate['action']
+        if action.get('type') == 'ResearchAdvance':
+            key, track = 'research', action.get('track')
+        else:
+            choice = action.get('tech_tile_choice')
+            if not isinstance(choice, dict) or not choice.get('advance_track'):
+                continue
+            track = choice['advance_track']
+            key = json.dumps({**action, 'tech_tile_choice': {**choice, 'advance_track': None}}, sort_keys=True)
+        groups.setdefault(key, {})[track] = i
+    return groups
+
+
+def research_when_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or state['round'] not in WHEN_ROUNDS:
+        return scores
+    track = research_when_track(state, actor)
+    if track is None:
+        return scores
+    lifted = list(scores)
+    for group in _when_groups(snapshot['candidates']).values():
+        open_moves = [i for i in group.values() if not blocked(scores[i])]
+        want = group.get(track)
+        if want not in open_moves:
+            continue
+        best = max(open_moves, key=lambda i: scores[i][0])
+        if scores[best][0] > scores[want][0]:
+            lifted[want] = (scores[best][0], f'{scores[want][1]}; research when: {track} now', *scores[want][2:])
+            lifted[best] = (scores[want][0], *scores[best][1:])
+    return lifted
+
+
+def install_when(research=True):
+    if research:
+        _guide['research_when'] = True
+        _wrap_rank('_research_when', research_when_scores)
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_when(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts plus the guides' timing rules added so
+    far (install_when): the track of a round 1-3 research advance."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
+    install_when()
     return teacher

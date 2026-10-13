@@ -168,3 +168,17 @@ class ResearchFocusTests(unittest.TestCase):
 
     def test_a_track_at_level_two_is_the_focus(self):
         self.assertEqual(self.order(navigation=3, economy=2, ai=1)[:2], ['economy', 'navigation'])
+
+
+class ResearchWhenTests(unittest.TestCase):
+    def test_groups_hold_moves_that_differ_only_in_the_track(self):
+        def lab(tile, track):
+            return {'action': {'type': 'Upgrade', 'coord': '3,-1', 'to': 'ResearchLab',
+                               'tech_tile_choice': {'kind': 'Standard', 'tile': tile, 'advance_track': track}}}
+        candidates = [{'action': {'type': 'ResearchAdvance', 'track': 'Economy'}},
+                      {'action': {'type': 'ResearchAdvance', 'track': 'Science'}},
+                      lab(5, 'Terraforming'), lab(5, 'Economy'), lab(10, None), lab(2, 'Economy'),
+                      {'action': {'type': 'Pass', 'booster_id': 1}}]
+        groups = sorted(tp._when_groups(candidates).values(), key=lambda g: min(g.values()))
+        self.assertEqual(groups, [{'Economy': 0, 'Science': 1}, {'Terraforming': 2, 'Economy': 3},
+                                  {'Economy': 5}])
