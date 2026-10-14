@@ -204,6 +204,14 @@ class ResearchWhenTests(unittest.TestCase):
                                   {'Economy': 5}])
 
 
+class LeechWhenTests(unittest.TestCase):
+    def test_answer_by_cost_and_round(self):
+        self.assertIsNone(tp._leech_when(0, 1))
+        self.assertEqual([tp._leech_when(1, r) for r in (1, 5, 6)], [True, True, None])
+        self.assertEqual([tp._leech_when(2, r) for r in (3, 4, 5)], [True, True, None])
+        self.assertEqual([tp._leech_when(3, r) for r in (1, 6)], [False, False])
+
+
 class ResearchDefendTests(unittest.TestCase):
     def track(self, new, held, *, kinds=(), structures=(), round_=1, unhurried=None, sure=False, **levels):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | levels

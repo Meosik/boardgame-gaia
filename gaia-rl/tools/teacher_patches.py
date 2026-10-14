@@ -544,7 +544,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'research_when': False,       # True: ..._vm_lf_ts_when (see research_when_track)
           'contested_first': False,     # True: ..._vm_lf_ts_when (see contested_first_scores)
           'ship_when': False,           # True: ..._vm_lf_ts_when (see ship_when_scores)
-          'research_defend': False}     # True: ..._vm_lf_ts_ships_defend (see research_defend_track)
+          'research_defend': False,     # True: ..._vm_lf_ts_ships_defend (see research_defend_track)
+          'leech_when': False}          # True: install_when(leech=True) (see leech_when_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2532,6 +2533,44 @@ def ship_when_scores(env, snapshot, scores):
     return lifted
 
 
+# 4. leech_when — which charges to accept, by round (B2-02 "5R까지 2충전은 … 수락, 3충전도 3–4R까지는
+#    수락, 4충전 이상은 정말 중요한 타이밍이 아니면 거절"). The answer the guide gives swaps scores with
+#    the other one when it ranks lower; a comparison can still pick the other ("정말 중요한 타이밍").
+#    Charges outside these lines (a free 1-charge, 2 in round 6, 3 from round 5) keep their order.
+#    The VP cost is read from the engine (charge - 1). SH1-11's exceptions (keeping 5 VP for a
+#    ship, tokens to spend) are not in.
+LEECH_ACCEPT_UNTIL = {1: 5, 2: 4}   # VP cost: last round in which the charge is accepted
+LEECH_DECLINE_FROM = 3              # VP cost (a 4-charge)
+
+
+def _leech_when(cost, round_):
+    """True accept, False decline, None no guidance."""
+    if cost >= LEECH_DECLINE_FROM:
+        return False
+    return True if round_ <= LEECH_ACCEPT_UNTIL.get(cost, 0) else None
+
+
+def leech_when_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    actor = snapshot.get('player')
+    answers = {c['action'].get('accept'): i for i, c in enumerate(snapshot['candidates'])
+               if c['action'].get('type') == 'ChargePower'}
+    if actor is None or True not in answers or False not in answers:
+        return scores
+    after = json.loads(env.fork(snapshot['decision_id'], answers[True]).snapshot_json())
+    cost = snapshot['state']['players'][actor]['vp'] - after['state']['players'][actor]['vp']
+    answer = _leech_when(cost, snapshot['state']['round'])
+    if answer is None:
+        return scores
+    want, other = answers[answer], answers[not answer]
+    if blocked(scores[want]) or blocked(scores[other]) or scores[want][0] >= scores[other][0]:
+        return scores
+    lifted = list(scores)
+    lifted[want] = (scores[other][0], f'{scores[want][1]}; leech when: cost {cost} VP', *scores[want][2:])
+    lifted[other] = (scores[want][0], *scores[other][1:])
+    return lifted
+
+
 def _install_when_root():
     """Record the decision a search is deciding (contested_first applies to that one only)."""
     import four_factions.preparation as p
@@ -2552,7 +2591,10 @@ def _install_when_root():
     p.search = search
 
 
-def install_when(research=True, contested=True, ships=True, defend=False):
+def install_when(research=True, contested=True, ships=True, defend=False, leech=False):
+    if leech:
+        _guide['leech_when'] = True
+        _wrap_rank('_leech_when', leech_when_scores)
     if defend:
         _guide['research_defend'] = True
         _wrap_rank('_research_defend', research_defend_scores)
