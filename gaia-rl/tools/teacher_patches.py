@@ -2236,8 +2236,14 @@ def _gaia_or_economy(state, actor, kinds):
 #    - what is worth defending (user): a home-type planet only when a faction whose home is one
 #      terraforming step away plays ("인접 종족이 아니면 수비를 늦게 해도 된다" — of the four fixed
 #      factions Terrans have none). Without such a faction the planets are still to be gained,
-#      only later: Economy or Science to level 2 first, whichever ranks higher, then Navigation
-#      (this part also in rounds 2-3); a planet one step from home only with a cheap step at hand
+#      only later ("인접 종족이 없을수록 경제나 과학 올린 후에 항해술"): Economy to level 2 first (B01
+#      p.11 "경제 2 또는 4"), then Navigation, this part also in rounds 2-3. Science instead of
+#      Economy when the third federation is sure (B18), which the user defines as: home planets
+#      near and easy to defend, and the advanced tile above Science worth more than the final
+#      goals. Computed as: two or more free home-type planets within the range and QIC held
+#      that no opponent reaches without a QIC (all of them when no neighbouring faction plays),
+#      and lf_advanced_option of that tile above the frozen standings value. The round goals
+#      are not compared (no such value exists). Science then goes on to level 4; a planet one step from home only with a cheap step at hand
 #      ("삽을 얻기 쉬우면"); a Gaia planet only if an opponent reaches it too and a mine there brings
 #      a new planet within reach or joins two of our building groups ("전략적 요충지인지 판단").
 #    The Gaia and Economy branches are rule 1's, in round 1 only. The round 1 mine scoring case
@@ -2246,7 +2252,8 @@ DEFEND_ROUNDS = (1,)
 DEFEND_PLANETS = 2
 LINK_HEXES = 2
 RANGE_BOOSTER = (8, 3)   # booster id, range added to one build per round
-DEFEND_FIRST = ('Economy', 'Science')   # user: "인접 종족이 없을수록 경제나 과학 올린 후에 항해술"
+SCIENCE_LEVEL = 4        # B18 p.3: "과학을 올리기 시작했으면 최대한 빨리 과학 4단계"
+SCIENCE_TILE = 5         # index of the Science track in research_board.advanced_tech_tiles
 
 
 def _home_type(player):
@@ -2330,6 +2337,20 @@ def _defend_counts(state, player, contested=True):
     return len(new), len(held)
 
 
+def _science_sure(state, actor):
+    """The user's "3연방이 확실하다" (see rule 1b)."""
+    player = state['players'][actor]
+    home = _home_type(player)
+    others = [o for o in state['players'] if o is not player]
+    near = {coord for coord, _, _ in _value.targets(state, player, (home,))}
+    if any(_ring_gap(home, _home_type(o)) == 1 for o in others):
+        near -= {coord for o in others for coord in _in_reach(state, o, (home,))}
+    if len(near) < DEFEND_PLANETS:
+        return False
+    tile = state['research_board']['advanced_tech_tiles'][SCIENCE_TILE]
+    return tile is not None and lf_advanced_option(state, player, tile) > _value.standings(state, actor)
+
+
 def research_defend_track(state, actor):
     """The action name of the track an advance takes (rule 1b), a tuple when either of two
     will do, or None."""
@@ -2341,16 +2362,19 @@ def research_defend_track(state, actor):
     def merit(contested):
         new, held = _defend_counts(state, player, contested)
         return new >= DEFEND_PLANETS and held < DEFEND_PLANETS
-    if tracks['navigation'] < WHEN_LEVEL and not academy:
-        if early and merit(True):
+    wide = tracks['navigation'] < WHEN_LEVEL and not academy
+    if wide and early and merit(True):
+        return 'Navigation'
+    # Science: begun in round 1 when the third federation is sure, then on to level 4.
+    if (tracks['science'] < SCIENCE_LEVEL and (early or tracks['science'] >= WHEN_LEVEL)
+            and _science_sure(state, actor)):
+        return 'Science'
+    if wide and merit(False):
+        # Nobody is near enough in colour to take the planets: Economy 2 (or the Science
+        # climb) first, Navigation after it (also in rounds 2-3).
+        if tracks['economy'] >= WHEN_LEVEL or tracks['science'] >= SCIENCE_LEVEL:
             return 'Navigation'
-        if merit(False):
-            # Nobody is near enough in colour to take the planets: Economy or Science to
-            # level 2 first, Navigation after it (also in rounds 2-3).
-            first = tuple(t for t in DEFEND_FIRST if tracks[TRACK_KEYS[t]] < WHEN_LEVEL)
-            if len(first) < len(DEFEND_FIRST):
-                return 'Navigation'
-            return first if early else None
+        return 'Economy' if early else None
     if not early:
         return None
     return _gaia_or_economy(state, actor, list(_in_reach(state, player, ('Asteroid', 'Transdim')).values()))

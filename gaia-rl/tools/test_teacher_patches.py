@@ -205,7 +205,7 @@ class ResearchWhenTests(unittest.TestCase):
 
 
 class ResearchDefendTests(unittest.TestCase):
-    def track(self, new, held, *, kinds=(), structures=(), round_=1, unhurried=None, **levels):
+    def track(self, new, held, *, kinds=(), structures=(), round_=1, unhurried=None, sure=False, **levels):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | levels
         state = {'round': round_, 'players': [{'faction': 'Taklons', 'research_tracks': tracks,
                                                'structures': list(structures)}]}
@@ -213,6 +213,7 @@ class ResearchDefendTests(unittest.TestCase):
         def counts(state, player, contested=True):
             return (new, held) if contested or unhurried is None else unhurried
         with mock.patch.object(tp, '_defend_counts', side_effect=counts), \
+                mock.patch.object(tp, '_science_sure', return_value=sure), \
                 mock.patch.object(tp, '_in_reach', return_value=dict(enumerate(kinds))):
             return tp.research_defend_track(state, 0)
 
@@ -230,11 +231,18 @@ class ResearchDefendTests(unittest.TestCase):
         self.assertEqual(self.track(0, 0, kinds=('Asteroid',)), 'GaiaProject')
         self.assertIsNone(self.track(0, 0, economy=2))
 
-    def test_without_a_neighbour_economy_or_science_comes_before_navigation(self):
-        self.assertEqual(self.track(0, 0, unhurried=(2, 0)), ('Economy', 'Science'))
-        self.assertEqual(self.track(0, 0, unhurried=(2, 0), science=2), 'Navigation')
+    def test_without_a_neighbour_economy_comes_before_navigation(self):
+        self.assertEqual(self.track(0, 0, unhurried=(2, 0)), 'Economy')
+        self.assertEqual(self.track(0, 0, unhurried=(2, 0), science=2), 'Economy')
         self.assertEqual(self.track(0, 0, unhurried=(2, 0), economy=2, round_=3), 'Navigation')
         self.assertIsNone(self.track(0, 0, unhurried=(2, 0), round_=2))
+
+    def test_a_sure_third_federation_means_science_up_to_four(self):
+        self.assertEqual(self.track(0, 0, unhurried=(2, 0), sure=True), 'Science')
+        self.assertEqual(self.track(0, 0, unhurried=(2, 0), sure=True, science=3, round_=3), 'Science')
+        self.assertEqual(self.track(0, 0, unhurried=(2, 0), sure=True, science=4, round_=3), 'Navigation')
+        self.assertIsNone(self.track(0, 0, sure=True, round_=2))
+        self.assertEqual(self.track(2, 0, sure=True), 'Navigation')
 
     def test_the_hurried_case_and_the_other_branches_are_round_one_only(self):
         self.assertIsNone(self.track(2, 0, unhurried=(0, 0), round_=2, kinds=('Asteroid',)))
