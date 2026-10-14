@@ -553,7 +553,20 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'burn_when': False,           # the next two: ..._when_all_tech (see _not_yet)
           'terrans_former': False,
           'academy_kind': False,        # True: install_when(academy=True) (see academy_kind_scores)
-          'tech_when': False}           # True: ..._when_all_tech (see tech_when_scores)
+          'tech_when': False,           # True: ..._when_all_tech (see tech_when_scores)
+          'fed_upgrade': False,         # GUIDE_MORE: ..._when_all_tech (see _not_yet_more, guide_more_scores)
+          'ts_excess': False,
+          'rebellion_ts': False,
+          'knowledge_action': False,
+          'qic_late': False,
+          'rebellion_qic': False,
+          'fed_cap': False,
+          'leech_lf': False,
+          'ship_first': False,
+          'qic_round6': False,
+          'fed_design': False,
+          'fed_token': False,
+          'pass_booster': False}
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2553,8 +2566,13 @@ LEECH_ACCEPT_UNTIL = {1: 5, 2: 4}   # VP cost: last round in which the charge is
 LEECH_DECLINE_FROM = 3              # VP cost (a 4-charge)
 
 
-def _leech_when(cost, round_):
-    """True accept, False decline, None no guidance."""
+def _leech_when(cost, round_, keep_ship=False):
+    """True accept, False decline, None no guidance. leech_lf (SH1-11, the Lost Fleet text over
+    B2-02 for the early rounds): "초반엔 함선 5점을 남기거나 토큰을 써야 하는 상황이 아니면 받는 게 좋음" —
+    in rounds 1-2 every charge is accepted unless it leaves fewer VP than a ship entry costs while a
+    ship can still be entered (then no guidance; C023 "함대 하나를 포기하고 파워를 받는 게 나을 수 있음")."""
+    if _guide['leech_lf'] and round_ in LEECH_LF_ROUNDS and cost:
+        return None if keep_ship else True
     if cost >= LEECH_DECLINE_FROM:
         return False
     return True if round_ <= LEECH_ACCEPT_UNTIL.get(cost, 0) else None
@@ -2569,13 +2587,29 @@ def leech_when_scores(env, snapshot, scores):
         return scores
     after = json.loads(env.fork(snapshot['decision_id'], answers[True]).snapshot_json())
     cost = snapshot['state']['players'][actor]['vp'] - after['state']['players'][actor]['vp']
-    answer = _leech_when(cost, snapshot['state']['round'])
+    keep_ship = (_guide['leech_lf'] and after['state']['players'][actor]['vp'] < SHIP_VP
+                 and _ship_open(snapshot['state'], snapshot['state']['players'][actor]))
+    answer = _leech_when(cost, snapshot['state']['round'], keep_ship)
+    if answer is None and keep_ship and snapshot['state']['round'] in LEECH_LF_ROUNDS:
+        # A tie still goes to accepting (C023 "1R 파워 거부는 손해가 막심"); a ranked decline stands.
+        accept, decline = answers[True], answers[False]
+        if scores[accept][0] == scores[decline][0] and not blocked(scores[accept]):
+            lifted = list(scores)
+            lifted[accept] = (scores[accept][0]+AHEAD, f'{scores[accept][1]}; leech when: tie to accept',
+                              *scores[accept][2:])
+            return lifted
     if answer is None:
         return scores
     want, other = answers[answer], answers[not answer]
-    if blocked(scores[want]) or blocked(scores[other]) or scores[want][0] >= scores[other][0]:
+    if blocked(scores[want]) or blocked(scores[other]) or scores[want][0] > scores[other][0]:
         return scores
     lifted = list(scores)
+    if scores[want][0] == scores[other][0]:
+        # A tie went to the first candidate (decline, 056 p005-g1 step 62); leech_lf breaks it.
+        if not _guide['leech_lf']:
+            return scores
+        lifted[want] = (scores[want][0]+AHEAD, f'{scores[want][1]}; leech when: cost {cost} VP', *scores[want][2:])
+        return lifted
     lifted[want] = (scores[other][0], f'{scores[want][1]}; leech when: cost {cost} VP', *scores[want][2:])
     lifted[other] = (scores[want][0], *scores[other][1:])
     return lifted
@@ -2638,7 +2672,39 @@ def _not_yet(state, player, action):
             and _asteroid(state, action) and _gaia_room(player)
             and _in_reach(state, player, ('Transdim',))):
         return 'Terrans former goes to a Transdim planet before an Asteroid'
+    return _not_yet_more(state, player, action)
+
+
+def _not_yet_more(state, player, action):
+    """The guide_more holds (see GUIDE_MORE)."""
+    kind, round_ = action.get('type'), state.get('round', 0)
+    if _guide['fed_upgrade'] and kind == 'Upgrade' and str(action.get('coord')) in player.get('federated_hexes', []):
+        now = next((_kind(s) for s in player['structures'] if str(s['hex']) == str(action.get('coord'))), None)
+        if not (now == 'TradingStation' and action.get('to') == 'ResearchLab'):
+            return 'a federated building is not upgraded (only a trading station to a lab)'
+    new_ts = (kind == 'Upgrade' and action.get('to') == 'TradingStation') or kind == 'RebellionFreeTradingStation'
+    if _guide['ts_excess'] and new_ts and round_ in TS_EXCESS_ROUNDS:
+        resources = player['resources']
+        stations = sum(_kind(s) == 'TradingStation' for s in player['structures'])
+        if stations >= TS_EXCESS_HELD or resources['credits'] >= CREDIT_EXCESS*max(resources['ore'], 1):
+            return 'no third trading station or credits beyond 2.5 per ore in rounds 1-3'
+    if (_guide['rebellion_ts'] and kind == 'RebellionFreeTradingStation'
+            and _next_to_opponent(state, player['player_id'], str(action.get('coord')))):
+        return 'Rebellion trading station only where it would cost 6 credits'
+    if (_guide['knowledge_action'] and kind == 'PowerAction' and action.get('id') == KNOWLEDGE_ACTION
+            and player['resources']['knowledge'] % NAV_KNOWLEDGE != 1):
+        return '3-knowledge power action only with 1 knowledge left over'
+    if _guide['qic_late'] and kind in QIC_LATE and round_ < QIC_LATE_FROM:
+        return f'2-QIC ship actions from round {QIC_LATE_FROM}'
+    if _guide['rebellion_qic'] and kind == 'RebellionCreditsAndQic' and player['resources']['qic']+1 < REBELLION_QIC:
+        return 'Rebellion 2 knowledge for a QIC only when it makes 3 QIC'
+    if _guide['fed_cap'] and kind == 'FormFederation' and _federations(player) >= FEDERATION_CAP:
+        return f'no federation beyond {FEDERATION_CAP}'
     return None
+
+
+def _federations(player):
+    return len(player.get('federation_tokens') or []) + len(player.get('gray_federation_tokens') or [])
 
 
 def _asteroid(state, action):
@@ -2788,40 +2854,47 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all(seed, **kwargs):
 # comparisons (step 25: Terrans took tile 5 at 23.40 over the 4-charge tile 10 at 22.07; no plan rolled
 # tile 10 out). The guides' timing for standard tiles (engine ids), order only, among the choices of
 # one upgrade:
-# - the first standard tile: Terrans with a Planetary Institute the 3-VP-per-Gaia-mine tile 8 (B3-T9
-#   "의회 먼저 지은 테란은 첫 번째로"); else Terrans and Taklons the 4-charge tile 10 (B04, B3-T4 "테란·
-#   타클론에 특히 좋음"), Xenos the 4-credit tile 3 or tile 10 (HANDOFF 2026-10-05 "제노스 4돈/4충전");
-# - tile 8 on the Gaia track, level 2 or more (B3-T9 "가이아 테크면 일찍 집을수록 이득");
+# - the first standard tile: Terrans and Taklons the 4-charge tile 10 (B04, B3-T4 "테란·타클론에 특히
+#   좋음", TK01 "첫 기술은 무조건 4충전"), Xenos the 4-credit tile 3 or tile 10 (HANDOFF 2026-10-05 "제노스
+#   4돈/4충전"); any other faction one of B18-03's first tiles "1광석1QIC·4충전·4돈" (4, 10, 3) or the
+#   Lost Fleet 1 ore 3 knowledge tile 13 that LF2-03 puts above 1 ore 1 QIC; from an Academy the
+#   1 knowledge 1 credit tile 5 (B18-03 "아카데미면 1지식1돈");
 # - tile 5 (1 knowledge 1 credit income) when the next income's knowledge is odd (B3-T3);
-# - not yet: tile 7 (7 VP) before round 6 (B3-T8 "최후반 점수 수단"), tile 9 (knowledge per planet type)
-#   in rounds 1-2 (B3-T7 "초반엔 손해 쉬움").
+# - not yet: tile 7 (7 VP) before round 6 (B3-T8 "최후반 점수 수단", LF2-09 "함대 입장 점수를 벌려고 7점
+#   기술을 집지 말 것"), tile 9 (knowledge per planet type) in rounds 1-2 (B3-T7 "초반엔 손해", LF2-04
+#   "중반에 얻는 즉발 기술"), the +1 range tile 12 from round 3 or at Navigation 2 (LF2-06 "극초반에만
+#   의미", "항해 2단계 이상이면 가치가 작아짐").
 # The wanted tile's best choice swaps scores with the group's best, as academy_kind; a held-back tile
 # that leads swaps with the best other standard tile. An advanced tile that leads keeps its place.
-# Not in: tile 6 before the first federation (B3-T6 names no state the ranking can check), tile 4 as
-# the tile to cover (needs the advanced tile plan).
+# Not in: the Gaia-mine tile 8 early (B3-T9 "가이아 테크면 일찍", "의회 먼저 지은 테란은 첫 번째로") —
+# LF2-08 and T01: in Lost Fleet "가이아 테크여도 끝까지 안 먹는 경우가 많음"; tile 6 before the first
+# federation (B3-T6 names no state the ranking can check); SH3-03's immediate tile when it builds one
+# more mine this round (needs the round plan).
 TECH_FIRST = {'Terrans': (10,), 'Taklons': (10,), 'Xenos': (3, 10)}
-GAIA_MINE_TILE = 8
+TECH_FIRST_OTHER = (4, 10, 3, 13)
 EVEN_KNOWLEDGE_TILE = 5
+ACADEMY_FIRST_TILE = 5
+RANGE_TILE = 12
 TECH_FROM_ROUND = {7: 6, 9: 3}   # tile: first round it may lead
 
 
-def _tech_wanted(state, player):
+def _tech_wanted(state, player, academy=False):
     """[(tiles, reason)] in the order the guides want them now."""
     wanted = []
     if not player['tech_tiles']:
-        if (player['faction'] == 'Terrans'
-                and any(_kind(s) == 'PlanetaryInstitute' for s in player['structures'])):
-            wanted.append(((GAIA_MINE_TILE,), 'Terrans first tile after the institute'))
         if player['faction'] in TECH_FIRST:
             wanted.append((TECH_FIRST[player['faction']], 'first tile'))
-    if player['research_tracks']['gaia'] >= WHEN_LEVEL and GAIA_MINE_TILE not in player['tech_tiles']:
-        wanted.append(((GAIA_MINE_TILE,), 'Gaia mines on the Gaia track'))
+        if academy:
+            wanted.append(((ACADEMY_FIRST_TILE,), 'first tile from an Academy'))
+        wanted.append((TECH_FIRST_OTHER, 'first tile'))
     if _value.production(state, player, include_booster=False)[2] % 2:
         wanted.append(((EVEN_KNOWLEDGE_TILE,), 'even knowledge income'))
     return wanted
 
 
-def _tech_held_back(state, tile):
+def _tech_held_back(state, tile, player=None):
+    if tile == RANGE_TILE and player is not None:
+        return state['round'] >= 3 or player['research_tracks']['navigation'] >= WHEN_LEVEL
     return state['round'] < TECH_FROM_ROUND.get(tile, 0)
 
 
@@ -2844,21 +2917,23 @@ def tech_when_scores(env, snapshot, scores):
     groups = [g for g in _tile_groups(snapshot['candidates'], scores).values() if len(g) > 1]
     if not groups:
         return scores
-    wanted = _tech_wanted(state, state['players'][actor])
+    player = state['players'][actor]
     lifted = list(scores)
     for group in groups:
         best = max(group, key=lambda g: scores[g[0]][0])
         if best[1] != 'Standard':
             continue
+        to = snapshot['candidates'][best[0]]['action'].get('to')
+        wanted = _tech_wanted(state, player, academy=isinstance(to, dict) and 'Academy' in to)
         standard = [g for g in group if g[1] == 'Standard']
         target, why = None, None
         for tiles, reason in wanted:
-            options = [g for g in standard if g[2] in tiles]
+            options = [g for g in standard if g[2] in tiles and not _tech_held_back(state, g[2], player)]
             if options:
                 target, why = max(options, key=lambda g: scores[g[0]][0]), reason
                 break
-        if target is None and _tech_held_back(state, best[2]):
-            others = [g for g in standard if not _tech_held_back(state, g[2])]
+        if target is None and _tech_held_back(state, best[2], player):
+            others = [g for g in standard if not _tech_held_back(state, g[2], player)]
             if others:
                 target = max(others, key=lambda g: scores[g[0]][0])
                 why = f'tile {best[2]} not yet'
@@ -2884,4 +2959,173 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech(seed, **kwargs):
     _guide['burn_when'] = _guide['terrans_former'] = True
     _guide['tech_when'] = True
     _wrap_rank('_tech_when', tech_when_scores)
+    install_guide_more()
     return teacher
+
+
+# ── guide_more (user 2026-10-14: "기존 11개 말고 더 없어? 이번이 진짜 마지막 … 종족별 공략을 제외하고 모든
+#    자료를 참고") — the common claims of gaia-strategy-claims.csv that name a move and a time and were
+#    not in the stack yet, order only (no new numbers; thresholds are the sources'):
+#    holds (just below passing, _not_yet_more):
+#    - fed_upgrade: no upgrade of a federated building except a trading station to a lab (SH3-06
+#      "교역소→연구소를 제외하면 이미 연방에 묶인 건물을 업그레이드하면 파워 손해", B2-05);
+#    - ts_excess: in rounds 1-3 no third trading station, nor one while credits are 2.5 or more per ore
+#      (SH3-04 "1:2.5 이상은 방지", "1–3R엔 교역소를 3개 이상 남기지 않음");
+#    - rebellion_ts: the Rebellion trading station (3 power 1 ore) only where a trading station costs 6
+#      credits, no opponent within 2 (SH2-06 "6돈 교역소에 쓸 것", LF1-08 "비싼 교역소일 때 매우 큼");
+#    - knowledge_action: the 7-power 3-knowledge action only with 1 knowledge left over (B18-08 "3지식은
+#      1지식이 남을 때만", LF1-07 "7파워 3지식은 손해");
+#    - qic_late: the 2-QIC ship actions (TF Mars, Eclipse) from round 4 (SH1-07 "4R 이후 누르길 추천");
+#    - rebellion_qic: Rebellion 2 knowledge → 2 credits 1 QIC only when it makes 3 QIC (SH2-06 "3QIC를
+#      누를 수 있게 해줄 때만 최고");
+#    - fed_cap: no fifth federation (SH1-03 "5–6연방 집착 금지", LF3-02 "티어 보너스 없는 종족의 5연방은
+#      노리지 말 것"; the four fixed factions have no tier bonus).
+#    leech_lf: rounds 1-2 charges by SH1-11 (see _leech_when).
+#    first moves (guide_more_scores):
+#    - ship_first: the Twilight lab (3 power 2 ore) and a 6-credit Rebellion trading station go first
+#      (LF1-08 "기회가 있으면 1순위 자원 액션", SH2-07 "모든 파워 액션 중 최고 효율");
+#    - qic_round6: in round 6 a QIC action before passing (B18-08 "6R엔 QIC 액션 하나는 꼭");
+#    - fed_design: in rounds 1-3 a federation without two labs or five mines before one with them
+#      (SH3-05 "첫 연방에 연구소 2개를 묶지 말 것", "광산도 초반 한 연방에 5개 이상 묶지 않음");
+#    - fed_token: among the tokens of one federation the technology token in rounds 1-2 (LF1-10 "기술
+#      습득 토큰은 초반 압도적"), else 8 VP 8 credits (LF3-10 "보통 8점8돈 최고"); never the 2-token or
+#      the unlimited-range token while another is there (B18-07, B19-09 "2토큰 연방은 없는 셈", LF1-10
+#      "무한사거리 광산 토큰은 대부분 가장 나쁨");
+#    - pass_booster: a pass booster worth 4 VP or more at the current counts before the best-ranked
+#      pass (SH1-06 "초반에도 4점 이상이면 점수 부스터"), and from round 5 a pass for 8 VP or more goes
+#      first even with moves left (SH1-06 "후반 8점 이상이면 할 행동이 남아도 패스", B18-05).
+#    Not in (no move or time the ranking can act on, or faction guides): B2-05 "광산 2개는 항상 유지"
+#    (which two is unclear), B2-06 lab for even knowledge (rule 7), SH3-02 ore terraforming (value),
+#    SH1-04/SH1-08 artifacts and Gaia tile late, LF3-03 Academy ahead for 4 federations, B18-06 the
+#    order among contested moves, final-scoring and round-goal claims (no goal value exists).
+GUIDE_MORE = ('fed_upgrade', 'ts_excess', 'rebellion_ts', 'knowledge_action', 'qic_late', 'rebellion_qic',
+              'fed_cap', 'leech_lf', 'ship_first', 'qic_round6', 'fed_design', 'fed_token', 'pass_booster')
+TS_EXCESS_ROUNDS = (1, 2, 3)
+TS_EXCESS_HELD = 2
+CREDIT_EXCESS = 2.5
+KNOWLEDGE_ACTION = 1                       # engine PowerAction id: 7 power → 3 knowledge
+QIC_LATE = frozenset({'TFMarsTechBonus', 'EclipsePlanetTypeBonus'})
+QIC_LATE_FROM = 4
+QIC_ACTIONS = QIC_LATE | {'RebellionGainTechTile', 'TwilightReplayFederationToken'}
+REBELLION_QIC = 3
+FEDERATION_CAP = 4
+LEECH_LF_ROUNDS = (1, 2)
+SHIP_VP = 5                                # engine SPACESHIP_DEPLOY_VP_COST
+FED_DESIGN_ROUNDS = (1, 2, 3)
+FED_LABS, FED_MINES = 2, 5
+TECH_TOKEN, BEST_TOKEN = 12, 8
+TOKEN_AVOID = frozenset({3, 15})           # 8 VP + 2 tokens, unlimited-range mine
+TOKEN_TECH_ROUNDS = (1, 2)
+PASS_EARLY_VP, PASS_LATE_VP, PASS_LATE_FROM = 4, 8, 5
+AHEAD = 0.001
+
+
+def _ship_open(state, player):
+    """A ship the player has not explored still has a free slot."""
+    return any(None in board['explorers'] and player['player_id'] not in board['explorers']
+               for board in state.get('spaceship_boards', []))
+
+
+def _booster_vp(state, player, booster):
+    """booster_pass_vp for `booster` held instead of the player's own."""
+    return booster_pass_vp(state, {**player, 'booster': booster})
+
+
+def _token_kind(state, token):
+    if not isinstance(token, dict):
+        return None
+    if token.get('source') == 'Supply':
+        return token.get('kind')
+    board = next((b for b in state.get('spaceship_boards', []) if b['id'] == token.get('ship')), None)
+    return board and board.get('federation_token')
+
+
+def _fed_heavy(player, hexes):
+    kinds = {str(s['hex']): _kind(s) for s in player['structures']}
+    held = [kinds.get(str(h)) for h in hexes]
+    return held.count('ResearchLab') >= FED_LABS or held.count('Mine') >= FED_MINES
+
+
+def _swap(lifted, scores, mine, top, why):
+    lifted[mine] = (scores[top][0], f'{scores[mine][1]}; {why}', *scores[mine][2:])
+    lifted[top] = (scores[mine][0], *scores[top][1:])
+
+
+def guide_more_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player, round_ = state['players'][actor], state['round']
+    candidates = snapshot['candidates']
+    live = [i for i in range(len(candidates)) if not blocked(scores[i])]
+    if not live:
+        return scores
+    lifted = list(scores)
+    act = {i: candidates[i]['action'] for i in live}
+    passes = [i for i in live if act[i].get('type') == 'Pass']
+    top = max(scores[i][0] for i in live)
+
+    def lift(i, value, why):
+        lifted[i] = (value, f'{scores[i][1]}; {why}', *scores[i][2:])
+
+    if _guide['ship_first']:
+        for i in live:
+            kind = act[i].get('type')
+            if ((kind == 'TwilightFreeResearchLab' or (kind == 'RebellionFreeTradingStation'
+                 and not _next_to_opponent(state, actor, str(act[i].get('coord')))))
+                    and not _not_yet(state, player, act[i]) and scores[i][0] < top):
+                lift(i, top+AHEAD, 'ship action first (LF1-08)')
+    if _guide['qic_round6'] and round_ == 6 and passes:
+        qic = [i for i in live if act[i].get('type') in QIC_ACTIONS]
+        floor = max(scores[i][0] for i in passes)
+        if qic and max(scores[i][0] for i in qic) <= floor:
+            lift(max(qic, key=lambda i: scores[i][0]), floor+AHEAD, 'a QIC action in round 6 (B18-08)')
+    feds = [i for i in live if act[i].get('type') == 'FormFederation']
+    if _guide['fed_design'] and round_ in FED_DESIGN_ROUNDS and len(feds) > 1:
+        best = max(feds, key=lambda i: scores[i][0])
+        light = [i for i in feds if not _fed_heavy(player, act[i]['hexes'])]
+        if light and _fed_heavy(player, act[best]['hexes']):
+            _swap(lifted, scores, max(light, key=lambda i: scores[i][0]), best,
+                  'federation without two labs or five mines (SH3-05)')
+    if _guide['fed_token'] and len(feds) > 1:
+        groups = {}
+        for i in feds:
+            key = json.dumps({k: v for k, v in act[i].items() if not k.startswith('bonus_') and k != 'token'},
+                             sort_keys=True)
+            groups.setdefault(key, []).append(i)
+        for group in groups.values():
+            if len(group) < 2:
+                continue
+            ranked = sorted(group, key=lambda i: -lifted[i][0])
+            kinds = {i: _token_kind(state, act[i].get('token')) for i in group}
+            wanted = [k for k in ((TECH_TOKEN,) if round_ in TOKEN_TECH_ROUNDS else ()) + (BEST_TOKEN,)
+                      if k in kinds.values()]
+            if wanted:
+                mine = next(i for i in ranked if kinds[i] == wanted[0])
+            elif kinds[ranked[0]] in TOKEN_AVOID:
+                mine = next((i for i in ranked if kinds[i] not in TOKEN_AVOID), None)
+            else:
+                mine = None
+            if mine is not None and mine != ranked[0]:
+                _swap(lifted, list(lifted), mine, ranked[0], f'federation token {kinds[mine]}')
+    if _guide['pass_booster'] and passes:
+        vp = {i: _booster_vp(state, player, act[i].get('booster_id')) for i in passes}
+        best = max(passes, key=lambda i: lifted[i][0])
+        rich = max(passes, key=lambda i: (vp[i], lifted[i][0]))
+        if vp[rich] >= PASS_EARLY_VP and rich != best and vp[rich] > vp[best]:
+            _swap(lifted, list(lifted), rich, best, f'pass booster for {vp[rich]} VP (SH1-06)')
+            best = rich
+        high = max(lifted[i][0] for i in live)
+        if round_ >= PASS_LATE_FROM and vp[best] >= PASS_LATE_VP and lifted[best][0] < high:
+            lifted[best] = (high+AHEAD, f'{lifted[best][1]}; pass for {vp[best]} VP late (SH1-06, B18-05)',
+                            *lifted[best][2:])
+    return lifted
+
+
+def install_guide_more(names=GUIDE_MORE):
+    for name in names:
+        _guide[name] = True
+    _wrap_rank('_not_yet', not_yet_scores)
+    _wrap_rank('_leech_when', leech_when_scores)
+    _wrap_rank('_guide_more', guide_more_scores)

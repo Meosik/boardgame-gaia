@@ -305,15 +305,60 @@ class TechWhenTests(unittest.TestCase):
         best = max(range(4), key=lambda i: lifted[i][0])
         return snapshot['candidates'][best]['action']['tech_tile_choice']['tile']
 
-    def test_first_tile_by_faction(self):
+    def test_first_tile(self):
         self.assertEqual(self.top_tile(), 10)
-        self.assertEqual(self.top_tile(structures=[{'kind': 'PlanetaryInstitute', 'hex': '0,0'}]), 8)
+        self.assertEqual(self.top_tile(faction='Geodens'), 10)             # B18-03 first tiles
 
     def test_later_tiles(self):
-        self.assertEqual(self.top_tile(faction='Geodens', gaia=2), 8)
-        self.assertEqual(self.top_tile(faction='Geodens', knowledge=3), 5)
-        self.assertEqual(self.top_tile(faction='Geodens'), 5)              # tile 7 held back, next best
-        self.assertEqual(self.top_tile(faction='Geodens', round_=6), 7)
+        self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), knowledge=3), 5)
+        self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,)), 5)  # tile 7 held back, next best
+        self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), round_=6), 7)
+        self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), gaia=3), 5)   # no Gaia-mine rule (LF2-08)
+
+
+class GuideMoreTests(unittest.TestCase):
+    def setUp(self):
+        self.saved = dict(tp._guide)
+        tp._guide.update(dict.fromkeys(tp.GUIDE_MORE, True))
+        self.addCleanup(lambda: tp._guide.update(self.saved))
+
+    def player(self, **resources):
+        return {'player_id': 0, 'faction': 'Geodens', 'federated_hexes': ['1,1'], 'federation_tokens': [],
+                'structures': [{'hex': '1,1', 'kind': 'Mine'}, {'hex': '2,2', 'kind': 'TradingStation'}],
+                'resources': {'ore': 4, 'credits': 6, 'knowledge': 0, 'qic': 1} | resources}
+
+    def held(self, action, round_=2, **resources):
+        return tp._not_yet_more({'round': round_}, self.player(**resources), action) is not None
+
+    def test_holds(self):
+        self.assertTrue(self.held({'type': 'Upgrade', 'coord': '1,1', 'to': 'TradingStation'}))
+        self.assertFalse(self.held({'type': 'Upgrade', 'coord': '3,3', 'to': 'TradingStation'}))
+        self.assertTrue(self.held({'type': 'Upgrade', 'coord': '3,3', 'to': 'TradingStation'}, credits=10))
+        self.assertTrue(self.held({'type': 'PowerAction', 'id': 1}, knowledge=0))
+        self.assertFalse(self.held({'type': 'PowerAction', 'id': 1}, knowledge=5))
+        self.assertTrue(self.held({'type': 'TFMarsTechBonus'}, round_=3))
+        self.assertFalse(self.held({'type': 'TFMarsTechBonus'}, round_=4))
+        self.assertTrue(self.held({'type': 'RebellionCreditsAndQic'}, qic=1))
+        self.assertFalse(self.held({'type': 'RebellionCreditsAndQic'}, qic=2))
+
+    def test_leech_lf_early_rounds(self):
+        self.assertTrue(tp._leech_when(3, 1))
+        self.assertIsNone(tp._leech_when(3, 2, keep_ship=True))
+        self.assertFalse(tp._leech_when(3, 3))
+
+    def test_federation_token_and_pass_booster(self):
+        def fed(kind):
+            return {'action': {'type': 'FormFederation', 'hexes': ['2,2'], 'satellite_hexes': [],
+                               'token': {'source': 'Supply', 'kind': kind}}}
+        snapshot = {'player': 0, 'state': {'round': 3, 'phase': {'ActionPhase': {}},
+                                           'players': [self.player()]},
+                    'candidates': [fed(3), fed(8), fed(5), {'action': {'type': 'Pass', 'booster_id': 1}},
+                                   {'action': {'type': 'Pass', 'booster_id': 3}}]}
+        scores = [(9.0, 'a'), (7.0, 'b'), (8.0, 'c'), (1.0, 'd'), (2.0, 'e')]
+        with mock.patch.object(tp, '_booster_vp', side_effect=lambda s, p, b: {1: 6, 3: 1}[b]):
+            lifted = tp.guide_more_scores(None, snapshot, scores)
+        self.assertEqual(max(range(3), key=lambda i: lifted[i][0]), 1)      # 8 VP 8 credits
+        self.assertGreater(lifted[3][0], lifted[4][0])                      # 6-VP pass booster
 
 
 class ResearchDefendTests(unittest.TestCase):
