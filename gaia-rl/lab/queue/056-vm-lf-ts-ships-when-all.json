@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-14 \"나머지 적용 안 한 거까지 한 번에 할걸\" → \"해보자\"): 자료의 시점 규칙 전부를 한 번에. A = vm_lf_ts_ships(기준 스택), B = A + 시점 규칙 전부(순서만) — 1b 1R 연구 트랙(055와 같음) / 2 뺏길 수 먼저 / 3 함선별 입장 시점 / 4 리치: 2충전 5R까지·3충전 4R까지 수락, 4충전+ 거절 / 5 자원·수입 인공물은 1R에 토큰 3개가 남을 때만 / 6 아카데미: 1–3R 지식(리벨리온 입장 시 QIC), 5–6R QIC / 8 소행성·원시 행성이 닿으면 마지막 광산 남김 / 9 타클론 의회 4R부터 / 트와일라잇 사거리는 지식이 4의 배수일 때 안 씀. 7(연구소 짝수 지식)·10(4QIC)은 옮길 수가 없거나 LF에 해당 없어 제외. 055 뒤 남은 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전). 함께 볼 것: 055(1b 단독)와 비교, 오류 중단 판(5–9번 첫 리그 실행), 비교 미탐색 결정 수(when 스택은 20초에 비교가 덜 끝날 수 있음), research_counts, 리플레이(사용자: 파워 문제 확인).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}

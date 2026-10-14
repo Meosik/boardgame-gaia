@@ -212,6 +212,50 @@ class LeechWhenTests(unittest.TestCase):
         self.assertEqual([tp._leech_when(3, r) for r in (1, 6)], [False, False])
 
 
+class NotYetTests(unittest.TestCase):
+    def setUp(self):
+        self.saved = dict(tp._guide)
+        tp._guide.update(dict.fromkeys(tp.WHEN_NOT_YET, True))
+        self.addCleanup(lambda: tp._guide.update(self.saved))
+
+    def player(self, *, tokens=9, knowledge=0, faction='Terrans', mines=2):
+        return {'faction': faction, 'structures': [{'kind': 'Mine', 'hex': f'{i},0'} for i in range(mines)],
+                'resources': {'knowledge': knowledge, 'power': {'bowl1': tokens, 'bowl2': 0, 'bowl3': 0}}}
+
+    def held(self, action, round_=1, **player):
+        return tp._not_yet({'round': round_}, self.player(**player), action) is not None
+
+    def test_resource_artifact_only_in_round_one_with_three_tokens_left(self):
+        artifact = {'type': 'ExamineArtifact', 'artifact': 6}
+        self.assertFalse(self.held(artifact))
+        self.assertTrue(self.held(artifact, tokens=8))
+        self.assertTrue(self.held(artifact, round_=2))
+        self.assertFalse(self.held({'type': 'ExamineArtifact', 'artifact': 12}, round_=2))
+
+    def test_taklons_institute_waits_for_round_four(self):
+        upgrade = {'type': 'Upgrade', 'coord': '0,0', 'to': 'PlanetaryInstitute'}
+        self.assertTrue(self.held(upgrade, round_=3, faction='Taklons'))
+        self.assertFalse(self.held(upgrade, round_=4, faction='Taklons'))
+        self.assertFalse(self.held(upgrade, round_=1))
+
+    def test_twilight_range_needs_knowledge_left_over(self):
+        move = {'type': 'TwilightRangeBuild', 'coord': '0,0'}
+        self.assertEqual([self.held(move, knowledge=k) for k in (3, 4, 5, 8)], [False, True, False, True])
+
+    def test_the_last_mine_is_kept_when_an_asteroid_is_in_reach(self):
+        build = {'type': 'Build', 'coord': '0,0'}
+        with mock.patch.object(tp, '_in_reach', return_value={'1,1': 'Asteroid'}):
+            self.assertTrue(self.held(build, mines=7))
+            self.assertFalse(self.held(build, mines=6))
+        with mock.patch.object(tp, '_in_reach', return_value={}):
+            self.assertFalse(self.held(build, mines=7))
+
+    def test_academy_kind_by_round(self):
+        kinds = [tp._academy_kind({'round': r}, {'explored_ships': []}) for r in (1, 3, 4, 5)]
+        self.assertEqual(kinds, ['Science', 'Science', None, 'Qic'])
+        self.assertEqual(tp._academy_kind({'round': 2}, {'explored_ships': ['Rebellion']}), 'Qic')
+
+
 class ResearchDefendTests(unittest.TestCase):
     def track(self, new, held, *, kinds=(), structures=(), round_=1, unhurried=None, sure=False, **levels):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | levels

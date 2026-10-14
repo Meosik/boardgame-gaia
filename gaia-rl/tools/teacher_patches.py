@@ -545,7 +545,12 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'contested_first': False,     # True: ..._vm_lf_ts_when (see contested_first_scores)
           'ship_when': False,           # True: ..._vm_lf_ts_when (see ship_when_scores)
           'research_defend': False,     # True: ..._vm_lf_ts_ships_defend (see research_defend_track)
-          'leech_when': False}          # True: install_when(leech=True) (see leech_when_scores)
+          'leech_when': False,          # True: install_when(leech=True) (see leech_when_scores)
+          'artifact_when': False,       # the next four: install_when(not_yet=...) (see _not_yet)
+          'mine_stock': False,
+          'taklons_pi': False,
+          'twilight_knowledge': False,
+          'academy_kind': False}        # True: install_when(academy=True) (see academy_kind_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2571,6 +2576,116 @@ def leech_when_scores(env, snapshot, scores):
     return lifted
 
 
+# 5-9. Moves the guides say not to make yet: each drops to just below passing while its condition
+#    holds (order only: the root ranking no longer picks it, a comparison still can).
+#    5 artifact_when — a resource or income artifact (engine ids below) only in round 1 and only
+#      if three power tokens are left after the six it costs (C029, LF1-11 "극초반은 시작 토큰 6개가
+#      이미 초과", LF4-07 "파워 토큰이 3개는 남아야 게임이 정상 진행"). VP artifacts are untouched.
+#    8 mine_stock — the last mine in hand is not built on an ordinary planet while a free
+#      Asteroid or Proto planet is in reach (LF3-14 "광산을 수중에 1개는 남겨야 원시 행성·소행성을 가져갈 수
+#      있음").
+#    9 taklons_pi — no Taklons Planetary Institute before round 4 (B10-02 "4–6R에 위성용 토큰 확보 목적").
+#    twilight_knowledge — the Twilight range action (1 knowledge) not while the knowledge held is
+#      a multiple of 4 (user: "트와일라잇은 지식이 남을 때 얘기, 4지식으로 트랙을 올릴 수 있는데 안 올리면 안 됨").
+#    Not in: 7 (B2-06 "다음 라운드 지식이 짝수가 되게" names no move to reorder), 10 (the base game's
+#    4-QIC action is not one of the Lost Fleet QIC action spaces).
+RESOURCE_ARTIFACTS = frozenset({2, 3, 6, 7, 9})   # engine artifact_effect: tokens, income, resources
+ARTIFACT_TOKENS = 6                               # engine ExamineArtifact: "Discards 6 power"
+ARTIFACT_TOKENS_LEFT = 3
+ARTIFACT_ROUND = 1
+TAKLONS_PI_FROM_ROUND = 4
+TWILIGHT_RANGE = frozenset({'TwilightRangeBuild', 'TwilightRangeGaiaFormation', 'TwilightRangeExploreSpaceship'})
+SPARE_MINE_PLANETS = ('Asteroid', 'ProtoPlanet')
+NOT_YET = 0.001
+
+
+def _kind(structure):
+    kind = structure['kind'] if 'kind' in structure else structure
+    return kind if isinstance(kind, str) else next(iter(kind))
+
+
+def _not_yet(state, player, action):
+    """Why the guides hold this move back now, or None."""
+    kind = action.get('type')
+    if _guide['artifact_when'] and kind == 'ExamineArtifact' and action.get('artifact') in RESOURCE_ARTIFACTS:
+        power = player['resources']['power']
+        left = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3')) - ARTIFACT_TOKENS
+        if state['round'] != ARTIFACT_ROUND or left < ARTIFACT_TOKENS_LEFT:
+            return f'resource artifact only in round {ARTIFACT_ROUND} with {ARTIFACT_TOKENS_LEFT} tokens left'
+    if _guide['mine_stock'] and kind == 'Build':
+        mines = sum(_kind(s) == 'Mine' for s in player['structures'])
+        if mines == MINE_LIMIT-1 and _in_reach(state, player, SPARE_MINE_PLANETS):
+            return 'last mine kept for an Asteroid or Proto planet'
+    if (_guide['taklons_pi'] and kind == 'Upgrade' and player['faction'] == 'Taklons'
+            and action.get('to') == 'PlanetaryInstitute' and state['round'] < TAKLONS_PI_FROM_ROUND):
+        return f'Taklons Planetary Institute from round {TAKLONS_PI_FROM_ROUND}'
+    if _guide['twilight_knowledge'] and kind in TWILIGHT_RANGE:
+        knowledge = player['resources']['knowledge']
+        if knowledge >= NAV_KNOWLEDGE and knowledge % NAV_KNOWLEDGE == 0:
+            return 'Twilight range only with knowledge left over after research'
+    return None
+
+
+def not_yet_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    candidates = snapshot['candidates']
+    passing = [scores[i][0] for i, c in enumerate(candidates)
+               if c['action'].get('type') == 'Pass' and not blocked(scores[i])]
+    if not passing:
+        return scores
+    floor, lifted = min(passing)-NOT_YET, list(scores)
+    for i, candidate in enumerate(candidates):
+        if blocked(scores[i]) or scores[i][0] <= floor:
+            continue
+        why = _not_yet(state, state['players'][actor], candidate['action'])
+        if why:
+            lifted[i] = (floor, f'{scores[i][1]}; not yet: {why}', *scores[i][2:])
+    return lifted
+
+
+# 6. academy_kind — which Academy (B2-07 "1–3R은 지식 아카데미, 5–6R은 QIC 아카데미가 많음"; SH4-02
+#    "리벨리온 3QIC를 누를 수 있으면 QIC 아카데미, 아니면 지식 아카데미" before round 3). Among upgrades
+#    that differ only in the Academy type the guide's one swaps scores with the better-ranked
+#    one. Rebellion explored stands for "can press its 3-QIC action". Round 4 has no guidance.
+ACADEMY_SCIENCE_UNTIL = 3
+ACADEMY_QIC_FROM = 5
+
+
+def _academy_kind(state, player):
+    if state['round'] <= ACADEMY_SCIENCE_UNTIL:
+        return 'Qic' if 'Rebellion' in (player.get('explored_ships') or []) else 'Science'
+    return 'Qic' if state['round'] >= ACADEMY_QIC_FROM else None
+
+
+def academy_kind_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    want = _academy_kind(state, state['players'][actor])
+    groups = {}
+    for i, candidate in enumerate(snapshot['candidates']):
+        action = candidate['action']
+        to = action.get('to')
+        if action.get('type') == 'Upgrade' and isinstance(to, dict) and 'Academy' in to and not blocked(scores[i]):
+            key = json.dumps({**action, 'to': 'Academy'}, sort_keys=True)
+            groups.setdefault(key, {})[to['Academy']] = i
+    if want is None or not groups:
+        return scores
+    lifted = list(scores)
+    for group in groups.values():
+        if want not in group or len(group) < 2:
+            continue
+        mine, best = group[want], max(group.values(), key=lambda i: scores[i][0])
+        if scores[best][0] > scores[mine][0]:
+            lifted[mine] = (scores[best][0], f'{scores[mine][1]}; academy kind: {want}', *scores[mine][2:])
+            lifted[best] = (scores[mine][0], *scores[best][1:])
+    return lifted
+
+
 def _install_when_root():
     """Record the decision a search is deciding (contested_first applies to that one only)."""
     import four_factions.preparation as p
@@ -2591,7 +2706,15 @@ def _install_when_root():
     p.search = search
 
 
-def install_when(research=True, contested=True, ships=True, defend=False, leech=False):
+def install_when(research=True, contested=True, ships=True, defend=False, leech=False, not_yet=(),
+                 academy=False):
+    if academy:
+        _guide['academy_kind'] = True
+        _wrap_rank('_academy_kind', academy_kind_scores)
+    if not_yet:
+        for name in not_yet:
+            _guide[name] = True
+        _wrap_rank('_not_yet', not_yet_scores)
     if leech:
         _guide['leech_when'] = True
         _wrap_rank('_leech_when', leech_when_scores)
@@ -2624,4 +2747,17 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_defend(seed, **kwargs):
     the track of a round 1 advance as the source words it), without rules 1-3 of lab 054."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     install_when(research=False, contested=False, ships=False, defend=True)
+    return teacher
+
+
+WHEN_NOT_YET = ('artifact_when', 'mine_stock', 'taklons_pi', 'twilight_knowledge')
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts_ships plus every timing rule written so
+    far: 1b research_defend, 2 contested_first, 3 ship_when, 4 leech_when, 5 artifact_when,
+    6 academy_kind, 8 mine_stock, 9 taklons_pi and twilight_knowledge (rule 1 of lab 054 is
+    replaced by 1b)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_when(research=False, defend=True, leech=True, not_yet=WHEN_NOT_YET, academy=True)
     return teacher
