@@ -2235,7 +2235,9 @@ def _gaia_or_economy(state, actor, kinds):
 #      Academy built (the plan's Academy target is not visible to the ranking; this is the proxy);
 #    - what is worth defending (user): a home-type planet only when a faction whose home is one
 #      terraforming step away plays ("인접 종족이 아니면 수비를 늦게 해도 된다" — of the four fixed
-#      factions Terrans have none); a planet one step from home only with a cheap step at hand
+#      factions Terrans have none). Without such a faction the planets are still to be gained,
+#      only later: Economy or Science to level 2 first, whichever ranks higher, then Navigation
+#      (this part also in rounds 2-3); a planet one step from home only with a cheap step at hand
 #      ("삽을 얻기 쉬우면"); a Gaia planet only if an opponent reaches it too and a mine there brings
 #      a new planet within reach or joins two of our building groups ("전략적 요충지인지 판단").
 #    The Gaia and Economy branches are rule 1's, in round 1 only. The round 1 mine scoring case
@@ -2244,6 +2246,7 @@ DEFEND_ROUNDS = (1,)
 DEFEND_PLANETS = 2
 LINK_HEXES = 2
 RANGE_BOOSTER = (8, 3)   # booster id, range added to one build per round
+DEFEND_FIRST = ('Economy', 'Science')   # user: "인접 종족이 없을수록 경제나 과학 올린 후에 항해술"
 
 
 def _home_type(player):
@@ -2298,16 +2301,17 @@ def _key_site(state, player, coord, reach):
                for other, _ in _free_planets(state, (*RING, 'Gaia')) if other != coord)
 
 
-def _defend_counts(state, player):
+def _defend_counts(state, player, contested=True):
     """(new, held): planets worth defending that the next range step brings within reach, and
-    those the range, QIC and range booster held already reach."""
+    those the range, QIC and range booster held already reach. contested=False counts the
+    home-type planets without a neighbouring faction too (planets to gain, in no hurry)."""
     from economy.teacher import RING, path_distance
     plus = _nav_plus(player)
     if plus is None:
         return 0, 0
     plus, home = plus[0], _home_type(player)
     others = [o for o in state['players'] if o is not player]
-    neighbour = any(_ring_gap(home, _home_type(o)) == 1 for o in others)
+    neighbour = not contested or any(_ring_gap(home, _home_type(o)) == 1 for o in others)
     step = _cheap_step(state, player)
     types = (*(k for k in RING if (k == home and neighbour) or (step and _ring_gap(home, k) == 1)), 'Gaia')
     rivals = {coord for o in others for coord, _, _ in _value.targets(state, o, ('Gaia',))}
@@ -2327,14 +2331,28 @@ def _defend_counts(state, player):
 
 
 def research_defend_track(state, actor):
-    """The action name of the track a round 1 advance takes (rule 1b), or None."""
+    """The action name of the track an advance takes (rule 1b), a tuple when either of two
+    will do, or None."""
     player = state['players'][actor]
+    tracks, early = player['research_tracks'], state['round'] in DEFEND_ROUNDS
     academy = any((s['kind'] if isinstance(s['kind'], str) else next(iter(s['kind']))) == 'Academy'
                   for s in player['structures'])
-    if player['research_tracks']['navigation'] < WHEN_LEVEL and not academy:
-        new, held = _defend_counts(state, player)
-        if new >= DEFEND_PLANETS and held < DEFEND_PLANETS:
+
+    def merit(contested):
+        new, held = _defend_counts(state, player, contested)
+        return new >= DEFEND_PLANETS and held < DEFEND_PLANETS
+    if tracks['navigation'] < WHEN_LEVEL and not academy:
+        if early and merit(True):
             return 'Navigation'
+        if merit(False):
+            # Nobody is near enough in colour to take the planets: Economy or Science to
+            # level 2 first, Navigation after it (also in rounds 2-3).
+            first = tuple(t for t in DEFEND_FIRST if tracks[TRACK_KEYS[t]] < WHEN_LEVEL)
+            if len(first) < len(DEFEND_FIRST):
+                return 'Navigation'
+            return first if early else None
+    if not early:
+        return None
     return _gaia_or_economy(state, actor, list(_in_reach(state, player, ('Asteroid', 'Transdim')).values()))
 
 
@@ -2369,9 +2387,10 @@ def research_when_scores(env, snapshot, scores, *, track_of=None, rounds=WHEN_RO
     lifted = list(scores)
     for group in groups:
         open_moves = [i for i in group.values() if not blocked(scores[i])]
-        want = group.get(track)
-        if want not in open_moves:
+        wants = [group[t] for t in ((track,) if isinstance(track, str) else track) if group.get(t) in open_moves]
+        if not wants:
             continue
+        want = max(wants, key=lambda i: scores[i][0])
         best = max(open_moves, key=lambda i: scores[i][0])
         if scores[best][0] > scores[want][0]:
             lifted[want] = (scores[best][0], f'{scores[want][1]}; research when: {track} now', *scores[want][2:])
@@ -2380,7 +2399,7 @@ def research_when_scores(env, snapshot, scores, *, track_of=None, rounds=WHEN_RO
 
 
 def research_defend_scores(env, snapshot, scores):
-    return research_when_scores(env, snapshot, scores, track_of=research_defend_track, rounds=DEFEND_ROUNDS)
+    return research_when_scores(env, snapshot, scores, track_of=research_defend_track)
 
 
 # 2. contested_first — the order of the moves inside a round (SH3-07 "빼앗길 수 있는 액션(QIC 액션·

@@ -205,11 +205,14 @@ class ResearchWhenTests(unittest.TestCase):
 
 
 class ResearchDefendTests(unittest.TestCase):
-    def track(self, new, held, *, kinds=(), structures=(), **levels):
+    def track(self, new, held, *, kinds=(), structures=(), round_=1, unhurried=None, **levels):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | levels
-        state = {'round': 1, 'players': [{'faction': 'Taklons', 'research_tracks': tracks,
-                                          'structures': list(structures)}]}
-        with mock.patch.object(tp, '_defend_counts', return_value=(new, held)), \
+        state = {'round': round_, 'players': [{'faction': 'Taklons', 'research_tracks': tracks,
+                                               'structures': list(structures)}]}
+
+        def counts(state, player, contested=True):
+            return (new, held) if contested or unhurried is None else unhurried
+        with mock.patch.object(tp, '_defend_counts', side_effect=counts), \
                 mock.patch.object(tp, '_in_reach', return_value=dict(enumerate(kinds))):
             return tp.research_defend_track(state, 0)
 
@@ -226,6 +229,15 @@ class ResearchDefendTests(unittest.TestCase):
     def test_gaia_and_economy_branches_are_kept(self):
         self.assertEqual(self.track(0, 0, kinds=('Asteroid',)), 'GaiaProject')
         self.assertIsNone(self.track(0, 0, economy=2))
+
+    def test_without_a_neighbour_economy_or_science_comes_before_navigation(self):
+        self.assertEqual(self.track(0, 0, unhurried=(2, 0)), ('Economy', 'Science'))
+        self.assertEqual(self.track(0, 0, unhurried=(2, 0), science=2), 'Navigation')
+        self.assertEqual(self.track(0, 0, unhurried=(2, 0), economy=2, round_=3), 'Navigation')
+        self.assertIsNone(self.track(0, 0, unhurried=(2, 0), round_=2))
+
+    def test_the_hurried_case_and_the_other_branches_are_round_one_only(self):
+        self.assertIsNone(self.track(2, 0, unhurried=(0, 0), round_=2, kinds=('Asteroid',)))
 
     def test_ring_gap_wraps(self):
         self.assertEqual(tp._ring_gap('Terra', 'Ice'), 1)
