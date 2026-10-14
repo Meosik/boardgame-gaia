@@ -1,6 +1,7 @@
 """symmetric_pass: exact against native passes, and only unpassed action-phase states change."""
 import json
 import unittest
+from unittest import mock
 
 import fast_teacher
 fast_teacher.install()
@@ -201,3 +202,38 @@ class ResearchWhenTests(unittest.TestCase):
         groups = sorted(tp._when_groups(candidates).values(), key=lambda g: min(g.values()))
         self.assertEqual(groups, [{'Economy': 0, 'Science': 1}, {'Terraforming': 2, 'Economy': 3},
                                   {'Economy': 5}])
+
+
+class ResearchDefendTests(unittest.TestCase):
+    def track(self, new, held, *, kinds=(), structures=(), **levels):
+        tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | levels
+        state = {'round': 1, 'players': [{'faction': 'Taklons', 'research_tracks': tracks,
+                                          'structures': list(structures)}]}
+        with mock.patch.object(tp, '_defend_counts', return_value=(new, held)), \
+                mock.patch.object(tp, '_in_reach', return_value=dict(enumerate(kinds))):
+            return tp.research_defend_track(state, 0)
+
+    def test_navigation_needs_two_new_planets(self):
+        self.assertEqual(self.track(2, 0), 'Navigation')
+        self.assertEqual(self.track(1, 0), 'Economy')
+
+    def test_two_planets_already_in_reach_mean_economy(self):
+        self.assertEqual(self.track(3, 2), 'Economy')
+
+    def test_an_academy_means_economy(self):
+        self.assertEqual(self.track(3, 0, structures=[{'kind': 'Academy', 'hex': '0,0'}]), 'Economy')
+
+    def test_gaia_and_economy_branches_are_kept(self):
+        self.assertEqual(self.track(0, 0, kinds=('Asteroid',)), 'GaiaProject')
+        self.assertIsNone(self.track(0, 0, economy=2))
+
+    def test_ring_gap_wraps(self):
+        self.assertEqual(tp._ring_gap('Terra', 'Ice'), 1)
+        self.assertEqual(tp._ring_gap('Volcanic', 'Desert'), 1)
+        self.assertEqual(tp._ring_gap('Terra', 'Swamp'), 3)
+        self.assertIsNone(tp._ring_gap('Terra', 'Gaia'))
+
+    def test_groups_chain_within_two_hexes(self):
+        groups = tp._groups(['0,0', '2,0', '6,0', '4,0'])
+        self.assertEqual(groups, [{'0,0', '2,0', '4,0', '6,0'}])
+        self.assertEqual(len(tp._groups(['0,0', '3,0'])), 2)

@@ -543,7 +543,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'former_use': False,          # True: ..._vm_lf_ts_former (see install_former_use)
           'research_when': False,       # True: ..._vm_lf_ts_when (see research_when_track)
           'contested_first': False,     # True: ..._vm_lf_ts_when (see contested_first_scores)
-          'ship_when': False}           # True: ..._vm_lf_ts_when (see ship_when_scores)
+          'ship_when': False,           # True: ..._vm_lf_ts_when (see ship_when_scores)
+          'research_defend': False}     # True: ..._vm_lf_ts_ships_defend (see research_defend_track)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2208,8 +2209,13 @@ def research_when_track(state, actor):
         plus = _nav_plus(player)
         if plus is not None and set(_in_reach(state, plus[0], wide)) - set(now):
             return 'Navigation'
+    return _gaia_or_economy(state, actor, list(now.values()))
+
+
+def _gaia_or_economy(state, actor, kinds):
+    """The Gaia and Economy branches of rule 1; kinds = planet types in reach without a QIC."""
+    tracks = state['players'][actor]['research_tracks']
     if not _early_terrans_gaia(state, actor):
-        kinds = list(now.values())
         if not tracks['gaia'] and 'Asteroid' in kinds:
             return 'GaiaProject'
         if tracks['gaia'] < WHEN_LEVEL and kinds.count('Transdim') >= WHEN_TRANSDIM:
@@ -2217,6 +2223,119 @@ def research_when_track(state, actor):
     if tracks['economy'] < WHEN_LEVEL and tracks['navigation'] < WHEN_LEVEL:
         return 'Economy'
     return None
+
+
+# 1b. research_defend — rule 1 as the source words it (lab 054: rule 1 sent three factions to
+#    Navigation, 0-3 advances to 15-20, and lost charges; user 2026-10-14). B18 p.3 "1라운드에 진보할
+#    연구 트랙": "이득이라는 것은 2사거리나 4사거리의 모행성, 가이아 행성, 인접 종족의 모행성을 2개 이상 수비할
+#    수 있다거나 …", "부스터와 시작 정보 큐브만으로도 행성 2개가 충분히 확보가 된다든가, 아카데미를 올릴 것이라서
+#    … 메리트가 없다면 경제 2단계". Against rule 1:
+#    - round 1 only, and two or more planets worth defending must come newly within reach;
+#    - not when the range, QIC and range booster held already reach two of them, nor with an
+#      Academy built (the plan's Academy target is not visible to the ranking; this is the proxy);
+#    - what is worth defending (user): a home-type planet only when a faction whose home is one
+#      terraforming step away plays ("인접 종족이 아니면 수비를 늦게 해도 된다" — of the four fixed
+#      factions Terrans have none); a planet one step from home only with a cheap step at hand
+#      ("삽을 얻기 쉬우면"); a Gaia planet only if an opponent reaches it too and a mine there brings
+#      a new planet within reach or joins two of our building groups ("전략적 요충지인지 판단").
+#    The Gaia and Economy branches are rule 1's, in round 1 only. The round 1 mine scoring case
+#    of the source is not in.
+DEFEND_ROUNDS = (1,)
+DEFEND_PLANETS = 2
+LINK_HEXES = 2
+RANGE_BOOSTER = (8, 3)   # booster id, range added to one build per round
+
+
+def _home_type(player):
+    from faction_teachers.profiles import profiles
+    return _value.HOME.get(player['faction']) or profiles()[player['faction']].home
+
+
+def _ring_gap(a, b):
+    """Terraforming steps between two planet types, None off the ring."""
+    from economy.teacher import RING
+    if a not in RING or b not in RING:
+        return None
+    gap = abs(RING.index(a)-RING.index(b))
+    return min(gap, len(RING)-gap)
+
+
+def _cheap_step(state, player):
+    """A terraforming step at hand: booster, TF Mars, an open power action, or 1 ore per step."""
+    from economy.teacher import ORE_PER_STEP
+    power = player['resources']['power']
+    spendable = power['bowl3'] + power['bowl2']//2
+    used = state.get('used_power_actions', [])
+    return (player['booster'] == 12 or 'TFMars' in (player.get('explored_ships') or [])
+            or ORE_PER_STEP[player['research_tracks']['terraforming']] == 1
+            or any(i not in used and cost <= spendable for i, (cost, _) in TERRAFORM_POWER_ACTIONS.items()))
+
+
+def _groups(hexes):
+    """Building hexes chained within LINK_HEXES of each other."""
+    groups = []
+    for coord in hexes:
+        near = [g for g in groups if any(_value.distance(coord, h) <= LINK_HEXES for h in g)]
+        groups = [g for g in groups if g not in near] + [{coord}.union(*near)]
+    return groups
+
+
+def _free_planets(state, planet_types):
+    for coord, cell in state['board']['hexes'].items():
+        planet = cell['planet']
+        if planet and planet['owner'] is None and not cell['structures'] and planet['planet_type'] in planet_types:
+            yield coord, planet
+
+
+def _key_site(state, player, coord, reach):
+    """A mine on coord joins two of our building groups, or brings within `reach` a planet to
+    build on that our buildings do not reach."""
+    from economy.teacher import RING, path_distance
+    starts = [s['hex'] for s in player['structures']]
+    if sum(any(_value.distance(coord, h) <= LINK_HEXES for h in g) for g in _groups(starts)) >= 2:
+        return True
+    return any(path_distance(state, [coord], other) <= reach < path_distance(state, starts, other)
+               for other, _ in _free_planets(state, (*RING, 'Gaia')) if other != coord)
+
+
+def _defend_counts(state, player):
+    """(new, held): planets worth defending that the next range step brings within reach, and
+    those the range, QIC and range booster held already reach."""
+    from economy.teacher import RING, path_distance
+    plus = _nav_plus(player)
+    if plus is None:
+        return 0, 0
+    plus, home = plus[0], _home_type(player)
+    others = [o for o in state['players'] if o is not player]
+    neighbour = any(_ring_gap(home, _home_type(o)) == 1 for o in others)
+    step = _cheap_step(state, player)
+    types = (*(k for k in RING if (k == home and neighbour) or (step and _ring_gap(home, k) == 1)), 'Gaia')
+    rivals = {coord for o in others for coord, _, _ in _value.targets(state, o, ('Gaia',))}
+    reach = _value.navigation(plus)
+
+    def worth(coord, planet):
+        return planet['planet_type'] != 'Gaia' or (coord in rivals and _key_site(state, player, coord, reach))
+    now = set(_in_reach(state, player, types))
+    new = [c for c, p, qic in _value.targets(state, plus, types) if not qic and c not in now and worth(c, p)]
+    held = {c for c, p, _ in _value.targets(state, player, types) if worth(c, p)}
+    booster, far = RANGE_BOOSTER
+    if player['booster'] == booster:
+        starts = [s['hex'] for s in player['structures']]
+        held |= {c for c, p in _free_planets(state, types) if c not in held and worth(c, p)
+                 and path_distance(state, starts, c) <= _value.navigation(player)+far}
+    return len(new), len(held)
+
+
+def research_defend_track(state, actor):
+    """The action name of the track a round 1 advance takes (rule 1b), or None."""
+    player = state['players'][actor]
+    academy = any((s['kind'] if isinstance(s['kind'], str) else next(iter(s['kind']))) == 'Academy'
+                  for s in player['structures'])
+    if player['research_tracks']['navigation'] < WHEN_LEVEL and not academy:
+        new, held = _defend_counts(state, player)
+        if new >= DEFEND_PLANETS and held < DEFEND_PLANETS:
+            return 'Navigation'
+    return _gaia_or_economy(state, actor, list(_in_reach(state, player, ('Asteroid', 'Transdim')).values()))
 
 
 def _when_groups(candidates):
@@ -2236,15 +2355,15 @@ def _when_groups(candidates):
     return groups
 
 
-def research_when_scores(env, snapshot, scores):
+def research_when_scores(env, snapshot, scores, *, track_of=None, rounds=WHEN_ROUNDS):
     from current_actions.conservation import blocked
     state, actor = snapshot['state'], snapshot.get('player')
-    if actor is None or 'ActionPhase' not in state['phase'] or state['round'] not in WHEN_ROUNDS:
+    if actor is None or 'ActionPhase' not in state['phase'] or state['round'] not in rounds:
         return scores
     groups = [g for g in _when_groups(snapshot['candidates']).values() if len(g) > 1]
     if not groups:
         return scores
-    track = research_when_track(state, actor)
+    track = (track_of or research_when_track)(state, actor)
     if track is None:
         return scores
     lifted = list(scores)
@@ -2258,6 +2377,10 @@ def research_when_scores(env, snapshot, scores):
             lifted[want] = (scores[best][0], f'{scores[want][1]}; research when: {track} now', *scores[want][2:])
             lifted[best] = (scores[want][0], *scores[best][1:])
     return lifted
+
+
+def research_defend_scores(env, snapshot, scores):
+    return research_when_scores(env, snapshot, scores, track_of=research_defend_track, rounds=DEFEND_ROUNDS)
 
 
 # 2. contested_first — the order of the moves inside a round (SH3-07 "빼앗길 수 있는 액션(QIC 액션·
@@ -2386,7 +2509,10 @@ def _install_when_root():
     p.search = search
 
 
-def install_when(research=True, contested=True, ships=True):
+def install_when(research=True, contested=True, ships=True, defend=False):
+    if defend:
+        _guide['research_defend'] = True
+        _wrap_rank('_research_defend', research_defend_scores)
     if research:
         _guide['research_when'] = True
         _wrap_rank('_research_when', research_when_scores)
@@ -2405,4 +2531,12 @@ def guide_r1_charge3_lf_more_vm_lf_ts_when(seed, **kwargs):
     away before upgrades and research, and which ship to enter in which round."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
     install_when()
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_defend(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts_ships plus rule 1b alone (research_defend:
+    the track of a round 1 advance as the source words it), without rules 1-3 of lab 054."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_when(research=False, contested=False, ships=False, defend=True)
     return teacher
