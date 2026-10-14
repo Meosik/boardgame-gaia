@@ -550,7 +550,10 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'mine_stock': False,
           'taklons_pi': False,
           'twilight_knowledge': False,
-          'academy_kind': False}        # True: install_when(academy=True) (see academy_kind_scores)
+          'burn_when': False,           # the next two: ..._when_all_tech (see _not_yet)
+          'terrans_former': False,
+          'academy_kind': False,        # True: install_when(academy=True) (see academy_kind_scores)
+          'tech_when': False}           # True: ..._when_all_tech (see tech_when_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2084,7 +2087,9 @@ def former_first_scores(env, snapshot, scores):
         return bool(planet) and planet['planet_type'] == 'Asteroid' and not planet['is_gaia_formed']
 
     candidates = snapshot['candidates']
-    uses = [i for i, c in enumerate(candidates) if uses_former(c['action']) and not blocked(scores[i])]
+    player = state['players'][actor]
+    uses = [i for i, c in enumerate(candidates) if uses_former(c['action']) and not blocked(scores[i])
+            and not _not_yet(state, player, c['action'])]
     gaia = [i for i, c in enumerate(candidates) if c['action'].get('type') == 'ResearchAdvance'
             and c['action'].get('track') == 'GaiaProject' and not blocked(scores[i])]
     if not uses or not gaia:
@@ -2597,6 +2602,7 @@ TAKLONS_PI_FROM_ROUND = 4
 TWILIGHT_RANGE = frozenset({'TwilightRangeBuild', 'TwilightRangeGaiaFormation', 'TwilightRangeExploreSpaceship'})
 SPARE_MINE_PLANETS = ('Asteroid', 'ProtoPlanet')
 NOT_YET = 0.001
+POWER_COST = {1: 7, 2: 5, 3: 4, 4: 4, 5: 4, 6: 3, 7: 3}   # engine PowerAction id: power (frozen power_purpose)
 
 
 def _kind(structure):
@@ -2623,7 +2629,21 @@ def _not_yet(state, player, action):
         knowledge = player['resources']['knowledge']
         if knowledge >= NAV_KNOWLEDGE and knowledge % NAV_KNOWLEDGE == 0:
             return 'Twilight range only with knowledge left over after research'
+    if _guide['burn_when'] and kind == 'FreeAction' and action.get('kind') == 'BurnPower':
+        bowl3, burned = player['resources']['power']['bowl3'], action.get('count', 1)
+        used = state.get('used_power_actions', [])
+        if not any(bowl3 < cost <= bowl3+burned for id_, cost in POWER_COST.items() if id_ not in used):
+            return 'burn only for a power action it pays for'
+    if (_guide['terrans_former'] and kind == 'Build' and player['faction'] == 'Terrans'
+            and _asteroid(state, action) and _gaia_room(player)
+            and _in_reach(state, player, ('Transdim',))):
+        return 'Terrans former goes to a Transdim planet before an Asteroid'
     return None
+
+
+def _asteroid(state, action):
+    planet = (state['board']['hexes'].get(str(action.get('coord'))) or {}).get('planet')
+    return bool(planet) and planet['planet_type'] == 'Asteroid' and not planet['is_gaia_formed']
 
 
 def not_yet_scores(env, snapshot, scores):
@@ -2760,4 +2780,108 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all(seed, **kwargs):
     replaced by 1b)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     install_when(research=False, defend=True, leech=True, not_yet=WHEN_NOT_YET, academy=True)
+    return teacher
+
+
+# ── tech_when (user 2026-10-14, lab 056 pair-005/game-1: "어떤 기술이 언제 좋은지 우선순위가 안 잡혀 있나?") ──
+# A standard tech tile was chosen by value alone, and the tile choices of one upgrade rarely reach the
+# comparisons (step 25: Terrans took tile 5 at 23.40 over the 4-charge tile 10 at 22.07; no plan rolled
+# tile 10 out). The guides' timing for standard tiles (engine ids), order only, among the choices of
+# one upgrade:
+# - the first standard tile: Terrans with a Planetary Institute the 3-VP-per-Gaia-mine tile 8 (B3-T9
+#   "의회 먼저 지은 테란은 첫 번째로"); else Terrans and Taklons the 4-charge tile 10 (B04, B3-T4 "테란·
+#   타클론에 특히 좋음"), Xenos the 4-credit tile 3 or tile 10 (HANDOFF 2026-10-05 "제노스 4돈/4충전");
+# - tile 8 on the Gaia track, level 2 or more (B3-T9 "가이아 테크면 일찍 집을수록 이득");
+# - tile 5 (1 knowledge 1 credit income) when the next income's knowledge is odd (B3-T3);
+# - not yet: tile 7 (7 VP) before round 6 (B3-T8 "최후반 점수 수단"), tile 9 (knowledge per planet type)
+#   in rounds 1-2 (B3-T7 "초반엔 손해 쉬움").
+# The wanted tile's best choice swaps scores with the group's best, as academy_kind; a held-back tile
+# that leads swaps with the best other standard tile. An advanced tile that leads keeps its place.
+# Not in: tile 6 before the first federation (B3-T6 names no state the ranking can check), tile 4 as
+# the tile to cover (needs the advanced tile plan).
+TECH_FIRST = {'Terrans': (10,), 'Taklons': (10,), 'Xenos': (3, 10)}
+GAIA_MINE_TILE = 8
+EVEN_KNOWLEDGE_TILE = 5
+TECH_FROM_ROUND = {7: 6, 9: 3}   # tile: first round it may lead
+
+
+def _tech_wanted(state, player):
+    """[(tiles, reason)] in the order the guides want them now."""
+    wanted = []
+    if not player['tech_tiles']:
+        if (player['faction'] == 'Terrans'
+                and any(_kind(s) == 'PlanetaryInstitute' for s in player['structures'])):
+            wanted.append(((GAIA_MINE_TILE,), 'Terrans first tile after the institute'))
+        if player['faction'] in TECH_FIRST:
+            wanted.append((TECH_FIRST[player['faction']], 'first tile'))
+    if player['research_tracks']['gaia'] >= WHEN_LEVEL and GAIA_MINE_TILE not in player['tech_tiles']:
+        wanted.append(((GAIA_MINE_TILE,), 'Gaia mines on the Gaia track'))
+    if _value.production(state, player, include_booster=False)[2] % 2:
+        wanted.append(((EVEN_KNOWLEDGE_TILE,), 'even knowledge income'))
+    return wanted
+
+
+def _tech_held_back(state, tile):
+    return state['round'] < TECH_FROM_ROUND.get(tile, 0)
+
+
+def _tile_groups(candidates, scores):
+    from current_actions.conservation import blocked
+    groups = {}
+    for i, candidate in enumerate(candidates):
+        action = candidate['action']
+        choice = action.get('tech_tile_choice')
+        if isinstance(choice, dict) and not blocked(scores[i]):
+            key = json.dumps({**action, 'tech_tile_choice': None}, sort_keys=True)
+            groups.setdefault(key, []).append((i, choice.get('kind'), choice.get('tile')))
+    return groups
+
+
+def tech_when_scores(env, snapshot, scores):
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    groups = [g for g in _tile_groups(snapshot['candidates'], scores).values() if len(g) > 1]
+    if not groups:
+        return scores
+    wanted = _tech_wanted(state, state['players'][actor])
+    lifted = list(scores)
+    for group in groups:
+        best = max(group, key=lambda g: scores[g[0]][0])
+        if best[1] != 'Standard':
+            continue
+        standard = [g for g in group if g[1] == 'Standard']
+        target, why = None, None
+        for tiles, reason in wanted:
+            options = [g for g in standard if g[2] in tiles]
+            if options:
+                target, why = max(options, key=lambda g: scores[g[0]][0]), reason
+                break
+        if target is None and _tech_held_back(state, best[2]):
+            others = [g for g in standard if not _tech_held_back(state, g[2])]
+            if others:
+                target = max(others, key=lambda g: scores[g[0]][0])
+                why = f'tile {best[2]} not yet'
+        if target is None or scores[best[0]][0] <= scores[target[0]][0]:
+            continue
+        mine, top = target[0], best[0]
+        lifted[mine] = (scores[top][0], f'{scores[mine][1]}; tech when: {why}', *scores[mine][2:])
+        lifted[top] = (scores[mine][0], *scores[top][1:])
+    return lifted
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech(seed, **kwargs):
+    """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all (the base stack after lab 056)
+    plus the fixes from the 056 pair-005/game-1 replay (user 2026-10-14 "일단 구현해봐, 아직 안 한 작업도"):
+    opponent-adjacent starts ordered first instead of blocking the others, with distinct setup
+    comparisons (reach parts A and B, lab 051); idle formers used before the Gaia track, a Transdim
+    planet counted only once formed, Asteroids as colony options (former_use); a burn only for a power
+    action it pays for and the Terrans former kept for a Transdim planet (not yet); standard tech tiles
+    by the guides' timing (tech_when)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all(seed, **kwargs)
+    install_reach(plus=False, focus=False)
+    install_former_use()
+    _guide['burn_when'] = _guide['terrans_former'] = True
+    _guide['tech_when'] = True
+    _wrap_rank('_tech_when', tech_when_scores)
     return teacher

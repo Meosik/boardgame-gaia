@@ -256,6 +256,66 @@ class NotYetTests(unittest.TestCase):
         self.assertEqual(tp._academy_kind({'round': 2}, {'explored_ships': ['Rebellion']}), 'Qic')
 
 
+class BurnAndFormerTests(unittest.TestCase):
+    def setUp(self):
+        self.saved = dict(tp._guide)
+        tp._guide.update(burn_when=True, terrans_former=True)
+        self.addCleanup(lambda: tp._guide.update(self.saved))
+
+    def burn_held(self, bowl3, count=2, used=()):
+        player = {'faction': 'Terrans', 'resources': {'power': {'bowl1': 0, 'bowl2': 4, 'bowl3': bowl3}}}
+        action = {'type': 'FreeAction', 'kind': 'BurnPower', 'count': count}
+        return tp._not_yet({'round': 1, 'used_power_actions': list(used)}, player, action) is not None
+
+    def test_burn_only_when_it_pays_for_a_power_action(self):
+        self.assertFalse(self.burn_held(2))                      # 2 + 2 reaches the 4-power actions
+        self.assertTrue(self.burn_held(2, used=(3, 4, 5, 6, 7)))
+        self.assertTrue(self.burn_held(7))                        # every action is affordable already
+
+    def test_terrans_former_waits_for_a_transdim_planet(self):
+        state = {'round': 1, 'board': {'hexes': {'1,1': {'planet': {'planet_type': 'Asteroid', 'is_gaia_formed': False}}}}}
+        player = {'faction': 'Terrans', 'structures': [], 'resources': {}}
+        build = {'type': 'Build', 'coord': '1,1'}
+        with mock.patch.object(tp, '_gaia_room', return_value=1):
+            with mock.patch.object(tp, '_in_reach', return_value={'2,2': 'Transdim'}):
+                self.assertIsNotNone(tp._not_yet(state, player, build))
+                self.assertIsNone(tp._not_yet(state, {**player, 'faction': 'Xenos'}, build))
+            with mock.patch.object(tp, '_in_reach', return_value={}):
+                self.assertIsNone(tp._not_yet(state, player, build))
+
+
+class TechWhenTests(unittest.TestCase):
+    def snapshot(self, *, faction='Terrans', tiles=(), structures=(), gaia=1, round_=1):
+        tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | {'gaia': gaia}
+        player = {'faction': faction, 'tech_tiles': list(tiles), 'structures': list(structures),
+                  'research_tracks': tracks}
+
+        def lab(tile, kind='Standard'):
+            return {'action': {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                               'tech_tile_choice': {'kind': kind, 'tile': tile, 'advance_track': None}}}
+        candidates = [lab(5), lab(10), lab(8), lab(7), {'action': {'type': 'Pass', 'booster_id': 1}}]
+        return {'player': 0, 'state': {'round': round_, 'phase': {'ActionPhase': {}}, 'players': [player]},
+                'candidates': candidates}
+
+    def top_tile(self, knowledge=0, **kwargs):
+        snapshot = self.snapshot(**kwargs)
+        scores = [(9.0, 'a'), (8.0, 'b'), (7.0, 'c'), (10.0, 'd'), (0.0, 'e')]
+        with mock.patch.object(tp._value, 'production', return_value=[0, 0, knowledge, 0, 0, 0, 0]):
+            lifted = tp.tech_when_scores(None, snapshot, scores)
+        best = max(range(4), key=lambda i: lifted[i][0])
+        return snapshot['candidates'][best]['action']['tech_tile_choice']['tile']
+
+    def test_first_tile_by_faction(self):
+        self.assertEqual(self.top_tile(), 10)
+        self.assertEqual(self.top_tile(structures=[{'kind': 'PlanetaryInstitute', 'hex': '0,0'}]), 8)
+
+    def test_later_tiles(self):
+        self.assertEqual(self.top_tile(faction='Geodens', gaia=2), 8)
+        self.assertEqual(self.top_tile(faction='Geodens', knowledge=3), 5)
+        self.assertEqual(self.top_tile(faction='Geodens'), 5)              # tile 7 held back, next best
+        self.assertEqual(self.top_tile(faction='Geodens', round_=6), 7)
+
+
 class ResearchDefendTests(unittest.TestCase):
     def track(self, new, held, *, kinds=(), structures=(), round_=1, unhurried=None, sure=False, **levels):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | levels
