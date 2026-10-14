@@ -56,5 +56,7 @@ Not measured: research tracks (`research_counts.py` was refused on the bot) and 
 `GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:tools .venv/bin/python tools/research_counts.py
 ~/projects/gaia-lab/gaia-rl/runs/lab-056-vm-lf-ts-ships-when-all --rounds 1-3` (from `gaia-rl`).
 
-Rejected as a bundle: the base stack stays vm_lf_ts_ships, no change to the live teacher. Next: find which rule
-breaks Geodens (decisions of p005-g1 B Geodens) before splitting rules 2–9 further.
+Not significant, loss direction. The bot proposed rejecting the bundle and splitting rules 2–9; the user decided
+instead (2026-10-14 "일단 다 넣고, 리플레이 보면서 수정하는 게 나을 수도"): **the base stack becomes
+vm_lf_ts_ships_when_all**, and the rules are fixed from replays (starting with p005-g1 B Geodens) rather than by
+component A/B. No change to the live teacher.
