@@ -3229,7 +3229,9 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech(seed, **kwargs):
 #   free Transdim planets within that range for factions with the Gaia track in FACTION_TRACKS, swaps with
 #   the best-ranked place when its count is strictly larger — ahead of "next to an opponent first";
 # - form_early (user, same day: "가이아 포밍하는애들은 파워 순환좀 시키게 포밍 좀 빨리 해라 즉시 포밍할거 아니면"):
-#   a legal normal Gaia-forming move goes first unless an instant forming move is legal now.
+#   a legal normal Gaia-forming move goes first unless an instant forming move is legal now — whatever the
+#   power held (user: "이미 파워가 많이 차있을 수도 있는데 … 기술타일이나 연방(특히 기술연방)을 이용할 수 있자나":
+#   the Gaia planet also serves tech tiles and federations, the tech-tile token above all).
 ORE_FREE_STEPS = {2: 2, 6: 1}   # engine free_terraform_steps_for_power_action
 PASS_BOOSTER_FROM = 4
 FORM_NORMAL = frozenset({'GaiaFormation', 'RoundBoosterRangeGaiaFormation', 'TwilightRangeGaiaFormation'})
