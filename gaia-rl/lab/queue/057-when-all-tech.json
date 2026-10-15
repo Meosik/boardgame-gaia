@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-15 \"일단 돌려봐. 문제 생기는 부분의 판단은 물어보면 되는 거지\"): A = vm_lf_ts_ships_when_all(056 뒤 기준 스택), B = when_all_tech(056 리플레이 수정 + 공통 자료 전부 + 4종족 공략 일부, 순서만; 규칙별 플래그로 끌 수 있음 — HANDOFF 5장). 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전). 함께 볼 것: 오류 중단 판(규칙 60개 첫 리그 실행), 결정 시간(round_goal·artifact_vp는 루트에서 엔진 fork, 셋업은 50초), 비교 미탐색 결정 수, research_counts, 리플레이.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-tech-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}
