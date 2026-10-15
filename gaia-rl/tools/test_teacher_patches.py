@@ -418,6 +418,13 @@ class GuideFinalTests(unittest.TestCase):
         self.assertIsNotNone(tp._not_yet_more(state, player, {'type': 'ExploreSpaceship', 'ship': 'Twilight'}))
         self.assertIsNone(tp._not_yet_more({**state, 'round': 4}, player, {'type': 'ExploreSpaceship', 'ship': 'Twilight'}))
 
+    def test_track_set(self):
+        player = {'faction': 'Geodens', 'structures': [], 'resources': {}}
+        research = {'type': 'ResearchAdvance', 'track': 'Economy'}
+        self.assertIsNotNone(tp._not_yet_more({'round': 2}, player, research))
+        self.assertIsNone(tp._not_yet_more({'round': 6}, player, research))
+        self.assertIsNone(tp._not_yet_more({'round': 2}, player, {**research, 'track': 'Terraforming'}))
+
     def test_mine_tile_without_mines_in_hand(self):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()}
         full = {'structures': [{'kind': 'Mine', 'hex': f'{i},0'} for i in range(8)], 'research_tracks': tracks}

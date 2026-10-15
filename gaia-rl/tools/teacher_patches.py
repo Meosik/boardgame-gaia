@@ -578,7 +578,9 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'former_booster': False,      # GUIDE_FINAL: ..._when_all_tech (see _not_yet_more, setup_step_scores)
           'late_ship': False,
           'mine_tile': False,
-          'setup_step1': False}
+          'setup_step1': False,
+          'track_set': False,           # ..._when_all_tech (see FACTION_TRACKS)
+          'hold_no_pass': False}        # ..._when_all_tech (see not_yet_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2442,6 +2444,12 @@ def research_when_scores(env, snapshot, scores, *, track_of=None, rounds=WHEN_RO
     if not groups:
         return scores
     track = (track_of or research_when_track)(state, actor)
+    faction = state['players'][actor].get('faction')
+    if track is not None and _guide['track_set'] and faction in FACTION_TRACKS and state['round'] < TRACK_FREE_ROUND:
+        # track_set wins: a timing rule only picks among the faction's own tracks.
+        own = [t for t in ((track,) if isinstance(track, str) else track)
+               if TRACK_KEYS.get(t) in FACTION_TRACKS[faction]]
+        track = tuple(own) or None
     if track is None:
         return scores
     lifted = list(scores)
@@ -2723,6 +2731,10 @@ def _not_yet_more(state, player, action):
         return 'formers kept for the former pass booster this round'
     if _guide['late_ship'] and kind in SHIP_ENTRIES and round_ >= LATE_SHIP_FROM:
         return f'no ship entry from round {LATE_SHIP_FROM}: fewer than 3 actions left'
+    if (_guide['track_set'] and kind in ('ResearchAdvance', 'EclipseResearchBoost') and round_ < TRACK_FREE_ROUND
+            and player.get('faction') in FACTION_TRACKS
+            and TRACK_KEYS.get(action.get('track')) not in FACTION_TRACKS[player['faction']]):
+        return f'{player["faction"]} research stays on its tracks'
     return None
 
 
@@ -2754,6 +2766,11 @@ def not_yet_scores(env, snapshot, scores):
     candidates = snapshot['candidates']
     passing = [scores[i][0] for i, c in enumerate(candidates)
                if c['action'].get('type') == 'Pass' and not blocked(scores[i])]
+    if not passing and _guide['hold_no_pass']:
+        # Passing blocked (knowledge_spend): a held move goes below every other move instead (moves
+        # already pushed down by more than HOLD_DEPTH, such as the early Terrans Gaia advance, aside).
+        finite = [s[0] for s in scores if not blocked(s)]
+        passing = [min((v for v in finite if v > max(finite)-HOLD_DEPTH), default=min(finite, default=0.0))]
     if not passing:
         return scores
     floor, lifted = min(passing)-NOT_YET, list(scores)
@@ -3185,6 +3202,19 @@ def guide_more_scores(env, snapshot, scores):
         if round_ >= PASS_LATE_FROM and vp[best] >= PASS_LATE_VP and lifted[best][0] < high:
             lifted[best] = (high+AHEAD, f'{lifted[best][1]}; pass for {vp[best]} VP late (SH1-06, B18-05)',
                             *lifted[best][2:])
+    if _guide['track_set'] and round_ < TRACK_FREE_ROUND and player['faction'] in FACTION_TRACKS:
+        tracks, groups = FACTION_TRACKS[player['faction']], {}
+        for i in live:
+            choice = act[i].get('tech_tile_choice')
+            if isinstance(choice, dict) and choice.get('advance_track'):
+                key = json.dumps({**act[i], 'tech_tile_choice': {**choice, 'advance_track': None}}, sort_keys=True)
+                groups.setdefault(key, []).append(i)
+        for group in groups.values():
+            best = max(group, key=lambda i: lifted[i][0])
+            own = [i for i in group if TRACK_KEYS.get(act[i]['tech_tile_choice']['advance_track']) in tracks]
+            if own and best not in own:
+                _swap(lifted, list(lifted), max(own, key=lambda i: lifted[i][0]), best,
+                      f'{player["faction"]} tile advance on its tracks')
     return _guide_rest(env, snapshot, scores, lifted, live, act)
 
 
@@ -3324,7 +3354,25 @@ def _guide_last(env, snapshot, lifted, live, act, root):
 # runs, B2-04 saving for the next round), value claims already priced (LF01/LF02 resources, boosters,
 # tokens, QIC for Gaia), research spread (C006-C008, SH1-10, B19-06/07: the focus rule lost in lab 049),
 # claims about expansion factions or the faction guides, the engine-rule note LF2-14, and coaching-only rows.
-GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1')
+# - track_set (user, same day: "흩뿌리진 말아야지. 종족마다 좋은 트랙 정해져 있잖아"): before round 6 each
+#   faction advances only its three tracks (SH1-10 "중구난방으로 올리지 말 것 … 트랙 두세 개는 아예 포기",
+#   B19-07 "과학을 제외하면 일반적으로 3트랙 … 올릴 트랙을 초반에 정해 거기만", C008 user "많아야 2–3개");
+#   round 6 is free (B19-07 "테라포밍·인공지능 중 하나는 6R 남는 진보용"). A research move on another track is
+#   held below passing, and a tech tile's free advance takes one of the faction's tracks when it can.
+#   The tracks, from the faction guides:
+#   Geodens terraforming, navigation, AI (GE01/B19 "테라 3·항해 2 맞추고 테라 꼭대기 수비하며 인공지능");
+#   Xenos Gaia, navigation, economy (B15-02 "가이아 트랙을 가장 추천 … 항해 1+가이아 2", B15-03 "경제 2");
+#   Taklons navigation, economy, science (B19-05 "가이아 빼고 아무 테크", B10-03 "지식 아카데미 … 선과학",
+#   SH4-06 "항해를 올리거나"); Terrans navigation, Gaia, terraforming (B4-01 "가이아 3단계는 항해 2가 먼저",
+#   B19-02 "가이아 1 주차 후 테라포밍"). Lab 049's focus rule (one track, chosen by level) lost charges;
+#   this one fixes the tracks by faction instead.
+FACTION_TRACKS = {'Geodens': ('terraforming', 'navigation', 'ai'),
+                  'Xenos': ('gaia', 'navigation', 'economy'),
+                  'Taklons': ('navigation', 'economy', 'science'),
+                  'Terrans': ('navigation', 'gaia', 'terraforming')}
+TRACK_FREE_ROUND = 6
+HOLD_DEPTH = 100
+GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1', 'track_set', 'hold_no_pass')
 FORMER_BOOSTER = 6
 LATE_SHIP_FROM = 5
 MINE_TILE = 11
