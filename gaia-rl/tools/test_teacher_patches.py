@@ -443,6 +443,13 @@ class GuideFinalTests(unittest.TestCase):
         full = {'structures': [{'kind': 'Mine', 'hex': f'{i},0'} for i in range(8)], 'research_tracks': tracks}
         self.assertTrue(tp._tech_held_back({'round': 3}, 11, full))
         self.assertFalse(tp._tech_held_back({'round': 3}, 11, {**full, 'structures': full['structures'][:7]}))
+        player = {**full, 'faction': 'Geodens', 'resources': {}}
+        state = {'round': 3, 'spaceship_boards': []}
+        for action in ({'type': 'ExamineArtifact', 'artifact': 12},
+                       {'type': 'RebellionGainTechTile', 'tile': 11, 'track': 'Economy'},
+                       {'type': 'FormFederation', 'hexes': [], 'token': {'source': 'Supply', 'kind': 14}}):
+            self.assertIsNotNone(tp._not_yet_more(state, player, action))
+            self.assertIsNone(tp._not_yet_more(state, {**player, 'structures': full['structures'][:7]}, action))
 
 
 class ResearchDefendTests(unittest.TestCase):

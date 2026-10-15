@@ -2726,6 +2726,8 @@ def _not_yet_more(state, player, action):
             return f'{MINES_KEPT} mines kept on the board'
     if _guide['ore_terraform'] and kind == 'Build' and _ore_steps(state, player, action):
         return 'no terraforming paid with 3 ore a step'
+    if _guide['mine_tile'] and _mine_effect(state, action) and _mines_in_hand(player) == 0:
+        return 'its free mine needs a mine in hand'
     if _guide['late_ship'] and kind in SHIP_ENTRIES and round_ >= LATE_SHIP_FROM:
         return f'no ship entry from round {LATE_SHIP_FROM}: fewer than 3 actions left'
     if (_guide['track_set'] and kind in ('ResearchAdvance', 'EclipseResearchBoost') and round_ < TRACK_FREE_ROUND
@@ -2948,9 +2950,30 @@ def _tech_wanted(state, player, academy=False):
     return wanted
 
 
+def _mines_in_hand(player):
+    return max(0, MINE_LIMIT - sum(_kind(s) == 'Mine' for s in player.get('structures', [])))
+
+
+def _mine_effect(state, action):
+    """The move's reward includes building a mine (user 2026-10-15: "광산 설치하는 타일, 기술은 광산이 없으면
+    효과를 사용할 수 없어"): the Lost Fleet 2-terraform mine tile, the free-build federation tokens,
+    the Proto planet and Asteroid mine artifacts."""
+    kind = action.get('type')
+    if kind == 'RebellionGainTechTile':
+        return action.get('tile') == MINE_TILE
+    if kind == 'FormFederation':
+        return (_token_kind(state, action.get('token')) in MINE_TOKENS
+                or action.get('bonus_tech_tile') == MINE_TILE)
+    if kind == 'TwilightReplayFederationToken':
+        return action.get('token_kind') in MINE_TOKENS or action.get('bonus_tech_tile') == MINE_TILE
+    if kind == 'ExamineArtifact':
+        return action.get('artifact') in MINE_ARTIFACTS
+    return False
+
+
 def _tech_held_back(state, tile, player=None):
     if _guide['mine_tile'] and tile == MINE_TILE and player is not None:
-        return sum(_kind(s) == 'Mine' for s in player['structures']) >= MINE_LIMIT
+        return _mines_in_hand(player) == 0
     if tile == RANGE_TILE and player is not None:
         return state['round'] >= 3 or player['research_tracks']['navigation'] >= WHEN_LEVEL
     return state['round'] < TECH_FROM_ROUND.get(tile, 0)
@@ -3173,6 +3196,7 @@ def guide_more_scores(env, snapshot, scores):
             key = json.dumps({k: v for k, v in act[i].items() if not k.startswith('bonus_') and k != 'token'},
                              sort_keys=True)
             groups.setdefault(key, []).append(i)
+        avoid = TOKEN_AVOID | (MINE_TOKENS if _guide['mine_tile'] and not _mines_in_hand(player) else frozenset())
         for group in groups.values():
             if len(group) < 2:
                 continue
@@ -3182,8 +3206,8 @@ def guide_more_scores(env, snapshot, scores):
                       if k in kinds.values()]
             if wanted:
                 mine = next(i for i in ranked if kinds[i] == wanted[0])
-            elif kinds[ranked[0]] in TOKEN_AVOID:
-                mine = next((i for i in ranked if kinds[i] not in TOKEN_AVOID), None)
+            elif kinds[ranked[0]] in avoid:
+                mine = next((i for i in ranked if kinds[i] not in avoid), None)
             else:
                 mine = None
             if mine is not None and mine != ranked[0]:
@@ -3355,7 +3379,9 @@ def _guide_last(env, snapshot, lifted, live, act, root):
 # - late_ship: no ship entry from round 5 (SH1-12 "들어가서 액션을 3번 이상 못 하면 가치가 떨어짐"; from round
 #   5 at most two rounds of actions are left);
 # - mine_tile: the 2-terraform mine tile (Lost Fleet 11) held back with no mine left in hand (LF2-05
-#   "남은 광산 재고가 0이면 가치가 0에 수렴");
+#   "남은 광산 재고가 0이면 가치가 0에 수렴"), and so is every other reward that builds a mine (the
+#   free-build federation tokens 14/15, the mine artifacts 8/12, tile 11 through Rebellion or a token;
+#   user 2026-10-15 "광산이 없으면 효과를 사용할 수 없어. 경계해야지");
 # - setup_step1: among starting places of the same kind (next to an opponent or not), one with a free
 #   planet one terraforming step from home within 2 hexes goes first (C017 "2칸 이내 1단계 테라포밍 행성").
 # Left out after this pass: plan-level goals (C001-C003 federation counts, SH5-03/04 fast advanced-tile
@@ -3384,6 +3410,8 @@ GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1', 'track
 FORMER_BOOSTER = 6
 LATE_SHIP_FROM = 5
 MINE_TILE = 11
+MINE_TOKENS = frozenset({14, 15})   # engine federation tokens: free build 3 steps, unlimited range
+MINE_ARTIFACTS = frozenset({8, 12})  # engine artifacts: 7 VP + Proto planet mine, 7 VP + Asteroid mine
 STEP1_HEXES = 2
 
 
