@@ -413,10 +413,23 @@ class GuideFinalTests(unittest.TestCase):
     def test_holds(self):
         state = {'round': 5, 'board': {'hexes': {'1,1': {'planet': {'planet_type': 'Asteroid', 'is_gaia_formed': False}}}}}
         player = {'faction': 'Geodens', 'booster': 6, 'structures': [], 'resources': {}}
-        self.assertIsNotNone(tp._not_yet_more(state, player, {'type': 'Build', 'coord': '1,1'}))
-        self.assertIsNone(tp._not_yet_more(state, {**player, 'booster': 9}, {'type': 'Build', 'coord': '1,1'}))
+        self.assertIsNone(tp._not_yet_more(state, player, {'type': 'Build', 'coord': '1,1'}))
         self.assertIsNotNone(tp._not_yet_more(state, player, {'type': 'ExploreSpaceship', 'ship': 'Twilight'}))
         self.assertIsNone(tp._not_yet_more({**state, 'round': 4}, player, {'type': 'ExploreSpaceship', 'ship': 'Twilight'}))
+
+    def test_former_booster_not_taken_with_an_asteroid_ahead(self):
+        player = {'player_id': 0, 'faction': 'Geodens', 'structures': [], 'tech_tiles': [],
+                  'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()},
+                  'resources': {'ore': 1, 'credits': 1, 'knowledge': 0, 'qic': 0}}
+        snapshot = {'player': 0, 'state': {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]},
+                    'candidates': [{'action': {'type': 'Pass', 'booster_id': 6}},
+                                   {'action': {'type': 'Pass', 'booster_id': 9}}]}
+        scores = [(2.0, 'a'), (1.0, 'b')]
+        with mock.patch.object(tp, '_idle_formers', return_value=1), \
+                mock.patch.object(tp, '_in_reach', return_value={'1,1': 'Asteroid'}), \
+                mock.patch.object(tp, '_booster_vp', return_value=0):
+            lifted = tp.guide_more_scores(None, snapshot, scores)
+        self.assertGreater(lifted[1][0], lifted[0][0])
 
     def test_track_set(self):
         player = {'faction': 'Geodens', 'structures': [], 'resources': {}}

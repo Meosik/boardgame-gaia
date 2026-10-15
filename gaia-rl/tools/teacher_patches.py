@@ -2726,9 +2726,6 @@ def _not_yet_more(state, player, action):
             return f'{MINES_KEPT} mines kept on the board'
     if _guide['ore_terraform'] and kind == 'Build' and _ore_steps(state, player, action):
         return 'no terraforming paid with 3 ore a step'
-    if (_guide['former_booster'] and player.get('booster') == FORMER_BOOSTER
-            and (kind == 'EclipseAsteroidMine' or (kind == 'Build' and _asteroid(state, action)))):
-        return 'formers kept for the former pass booster this round'
     if _guide['late_ship'] and kind in SHIP_ENTRIES and round_ >= LATE_SHIP_FROM:
         return f'no ship entry from round {LATE_SHIP_FROM}: fewer than 3 actions left'
     if (_guide['track_set'] and kind in ('ResearchAdvance', 'EclipseResearchBoost') and round_ < TRACK_FREE_ROUND
@@ -3191,15 +3188,23 @@ def guide_more_scores(env, snapshot, scores):
                 mine = None
             if mine is not None and mine != ranked[0]:
                 _swap(lifted, list(lifted), mine, ranked[0], f'federation token {kinds[mine]}')
-    if _guide['pass_booster'] and passes:
+    if (_guide['pass_booster'] or _guide['former_booster']) and passes:
         vp = {i: _booster_vp(state, player, act[i].get('booster_id')) for i in passes}
         best = max(passes, key=lambda i: lifted[i][0])
         rich = max(passes, key=lambda i: (vp[i], lifted[i][0]))
-        if vp[rich] >= PASS_EARLY_VP and rich != best and vp[rich] > vp[best]:
+        if _guide['pass_booster'] and vp[rich] >= PASS_EARLY_VP and rich != best and vp[rich] > vp[best]:
             _swap(lifted, list(lifted), rich, best, f'pass booster for {vp[rich]} VP (SH1-06)')
             best = rich
+        if (_guide['former_booster'] and act[best].get('booster_id') == FORMER_BOOSTER
+                and _idle_formers(player) and _in_reach(state, player, ('Asteroid',))):
+            # The formers will go to an Asteroid next round, so they will not be there to score.
+            others = [i for i in passes if act[i].get('booster_id') != FORMER_BOOSTER]
+            if others:
+                other = max(others, key=lambda i: lifted[i][0])
+                _swap(lifted, list(lifted), other, best, 'formers go to an Asteroid next round (C035)')
+                best = other
         high = max(lifted[i][0] for i in live)
-        if round_ >= PASS_LATE_FROM and vp[best] >= PASS_LATE_VP and lifted[best][0] < high:
+        if _guide['pass_booster'] and round_ >= PASS_LATE_FROM and vp[best] >= PASS_LATE_VP and lifted[best][0] < high:
             lifted[best] = (high+AHEAD, f'{lifted[best][1]}; pass for {vp[best]} VP late (SH1-06, B18-05)',
                             *lifted[best][2:])
     if _guide['track_set'] and round_ < TRACK_FREE_ROUND and player['faction'] in FACTION_TRACKS:
@@ -3342,8 +3347,11 @@ def _guide_last(env, snapshot, lifted, live, act, root):
 
 
 # GUIDE_FINAL (user 2026-10-15 "더 넣어야 하지 않나?" — a second pass over the common claims):
-# - former_booster: while holding the former pass booster (engine 6, 3 VP a former at the pass) no
-#   Asteroid mine uses a former up (C035/PG24 "포머를 남겨 부스터 점수를 받는 것과 소행성에 쓰는 것이 충돌");
+# - former_booster: when passing, not the former pass booster (engine 6, 3 VP a former at the next
+#   pass) while an idle former has an Asteroid in reach — it goes there next round (C035/PG24 "포머를
+#   남겨 부스터 점수를 받는 것과 소행성에 쓰는 것이 충돌"; user 2026-10-15: "다음 라운드에 포머를 소행성에 쓸
+#   생각이 있으면 포머당 3점을 안 가져오는 방향", replacing a first version that kept the formers);
+#   it overrides pass_booster;
 # - late_ship: no ship entry from round 5 (SH1-12 "들어가서 액션을 3번 이상 못 하면 가치가 떨어짐"; from round
 #   5 at most two rounds of actions are left);
 # - mine_tile: the 2-terraform mine tile (Lost Fleet 11) held back with no mine left in hand (LF2-05
