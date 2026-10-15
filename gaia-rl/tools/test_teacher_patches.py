@@ -478,6 +478,19 @@ class GuideFinalTests(unittest.TestCase):
         self.assertGreater(lifted[0][0], lifted[2][0])
         self.assertGreater(lifted[1][0], lifted[2][0])
 
+    def test_ship_numbers_and_gaia_both(self):
+        player = {'explored_ships': [1, 2], 'research_tracks': {'gaia': 0}, 'booster': 9,
+                  'gaiaformers_total': 0, 'gaiaformers_deployed': 0, 'gaiaformers_in_gaia_area': 0,
+                  'resources': {'spent_gaia_formers': 0}}
+        self.assertTrue(tp._explored(player, 'Rebellion'))
+        self.assertFalse(tp._explored(player, 'Eclipse'))
+        state = {'used_spaceship_actions': []}
+        self.assertTrue(tp._gaia_both(state, player, ['Transdim', 'Asteroid']))      # TF Mars + new former
+        self.assertFalse(tp._gaia_both(state, player, ['Transdim']))
+        self.assertFalse(tp._gaia_both({'used_spaceship_actions': [6]}, player, ['Transdim', 'Asteroid']))
+        booster = {**player, 'explored_ships': [], 'booster': 5}
+        self.assertTrue(tp._gaia_both(state, booster, ['Transdim', 'Asteroid']))
+
     def test_mine_tile_without_mines_in_hand(self):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()}
         full = {'structures': [{'kind': 'Mine', 'hex': f'{i},0'} for i in range(8)], 'research_tracks': tracks}

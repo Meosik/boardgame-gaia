@@ -584,6 +584,9 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'faction_more': False,        # ..._when_all_tech (see _faction_hold)
           'adv_immediate': False,       # ..._when_all_tech (see lf_advanced_option)
           'r1_basics': False,           # ..._when_all_tech (see guide_more_scores, SH3-01/03)
+          'gaia_both': False,           # ..._when_all_tech (see _gaia_or_economy)
+          'ship_ids': False,            # ..._when_all_tech (see _explored)
+          'taklons_brainstone': False,  # ..._when_all_tech (see guide_more_scores, TK02)
           'tokens_lf': False,           # ..._when_all_tech (see lf_power_value)
           'hold_no_pass': False}        # ..._when_all_tech (see not_yet_scores)
 
@@ -1184,7 +1187,7 @@ def geodens_pi4_ready(snapshot):
     steps = int(player['booster'] == 12)
     steps += max((free for i, (cost, free) in TERRAFORM_POWER_ACTIONS.items()
                   if i not in used and cost <= spendable), default=0)
-    steps += int('TFMars' in player['explored_ships'] or any(
+    steps += int(_explored(player, 'TFMars') or any(
         c['action']['type'] == 'ExploreSpaceship' and c['action'].get('ship') == 'TFMars'
         for c in snapshot['candidates']))
     return steps >= 2
@@ -2275,10 +2278,49 @@ def research_when_track(state, actor):
     return _gaia_or_economy(state, actor, list(now.values()))
 
 
+def _gaia_both(state, player, kinds):
+    """After one Gaia advance a former is free, an immediate forming is at hand (the round booster or
+    TF Mars, engine apply_immediate_gaia_formation_impl: no tokens, the planet is formed at once and its
+    mine sends the former back) with a Transdim planet in reach, and an Asteroid is in reach for the
+    same former next."""
+    if 'Transdim' not in kinds or 'Asteroid' not in kinds:
+        return False
+    new_former = player['research_tracks']['gaia']+1 in GAIA_FORMER_LEVELS
+    if _idle_formers(player) + int(new_former) < 1:
+        return False
+    booster = (player.get('booster') == IMMEDIATE_GAIA_BOOSTER
+               and not player.get('round_booster_special_action_used_this_round'))
+    tfmars = (_explored(player, 'TFMars')
+              and TFMARS_FORMING not in state.get('used_spaceship_actions', []))
+    return booster or tfmars
+
+
+SHIP_NUMBER = {'Twilight': 0, 'Rebellion': 1, 'TFMars': 2, 'Eclipse': 3}   # engine spaceship_id_to_ship_id
+
+
+def _explored(player, ship):
+    """Whether the player explored `ship`. The engine stores ship numbers; the rules written before
+    2026-10-15 compared names and so never saw an entry (academy_kind's Rebellion, the cheap terraform
+    step of 1b and geodens_pi4's TF Mars). ship_ids reads the numbers; without it the old reading stays
+    so the base stack plays as it did."""
+    explored = player.get('explored_ships') or []
+    return SHIP_NUMBER[ship] in explored if _guide['ship_ids'] else ship in explored
+
+
+GAIA_FORMER_LEVELS = (1, 3, 4)   # rulebook: Gaia track levels that bring a Gaia former
+TFMARS_FORMING = 6               # engine SPACESHIP_ACTION_TFMARS_GAIA_FORMATION
+
+
 def _gaia_or_economy(state, actor, kinds):
     """The Gaia and Economy branches of rule 1; kinds = planet types in reach without a QIC."""
     tracks = state['players'][actor]['research_tracks']
-    if not _early_terrans_gaia(state, actor):
+    if _guide['gaia_both']:
+        # User 2026-10-15 (with LF4-15/C022 "확장판에선 가이아 1단계가 경제 2단계보다 자주 좋음"): "가이아는 즉시
+        # 포밍 + 소행성을 한번에 할 수 있을 때 올려" — the Gaia advance goes first when, after it, an idle
+        # former has its tokens for a Transdim planet in reach and an Asteroid is in reach too.
+        if not _early_terrans_gaia(state, actor) and _gaia_both(state, state['players'][actor], kinds):
+            return 'GaiaProject'
+    elif not _early_terrans_gaia(state, actor):
         if not tracks['gaia'] and 'Asteroid' in kinds:
             return 'GaiaProject'
         if tracks['gaia'] < WHEN_LEVEL and kinds.count('Transdim') >= WHEN_TRANSDIM:
@@ -2339,7 +2381,7 @@ def _cheap_step(state, player):
     power = player['resources']['power']
     spendable = power['bowl3'] + power['bowl2']//2
     used = state.get('used_power_actions', [])
-    return (player['booster'] == 12 or 'TFMars' in (player.get('explored_ships') or [])
+    return (player['booster'] == 12 or _explored(player, 'TFMars')
             or ORE_PER_STEP[player['research_tracks']['terraforming']] == 1
             or any(i not in used and cost <= spendable for i, (cost, _) in TERRAFORM_POWER_ACTIONS.items()))
 
@@ -2813,7 +2855,7 @@ ACADEMY_QIC_FROM = 5
 
 def _academy_kind(state, player):
     if state['round'] <= ACADEMY_SCIENCE_UNTIL:
-        return 'Qic' if 'Rebellion' in (player.get('explored_ships') or []) else 'Science'
+        return 'Qic' if _explored(player, 'Rebellion') else 'Science'
     return 'Qic' if state['round'] >= ACADEMY_QIC_FROM else None
 
 
@@ -3297,6 +3339,18 @@ def guide_more_scores(env, snapshot, scores):
         if _guide['pass_booster'] and round_ >= PASS_LATE_FROM and vp[best] >= PASS_LATE_VP and lifted[best][0] < high:
             lifted[best] = (high+AHEAD, f'{lifted[best][1]}; pass for {vp[best]} VP late (SH1-06, B18-05)',
                             *lifted[best][2:])
+    if (_guide['taklons_brainstone'] and player['faction'] == 'Taklons' and passes and round_ < 6
+            and player['resources']['power'].get('brainstone') == 'Area3'
+            and any(_value.distance(s['hex'], b['hex']) <= 2 for other in state['players'] if other is not player
+                    for s in player['structures'] for b in other['structures'])):
+        # PG21/TK02/B10-01 "3그릇 브레인스톤은 턴 종료 때 반드시 사용", "패스 전에 브레인스톤을 소비해 다음 충전을
+        # 받을 준비": with a neighbour to charge it next round, a power spend goes before passing.
+        floor = max(lifted[i][0] for i in passes)
+        spends = [i for i in live if act[i].get('type') == 'PowerAction'
+                  or (act[i].get('type') == 'FreeAction' and act[i].get('kind') in POWER_TO_RESOURCE)]
+        if spends and max(lifted[i][0] for i in spends) <= floor:
+            best = max(spends, key=lambda i: lifted[i][0])
+            lifted[best] = (floor+AHEAD, f'{lifted[best][1]}; Brainstone spent before passing (TK02)', *lifted[best][2:])
     if _guide['faction_more'] and player['faction'] == 'Taklons':
         powers = [i for i in live if act[i].get('type') == 'PowerAction']
         if len({act[i].get('id') for i in powers}) > 1:
@@ -3522,7 +3576,8 @@ def _faction_tracks(state, player):
 TRACK_FREE_ROUND = 6
 HOLD_DEPTH = 100
 GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1', 'track_set', 'hold_no_pass',
-               'terrans_gaia_cond', 'tokens_lf', 'faction_more', 'adv_immediate', 'r1_basics')
+               'terrans_gaia_cond', 'tokens_lf', 'faction_more', 'adv_immediate', 'r1_basics',
+               'gaia_both', 'ship_ids', 'taklons_brainstone')
 R1_START_MINES = {'Xenos': 3}   # starting mines (others 2; engine factions.toml)
 FORMER_BOOSTER = 6
 LATE_SHIP_FROM = 5
