@@ -590,7 +590,10 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'cover_tile': False,          # ..._when_all_tech (see _tech_wanted, L3-13)
           'nav3_ai': False,             # ..._when_all_tech (see guide_more_scores, B1-9)
           'tokens_lf': False,           # ..._when_all_tech (see lf_power_value)
-          'hold_no_pass': False}        # ..._when_all_tech (see not_yet_scores)
+          'hold_no_pass': False,        # ..._when_all_tech (see not_yet_scores)
+          'ore_free_steps': False,      # ..._when_all_tech_fix (see _not_yet_more, ORE_FREE_STEPS)
+          'pass_booster_late': False,   # ..._when_all_tech_fix (see guide_more_scores, PASS_BOOSTER_FROM)
+          'booster_root': False}        # ..._when_all_tech_fix (see _booster_root)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -1602,6 +1605,18 @@ def install_ship_setup():
     _wrap_rank('_ship_setup', ship_setup_scores)
 
 
+def _booster_root(snapshot, result):
+    """booster_root: the starting booster is the root ranking's first (when_all_tech_fix)."""
+    candidates, scores = snapshot.get('candidates') or [], result.get('scores')
+    if (not _guide['booster_root'] or not candidates or not scores
+            or any(c['action'].get('type') != 'SelectStartingBooster' for c in candidates)):
+        return
+    best = max(range(len(scores)), key=lambda i: scores[i][0])
+    if best != result.get('index'):
+        result['booster_root'] = {'replaced': result.get('selected'), 'replaced_index': result.get('index')}
+        result.update(index=best, selected='booster-root')
+
+
 def install_value_max():
     import four_factions.preparation as p
     _guide['value_max'] = True
@@ -1611,9 +1626,11 @@ def install_value_max():
         def search(env, snapshot, memory, publish, *args, **kwargs):
             def publish_value_max(result):
                 _value_max(snapshot, result)
+                _booster_root(snapshot, result)
                 publish(result)
             result = inner_search(env, snapshot, memory, publish_value_max, *args, **kwargs)
             _value_max(snapshot, result)
+            _booster_root(snapshot, result)
             return result
         search._value_max = True
         search._parallel = getattr(inner_search, '_parallel', False)
@@ -2791,6 +2808,9 @@ def _not_yet_more(state, player, action):
             return f'{MINES_KEPT} mines kept on the board'
     if _guide['ore_terraform'] and kind == 'Build' and _ore_steps(state, player, action):
         return 'no terraforming paid with 3 ore a step'
+    free = _ore_free_steps(action)
+    if _guide['ore_free_steps'] and free and _ore_steps(state, player, action, free):
+        return 'no terraforming step beyond the free ones paid with 3 ore'
     if _guide['mine_tile'] and _mine_effect(state, action) and _mines_in_hand(player) == 0:
         return 'its free mine needs a mine in hand'
     if _guide['faction_more']:
@@ -2802,15 +2822,25 @@ def _not_yet_more(state, player, action):
     return None
 
 
-def _ore_steps(state, player, action):
-    """A plain Build that pays its terraforming steps at 3 ore each (Terraforming level 0)."""
+def _ore_free_steps(action):
+    """Free terraforming steps of a mine-building action (engine
+    free_terraform_steps_for_power_action; the terraforming booster's build is 1 step)."""
+    kind = action.get('type')
+    if kind == 'PowerAction' and action.get('coord') is not None:
+        return ORE_FREE_STEPS.get(action.get('id'), 0)
+    return 1 if kind == 'RoundBoosterTerraformBuild' else 0
+
+
+def _ore_steps(state, player, action, free=0):
+    """A plain Build that pays its terraforming steps at 3 ore each (Terraforming level 0);
+    with `free` steps, a build that still pays a step beyond them."""
     from economy.teacher import ORE_PER_STEP, RING
     planet = (state['board']['hexes'].get(str(action.get('coord'))) or {}).get('planet')
     home = _home_type(player)   # _value.HOME has Terrans and Taklons only (057: Xenos 7-ore mine not held)
     if not planet or home not in RING or planet['planet_type'] not in RING:
         return False
     gap = abs(RING.index(home)-RING.index(planet['planet_type']))
-    return min(gap, 7-gap) > 0 and ORE_PER_STEP[player['research_tracks']['terraforming']] >= ORE_PER_PAID_STEP
+    return min(gap, 7-gap) > free and ORE_PER_STEP[player['research_tracks']['terraforming']] >= ORE_PER_PAID_STEP
 
 
 def _federations(player):
@@ -3158,6 +3188,28 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech(seed, **kwargs):
     return teacher
 
 
+# ── when_all_tech_fix (user 2026-10-16 "일단 고칠거 고쳐야지", lab 058 replays):
+# - ore_free_steps: ore_terraform also holds a mine built with free terraforming steps (power actions
+#   2 and 6, the terraforming booster) that still pays a step beyond them in ore (000-g1 Taklons step 13,
+#   power action 1 step to 2,-2: "테라포밍에 광석 쓰지 말랬는데", SH3-02);
+# - pass_booster_late: SH1-06's early score-booster swap only from round 4 (058: B picked the score
+#   boosters 1/3/4 22 times of 72 vs 9 for A; 000-g1 Geodens took booster 4 for 4 VP of one academy and
+#   never used its charge in round 2; user "4원 수입에 경제 올려놓고 의회 지을 준비");
+# - booster_root: the starting booster is the root ranking's first; the comparison ends at the round-1
+#   income and does not override it (000-g1 Geodens: terraforming booster 12 first, knowledge booster 13
+#   won 274.1 vs 252.4 through value_max; user "기오덴이 테라포밍 부스터를 먹지 않을 이유가 있던가?").
+ORE_FREE_STEPS = {2: 2, 6: 1}   # engine free_terraform_steps_for_power_action
+PASS_BOOSTER_FROM = 4
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech_fix(seed, **kwargs):
+    """Teacher factory: ..._when_all_tech plus the lab 058 replay fixes (ore_free_steps,
+    pass_booster_late, booster_root)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech(seed, **kwargs)
+    _guide['ore_free_steps'] = _guide['pass_booster_late'] = _guide['booster_root'] = True
+    return teacher
+
+
 # ── guide_more (user 2026-10-14: "기존 11개 말고 더 없어? 이번이 진짜 마지막 … 종족별 공략을 제외하고 모든
 #    자료를 참고") — the common claims of gaia-strategy-claims.csv that name a move and a time and were
 #    not in the stack yet, order only (no new numbers; thresholds are the sources'):
@@ -3332,7 +3384,8 @@ def guide_more_scores(env, snapshot, scores):
         vp = {i: _booster_vp(state, player, act[i].get('booster_id')) for i in passes}
         best = max(passes, key=lambda i: lifted[i][0])
         rich = max(passes, key=lambda i: (vp[i], lifted[i][0]))
-        if _guide['pass_booster'] and vp[rich] >= PASS_EARLY_VP and rich != best and vp[rich] > vp[best]:
+        if (_guide['pass_booster'] and vp[rich] >= PASS_EARLY_VP and rich != best and vp[rich] > vp[best]
+                and not (_guide['pass_booster_late'] and round_ < PASS_BOOSTER_FROM)):
             _swap(lifted, list(lifted), rich, best, f'pass booster for {vp[rich]} VP (SH1-06)')
             best = rich
         if (_guide['former_booster'] and act[best].get('booster_id') == FORMER_BOOSTER
