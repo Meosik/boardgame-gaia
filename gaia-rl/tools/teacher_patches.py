@@ -2806,7 +2806,7 @@ def _ore_steps(state, player, action):
     """A plain Build that pays its terraforming steps at 3 ore each (Terraforming level 0)."""
     from economy.teacher import ORE_PER_STEP, RING
     planet = (state['board']['hexes'].get(str(action.get('coord'))) or {}).get('planet')
-    home = _value.HOME.get(player['faction'])
+    home = _home_type(player)   # _value.HOME has Terrans and Taklons only (057: Xenos 7-ore mine not held)
     if not planet or home not in RING or planet['planet_type'] not in RING:
         return False
     gap = abs(RING.index(home)-RING.index(planet['planet_type']))
@@ -3609,7 +3609,7 @@ def _step1_near(state, player, coord):
     """A free planet one terraforming step from home within STEP1_HEXES of coord."""
     from economy.teacher import RING
     from strategy_teacher import distance
-    home = _value.HOME.get(player['faction'])
+    home = _home_type(player)
     if home not in RING:
         return False
     for c, cell in state['board']['hexes'].items():
