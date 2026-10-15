@@ -410,7 +410,7 @@ class GuideFinalTests(unittest.TestCase):
 
     def test_holds(self):
         state = {'round': 5, 'board': {'hexes': {'1,1': {'planet': {'planet_type': 'Asteroid', 'is_gaia_formed': False}}}}}
-        player = {'faction': 'Geodens', 'booster': 6, 'structures': [], 'resources': {}}
+        player = {'faction': 'Taklons', 'booster': 6, 'structures': [], 'resources': {}}
         self.assertIsNone(tp._not_yet_more(state, player, {'type': 'Build', 'coord': '1,1'}))
         self.assertIsNotNone(tp._not_yet_more(state, player, {'type': 'ExploreSpaceship', 'ship': 'Twilight'}))
         self.assertIsNone(tp._not_yet_more({**state, 'round': 4}, player, {'type': 'ExploreSpaceship', 'ship': 'Twilight'}))
@@ -444,6 +444,25 @@ class GuideFinalTests(unittest.TestCase):
         self.assertEqual(tp._faction_tracks({}, terrans), ('navigation', 'gaia', 'economy'))
         mission = {'final_scoring_tiles': [{'condition': 'MostPlanetTypes'}]}
         self.assertIn('terraforming', tp._faction_tracks(mission, terrans))
+
+    def test_faction_holds(self):
+        hexes = {'1,1': {'planet': {'planet_type': 'Desert'}}, '0,0': {'planet': {'planet_type': 'Oxide'}}}
+        state = {'round': 2, 'board': {'hexes': hexes}, 'used_power_actions': []}
+        power = {'bowl1': 0, 'bowl2': 0, 'bowl3': 7, 'brainstone': None}
+
+        def player(faction, *kinds):
+            return {'faction': faction, 'structures': [{'hex': '0,0', 'kind': k} for k in kinds],
+                    'resources': {'power': power}}
+        fed = {'type': 'FormFederation', 'hexes': []}
+        self.assertIsNotNone(tp._faction_hold(state, player('Xenos', 'Mine'), fed))
+        self.assertIsNone(tp._faction_hold(state, player('Xenos', 'PlanetaryInstitute'), fed))
+        pi = {'type': 'Upgrade', 'coord': '0,0', 'to': 'PlanetaryInstitute'}
+        self.assertIsNotNone(tp._faction_hold(state, player('Xenos', 'TradingStation'), pi))
+        build = {'type': 'Build', 'coord': '1,1'}
+        self.assertIsNotNone(tp._faction_hold(state, player('Geodens', 'Mine'), build))
+        self.assertIsNone(tp._faction_hold(state, player('Geodens', 'PlanetaryInstitute'), build))
+        free = {'type': 'FreeAction', 'kind': 'PowerToCredit', 'count': 1}
+        self.assertIsNotNone(tp._faction_hold(state, player('Terrans', 'Mine'), free))
 
     def test_mine_tile_without_mines_in_hand(self):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()}

@@ -581,6 +581,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'setup_step1': False,
           'track_set': False,           # ..._when_all_tech (see FACTION_TRACKS)
           'terrans_gaia_cond': False,   # ..._when_all_tech (see _early_terrans_gaia)
+          'faction_more': False,        # ..._when_all_tech (see _faction_hold)
+          'adv_immediate': False,       # ..._when_all_tech (see lf_advanced_option)
           'tokens_lf': False,           # ..._when_all_tech (see lf_power_value)
           'hold_no_pass': False}        # ..._when_all_tech (see not_yet_scores)
 
@@ -688,6 +690,14 @@ def lf_advanced_option(state, player, tile):
         available = tile not in player['advanced_tech_tile_special_actions_used_this_round']
         uses = horizon + int(available and not player['passed'])
         return uses*gv.to_vp(state, gv.SPECIAL_ACTION[tile])
+    if _guide['adv_immediate'] and tile not in player['advanced_tech_tiles']:
+        from integrated.features import IMMEDIATE
+        if tile in IMMEDIATE:
+            # adv_immediate (user 2026-10-15 "다 넣어"; C013 "획득 당시 실제 보드 상태로 가치를 판단", SH5-01
+            # "즉발 고급 기술은 평균 약 12점"): an immediate tile not yet held is worth what it would pay
+            # now (the frozen option counted 0); a held one has paid already.
+            counter, per_unit = IMMEDIATE[tile]
+            return per_unit*counters(state, player)[counter]
     if tile not in PASS:
         return _value.advanced_option(state, player, tile)
     passes = horizon + int(not player['passed'])
@@ -2691,7 +2701,9 @@ def _not_yet(state, player, action):
         knowledge = player['resources']['knowledge']
         if knowledge >= NAV_KNOWLEDGE and knowledge % NAV_KNOWLEDGE == 0:
             return 'Twilight range only with knowledge left over after research'
-    if _guide['burn_when'] and kind == 'FreeAction' and action.get('kind') == 'BurnPower':
+    if (_guide['burn_when'] and kind == 'FreeAction' and action.get('kind') == 'BurnPower'
+            and not (_guide['faction_more'] and player['faction'] == 'Taklons'
+                     and _tokens(player) > TAKLONS_TOKENS)):
         bowl3, burned = player['resources']['power']['bowl3'], action.get('count', 1)
         used = state.get('used_power_actions', [])
         if not any(bowl3 < cost <= bowl3+burned for id_, cost in POWER_COST.items() if id_ not in used):
@@ -2736,6 +2748,10 @@ def _not_yet_more(state, player, action):
         return 'no terraforming paid with 3 ore a step'
     if _guide['mine_tile'] and _mine_effect(state, action) and _mines_in_hand(player) == 0:
         return 'its free mine needs a mine in hand'
+    if _guide['faction_more']:
+        why = _faction_hold(state, player, action)
+        if why:
+            return why
     if _guide['late_ship'] and kind in SHIP_ENTRIES and round_ >= LATE_SHIP_FROM:
         return f'no ship entry from round {LATE_SHIP_FROM}: fewer than 3 actions left'
     return None
@@ -2954,6 +2970,49 @@ def _tech_wanted(state, player, academy=False):
     return wanted
 
 
+# faction_more (user 2026-10-15 "다 넣어": the four fixed factions' guides, beyond openings and tracks):
+# - Xenos: no federation before the Planetary Institute, and no Institute before a lab (B15-01 "연방 선언
+#   전에 반드시 행성 의회", "의회보다 연구소를 먼저"; B19-04 "선의회 빼고");
+# - Geodens: no mine on a planet type not yet colonized before the Institute (GE01/B18 "의회 전엔 다른 행성
+#   종류에 광산 금지" — the Institute's knowledge per new type);
+# - Terrans: with 6 power or more in bowl III no power-to-resource free action while a power action it
+#   pays for is open (B4-01 "6파워 이상은 프리 액션이 아닌 파워 액션으로");
+# - Taklons: burning allowed above 4 tokens (B10-01, TK01 "토큰을 최대한 태워 브레인스톤 포함 3–4개 유지"),
+#   and among power actions 1 terraforming, then 2 knowledge first (B19-05 "1테라 > 2지식", B10-01
+#   "2광석·7돈은 욕심낼 필요 없고 1테라·2지식이 중요"), in guide_more_scores.
+TAKLONS_TOKENS = 4
+TERRANS_POWER = 6
+POWER_TO_RESOURCE = frozenset({'PowerToCredit', 'PowerToOre', 'PowerToQic', 'PowerToKnowledge'})
+TAKLONS_POWER_ORDER = (6, 5)   # engine PowerAction ids: 1 terraforming step, 2 knowledge
+
+
+def _tokens(player):
+    power = player['resources']['power']
+    return sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3')) + int(power.get('brainstone') not in (None, 'Gaia'))
+
+
+def _faction_hold(state, player, action):
+    kind, faction = action.get('type'), player.get('faction')
+    built = {_kind(s) for s in player.get('structures', [])}
+    if faction == 'Xenos':
+        if kind == 'FormFederation' and 'PlanetaryInstitute' not in built:
+            return 'Xenos federation after the Planetary Institute (B15-01)'
+        if kind == 'Upgrade' and action.get('to') == 'PlanetaryInstitute' and 'ResearchLab' not in built:
+            return 'Xenos lab before the Planetary Institute (B15-01)'
+    if faction == 'Geodens' and kind == 'Build' and 'PlanetaryInstitute' not in built:
+        planet = (state['board']['hexes'].get(str(action.get('coord'))) or {}).get('planet')
+        held = {((state['board']['hexes'].get(str(s['hex'])) or {}).get('planet') or {}).get('planet_type')
+                for s in player['structures']}
+        if planet and planet['planet_type'] not in held:
+            return 'Geodens new planet types after the Planetary Institute (GE01)'
+    if faction == 'Terrans' and kind == 'FreeAction' and action.get('kind') in POWER_TO_RESOURCE:
+        bowl3 = player['resources']['power']['bowl3']
+        used = state.get('used_power_actions', [])
+        if bowl3 >= TERRANS_POWER and any(c <= bowl3 for i, c in POWER_COST.items() if i not in used):
+            return 'Terrans 6+ power goes to a power action (B4-01)'
+    return None
+
+
 def _mines_in_hand(player):
     return max(0, MINE_LIMIT - sum(_kind(s) == 'Mine' for s in player.get('structures', [])))
 
@@ -3164,7 +3223,9 @@ def guide_more_scores(env, snapshot, scores):
         return scores
     player, round_ = state['players'][actor], state['round']
     candidates = snapshot['candidates']
-    live = [i for i in range(len(candidates)) if not blocked(scores[i])]
+    # A move a "not yet" rule held down is never promoted again here (056 p005-g1 step 39: the round
+    # goal swap lifted a held third trading station back to the top).
+    live = [i for i in range(len(candidates)) if not blocked(scores[i]) and 'not yet:' not in str(scores[i][1])]
     if not live:
         return scores
     lifted = list(scores)
@@ -3235,6 +3296,16 @@ def guide_more_scores(env, snapshot, scores):
         if _guide['pass_booster'] and round_ >= PASS_LATE_FROM and vp[best] >= PASS_LATE_VP and lifted[best][0] < high:
             lifted[best] = (high+AHEAD, f'{lifted[best][1]}; pass for {vp[best]} VP late (SH1-06, B18-05)',
                             *lifted[best][2:])
+    if _guide['faction_more'] and player['faction'] == 'Taklons':
+        powers = [i for i in live if act[i].get('type') == 'PowerAction']
+        if len({act[i].get('id') for i in powers}) > 1:
+            rank = {pid: n for n, pid in enumerate(TAKLONS_POWER_ORDER)}
+            by_score = sorted(powers, key=lambda i: -lifted[i][0])
+            order = sorted(powers, key=lambda i: (rank.get(act[i].get('id'), len(rank)), by_score.index(i)))
+            given = list(lifted)
+            for i, source in zip(order, by_score):
+                if i != source:
+                    lifted[i] = (given[source][0], f'{given[i][1]}; Taklons power action order (B19-05)', *given[i][2:])
     if _guide['track_set'] and round_ < TRACK_FREE_ROUND and player['faction'] in FACTION_TRACKS:
         tracks, groups = _faction_tracks(state, player), {}
         research = [i for i in live if act[i].get('type') == 'ResearchAdvance']
@@ -3431,7 +3502,7 @@ def _faction_tracks(state, player):
 TRACK_FREE_ROUND = 6
 HOLD_DEPTH = 100
 GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1', 'track_set', 'hold_no_pass',
-               'terrans_gaia_cond', 'tokens_lf')
+               'terrans_gaia_cond', 'tokens_lf', 'faction_more', 'adv_immediate')
 FORMER_BOOSTER = 6
 LATE_SHIP_FROM = 5
 MINE_TILE = 11
