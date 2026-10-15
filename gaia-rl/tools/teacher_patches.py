@@ -587,6 +587,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'gaia_both': False,           # ..._when_all_tech (see _gaia_or_economy)
           'ship_ids': False,            # ..._when_all_tech (see _explored)
           'taklons_brainstone': False,  # ..._when_all_tech (see guide_more_scores, TK02)
+          'cover_tile': False,          # ..._when_all_tech (see _tech_wanted, L3-13)
+          'nav3_ai': False,             # ..._when_all_tech (see guide_more_scores, B1-9)
           'tokens_lf': False,           # ..._when_all_tech (see lf_power_value)
           'hold_no_pass': False}        # ..._when_all_tech (see not_yet_scores)
 
@@ -2995,6 +2997,7 @@ TECH_FROM_ROUND = {7: 6, 9: 3}   # tile: first round it may lead
 # 3점" agree for Terrans. LF2-08's "확장판에선 약해짐" is the general case these two exceptions leave.
 GAIA_MINE_TILE = 8
 GAIA_TILE_FACTIONS = frozenset({'Terrans'})
+COVER_TILES = (11, 13, 4)   # 2-terraform mine, 1 ore 3 knowledge, 1 ore 1 QIC (one-shot tiles)
 
 
 def _tech_wanted(state, player, academy=False):
@@ -3006,6 +3009,11 @@ def _tech_wanted(state, player, academy=False):
         if academy:
             wanted.append(((ACADEMY_FIRST_TILE,), 'first tile from an Academy'))
         wanted.append((TECH_FIRST_OTHER, 'first tile'))
+    if (_guide['cover_tile'] and len(player['tech_tiles']) == 1
+            and not set(player['tech_tiles']) & set(COVER_TILES)):
+        # L3-13/L4-16 "첫 두 기술 중 하나는 덮기 좋은 기술 (2테라 광산·1광석3지식 최선, 1광석1QIC도)",
+        # LF2-03: the second standard tile is one to cover with the first advanced tile.
+        wanted.append((COVER_TILES, 'a tile to cover (L3-13)'))
     if (_guide['gaia_tile'] and GAIA_MINE_TILE not in player['tech_tiles']
             and (player['faction'] in GAIA_TILE_FACTIONS
                  or any(t.get('condition') == 'MostGaiaPlanets' for t in state.get('final_scoring_tiles', [])))):
@@ -3380,6 +3388,16 @@ def guide_more_scores(env, snapshot, scores):
                 best = max(options, key=lambda i: lifted[i][0])
                 lifted[best] = (floor+AHEAD, f'{lifted[best][1]}; round 1 {name} before passing (SH3-01/03)',
                                 *lifted[best][2:])
+    if _guide['nav3_ai'] and round_ < TRACK_FREE_ROUND:
+        # B1-9 "항해 3단계와 인공지능 1단계 고민 시, 당장 3충전 급하지 않으면 인공지능": Navigation 2→3 against
+        # AI 0→1, AI first (marked as a situational choice so track_set leaves it).
+        research = {act[i].get('track'): i for i in live if act[i].get('type') == 'ResearchAdvance'}
+        nav, ai = research.get('Navigation'), research.get('ArtificialIntelligence')
+        tracks = player['research_tracks']
+        if (nav is not None and ai is not None and tracks['navigation'] == 2 and tracks['ai'] == 0
+                and lifted[nav][0] > lifted[ai][0]
+                and max(lifted[i][0] for i in research.values()) == lifted[nav][0]):
+            _swap(lifted, list(lifted), ai, nav, 'research when: AI 1 before Navigation 3 (B1-9)')
     if _guide['track_set'] and round_ < TRACK_FREE_ROUND and player['faction'] in FACTION_TRACKS:
         tracks, groups = _faction_tracks(state, player), {}
         research = [i for i in live if act[i].get('type') == 'ResearchAdvance']
@@ -3577,7 +3595,7 @@ TRACK_FREE_ROUND = 6
 HOLD_DEPTH = 100
 GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1', 'track_set', 'hold_no_pass',
                'terrans_gaia_cond', 'tokens_lf', 'faction_more', 'adv_immediate', 'r1_basics',
-               'gaia_both', 'ship_ids', 'taklons_brainstone')
+               'gaia_both', 'ship_ids', 'taklons_brainstone', 'cover_tile', 'nav3_ai')
 R1_START_MINES = {'Xenos': 3}   # starting mines (others 2; engine factions.toml)
 FORMER_BOOSTER = 6
 LATE_SHIP_FROM = 5

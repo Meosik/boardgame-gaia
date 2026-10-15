@@ -315,6 +315,19 @@ class TechWhenTests(unittest.TestCase):
         self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), round_=6), 7)
         self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), gaia=3), 5)   # no Gaia-mine rule (LF2-08)
 
+    def test_second_tile_is_one_to_cover(self):
+        saved = dict(tp._guide)
+        self.addCleanup(lambda: tp._guide.update(saved))
+        tp._guide['cover_tile'] = True
+        snapshot = self.snapshot(faction='Geodens', tiles=(10,))
+        snapshot['candidates'].insert(0, {'action': {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                                                     'tech_tile_choice': {'kind': 'Standard', 'tile': 13,
+                                                                          'advance_track': None}}})
+        scores = [(1.0, 'z'), (9.0, 'a'), (8.0, 'b'), (7.0, 'c'), (10.0, 'd'), (0.0, 'e')]
+        with mock.patch.object(tp._value, 'production', return_value=[0]*7):
+            lifted = tp.tech_when_scores(None, snapshot, scores)
+        self.assertEqual(max(range(5), key=lambda i: lifted[i][0]), 0)
+
     def test_gaia_tile_for_terrans(self):
         saved = dict(tp._guide)
         self.addCleanup(lambda: tp._guide.update(saved))
