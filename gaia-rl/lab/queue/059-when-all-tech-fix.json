@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-16 \"그냥 돌려\"): A = vm_lf_ts_ships_when_all(기준 스택), B = when_all_tech_fix = when_all_tech + 058 리플레이 수정 7개(ore_free_steps: 파워 액션·부스터 무료 삽 넘는 광석 테라포밍 보류, pass_booster_late: SH1-06 초반 점수 부스터 스왑은 4R부터, booster_root: 시작 부스터는 기본 순위 1위, convert_when: 파워 액션 가능하면 파워→QIC 보류·광석 전환은 건물 지을 때만, setup_reach: 3칸 안 함선 수 + 가이아 종족은 차원 변형 행성 수, form_early: 일반 포밍 먼저(1구역 토큰 부족하면 파워 액션 먼저)). tokens_lf 유지. 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전), 058(−30.6, Ter −47.5, Tak −35.4)과 비교. 함께 볼 것: 부스터 선택 분포(058 B 점수 부스터 22/72), 결정 시간(058 B 최대 69.9초), research_counts, 함선 입장 뒤 액션 사용, 리플레이.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-tech-fix-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}
