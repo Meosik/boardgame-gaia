@@ -593,7 +593,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'hold_no_pass': False,        # ..._when_all_tech (see not_yet_scores)
           'ore_free_steps': False,      # ..._when_all_tech_fix (see _not_yet_more, ORE_FREE_STEPS)
           'pass_booster_late': False,   # ..._when_all_tech_fix (see guide_more_scores, PASS_BOOSTER_FROM)
-          'booster_root': False}        # ..._when_all_tech_fix (see _booster_root)
+          'booster_root': False,        # ..._when_all_tech_fix (see _booster_root)
+          'convert_when': False}        # ..._when_all_tech_fix (see _convert_hold)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2872,9 +2873,31 @@ def not_yet_scores(env, snapshot, scores):
         if blocked(scores[i]) or scores[i][0] <= floor:
             continue
         why = _not_yet(state, state['players'][actor], candidate['action'])
+        if not why and _guide['convert_when']:
+            why = _convert_hold(candidates, candidate['action'], scores[i][1])
         if why:
             lifted[i] = (floor, f'{scores[i][1]}; not yet: {why}', *scores[i][2:])
     return lifted
+
+
+# convert_when (user 2026-10-16, lab 058 002-g1 Taklons steps 57-61: power -> QIC twice, a QIC -> ore never
+# used, then the Eclipse entry; "4파워로 액션 안하고 무료행동 하는 이유를 모르겟어", "광석으로 바꿨는데 아무것도
+# 안했어", "처음 줬던 qic를 그렇게 쓰는 방향으로"): power goes to a power action and range comes from the QIC
+# already held, so power -> QIC waits while a power action is legal; a conversion to ore waits unless the
+# move it funds (the frozen ranking's follow-up sample) builds or upgrades. Order only.
+CONVERT_TO_QIC = frozenset({'PowerToQic'})
+CONVERT_TO_ORE = frozenset({'PowerToOre', 'QicToOre'})
+
+
+def _convert_hold(candidates, action, reason):
+    kind = action.get('type') == 'FreeAction' and action.get('kind')
+    if kind in CONVERT_TO_QIC and any(c['action'].get('type') == 'PowerAction' for c in candidates):
+        return 'power goes to a power action; range from the QIC held'
+    if kind in CONVERT_TO_ORE:
+        follow = str(reason).split('follow-up sample: ', 1)[-1] if 'follow-up sample: ' in str(reason) else ''
+        if '"Build"' not in follow and '"Upgrade"' not in follow:
+            return 'ore only for a building it pays'
+    return None
 
 
 # 6. academy_kind — which Academy (B2-07 "1–3R은 지식 아카데미, 5–6R은 QIC 아카데미가 많음"; SH4-02
@@ -3207,6 +3230,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech_fix(seed, **kwargs):
     pass_booster_late, booster_root)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech(seed, **kwargs)
     _guide['ore_free_steps'] = _guide['pass_booster_late'] = _guide['booster_root'] = True
+    _guide['convert_when'] = True
     return teacher
 
 
