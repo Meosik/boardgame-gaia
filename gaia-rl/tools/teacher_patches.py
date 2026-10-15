@@ -594,7 +594,9 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'ore_free_steps': False,      # ..._when_all_tech_fix (see _not_yet_more, ORE_FREE_STEPS)
           'pass_booster_late': False,   # ..._when_all_tech_fix (see guide_more_scores, PASS_BOOSTER_FROM)
           'booster_root': False,        # ..._when_all_tech_fix (see _booster_root)
-          'convert_when': False}        # ..._when_all_tech_fix (see _convert_hold)
+          'convert_when': False,        # ..._when_all_tech_fix (see _convert_hold)
+          'setup_reach': False,         # ..._when_all_tech_fix (see setup_reach_scores)
+          'form_early': False}          # ..._when_all_tech_fix (see form_early_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -3221,16 +3223,75 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech(seed, **kwargs):
 # - booster_root: the starting booster is the root ranking's first; the comparison ends at the round-1
 #   income and does not override it (000-g1 Geodens: terraforming booster 12 first, knowledge booster 13
 #   won 274.1 vs 252.4 through value_max; user "기오덴이 테라포밍 부스터를 먹지 않을 이유가 있던가?").
+# - setup_reach (user, same day, 002-g1 Terrans "8번 6번 배치했으면 잘 풀렸겠다 … 하나는 주변에 차원 변형 행성이
+#   많았고 다른 하나는 함선들 여러개랑 엄청 가까웠던데", "차원 변형 행성은 테란처럼 가이아 위주로 가는 친구들 기준"):
+#   the starting place with more ship tiles within SHIP_SETUP_RANGE (navigation 1 + the starting QIC), plus
+#   free Transdim planets within that range for factions with the Gaia track in FACTION_TRACKS, swaps with
+#   the best-ranked place when its count is strictly larger — ahead of "next to an opponent first";
+# - form_early (user, same day: "가이아 포밍하는애들은 파워 순환좀 시키게 포밍 좀 빨리 해라 즉시 포밍할거 아니면"):
+#   a legal normal Gaia-forming move goes first unless an instant forming move is legal now.
 ORE_FREE_STEPS = {2: 2, 6: 1}   # engine free_terraform_steps_for_power_action
 PASS_BOOSTER_FROM = 4
+FORM_NORMAL = frozenset({'GaiaFormation', 'RoundBoosterRangeGaiaFormation', 'TwilightRangeGaiaFormation'})
+FORM_INSTANT = frozenset({'RoundBoosterImmediateGaiaFormation', 'TFMarsGaiaFormation'})
+
+
+def _reach_count(state, player, coord):
+    from strategy_teacher import distance
+    ships = state['board'].get('spaceship_tiles') or {}
+    count = sum(distance(coord, at) <= SHIP_SETUP_RANGE for at in ships.values())
+    if 'gaia' in FACTION_TRACKS.get(player['faction'], ()):
+        count += sum(1 for c, cell in state['board']['hexes'].items()
+                     if (cell.get('planet') or {}).get('planet_type') == 'Transdim' and not cell['structures']
+                     and distance(coord, c) <= SHIP_SETUP_RANGE)
+    return count
+
+
+def setup_reach_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    places = [i for i, c in enumerate(snapshot['candidates'])
+              if c['action'].get('type') == 'PlaceStartingStructure' and not blocked(scores[i])]
+    if actor is None or len(places) < 2:
+        return scores
+    player = state['players'][actor]
+    count = {i: _reach_count(state, player, str(snapshot['candidates'][i]['action']['coord'])) for i in places}
+    best = max(places, key=lambda i: scores[i][0])
+    mine = max(places, key=lambda i: (count[i], scores[i][0]))
+    if count[mine] <= count[best]:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(lifted), mine, best, f'{count[mine]} ships/Transdim within {SHIP_SETUP_RANGE}')
+    return lifted
+
+
+def form_early_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    act = [c['action'] for c in snapshot['candidates']]
+    live = [i for i in range(len(act)) if not blocked(scores[i]) and 'not yet:' not in str(scores[i][1])]
+    if not live or any(act[i].get('type') in FORM_INSTANT for i in live):
+        return scores
+    forms = [i for i in live if act[i].get('type') in FORM_NORMAL]
+    top = max(scores[i][0] for i in live)
+    if not forms or max(scores[i][0] for i in forms) >= top:
+        return scores
+    lifted = list(scores)
+    i = max(forms, key=lambda i: scores[i][0])
+    lifted[i] = (top+AHEAD, f'{scores[i][1]}; Gaia forming early (power cycle)', *scores[i][2:])
+    return lifted
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech_fix(seed, **kwargs):
     """Teacher factory: ..._when_all_tech plus the lab 058 replay fixes (ore_free_steps,
-    pass_booster_late, booster_root)."""
+    pass_booster_late, booster_root, convert_when, setup_reach, form_early)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech(seed, **kwargs)
     _guide['ore_free_steps'] = _guide['pass_booster_late'] = _guide['booster_root'] = True
-    _guide['convert_when'] = True
+    _guide['convert_when'] = _guide['setup_reach'] = _guide['form_early'] = True
+    _wrap_rank('_setup_reach', setup_reach_scores)
+    _wrap_rank('_form_early', form_early_scores)
     return teacher
 
 
