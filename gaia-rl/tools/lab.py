@@ -360,7 +360,7 @@ def publish_watch_replay(name, run_dir, env, data):
     game, seat, label = pick
     source = run_dir/'watch-replay'
     steps = [['tools/ab_replays.py', 'export', str(run_dir/game), '--output', str(source),
-              '--focus', str(seat), '--label', f'{name} · {label}'],
+              '--focus', str(seat)],
              ['tools/publish_replays.py', '--source', str(source), '--destination', str(REPLAY_DIR)]]
     for argv in steps:
         done = subprocess.run([sys.executable, *argv], cwd=GAIA_RL, env=env, capture_output=True, text=True)

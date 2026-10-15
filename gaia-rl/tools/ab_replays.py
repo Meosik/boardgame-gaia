@@ -3,7 +3,8 @@
 A teacher_ab game directory holds result.json (seed, factions, A seats, final scores) and
 decisions.jsonl.gz (every decision id and chosen index). The game is replayed in the engine,
 each state recorded, and the final scores checked against result.json; a mismatch exports
-nothing. The policy label names the experiment and which seats were A and B.
+nothing. The policy label is the pair and game, e.g. "000 / game-0-A02" (user, 2026-10-15); the
+site adds "· 초점 <faction> <VP>점".
 
   # list the games of a run with seats, factions, arms and scores
   .venv/bin/python tools/ab_replays.py list runs/lab-027-search4-cap10
@@ -65,7 +66,7 @@ def focus_seat(result, focus):
     return seat
 
 
-def replay_game(game_dir, focus, label):
+def replay_game(game_dir, focus):
     from gaia_rl import Environment
     result = game_info(game_dir)
     env = Environment(result['seed'], 2000)
@@ -98,11 +99,11 @@ def replay_game(game_dir, focus, label):
     else:
         from gaia_rl.versions import runtime_versions
         versions = runtime_versions()
-    a_seats = ','.join(map(str, result['a_seats']))
+    pair = game_dir.parent.name.removeprefix('pair-')
     replay = {'schema_version': 1, 'metadata': {
         'seed': result['seed'], 'focus_player': seat,
         'faction': result['factions'][seat],
-        'policy': f'{label} · {arm(result, seat)}팔 (A 좌석 {a_seats})',
+        'policy': f'{pair} / {game_dir.name}',
         'versions': versions, 'scores': scores, 'steps': snapshot['steps'], 'reproduced_original': True,
         'source': str(game_dir)}, 'frames': frames, 'events': []}
     if result.get('stopped_at_round'):
@@ -116,7 +117,7 @@ def cmd_export(args):
     output = Path(args.output)
     if output.exists():
         raise SystemExit(f'{output} exists; choose a new directory')
-    replays = [(Path(g), replay_game(Path(g), args.focus, args.label or Path(g).parents[1].name))
+    replays = [(Path(g), replay_game(Path(g), args.focus))
                for g in args.games]
     output.mkdir(parents=True)
     catalog = []
@@ -146,7 +147,6 @@ def main():
     export.add_argument('games', nargs='+')
     export.add_argument('--output', required=True)
     export.add_argument('--focus', default='best', help='best, worst, A, B or a seat 0-3')
-    export.add_argument('--label', help='Replay policy label (default: the run directory name)')
     args = parser.parse_args()
     (cmd_list if args.command == 'list' else cmd_export)(args)
 

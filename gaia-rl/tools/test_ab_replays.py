@@ -35,14 +35,14 @@ class AbReplayTests(unittest.TestCase):
     def test_export_reproduces_scores_and_writes_a_catalog(self):
         root = Path(tempfile.mkdtemp())
         game = fake_game(root)
-        replay = ab_replays.replay_game(game, 'B', 'test')
+        replay = ab_replays.replay_game(game, 'B')
         self.assertIn(replay['metadata']['focus_player'], (1, 3))
-        self.assertIn('B팔 (A 좌석 0,2)', replay['metadata']['policy'])
+        self.assertEqual(replay['metadata']['policy'], '000 / game-0-A02')
         self.assertIsInstance(replay['metadata']['versions'], dict)  # the browser viewer requires it
         out = root/'out'
 
         class Args:
-            games, output, focus, label = [str(game)], str(out), 'best', None
+            games, output, focus = [str(game)], str(out), 'best'
         ab_replays.cmd_export(Args)
         catalog = json.loads((out/'index.json').read_text())['games']
         self.assertEqual(len(catalog), 1)
@@ -55,7 +55,7 @@ class AbReplayTests(unittest.TestCase):
         result['scores']['0'] += 1
         (game/'result.json').write_text(json.dumps(result))
         with self.assertRaises(ValueError):
-            ab_replays.replay_game(game, 'best', 'test')
+            ab_replays.replay_game(game, 'best')
 
 
 if __name__ == '__main__':

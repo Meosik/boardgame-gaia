@@ -1190,6 +1190,9 @@
 - 사이트는 `/ai-replays`를 호스트 폴더 `~/gaia-media/ai-replays`(`.env`의 `GAIA_REPLAY_DIR`)에서 바로 읽는다
   (2026-10-05 볼륨 분리). publish의 `--destination`을 그 폴더로 하면 **배포 없이** 바로 보인다.
   저장소 `gaia-frontend/public/ai-replays`는 기본값일 뿐, 실제 사이트 목록은 `~/gaia-media` 쪽이다.
+- 목록 이름(사용자 2026-10-15 "000 / game-0-A02 초점 -- 이렇게만 해"): 제목 = `<쌍> / <게임 폴더>`, 사이트가 "· 초점 <종족> <점수>점"을 붙임.
+  실험 이름·팔·충전은 제목에 넣지 않는다(`--label` 삭제, lab 자동 게시도 같음). 팔은 게임 폴더 이름의 A 좌석(`A02` = 좌석 0·2가 A).
+  봇에서는 저장소 루트 기준 경로로: `GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/ab_replays.py export …`.
 
 ## 5c. 수 하나 분석 ("왜 그 수를 뒀나")
 
