@@ -310,7 +310,7 @@ class TechWhenTests(unittest.TestCase):
         self.assertEqual(self.top_tile(faction='Geodens'), 10)             # B18-03 first tiles
 
     def test_later_tiles(self):
-        self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), knowledge=3), 5)
+        self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), knowledge=3), 5)  # tile 7 held back only
         self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,)), 5)  # tile 7 held back, next best
         self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), round_=6), 7)
         self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), gaia=3), 5)   # no Gaia-mine rule (LF2-08)
@@ -381,20 +381,15 @@ class GuideRestTests(unittest.TestCase):
                 'resources': {'ore': 4, 'credits': 6, 'knowledge': knowledge, 'qic': 1}}
 
     def held(self, action, round_=2, **player):
-        with mock.patch.object(tp, '_next_knowledge', return_value=1):
-            return tp._not_yet_more({'round': round_}, self.player(**player), action) is not None
+        return tp._not_yet_more({'round': round_}, self.player(**player), action) is not None
 
-    def test_mines_kept_and_lab_even(self):
+    def test_mines_kept(self):
         ts = {'type': 'Upgrade', 'coord': '0,0', 'to': 'TradingStation'}
         self.assertTrue(self.held(ts))
         self.assertFalse(self.held(ts, mines=3))
         self.assertFalse(self.held(ts, round_=1))
         lab = {'type': 'Upgrade', 'coord': '9,9', 'to': 'ResearchLab'}
-        self.assertFalse(self.held(lab, knowledge=0))        # 0 + 1 + 1 even
-        self.assertTrue(self.held(lab, knowledge=1))
-        with mock.patch.object(tp, '_next_knowledge', return_value=1):
-            twilight = {**self.player(knowledge=1), 'explored_ships': ['Twilight']}
-            self.assertIsNone(tp._not_yet_more({'round': 2}, twilight, lab))
+        self.assertFalse(self.held(lab, knowledge=1))        # no even-knowledge rule (removed)
 
     def test_contested_order(self):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | {'ai': 4}

@@ -568,7 +568,6 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'fed_token': False,
           'pass_booster': False,
           'mines_kept': False,          # GUIDE_REST: ..._when_all_tech (see _not_yet_more, guide_more_scores)
-          'lab_even': False,
           'ore_terraform': False,
           'artifact_vp': False,
           'academy_ahead': False,
@@ -2709,17 +2708,10 @@ def _not_yet_more(state, player, action):
         return 'Rebellion 2 knowledge for a QIC only when it makes 3 QIC'
     if _guide['fed_cap'] and kind == 'FormFederation' and _federations(player) >= FEDERATION_CAP:
         return f'no federation beyond {FEDERATION_CAP}'
-    if kind == 'Upgrade' and (_guide['mines_kept'] or _guide['lab_even']):
+    if _guide['mines_kept'] and kind == 'Upgrade' and round_ >= MINES_KEPT_FROM:
         now = next((_kind(s) for s in player['structures'] if str(s['hex']) == str(action.get('coord'))), None)
-        mines = sum(_kind(s) == 'Mine' for s in player['structures'])
-        if (_guide['mines_kept'] and now == 'Mine' and round_ >= MINES_KEPT_FROM
-                and mines <= MINES_KEPT):
+        if now == 'Mine' and sum(_kind(s) == 'Mine' for s in player['structures']) <= MINES_KEPT:
             return f'{MINES_KEPT} mines kept on the board'
-        # Not after entering Twilight (user 2026-10-15): its 1-knowledge range action uses an odd knowledge.
-        if (_guide['lab_even'] and now == 'TradingStation' and action.get('to') == 'ResearchLab'
-                and 'Twilight' not in (player.get('explored_ships') or [])
-                and round_ < 6 and (player['resources']['knowledge'] + _next_knowledge(state, player) + 1) % 2):
-            return 'a lab when it makes the next round knowledge even'
     if _guide['ore_terraform'] and kind == 'Build' and _ore_steps(state, player, action):
         return 'no terraforming paid with 3 ore a step'
     return None
@@ -2734,13 +2726,6 @@ def _ore_steps(state, player, action):
         return False
     gap = abs(RING.index(home)-RING.index(planet['planet_type']))
     return min(gap, 7-gap) > 0 and ORE_PER_STEP[player['research_tracks']['terraforming']] >= ORE_PER_PAID_STEP
-
-
-def _next_knowledge(state, player):
-    try:
-        return _value.production(state, player, include_booster=False)[2]
-    except (KeyError, TypeError):
-        return 0
 
 
 def _federations(player):
@@ -2899,7 +2884,6 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all(seed, **kwargs):
 #   4돈/4충전"); any other faction one of B18-03's first tiles "1광석1QIC·4충전·4돈" (4, 10, 3) or the
 #   Lost Fleet 1 ore 3 knowledge tile 13 that LF2-03 puts above 1 ore 1 QIC; from an Academy the
 #   1 knowledge 1 credit tile 5 (B18-03 "아카데미면 1지식1돈");
-# - tile 5 (1 knowledge 1 credit income) when the next income's knowledge is odd (B3-T3);
 # - not yet: tile 7 (7 VP) before round 6 (B3-T8 "최후반 점수 수단", LF2-09 "함대 입장 점수를 벌려고 7점
 #   기술을 집지 말 것"), tile 9 (knowledge per planet type) in rounds 1-2 (B3-T7 "초반엔 손해", LF2-04
 #   "중반에 얻는 즉발 기술"), the +1 range tile 12 from round 3 or at Navigation 2 (LF2-06 "극초반에만
@@ -2909,10 +2893,11 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all(seed, **kwargs):
 # Not in: the Gaia-mine tile 8 early (B3-T9 "가이아 테크면 일찍", "의회 먼저 지은 테란은 첫 번째로") —
 # LF2-08 and T01: in Lost Fleet "가이아 테크여도 끝까지 안 먹는 경우가 많음"; tile 6 before the first
 # federation (B3-T6 names no state the ranking can check); SH3-03's immediate tile when it builds one
-# more mine this round (needs the round plan).
+# more mine this round (needs the round plan); even knowledge (B3-T3 tile 5, B2-14 the lab) — removed by
+# the user (2026-10-15): base-game advice, and in Lost Fleet an odd knowledge has uses (C026: Twilight
+# 1-knowledge range, the 1 ore 3 knowledge tile).
 TECH_FIRST = {'Terrans': (10,), 'Taklons': (10,), 'Xenos': (3, 10)}
 TECH_FIRST_OTHER = (4, 10, 3, 13)
-EVEN_KNOWLEDGE_TILE = 5
 ACADEMY_FIRST_TILE = 5
 RANGE_TILE = 12
 TECH_FROM_ROUND = {7: 6, 9: 3}   # tile: first round it may lead
@@ -2937,8 +2922,6 @@ def _tech_wanted(state, player, academy=False):
             and (player['faction'] in GAIA_TILE_FACTIONS
                  or any(t.get('condition') == 'MostGaiaPlanets' for t in state.get('final_scoring_tiles', [])))):
         wanted.append(((GAIA_MINE_TILE,), 'Gaia-mine tile (SH1-04)'))
-    if _value.production(state, player, include_booster=False)[2] % 2:
-        wanted.append(((EVEN_KNOWLEDGE_TILE,), 'even knowledge income'))
     return wanted
 
 
@@ -3071,8 +3054,7 @@ AHEAD = 0.001
 # GUIDE_REST (user 2026-10-15 "일단 나머지 적용해": what guide_more had left out, read as follows):
 # - mines_kept: from round 2 no mine upgraded while 2 or fewer mines stand (B2-05 "광산 2개는 항상
 #   유지"; read as mines on the board — round 1 openings upgrade a starting mine, so not then);
-# - lab_even: a trading station to a lab only when the knowledge held plus the next income (+1 from
-#   the lab) is even (B2-06 "다음 라운드 지식이 짝수가 되게"; rule 7 of the timing list);
+# - (lab_even, B2-06 "다음 라운드 지식이 짝수가 되게", was here; removed by the user 2026-10-15, see tech_when);
 # - ore_terraform: no Build paying 3 ore a terraforming step (SH3-02 "광석을 쓰는 깡 테라포밍은 절대
 #   하지 말 것"; the frozen power_purpose's "expensive" line);
 # - artifact_vp: a VP artifact worth 9 VP or more goes first (SH1-08 "9점 이상이면 좋고", LF1-11 "9점이면
@@ -3084,7 +3066,7 @@ AHEAD = 0.001
 #   still plays; their scores are handed out in that order (root decision only).
 # Still not in: final and round goals (the frozen value already counts the VP a move scores now;
 # SH1-09/B20-01 "미션을 과하게 신경쓰지 말 것"), the Gaia-mine tile (LF2-08 over SH1-04).
-GUIDE_REST = ('mines_kept', 'lab_even', 'ore_terraform', 'artifact_vp', 'academy_ahead', 'contested_order')
+GUIDE_REST = ('mines_kept', 'ore_terraform', 'artifact_vp', 'academy_ahead', 'contested_order')
 MINES_KEPT, MINES_KEPT_FROM = 2, 2
 ORE_PER_PAID_STEP = 3
 ARTIFACT_VP = 9
