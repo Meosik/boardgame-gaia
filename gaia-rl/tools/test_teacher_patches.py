@@ -404,6 +404,27 @@ class GuideRestTests(unittest.TestCase):
         self.assertGreater(lifted[1][0], lifted[0][0])
 
 
+class GuideFinalTests(unittest.TestCase):
+    def setUp(self):
+        self.saved = dict(tp._guide)
+        tp._guide.update(dict.fromkeys(tp.GUIDE_FINAL, True))
+        self.addCleanup(lambda: tp._guide.update(self.saved))
+
+    def test_holds(self):
+        state = {'round': 5, 'board': {'hexes': {'1,1': {'planet': {'planet_type': 'Asteroid', 'is_gaia_formed': False}}}}}
+        player = {'faction': 'Geodens', 'booster': 6, 'structures': [], 'resources': {}}
+        self.assertIsNotNone(tp._not_yet_more(state, player, {'type': 'Build', 'coord': '1,1'}))
+        self.assertIsNone(tp._not_yet_more(state, {**player, 'booster': 9}, {'type': 'Build', 'coord': '1,1'}))
+        self.assertIsNotNone(tp._not_yet_more(state, player, {'type': 'ExploreSpaceship', 'ship': 'Twilight'}))
+        self.assertIsNone(tp._not_yet_more({**state, 'round': 4}, player, {'type': 'ExploreSpaceship', 'ship': 'Twilight'}))
+
+    def test_mine_tile_without_mines_in_hand(self):
+        tracks = {t: 0 for t in tp.TRACK_KEYS.values()}
+        full = {'structures': [{'kind': 'Mine', 'hex': f'{i},0'} for i in range(8)], 'research_tracks': tracks}
+        self.assertTrue(tp._tech_held_back({'round': 3}, 11, full))
+        self.assertFalse(tp._tech_held_back({'round': 3}, 11, {**full, 'structures': full['structures'][:7]}))
+
+
 class ResearchDefendTests(unittest.TestCase):
     def track(self, new, held, *, kinds=(), structures=(), round_=1, unhurried=None, sure=False, **levels):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | levels

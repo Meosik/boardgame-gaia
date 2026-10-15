@@ -574,7 +574,11 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'contested_order': False,
           'gaia_tile': False,           # GUIDE_LAST: ..._when_all_tech (see _tech_wanted, _guide_last)
           'round_goal': False,
-          'final_mission': False}
+          'final_mission': False,
+          'former_booster': False,      # GUIDE_FINAL: ..._when_all_tech (see _not_yet_more, setup_step_scores)
+          'late_ship': False,
+          'mine_tile': False,
+          'setup_step1': False}
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2714,6 +2718,11 @@ def _not_yet_more(state, player, action):
             return f'{MINES_KEPT} mines kept on the board'
     if _guide['ore_terraform'] and kind == 'Build' and _ore_steps(state, player, action):
         return 'no terraforming paid with 3 ore a step'
+    if (_guide['former_booster'] and player.get('booster') == FORMER_BOOSTER
+            and (kind == 'EclipseAsteroidMine' or (kind == 'Build' and _asteroid(state, action)))):
+        return 'formers kept for the former pass booster this round'
+    if _guide['late_ship'] and kind in SHIP_ENTRIES and round_ >= LATE_SHIP_FROM:
+        return f'no ship entry from round {LATE_SHIP_FROM}: fewer than 3 actions left'
     return None
 
 
@@ -2926,6 +2935,8 @@ def _tech_wanted(state, player, academy=False):
 
 
 def _tech_held_back(state, tile, player=None):
+    if _guide['mine_tile'] and tile == MINE_TILE and player is not None:
+        return sum(_kind(s) == 'Mine' for s in player['structures']) >= MINE_LIMIT
     if tile == RANGE_TILE and player is not None:
         return state['round'] >= 3 or player['research_tracks']['navigation'] >= WHEN_LEVEL
     return state['round'] < TECH_FROM_ROUND.get(tile, 0)
@@ -3300,9 +3311,70 @@ def _guide_last(env, snapshot, lifted, live, act, root):
     return lifted
 
 
-def install_guide_more(names=GUIDE_MORE+GUIDE_REST+GUIDE_LAST):
+# GUIDE_FINAL (user 2026-10-15 "더 넣어야 하지 않나?" — a second pass over the common claims):
+# - former_booster: while holding the former pass booster (engine 6, 3 VP a former at the pass) no
+#   Asteroid mine uses a former up (C035/PG24 "포머를 남겨 부스터 점수를 받는 것과 소행성에 쓰는 것이 충돌");
+# - late_ship: no ship entry from round 5 (SH1-12 "들어가서 액션을 3번 이상 못 하면 가치가 떨어짐"; from round
+#   5 at most two rounds of actions are left);
+# - mine_tile: the 2-terraform mine tile (Lost Fleet 11) held back with no mine left in hand (LF2-05
+#   "남은 광산 재고가 0이면 가치가 0에 수렴");
+# - setup_step1: among starting places of the same kind (next to an opponent or not), one with a free
+#   planet one terraforming step from home within 2 hexes goes first (C017 "2칸 이내 1단계 테라포밍 행성").
+# Left out after this pass: plan-level goals (C001-C003 federation counts, SH5-03/04 fast advanced-tile
+# runs, B2-04 saving for the next round), value claims already priced (LF01/LF02 resources, boosters,
+# tokens, QIC for Gaia), research spread (C006-C008, SH1-10, B19-06/07: the focus rule lost in lab 049),
+# claims about expansion factions or the faction guides, the engine-rule note LF2-14, and coaching-only rows.
+GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1')
+FORMER_BOOSTER = 6
+LATE_SHIP_FROM = 5
+MINE_TILE = 11
+STEP1_HEXES = 2
+
+
+def _step1_near(state, player, coord):
+    """A free planet one terraforming step from home within STEP1_HEXES of coord."""
+    from economy.teacher import RING
+    from strategy_teacher import distance
+    home = _value.HOME.get(player['faction'])
+    if home not in RING:
+        return False
+    for c, cell in state['board']['hexes'].items():
+        planet = cell.get('planet')
+        if (planet and planet['owner'] is None and not cell['structures'] and planet['planet_type'] in RING
+                and distance(c, coord) <= STEP1_HEXES):
+            gap = abs(RING.index(home)-RING.index(planet['planet_type']))
+            if min(gap, 7-gap) == 1:
+                return True
+    return False
+
+
+def setup_step_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    places = [i for i, c in enumerate(snapshot['candidates'])
+              if c['action'].get('type') == 'PlaceStartingStructure' and not blocked(scores[i])]
+    if actor is None or len(places) < 2:
+        return scores
+    player = state['players'][actor]
+    near = _near_places(snapshot, scores)
+    lifted = list(scores)
+    for group in ([i for i in places if i in near], [i for i in places if i not in near]):
+        if len(group) < 2:
+            continue
+        best = max(group, key=lambda i: lifted[i][0])
+        step1 = [i for i in group
+                 if _step1_near(state, player, str(snapshot['candidates'][i]['action']['coord']))]
+        if step1 and best not in step1:
+            _swap(lifted, list(lifted), max(step1, key=lambda i: lifted[i][0]), best,
+                  'one-step planet within 2 (C017)')
+    return lifted
+
+
+def install_guide_more(names=GUIDE_MORE+GUIDE_REST+GUIDE_LAST+GUIDE_FINAL):
     for name in names:
         _guide[name] = True
     _wrap_rank('_not_yet', not_yet_scores)
     _wrap_rank('_leech_when', leech_when_scores)
     _wrap_rank('_guide_more', guide_more_scores)
+    if _guide['setup_step1']:
+        _wrap_rank('_setup_step1', setup_step_scores)
