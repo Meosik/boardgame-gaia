@@ -566,7 +566,13 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'qic_round6': False,
           'fed_design': False,
           'fed_token': False,
-          'pass_booster': False}
+          'pass_booster': False,
+          'mines_kept': False,          # GUIDE_REST: ..._when_all_tech (see _not_yet_more, guide_more_scores)
+          'lab_even': False,
+          'ore_terraform': False,
+          'artifact_vp': False,
+          'academy_ahead': False,
+          'contested_order': False}
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2700,7 +2706,36 @@ def _not_yet_more(state, player, action):
         return 'Rebellion 2 knowledge for a QIC only when it makes 3 QIC'
     if _guide['fed_cap'] and kind == 'FormFederation' and _federations(player) >= FEDERATION_CAP:
         return f'no federation beyond {FEDERATION_CAP}'
+    if kind == 'Upgrade' and (_guide['mines_kept'] or _guide['lab_even']):
+        now = next((_kind(s) for s in player['structures'] if str(s['hex']) == str(action.get('coord'))), None)
+        mines = sum(_kind(s) == 'Mine' for s in player['structures'])
+        if (_guide['mines_kept'] and now == 'Mine' and round_ >= MINES_KEPT_FROM
+                and mines <= MINES_KEPT):
+            return f'{MINES_KEPT} mines kept on the board'
+        if (_guide['lab_even'] and now == 'TradingStation' and action.get('to') == 'ResearchLab'
+                and round_ < 6 and (player['resources']['knowledge'] + _next_knowledge(state, player) + 1) % 2):
+            return 'a lab when it makes the next round knowledge even'
+    if _guide['ore_terraform'] and kind == 'Build' and _ore_steps(state, player, action):
+        return 'no terraforming paid with 3 ore a step'
     return None
+
+
+def _ore_steps(state, player, action):
+    """A plain Build that pays its terraforming steps at 3 ore each (Terraforming level 0)."""
+    from economy.teacher import ORE_PER_STEP, RING
+    planet = (state['board']['hexes'].get(str(action.get('coord'))) or {}).get('planet')
+    home = _value.HOME.get(player['faction'])
+    if not planet or home not in RING or planet['planet_type'] not in RING:
+        return False
+    gap = abs(RING.index(home)-RING.index(planet['planet_type']))
+    return min(gap, 7-gap) > 0 and ORE_PER_STEP[player['research_tracks']['terraforming']] >= ORE_PER_PAID_STEP
+
+
+def _next_knowledge(state, player):
+    try:
+        return _value.production(state, player, include_booster=False)[2]
+    except (KeyError, TypeError):
+        return 0
 
 
 def _federations(player):
@@ -3018,6 +3053,28 @@ TOKEN_AVOID = frozenset({3, 15})           # 8 VP + 2 tokens, unlimited-range mi
 TOKEN_TECH_ROUNDS = (1, 2)
 PASS_EARLY_VP, PASS_LATE_VP, PASS_LATE_FROM = 4, 8, 5
 AHEAD = 0.001
+# GUIDE_REST (user 2026-10-15 "일단 나머지 적용해": what guide_more had left out, read as follows):
+# - mines_kept: from round 2 no mine upgraded while 2 or fewer mines stand (B2-05 "광산 2개는 항상
+#   유지"; read as mines on the board — round 1 openings upgrade a starting mine, so not then);
+# - lab_even: a trading station to a lab only when the knowledge held plus the next income (+1 from
+#   the lab) is even (B2-06 "다음 라운드 지식이 짝수가 되게"; rule 7 of the timing list);
+# - ore_terraform: no Build paying 3 ore a terraforming step (SH3-02 "광석을 쓰는 깡 테라포밍은 절대
+#   하지 말 것"; the frozen power_purpose's "expensive" line);
+# - artifact_vp: a VP artifact worth 9 VP or more goes first (SH1-08 "9점 이상이면 좋고", LF1-11 "9점이면
+#   가져갈 만함"; the gain read from an engine fork, root decision only);
+# - academy_ahead: with two federations and no Academy the best Academy upgrade goes before other
+#   upgrades (LF3-03 "4연방을 할 때 아카데미 1개는 결국 필요하므로 미리");
+# - contested_order: among the moves above passing, level-5 advances and advanced tiles, then QIC
+#   actions, then power actions (B18-06 "5단계·고급 기술 > QIC 액션 > 파워 액션"), while an opponent
+#   still plays; their scores are handed out in that order (root decision only).
+# Still not in: final and round goals (the frozen value already counts the VP a move scores now;
+# SH1-09/B20-01 "미션을 과하게 신경쓰지 말 것"), the Gaia-mine tile (LF2-08 over SH1-04).
+GUIDE_REST = ('mines_kept', 'lab_even', 'ore_terraform', 'artifact_vp', 'academy_ahead', 'contested_order')
+MINES_KEPT, MINES_KEPT_FROM = 2, 2
+ORE_PER_PAID_STEP = 3
+ARTIFACT_VP = 9
+ACADEMY_AHEAD_FEDS = 2
+TOP_LEVEL = 5
 
 
 def _ship_open(state, player):
@@ -3120,10 +3177,57 @@ def guide_more_scores(env, snapshot, scores):
         if round_ >= PASS_LATE_FROM and vp[best] >= PASS_LATE_VP and lifted[best][0] < high:
             lifted[best] = (high+AHEAD, f'{lifted[best][1]}; pass for {vp[best]} VP late (SH1-06, B18-05)',
                             *lifted[best][2:])
+    return _guide_rest(env, snapshot, scores, lifted, live, act)
+
+
+def _guide_rest(env, snapshot, scores, lifted, live, act):
+    """The GUIDE_REST firsts (see guide_more)."""
+    state, actor = snapshot['state'], snapshot['player']
+    player = state['players'][actor]
+    root = not _when_root or _when_root[-1] == snapshot['decision_id']
+    if _guide['artifact_vp'] and root and env is not None:
+        high = max(lifted[i][0] for i in live)
+        for i in live:
+            if act[i].get('type') != 'ExamineArtifact' or act[i].get('artifact') in RESOURCE_ARTIFACTS:
+                continue
+            after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
+            gain = after['state']['players'][actor]['vp'] - player['vp']
+            if gain >= ARTIFACT_VP and lifted[i][0] < high:
+                lifted[i] = (high+AHEAD, f'{lifted[i][1]}; artifact for {gain} VP (SH1-08, LF1-11)', *lifted[i][2:])
+    upgrades = [i for i in live if act[i].get('type') == 'Upgrade']
+    if (_guide['academy_ahead'] and _federations(player) >= ACADEMY_AHEAD_FEDS
+            and not any(_kind(s) == 'Academy' for s in player['structures'])):
+        academy = [i for i in upgrades if isinstance(act[i].get('to'), dict) and 'Academy' in act[i]['to']]
+        if academy:
+            mine, best = max(academy, key=lambda i: lifted[i][0]), max(upgrades, key=lambda i: lifted[i][0])
+            if best not in academy:
+                _swap(lifted, list(lifted), mine, best, 'an Academy ahead of the fourth federation (LF3-03)')
+    if _guide['contested_order'] and root and not all(
+            other['passed'] for i, other in enumerate(state['players']) if i != actor):
+        floor = max((lifted[i][0] for i in live if act[i].get('type') == 'Pass'), default=0.0)
+        tracks = player['research_tracks']
+
+        def rank(i):
+            a, kind = act[i], act[i].get('type')
+            choice = a.get('tech_tile_choice') or {}
+            if ((kind == 'ResearchAdvance' and tracks.get(TRACK_KEYS.get(a.get('track')), 0) == TOP_LEVEL-1)
+                    or choice.get('kind') in ('Advanced', 'LostFleetAdvanced')):
+                return 0
+            if kind in QIC_ACTIONS:
+                return 1
+            return 2 if kind == 'PowerAction' else None
+        ranked = [i for i in live if rank(i) is not None and lifted[i][0] > floor]
+        if len({rank(i) for i in ranked}) > 1:
+            by_score = sorted(ranked, key=lambda i: -lifted[i][0])
+            order = sorted(ranked, key=lambda i: (rank(i), by_score.index(i)))
+            given = list(lifted)
+            for i, source in zip(order, by_score):
+                if i != source:
+                    lifted[i] = (given[source][0], f'{given[i][1]}; contested order (B18-06)', *given[i][2:])
     return lifted
 
 
-def install_guide_more(names=GUIDE_MORE):
+def install_guide_more(names=GUIDE_MORE+GUIDE_REST):
     for name in names:
         _guide[name] = True
     _wrap_rank('_not_yet', not_yet_scores)

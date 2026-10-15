@@ -361,6 +361,44 @@ class GuideMoreTests(unittest.TestCase):
         self.assertGreater(lifted[3][0], lifted[4][0])                      # 6-VP pass booster
 
 
+class GuideRestTests(unittest.TestCase):
+    def setUp(self):
+        self.saved = dict(tp._guide)
+        tp._guide.update(dict.fromkeys(tp.GUIDE_REST, True))
+        self.addCleanup(lambda: tp._guide.update(self.saved))
+
+    def player(self, mines=2, knowledge=0):
+        structures = [{'hex': f'{i},0', 'kind': 'Mine'} for i in range(mines)] + [{'hex': '9,9', 'kind': 'TradingStation'}]
+        return {'player_id': 0, 'faction': 'Geodens', 'structures': structures, 'federation_tokens': [],
+                'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()},
+                'resources': {'ore': 4, 'credits': 6, 'knowledge': knowledge, 'qic': 1}}
+
+    def held(self, action, round_=2, **player):
+        with mock.patch.object(tp, '_next_knowledge', return_value=1):
+            return tp._not_yet_more({'round': round_}, self.player(**player), action) is not None
+
+    def test_mines_kept_and_lab_even(self):
+        ts = {'type': 'Upgrade', 'coord': '0,0', 'to': 'TradingStation'}
+        self.assertTrue(self.held(ts))
+        self.assertFalse(self.held(ts, mines=3))
+        self.assertFalse(self.held(ts, round_=1))
+        lab = {'type': 'Upgrade', 'coord': '9,9', 'to': 'ResearchLab'}
+        self.assertFalse(self.held(lab, knowledge=0))        # 0 + 1 + 1 even
+        self.assertTrue(self.held(lab, knowledge=1))
+
+    def test_contested_order(self):
+        tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | {'ai': 4}
+        players = [{**self.player(), 'research_tracks': tracks, 'passed': False}, {'passed': False}]
+        snapshot = {'player': 0, 'decision_id': 1, 'state': {'round': 3, 'phase': {'ActionPhase': {}}, 'players': players},
+                    'candidates': [{'action': {'type': 'PowerAction', 'id': 3}},
+                                   {'action': {'type': 'ResearchAdvance', 'track': 'ArtificialIntelligence'}},
+                                   {'action': {'type': 'Pass', 'booster_id': 1}}]}
+        scores = [(5.0, 'a'), (3.0, 'b'), (0.0, 'c')]
+        lifted = tp._guide_rest(None, snapshot, scores, list(scores), [0, 1, 2],
+                                {i: c['action'] for i, c in enumerate(snapshot['candidates'])})
+        self.assertGreater(lifted[1][0], lifted[0][0])
+
+
 class ResearchDefendTests(unittest.TestCase):
     def track(self, new, held, *, kinds=(), structures=(), round_=1, unhurried=None, sure=False, **levels):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | levels
