@@ -2715,7 +2715,9 @@ def _not_yet_more(state, player, action):
         if (_guide['mines_kept'] and now == 'Mine' and round_ >= MINES_KEPT_FROM
                 and mines <= MINES_KEPT):
             return f'{MINES_KEPT} mines kept on the board'
+        # Not after entering Twilight (user 2026-10-15): its 1-knowledge range action uses an odd knowledge.
         if (_guide['lab_even'] and now == 'TradingStation' and action.get('to') == 'ResearchLab'
+                and 'Twilight' not in (player.get('explored_ships') or [])
                 and round_ < 6 and (player['resources']['knowledge'] + _next_knowledge(state, player) + 1) % 2):
             return 'a lab when it makes the next round knowledge even'
     if _guide['ore_terraform'] and kind == 'Build' and _ore_steps(state, player, action):

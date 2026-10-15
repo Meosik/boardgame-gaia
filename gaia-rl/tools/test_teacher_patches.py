@@ -392,6 +392,9 @@ class GuideRestTests(unittest.TestCase):
         lab = {'type': 'Upgrade', 'coord': '9,9', 'to': 'ResearchLab'}
         self.assertFalse(self.held(lab, knowledge=0))        # 0 + 1 + 1 even
         self.assertTrue(self.held(lab, knowledge=1))
+        with mock.patch.object(tp, '_next_knowledge', return_value=1):
+            twilight = {**self.player(knowledge=1), 'explored_ships': ['Twilight']}
+            self.assertIsNone(tp._not_yet_more({'round': 2}, twilight, lab))
 
     def test_contested_order(self):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()} | {'ai': 4}
