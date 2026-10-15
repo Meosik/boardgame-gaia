@@ -54,10 +54,24 @@ No errors, timeouts or fallback decisions in the first league run of the full ru
 its maximum (58.3 s) is just under the hard server limit of 60 s. Unsearched decisions 610 vs 638. Decisions: Taklons
 207 → 246 (unsearched 143 → 190), Xenos 275 → 219.
 
-Not measured: research tracks and action counts (`research_counts.py` and `action_counts.py` are refused on the bot).
-To fill in (from `gaia-rl`):
-`GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:tools .venv/bin/python tools/research_counts.py
-~/projects/gaia-lab/gaia-rl/runs/lab-057-when-all-tech --rounds 1-3`.
+Research steps in rounds 1–3 (`research_counts.py --rounds 1-3`, six seats per arm):
+
+| Arm | Faction | TF | Nav | AI | Gaia | Eco | Sci | Total |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| A | Geodens | 0 | 1 | 3 | 9 | 6 | 1 | 20 |
+| B | Geodens | 0 | 1 | 14 | 2 | 7 | 0 | 24 |
+| A | Taklons | 5 | 2 | 5 | 1 | 10 | 2 | 25 |
+| B | Taklons | 1 | 10 | 0 | 2 | 9 | 3 | 25 |
+| A | Terrans | 4 | 0 | 8 | 2 | 8 | 2 | 24 |
+| B | Terrans | 0 | 6 | 2 | 0 | 5 | 0 | **13** |
+| A | Xenos | 4 | 10 | 2 | 4 | 4 | 1 | 25 |
+| B | Xenos | 0 | 10 | 0 | 2 | 6 | 0 | 18 |
+
+B Terrans research about half as much (13 vs 24) and none on Gaia or Terraforming. track_set limits Terrans to
+Navigation, Gaia and Terraforming, and Gaia stays forbidden before round 4 unless two untransformed Transdim planets
+are in reach, so in practice only Navigation is open. B Xenos lose Terraforming, AI and part of Gaia (25 → 18). The two
+factions whose research shrank are the two that lost charges; Geodens moved Gaia → AI and Taklons moved
+TF/AI → Navigation without losing steps. Prime suspect: track_set (with the Terrans Gaia ban). Action counts not run.
 
 Not significant, loss direction carried by Terrans (significant) and Xenos. Per the user's way of working
 ("문제 생기는 부분의 판단은 물어보면 되는 거지"), the next step is to find which rules break Terrans and Xenos —
