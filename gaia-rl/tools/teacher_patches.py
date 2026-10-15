@@ -580,6 +580,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'mine_tile': False,
           'setup_step1': False,
           'track_set': False,           # ..._when_all_tech (see FACTION_TRACKS)
+          'terrans_gaia_cond': False,   # ..._when_all_tech (see _early_terrans_gaia)
+          'tokens_lf': False,           # ..._when_all_tech (see lf_power_value)
           'hold_no_pass': False}        # ..._when_all_tech (see not_yet_scores)
 
 
@@ -1086,8 +1088,16 @@ def _near_sites(state, actor, coord, sites):
 
 
 def _early_terrans_gaia(state, actor):
-    return (state['players'][actor]['faction'] == 'Terrans'
-            and state['round'] < TERRANS_GAIA_FROM_ROUND)
+    player = state['players'][actor]
+    if player['faction'] != 'Terrans' or state['round'] >= TERRANS_GAIA_FROM_ROUND:
+        return False
+    if _guide['terrans_gaia_cond']:
+        # B04's condition ("차원 변형 행성을 충분히 확보하기 전엔 올리지 않음", user 2026-10-15): with two
+        # unformed Transdim planets in reach the Gaia track may go up before round 4 (B18-03's count).
+        free = [c for c, t in _in_reach(state, player, ('Transdim',)).items()
+                if not (state['board']['hexes'][c]['planet'] or {}).get('is_gaia_formed')]
+        return len(free) < WHEN_TRANSDIM
+    return True
 
 
 def _near_places(snapshot, scores):
@@ -1699,7 +1709,11 @@ def lf_power_value(state, player):
     if player['faction'] == 'Terrans':
         charges += power['gaia_forming']
     tokens = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3')) + power['gaia_forming']
-    return gv.to_vp(state, charges + gv.TOKEN*min(tokens, gv.tokens_needed(player)))
+    if not _guide['tokens_lf']:
+        tokens = min(tokens, gv.tokens_needed(player))
+    # tokens_lf (user 2026-10-15): no cap at B02's need — LF1-02 "파워 토큰이 많아도 방해만 되지 않음,
+    # 기회가 될 때 늘려두면 도움" (Gaia use, Asteroids, artifacts); each token at the LF01 price.
+    return gv.to_vp(state, charges + gv.TOKEN*tokens)
 
 
 GAIA_TOKENS = (255, 6, 6, 4, 3, 3)   # rulebook: tokens per Gaia former by Gaia track level
@@ -2444,12 +2458,6 @@ def research_when_scores(env, snapshot, scores, *, track_of=None, rounds=WHEN_RO
     if not groups:
         return scores
     track = (track_of or research_when_track)(state, actor)
-    faction = state['players'][actor].get('faction')
-    if track is not None and _guide['track_set'] and faction in FACTION_TRACKS and state['round'] < TRACK_FREE_ROUND:
-        # track_set wins: a timing rule only picks among the faction's own tracks.
-        own = [t for t in ((track,) if isinstance(track, str) else track)
-               if TRACK_KEYS.get(t) in FACTION_TRACKS[faction]]
-        track = tuple(own) or None
     if track is None:
         return scores
     lifted = list(scores)
@@ -2730,10 +2738,6 @@ def _not_yet_more(state, player, action):
         return 'its free mine needs a mine in hand'
     if _guide['late_ship'] and kind in SHIP_ENTRIES and round_ >= LATE_SHIP_FROM:
         return f'no ship entry from round {LATE_SHIP_FROM}: fewer than 3 actions left'
-    if (_guide['track_set'] and kind in ('ResearchAdvance', 'EclipseResearchBoost') and round_ < TRACK_FREE_ROUND
-            and player.get('faction') in FACTION_TRACKS
-            and TRACK_KEYS.get(action.get('track')) not in FACTION_TRACKS[player['faction']]):
-        return f'{player["faction"]} research stays on its tracks'
     return None
 
 
@@ -3114,7 +3118,7 @@ AHEAD = 0.001
 #   still plays; their scores are handed out in that order (root decision only).
 # Still not in: final and round goals (the frozen value already counts the VP a move scores now;
 # SH1-09/B20-01 "미션을 과하게 신경쓰지 말 것"), the Gaia-mine tile (LF2-08 over SH1-04).
-GUIDE_REST = ('mines_kept', 'ore_terraform', 'artifact_vp', 'academy_ahead', 'contested_order')
+GUIDE_REST = ('ore_terraform', 'artifact_vp', 'academy_ahead', 'contested_order')
 MINES_KEPT, MINES_KEPT_FROM = 2, 2
 ORE_PER_PAID_STEP = 3
 ARTIFACT_VP = 9
@@ -3232,18 +3236,25 @@ def guide_more_scores(env, snapshot, scores):
             lifted[best] = (high+AHEAD, f'{lifted[best][1]}; pass for {vp[best]} VP late (SH1-06, B18-05)',
                             *lifted[best][2:])
     if _guide['track_set'] and round_ < TRACK_FREE_ROUND and player['faction'] in FACTION_TRACKS:
-        tracks, groups = FACTION_TRACKS[player['faction']], {}
+        tracks, groups = _faction_tracks(state, player), {}
+        research = [i for i in live if act[i].get('type') == 'ResearchAdvance']
         for i in live:
             choice = act[i].get('tech_tile_choice')
             if isinstance(choice, dict) and choice.get('advance_track'):
                 key = json.dumps({**act[i], 'tech_tile_choice': {**choice, 'advance_track': None}}, sort_keys=True)
                 groups.setdefault(key, []).append(i)
-        for group in groups.values():
+        for group in [research, *groups.values()]:
+            if len(group) < 2:
+                continue
             best = max(group, key=lambda i: lifted[i][0])
-            own = [i for i in group if TRACK_KEYS.get(act[i]['tech_tile_choice']['advance_track']) in tracks]
-            if own and best not in own:
+            if 'research when' in lifted[best][1]:
+                continue   # a situational rule chose this track (user: "트랙은 언제나 상황 맞춰가는 거")
+            track = act[best].get('track') or act[best]['tech_tile_choice']['advance_track']
+            own = [i for i in group if TRACK_KEYS.get(act[i].get('track')
+                                                     or act[i]['tech_tile_choice']['advance_track']) in tracks]
+            if own and TRACK_KEYS.get(track) not in tracks:
                 _swap(lifted, list(lifted), max(own, key=lambda i: lifted[i][0]), best,
-                      f'{player["faction"]} tile advance on its tracks')
+                      f'{player["faction"]} research on its tracks')
     return _guide_rest(env, snapshot, scores, lifted, live, act)
 
 
@@ -3391,22 +3402,36 @@ def _guide_last(env, snapshot, lifted, live, act, root):
 # - track_set (user, same day: "흩뿌리진 말아야지. 종족마다 좋은 트랙 정해져 있잖아"): before round 6 each
 #   faction advances only its three tracks (SH1-10 "중구난방으로 올리지 말 것 … 트랙 두세 개는 아예 포기",
 #   B19-07 "과학을 제외하면 일반적으로 3트랙 … 올릴 트랙을 초반에 정해 거기만", C008 user "많아야 2–3개");
-#   round 6 is free (B19-07 "테라포밍·인공지능 중 하나는 6R 남는 진보용"). A research move on another track is
-#   held below passing, and a tech tile's free advance takes one of the faction's tracks when it can.
+#   round 6 is free (B19-07 "테라포밍·인공지능 중 하나는 6R 남는 진보용"). Order only, and only as the
+#   default (user, same day: "트랙은 언제나 상황 맞춰가는 거"): when the best research move or tile advance
+#   is on another track and no situational rule (1b and the other "research when" rules) picked it, it
+#   swaps with the best one on the faction's tracks; nothing is held.
 #   The tracks, from the faction guides:
 #   Geodens terraforming, navigation, AI (GE01/B19 "테라 3·항해 2 맞추고 테라 꼭대기 수비하며 인공지능");
 #   Xenos Gaia, navigation, economy (B15-02 "가이아 트랙을 가장 추천 … 항해 1+가이아 2", B15-03 "경제 2");
 #   Taklons navigation, economy, science (B19-05 "가이아 빼고 아무 테크", B10-03 "지식 아카데미 … 선과학",
-#   SH4-06 "항해를 올리거나"); Terrans navigation, Gaia, terraforming (B4-01 "가이아 3단계는 항해 2가 먼저",
-#   B19-02 "가이아 1 주차 후 테라포밍"). Lab 049's focus rule (one track, chosen by level) lost charges;
-#   this one fixes the tracks by faction instead.
+#   SH4-06 "항해를 올리거나"); Terrans navigation, Gaia, economy (B4-01 "가이아 3단계는 항해 2가 먼저", B4-02
+#   "4연방은 경제+큰 건물 4티어"), terraforming instead of economy with the planet-type final mission
+#   (B19-02, B4-02 "행성 종류 미션이면 테라포밍 선점"). Lab 049's focus rule (one track, chosen by level) lost
+#   charges; this one fixes the tracks by faction instead.
+# Also (user 2026-10-15, "제안대로 해"): terrans_gaia_cond — the early Terrans Gaia ban keeps B04's condition;
+# tokens_lf — tokens above B02's need keep their price (LF1-02); mines_kept is dropped (B2-05 unclear).
 FACTION_TRACKS = {'Geodens': ('terraforming', 'navigation', 'ai'),
                   'Xenos': ('gaia', 'navigation', 'economy'),
                   'Taklons': ('navigation', 'economy', 'science'),
-                  'Terrans': ('navigation', 'gaia', 'terraforming')}
+                  'Terrans': ('navigation', 'gaia', 'economy')}
+
+
+def _faction_tracks(state, player):
+    tracks = FACTION_TRACKS[player['faction']]
+    if player['faction'] == 'Terrans' and any(t.get('condition') == 'MostPlanetTypes'
+                                              for t in state.get('final_scoring_tiles', [])):
+        return ('navigation', 'gaia', 'terraforming')
+    return tracks
 TRACK_FREE_ROUND = 6
 HOLD_DEPTH = 100
-GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1', 'track_set', 'hold_no_pass')
+GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1', 'track_set', 'hold_no_pass',
+               'terrans_gaia_cond', 'tokens_lf')
 FORMER_BOOSTER = 6
 LATE_SHIP_FROM = 5
 MINE_TILE = 11

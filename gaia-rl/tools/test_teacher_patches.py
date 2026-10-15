@@ -383,11 +383,9 @@ class GuideRestTests(unittest.TestCase):
     def held(self, action, round_=2, **player):
         return tp._not_yet_more({'round': round_}, self.player(**player), action) is not None
 
-    def test_mines_kept(self):
-        ts = {'type': 'Upgrade', 'coord': '0,0', 'to': 'TradingStation'}
-        self.assertTrue(self.held(ts))
-        self.assertFalse(self.held(ts, mines=3))
-        self.assertFalse(self.held(ts, round_=1))
+    def test_no_mines_kept_or_even_knowledge(self):
+        self.assertNotIn('mines_kept', tp.GUIDE_REST)       # dropped (B2-05 unclear)
+        self.assertFalse(self.held({'type': 'Upgrade', 'coord': '0,0', 'to': 'TradingStation'}))
         lab = {'type': 'Upgrade', 'coord': '9,9', 'to': 'ResearchLab'}
         self.assertFalse(self.held(lab, knowledge=1))        # no even-knowledge rule (removed)
 
@@ -431,12 +429,21 @@ class GuideFinalTests(unittest.TestCase):
             lifted = tp.guide_more_scores(None, snapshot, scores)
         self.assertGreater(lifted[1][0], lifted[0][0])
 
-    def test_track_set(self):
-        player = {'faction': 'Geodens', 'structures': [], 'resources': {}}
-        research = {'type': 'ResearchAdvance', 'track': 'Economy'}
-        self.assertIsNotNone(tp._not_yet_more({'round': 2}, player, research))
-        self.assertIsNone(tp._not_yet_more({'round': 6}, player, research))
-        self.assertIsNone(tp._not_yet_more({'round': 2}, player, {**research, 'track': 'Terraforming'}))
+    def test_track_set_orders_research_unless_a_rule_chose(self):
+        player = {'player_id': 0, 'faction': 'Geodens', 'structures': [], 'tech_tiles': [],
+                  'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()},
+                  'resources': {'ore': 1, 'credits': 1, 'knowledge': 4, 'qic': 0}}
+        snapshot = {'player': 0, 'state': {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]},
+                    'candidates': [{'action': {'type': 'ResearchAdvance', 'track': 'Economy'}},
+                                   {'action': {'type': 'ResearchAdvance', 'track': 'Terraforming'}}]}
+        lifted = tp.guide_more_scores(None, snapshot, [(5.0, 'a'), (3.0, 'b')])
+        self.assertGreater(lifted[1][0], lifted[0][0])
+        lifted = tp.guide_more_scores(None, snapshot, [(5.0, 'a; research when: Economy now'), (3.0, 'b')])
+        self.assertGreater(lifted[0][0], lifted[1][0])
+        terrans = {**player, 'faction': 'Terrans'}
+        self.assertEqual(tp._faction_tracks({}, terrans), ('navigation', 'gaia', 'economy'))
+        mission = {'final_scoring_tiles': [{'condition': 'MostPlanetTypes'}]}
+        self.assertIn('terraforming', tp._faction_tracks(mission, terrans))
 
     def test_mine_tile_without_mines_in_hand(self):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()}
