@@ -3278,10 +3278,21 @@ def form_early_scores(env, snapshot, scores):
         return scores
     forms = [i for i in live if act[i].get('type') in FORM_NORMAL]
     top = max(scores[i][0] for i in live)
-    if not forms or max(scores[i][0] for i in forms) >= top:
+    if not forms:
         return scores
     lifted = list(scores)
+    player = state['players'][actor]
+    need = GAIA_TOKENS[min(player['research_tracks']['gaia'], len(GAIA_TOKENS)-1)]
+    actions = [i for i in live if act[i].get('type') == 'PowerAction']
+    if player['resources']['power']['bowl1'] < need and actions:
+        # The engine takes forming tokens from bowl I first, then the charged bowls (move_power_to_gaia):
+        # spend the charged power on an action first so it comes back to bowl I (user, same day).
+        i = max(actions, key=lambda i: scores[i][0])
+        lifted[i] = (top+AHEAD, f'{scores[i][1]}; power action before Gaia forming (bowl I short)', *scores[i][2:])
+        return lifted
     i = max(forms, key=lambda i: scores[i][0])
+    if scores[i][0] >= top:
+        return scores
     lifted[i] = (top+AHEAD, f'{scores[i][1]}; Gaia forming early (power cycle)', *scores[i][2:])
     return lifted
 
