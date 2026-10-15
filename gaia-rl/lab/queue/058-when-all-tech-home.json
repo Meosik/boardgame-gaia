@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-15 \"그럼 다시 해\"): 057 재실행. A = vm_lf_ts_ships_when_all(기준 스택, 057과 같음), B = when_all_tech + 고향 행성 버그 수정(7f8a085: ore_terraform·setup_step1이 _value.HOME(테란·타클론만)을 써 제노스·기오덴에 작동 안 하던 것). round_goal 유지. 새 시드 6쌍, 3라운드에서 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전), 057(−17.8, Ter −79.3, Xen −48.2)과 비교. 함께 볼 것: 제노스·기오덴 변화, 오류 중단 판, 결정 시간(057 B 최대 58.3초), 결정당 완료 비교 수, research_counts, 리플레이.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-tech-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}
