@@ -572,7 +572,10 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'ore_terraform': False,
           'artifact_vp': False,
           'academy_ahead': False,
-          'contested_order': False}
+          'contested_order': False,
+          'gaia_tile': False,           # GUIDE_LAST: ..._when_all_tech (see _tech_wanted, _guide_last)
+          'round_goal': False,
+          'final_mission': False}
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -2911,6 +2914,12 @@ EVEN_KNOWLEDGE_TILE = 5
 ACADEMY_FIRST_TILE = 5
 RANGE_TILE = 12
 TECH_FROM_ROUND = {7: 6, 9: 3}   # tile: first round it may lead
+# gaia_tile (user 2026-10-15 "그냥 다 넣어"): SH1-04 (Lost Fleet) "가이아 미션이 많거나 글린·테란·아이타처럼
+# 포밍 많은 종족이 먹으면 15–30점 엔진" — tile 8 after the first tile for Terrans (of the four fixed
+# factions the only one named) or with the Gaia-planet final mission; B04/B19-02 "아카데미로 4충전+가이아
+# 3점" agree for Terrans. LF2-08's "확장판에선 약해짐" is the general case these two exceptions leave.
+GAIA_MINE_TILE = 8
+GAIA_TILE_FACTIONS = frozenset({'Terrans'})
 
 
 def _tech_wanted(state, player, academy=False):
@@ -2922,6 +2931,10 @@ def _tech_wanted(state, player, academy=False):
         if academy:
             wanted.append(((ACADEMY_FIRST_TILE,), 'first tile from an Academy'))
         wanted.append((TECH_FIRST_OTHER, 'first tile'))
+    if (_guide['gaia_tile'] and GAIA_MINE_TILE not in player['tech_tiles']
+            and (player['faction'] in GAIA_TILE_FACTIONS
+                 or any(t.get('condition') == 'MostGaiaPlanets' for t in state.get('final_scoring_tiles', [])))):
+        wanted.append(((GAIA_MINE_TILE,), 'Gaia-mine tile (SH1-04)'))
     if _value.production(state, player, include_booster=False)[2] % 2:
         wanted.append(((EVEN_KNOWLEDGE_TILE,), 'even knowledge income'))
     return wanted
@@ -3224,10 +3237,86 @@ def _guide_rest(env, snapshot, scores, lifted, live, act):
             for i, source in zip(order, by_score):
                 if i != source:
                     lifted[i] = (given[source][0], f'{given[i][1]}; contested order (B18-06)', *given[i][2:])
+    return _guide_last(env, snapshot, lifted, live, act, root)
+
+
+# GUIDE_LAST (user 2026-10-15 "그냥 다 넣어": the round and final missions too):
+# - round_goal: among the moves that build, upgrade, form a Gaia planet or advance research, the best
+#   one that scores VP now (the round tile, read from an engine fork) goes ahead of the best of them
+#   (LF3-05 "1R 라운드 보너스를 따라가는 것이 매우 중요", SH1-02 "라운드 미션은 자원을 그대로 점수로 바꿔주는
+#   엔진"); root decision only;
+# - final_mission: from round 4, a player last on both final missions puts first the best move that
+#   raises one of their metrics (SH1-09 "두 미션 모두 꼴찌면 1등이 어려우니 최소 6점 확보"; B20-01, LF3-12
+#   otherwise "과하게 신경쓰지 말 것"); root decision only.
+GUIDE_LAST = ('gaia_tile', 'round_goal', 'final_mission')
+GOAL_MOVES = frozenset({'Build', 'Upgrade', 'GaiaFormation', 'ResearchAdvance', 'RoundBoosterTerraformBuild',
+                        'RoundBoosterRangeBuild', 'TwilightRangeBuild', 'SpaceshipCreditTerraform',
+                        'EclipseAsteroidMine', 'TwilightFreeResearchLab', 'RebellionFreeTradingStation'})
+FINAL_FROM = 4
+
+
+def _final_ranks(state, actor):
+    """[(condition, own metric, last on it)] for the two final missions."""
+    from research_plans.value import final_metric
+    result = []
+    for tile in state.get('final_scoring_tiles', []):
+        try:
+            values = [final_metric(state, p, tile['condition']) for p in state['players']]
+        except (KeyError, TypeError, ValueError):
+            continue
+        result.append((tile['condition'], values[actor], values[actor] < min(v for i, v in enumerate(values) if i != actor)))
+    return result
+
+
+def _guide_last(env, snapshot, lifted, live, act, root):
+    state, actor = snapshot['state'], snapshot['player']
+    if not root or env is None:
+        return lifted
+    player = state['players'][actor]
+    moves = [i for i in live if act[i].get('type') in GOAL_MOVES]
+    if not moves:
+        return lifted
+    forks = {}
+
+    def after(i):
+        if i not in forks:
+            forks[i] = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())['state']
+        return forks[i]
+    floor = max((lifted[i][0] for i in live if act[i].get('type') == 'Pass'), default=None)
+    if _guide['round_goal']:
+        # A tech tile's own VP (tile 7, advanced tiles) is not the round goal: the moves that differ
+        # only in the tile are read through one member taking a standard tile other than 7.
+        groups = {}
+        for i in moves:
+            choice = act[i].get('tech_tile_choice')
+            key = json.dumps({**act[i], 'tech_tile_choice': None}, sort_keys=True) if isinstance(choice, dict) else i
+            groups.setdefault(key, []).append(i)
+        scores_goal = set()
+        for group in groups.values():
+            plain = [i for i in group if not isinstance(act[i].get('tech_tile_choice'), dict)
+                     or (act[i]['tech_tile_choice'].get('kind') == 'Standard'
+                         and act[i]['tech_tile_choice'].get('tile') != 7)]
+            if plain and after(plain[0])['players'][actor]['vp'] > player['vp']:
+                scores_goal.update(group)
+        best = max(moves, key=lambda i: lifted[i][0])
+        scoring = [i for i in scores_goal if floor is None or lifted[i][0] > floor]
+        if scoring and best not in scoring:
+            _swap(lifted, list(lifted), max(scoring, key=lambda i: lifted[i][0]), best,
+                  'scores the round goal (LF3-05, SH1-02)')
+    if _guide['final_mission'] and state['round'] >= FINAL_FROM:
+        from research_plans.value import final_metric
+        ranks = _final_ranks(state, actor)
+        if len(ranks) == 2 and all(last for _, _, last in ranks):
+            raising = [i for i in moves if any(
+                final_metric(after(i), after(i)['players'][actor], c) > own for c, own, _ in ranks)]
+            best = max(moves, key=lambda i: lifted[i][0])
+            if raising and best not in raising:
+                _swap(lifted, list(lifted), max(raising, key=lambda i: lifted[i][0]), best,
+                      'last on both final missions (SH1-09)')
     return lifted
 
 
-def install_guide_more(names=GUIDE_MORE+GUIDE_REST):
+def install_guide_more(names=GUIDE_MORE+GUIDE_REST+GUIDE_LAST):
     for name in names:
         _guide[name] = True
     _wrap_rank('_not_yet', not_yet_scores)

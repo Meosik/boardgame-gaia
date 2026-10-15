@@ -315,6 +315,13 @@ class TechWhenTests(unittest.TestCase):
         self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), round_=6), 7)
         self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,), gaia=3), 5)   # no Gaia-mine rule (LF2-08)
 
+    def test_gaia_tile_for_terrans(self):
+        saved = dict(tp._guide)
+        self.addCleanup(lambda: tp._guide.update(saved))
+        tp._guide['gaia_tile'] = True
+        self.assertEqual(self.top_tile(tiles=(10,)), 8)
+        self.assertEqual(self.top_tile(faction='Geodens', tiles=(2,)), 5)
+
 
 class GuideMoreTests(unittest.TestCase):
     def setUp(self):
