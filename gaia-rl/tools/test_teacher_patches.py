@@ -464,6 +464,20 @@ class GuideFinalTests(unittest.TestCase):
         free = {'type': 'FreeAction', 'kind': 'PowerToCredit', 'count': 1}
         self.assertIsNotNone(tp._faction_hold(state, player('Terrans', 'Mine'), free))
 
+    def test_round1_mine_and_lab_before_passing(self):
+        player = {'player_id': 0, 'faction': 'Terrans', 'tech_tiles': [],
+                  'structures': [{'hex': '0,0', 'kind': 'Mine'}, {'hex': '1,0', 'kind': 'TradingStation'}],
+                  'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()},
+                  'resources': {'ore': 1, 'credits': 1, 'knowledge': 0, 'qic': 0}}
+        snapshot = {'player': 0, 'state': {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player]},
+                    'candidates': [{'action': {'type': 'Build', 'coord': '2,0'}},
+                                   {'action': {'type': 'Upgrade', 'coord': '1,0', 'to': 'ResearchLab'}},
+                                   {'action': {'type': 'Pass', 'booster_id': 1}}]}
+        with mock.patch.object(tp, '_booster_vp', return_value=0):
+            lifted = tp.guide_more_scores(None, snapshot, [(-1.0, 'a'), (-2.0, 'b'), (0.0, 'c')])
+        self.assertGreater(lifted[0][0], lifted[2][0])
+        self.assertGreater(lifted[1][0], lifted[2][0])
+
     def test_mine_tile_without_mines_in_hand(self):
         tracks = {t: 0 for t in tp.TRACK_KEYS.values()}
         full = {'structures': [{'kind': 'Mine', 'hex': f'{i},0'} for i in range(8)], 'research_tracks': tracks}

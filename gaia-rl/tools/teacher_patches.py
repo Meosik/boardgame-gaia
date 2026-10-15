@@ -583,6 +583,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'terrans_gaia_cond': False,   # ..._when_all_tech (see _early_terrans_gaia)
           'faction_more': False,        # ..._when_all_tech (see _faction_hold)
           'adv_immediate': False,       # ..._when_all_tech (see lf_advanced_option)
+          'r1_basics': False,           # ..._when_all_tech (see guide_more_scores, SH3-01/03)
           'tokens_lf': False,           # ..._when_all_tech (see lf_power_value)
           'hold_no_pass': False}        # ..._when_all_tech (see not_yet_scores)
 
@@ -3306,6 +3307,25 @@ def guide_more_scores(env, snapshot, scores):
             for i, source in zip(order, by_score):
                 if i != source:
                     lifted[i] = (given[source][0], f'{given[i][1]}; Taklons power action order (B19-05)', *given[i][2:])
+    if _guide['r1_basics'] and round_ == 1 and passes:
+        # SH3-01 "아카데미 스타트·파이락이 아니면 1R에 최소 광산 1개", SH3-03 "의회 빌드가 아닌 종족의 1R 연구소는
+        # 무조건" (Geodens are the source's Institute faction): before passing in round 1.
+        floor = max(lifted[i][0] for i in passes)
+        built = [_kind(s) for s in player['structures']]
+        starting = R1_START_MINES.get(player['faction'], 2)
+        needs = []
+        if len(built) <= starting and 'Academy' not in built:
+            needs.append(('mine', {'Build', 'RoundBoosterTerraformBuild', 'RoundBoosterRangeBuild',
+                                   'TwilightRangeBuild', 'SpaceshipCreditTerraform', 'EclipseAsteroidMine'}))
+        if player['faction'] != 'Geodens' and not {'ResearchLab', 'Academy'} & set(built):
+            needs.append(('lab', None))
+        for name, kinds in needs:
+            options = [i for i in live if (act[i].get('type') in kinds if kinds else
+                                           act[i].get('type') == 'Upgrade' and act[i].get('to') == 'ResearchLab')]
+            if options and max(lifted[i][0] for i in options) <= floor:
+                best = max(options, key=lambda i: lifted[i][0])
+                lifted[best] = (floor+AHEAD, f'{lifted[best][1]}; round 1 {name} before passing (SH3-01/03)',
+                                *lifted[best][2:])
     if _guide['track_set'] and round_ < TRACK_FREE_ROUND and player['faction'] in FACTION_TRACKS:
         tracks, groups = _faction_tracks(state, player), {}
         research = [i for i in live if act[i].get('type') == 'ResearchAdvance']
@@ -3502,7 +3522,8 @@ def _faction_tracks(state, player):
 TRACK_FREE_ROUND = 6
 HOLD_DEPTH = 100
 GUIDE_FINAL = ('former_booster', 'late_ship', 'mine_tile', 'setup_step1', 'track_set', 'hold_no_pass',
-               'terrans_gaia_cond', 'tokens_lf', 'faction_more', 'adv_immediate')
+               'terrans_gaia_cond', 'tokens_lf', 'faction_more', 'adv_immediate', 'r1_basics')
+R1_START_MINES = {'Xenos': 3}   # starting mines (others 2; engine factions.toml)
 FORMER_BOOSTER = 6
 LATE_SHIP_FROM = 5
 MINE_TILE = 11
