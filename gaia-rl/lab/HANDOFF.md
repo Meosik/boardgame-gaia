@@ -83,6 +83,7 @@
 | 058 | when_all_tech + 고향 행성 수정(7f8a085, 제노스·기오덴에 ore_terraform·setup_step1 작동) — 057 재실행, A = when_all, 새 시드 6쌍, 4R 시작 종료 | **1–3R 충전 −30.6** [−57.8, −3.3](유의, 쌍 6개 중 5개 음수). **Ter −47.5** [−94.9, −0.1](5쌍 음수, 057+058 12쌍 중 11쌍 음수), **Tak −35.4** [−65.6, −5.1](5쌍 음수, 057 +33.5에서 반전), Geo −22.9(±110 잡음), Xenos −16.4(057 −48.2에서 개선, 잡음 범위). 연구: B Ter AI 8→0·경제 7→11, B Tak AI 8→2·가이아 6→0·경제 8→14. 참고 VP Ter +6.3. 오류 0, B 평균 15.2초(1.22×)·**최대 69.9초(hard 한도 60초 초과)** | 기각(묶음 그대로는), 057+058 합산 약 −24. 기준 스택 when_all 유지 |
 | 059 | when_all_tech_fix(058 B + 058 리플레이 수정: ore_free_steps·pass_booster_late·booster_root·convert_when·setup_reach·form_early) — A = when_all, 새 시드 6쌍, 4R 시작 종료 | **1–3R 충전 −35.8** [−74.9, +3.3](쌍 6개 중 5개 음수). Ter −57.3(5쌍 음수, 057–059 18쌍 중 16쌍 음수), Xenos −51.1(B 84·74 vs A 239·251), Tak −25.7, Geo −9.0(p003 −114 빼면 ≈0). 참고 VP Geo **−7.0** [−11.0, −3.0](6좌석 모두 낮음). 오류 0, B 평균 14.9초(1.23×)·최대 51.5초(058 69.9초 → 한도 안) | 유의하지 않음(0 살짝 걸침), 세 번 중 최대 손해. 057–059 합산 약 −28, 테란 약 −61. 기준 스택 when_all 유지 |
 | 060 | **vm_lf_ts_ships vs when_all_tech_fix**(056 이후 세 층 전체) — A = vm_lf_ts_ships, B = 059 B, 새 시드 6쌍, **6R 끝까지** | **1–3R 충전 −25.0** [−41.4, −8.7](유의, 쌍 6개 모두 음수). **Xenos −45.5** [−74.1, −17.0](6쌍 모두 음수), Geo −36.8(4쌍 음수, p000 −146), Ter −23.5(4쌍 음수), Tak +5.7(3:3). 참고 최종 VP +2.2: **Tak +26.8**(유의), Geo +17.2, Ter −1.5, Xen −33.8. 오류 0, B 평균 13.7초(1.15×)·최대 52.7초 | 사전 조건 충족 → **기준 스택을 vm_lf_ts_ships로 되돌리고 PPO 교사로 쓰는 안 제안(사용자 확인 대기)** |
+| 061 | when_all_tech_fix + setup_one_near, 4좌석 같은 교사(관전용), 시드 2개 × 2판, 6R 끝까지 | 48분 뒤 사용자가 중단(SIGTERM, 종료 코드 −15). 측정 없음, 교사는 오류 없이 돌아감 | 중단, 큐는 external로 |
 
 결정은 그대로 두고 속도만 높인 변경도 있다. `fast_teacher.py`에서 Taklons·Terrans 순위를 계산할 때 fork 대신 미리보기 상태를 쓴다. 두 판에서 결정이 동일했고 16~19% 빨라졌다.
 
@@ -1238,6 +1239,9 @@
      **사용자(같은 날) "일단 지금 실험 멈추고, 넣어, 앞으로 fable로 설계"**: 061 큐는 kind external로 바꿔 다시 안 돌게 함(진행 중 프로세스는 사용자가 정지).
      lab 062 큐 `062-ships-cap40` = A vm_lf_ts_ships 20초 vs B 같은 교사 40초(spec `...-ships-cap40.json`), 새 시드 6쌍, stop_round 3.
      봇 모델: `discord_claude.py` command()에 `--model`(기본 claude-fable-5-1, 환경 변수 CLAUDE_MODEL로 바꿈). 되돌리려면 기본값을 고치거나 CLAUDE_MODEL 지정.
+     **061 중단 확인(2026-10-16 17:29)**: 사용자가 pkill, lab이 failed(−15)로 기록. 사이클 문서 `061-all-rules-selfplay-full.md`. 부분 판 4개는 runs/lab-061에 남음.
+     **062 상태**: `lab.py status` 대기, 새 시드 6개 확보(allocate(6)=6). lab watcher가 5분 주기로 자동 시작 — 봇이 따로 시작할 일 없음.
+     062가 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
      봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
