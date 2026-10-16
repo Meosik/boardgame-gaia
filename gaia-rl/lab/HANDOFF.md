@@ -1392,6 +1392,8 @@ GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:baseline-teacher-20260917:tools .venv/bi
 교사는 이전 수를 모두 지켜보지만 그 판의 계획 기억은 없으므로, 실제 수와 다르면 그 점을 감안해 해석한다.
 계획 기억까지 맞추려면 `tools/explain_ab_decisions.py <게임폴더> --arm A|B --steps N ...`(0부터 센 step = 프레임−1)를 쓴다.
 이 도구는 그 팔의 좌석 수를 처음부터 다시 고르게 해서 기억을 재현한다.
+`list_decisions.py`의 첫 열은 **0부터 센 step**(= `--steps` 값, 다시보기 프레임 − 1)이고 네 좌석의 결정을 모두 센다.
+따라서 step 51(제노스) 다음 step 52는 보통 다른 좌석의 결정이다(065에서 52는 기오덴 B의 ChargePower).
 
 ## 6. 디스코드 세션 안전 규칙
 

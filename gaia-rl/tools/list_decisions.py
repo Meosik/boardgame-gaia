@@ -1,6 +1,9 @@
-"""List the moves of a lab/teacher_ab game: frame, round, seat, faction, arm, move.
+"""List the moves of a lab/teacher_ab game: step, round, seat, faction, arm, move.
 
-Frame = decision number in the replay viewer (the --step of explain_decision.py).
+The first column is the 0-based decision step — the --step of explain_decision.py and the
+--steps of explain_ab_decisions.py. The replay viewer's frame number is step + 1
+(explain_ab_decisions prints "step N (frame N+1)"). Steps count every seat's decisions,
+so --steps 52 after a seat-1 move at step 51 is usually another seat's decision.
 
   GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:tools .venv/bin/python tools/list_decisions.py \\
     ~/projects/gaia-lab/gaia-rl/runs/lab-035-.../pair-001/game-0-A23 [--rounds 0-2] [--seat N]
