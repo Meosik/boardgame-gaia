@@ -1302,6 +1302,16 @@
      **다음 제안(사용자 확인 대기, 큐 안 넣음)**: ⓐ 같은 A/B 새 시드 12쌍 재확인(합쳐 18쌍이면 ±30 판정) ⓑ 1AC+2M이 연구소에서 멈추는 이유를 리플레이로
      확인(p000/game-1 좌석 0 = 게시된 관전 리플레이 B 150 vs A 216, p003/game-0 = 완성 판) 뒤 B14 1순위를 광석 여유 조건으로 거를지 결정
      ⓒ 063 배포 조건은 이미 충족이므로 합의 순서대로 former_use A/B → "연방 안 함" 계획을 비교에 넣는 탐색 수정으로 넘어감.
+     **064 리플레이 분석(사용자 "추천대로 진행해", 2026-10-17, 코드 변경 없음)** — 1AC+2M이 연구소에서 멈추는 원인은 광석이 아니라 **목표 재명명**:
+     `bgg_openings/planning.py select_forecast`는 비교한 계획의 rollout이 1R 끝에 실제로 가진 건물 조합을 카탈로그 행에 대응시켜 그것을 목표로 기억한다.
+     p000/game-1 B 결정 0(첫 광산 배치): B14 순서대로 BGG-R1-1AC+2M 하나만 비교했는데 rollout은 광산 2+연구소 1에서 끝남 → 목표가 **1RL+2M**(B14 목록에 없음)으로
+     기록되고, 이후 goals·select_forecast 모두 remembered를 맨 앞에 두므로 1AC+2M은 다시 제안되지 않음(결정 13·25·36·42·48 전부 "kept 1RL+2M").
+     p001/game-0도 결정 16부터 1RL+2M, p003/game-0(유일한 AC 완성)은 같은 식으로 **1AC+1M**이 기억돼 AC까지 감. 즉 B14 순서는 결정 0에서 어느 계획을 먼저 굴릴지만 정하고,
+     기억되는 목표는 rollout이 도달한 모양이다. 부수 관찰: p000/game-1에서 geodens_guide의 PI 계획이 더 높았는데(결정 25: 270 vs 264, 36: 281 vs 264, 53: 313 vs 246) remembered
+     우선 때문에 짐. 결정 53은 기억 재현 시 TS 업그레이드를 고르나 실제 판은 패스(시간 상한 비결정성).
+     도구 주의: `explain_ab_decisions.py`는 요청한 step까지 모든 결정을 실제 교사로 다시 두므로(결정당 최대 20초) 한 판에 수십 분 — 봇 턴(10분)에 한 판·초반 step만, 여러 판 동시 실행 금지.
+     **수정 제안(사용자 확인 대기)**: ⓐ 결정 0에서 B14 목록 3개를 순서대로 모두 비교(지금은 첫 하나) ⓑ select_forecast가 목표를 계획 라벨(1AC+2M)로 기억하고 도달 모양으로
+     바꾸지 않게 — 못 채우면 B14 다음 순위(1RL+1TS+2M)로 넘어가게. 둘 다 순서·탐색 범위 변경, 새 수치 없음. 이후 A = 지금 ships vs B = 수정본, 새 시드 6쌍 A/B.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
