@@ -1228,6 +1228,9 @@
      **lab 061 큐(사용자 "규칙 다 넣고 셋업 조정하고 A 섞인 종족 없이 전부 최선을 다해서 한두 겜만 끝까지", 2026-10-16)**: `061-all-rules-selfplay-full` =
      양 팔 모두 `..._when_all_tech_fix_setup`(when_all_tech_fix + setup_one_near, `_one_near`), 시드 2개 × 2판, stop_round 0. 4좌석 같은 교사라 A/B 수치는 무의미 — 관전용.
      패치 테스트 44개 통과, 새 교사 실제 실행은 lab이 처음. 끝나면 판별 최종 점수·다시보기 게시.
+     **다음 실험 3개 제안(사용자 요청, 2026-10-16, 큐 안 넣음, 모두 A = vm_lf_ts_ships, stop_round 3, 가능하면 12쌍)**: ① vm + setup_one_near(제한 풀기, 규칙 추가 아님)
+     ② vm + 셋업·시작 부스터 결정만 두 수입 rollout(셋업 비교값이 자리와 무관하게 같음 242.14, 결정 수 적어 시간 부담 작음) ③ vm 20초 → 40초 상한(060 A 결정 77%가 비교 미탐색 — 탐색 여유 진단, hard 한도 60초 안).
+     시드 부족 → `find_seeds.py` 먼저.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
