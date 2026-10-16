@@ -1350,6 +1350,9 @@
      **수정안(사용자 확인 대기, 미구현)**: `guide_label_forecast`에서 라벨 유지는 "비교된 가이드 계획의 forecast_r1_buildings가 목표까지 거리를 줄이거나 같을 때"만.
      멀어지면(광산 감소·다른 건물로 샘) 원래 선택(도달 모양 기억)으로 — 가이드 다음 순위로 넘기지 않음. 순서·범위 규칙, 수치·종족 코드 없음.
      그 뒤 A = ships vs B = 수정 label, 064 시드(699682…712850) 6쌍(ⓑ)으로 시험.
+     **step 51 확인(사용자 실행)**: 교역소 업그레이드가 "selected BGG-R1-1RL+5M via BGG-R1-1RL+5M"으로 뽑힘 — 라벨이 살아 있는 채로 TS가 선택됨. 기본 순위 6개에
+     **광산(Build)이 하나도 없음**(닿거나 살 수 있는 자리 없음) → 목표 거리를 줄일 수가 없어 ③ 기본 1위 TS(73.5, penalty 12.4에도 연구 43.5보다 훨씬 높음)로 감.
+     가설 확정: 라벨 유지 + 도달 불가 광산 목표 = 오프닝 모드가 안 끝남. step 52는 기오덴 B(1AC+2M, fallback-no-verified-route — 라벨은 있고 완료 rollout은 없음, 이 판 TS→RL→TS).
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
