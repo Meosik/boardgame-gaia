@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-17 \"일단 고쳐봐\" → \"넣어\"): A = 지금 vm_lf_ts_ships, B = ships_label(가이드 순서의 1R 오프닝을 rollout이 도달한 건물 모양이 아니라 그 라벨 그대로 기억 — 064 리플레이에서 기오덴 1AC+2M이 1RL+2M으로 바뀌어 기억되던 것 수정, 우이쿠 순서 14종족 공통). 새 시드 6쌍, 4R 시작 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전), 기오덴 행을 주로 보되 다른 3종족도 공통 규칙이라 함께 봄. 함께 볼 것: 기오덴 1R 아카데미 완성 수(upgrade_targets.py --rounds 1-1 --faction Geodens), 오류·미탐색 수.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-label-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}

@@ -1323,8 +1323,9 @@
      라벨 규칙이면 첫 도달 가능 라벨이 어차피 뽑혀 비교해도 선택이 안 바뀜. 테스트 `OpeningLabelTests` 3개 추가, 47개 통과. 스모크(ships_label, geo-quartet-699682, 60결정) 오류 없음.
      확인(`explain_ab_decisions.py --spec …ships-label-cap20.json`, 064 p000/game-1 B 결정 0·13·25·36): 목표가 결정 0 "selected 1AC+2M" 뒤 세 결정 모두 "kept 1AC+2M"
      (수정 전 같은 자리: 1RL+2M). 기록된 수를 다시 두는 재현이라 연구소 뒤 아카데미 자금 행동이 실제로 바뀌는지는 A/B에서 봄.
-     **다음(사용자 확인 대기, 큐 안 넣음)**: lab 065 = A ships(`…-ships-cap20.json`) vs B ships_label(`…-ships-label-cap20.json`), 새 시드 6쌍, stop_round 3, 판정 1–3R 충전.
+     **lab 065 큐(사용자 "넣어", 2026-10-17)** `065-ships-label` = A ships(`…-ships-cap20.json`) vs B ships_label(`…-ships-label-cap20.json`), 새 시드 6쌍, stop_round 3, 판정 1–3R 충전.
      함께 볼 것: 기오덴 1R 아카데미 완성 수(`upgrade_targets.py --rounds 1-1 --faction Geodens`), 다른 3종족 변화(공통 규칙이라 영향 가능), 오류·미탐색.
+     끝나면: 사이클 문서 + 결과표 + 여기 갱신. 기오덴 양수·아카데미 완성 증가면 ships_label을 기준 스택 후보로 제안(사용자 확인).
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
