@@ -1241,6 +1241,13 @@
      봇 모델: `discord_claude.py` command()에 `--model`(기본 claude-fable-5-1, 환경 변수 CLAUDE_MODEL로 바꿈). 되돌리려면 기본값을 고치거나 CLAUDE_MODEL 지정.
      **061 중단 확인(2026-10-16 17:29)**: 사용자가 pkill, lab이 failed(−15)로 기록. 사이클 문서 `061-all-rules-selfplay-full.md`. 부분 판 4개는 runs/lab-061에 남음.
      **062 상태**: `lab.py status` 대기, 새 시드 6개 확보(allocate(6)=6). lab watcher가 5분 주기로 자동 시작 — 봇이 따로 시작할 일 없음.
+     **전 종족 교사(사용자 2026-10-16 "슬슬 모든 종족의 교사를 만들 때")** — 현황: 실서버 봇 풀(`dev_game.rs dev_bot_factions`)은 Terrans·Xenos·Taklons·
+     HadschHallas·Geodens·Firaks·Nevlas·Tinkeroids·Moweyds 순서에서 사람 종족(과 뒷면)을 빼고 앞 3개 → 사람이 테란·제노스·타클론을 고를 때만 5번째 이후가 나옴.
+     `teacher_patches.FACTION_TRACKS`(track_set)는 4종족만 있어 다른 종족이면 KeyError — when_all 계열은 4종족 밖에서 못 돈다. vm_lf_ts_ships는 종족별 코드가
+     uiqoo_openings(B04·B10·B15)·Xenos 부스터만이라 fallback 확인 필요. 자료: claims.csv 종족별 행 수 Hadsch 9+B17 3+3, Xenos 11+3, Terrans 6+3, Taklons 5+3,
+     Moweyds 4+1, SpaceGiants 4+1, Darkanians 3+1, Ambas 3, Tinkeroids 2+1, Gleens·Ivits·Lantids·Firaks·BalTaks 2, Itars·Nevlas·Bescods 1. 원문 PDF 로컬에 없는
+     종족 가이드: B05–B09, B11–B13, B16(, B17 미확인). 제안(사용자 답 대기): ① 공용 스택이 전 종족에서 안 죽게(FACTION_TRACKS fallback) ② 종족별로는 오프닝 후보·
+     연구 트랙 3개만 자료에서(순서만) ③ 실서버 풀 라인업 시드 세트 새로 만들어(find_seeds.py) hard 대비 1–3R 충전 A/B ④ 순서 Hadsch → Firaks·Nevlas → Tinkeroids·Moweyds.
      062가 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
      봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
