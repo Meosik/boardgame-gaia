@@ -597,7 +597,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'convert_when': False,        # ..._when_all_tech_fix (see _convert_hold)
           'setup_reach': False,         # ..._when_all_tech_fix (see setup_reach_scores)
           'form_early': False,          # ..._when_all_tech_fix (see form_early_scores)
-          'setup_one_near': False}      # ..._when_all_tech_fix_setup (see _one_near)
+          'setup_one_near': False,      # ..._when_all_tech_fix_setup (see _one_near)
+          'geodens_b14': True}          # False: ..._ships_geodens_prior (1PI+4M first, no B14 opening order)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -915,7 +916,7 @@ SHEDEN_OPENINGS = {
 def uiqoo_opening_order(snapshot, goals, remembered=None):
     faction = snapshot['state']['players'][snapshot['player']]['faction']
     order = (SHEDEN_OPENINGS if _guide.get('sheden_r1') else UIQOO_OPENINGS).get(faction)
-    if not order:
+    if not order or (faction == 'Geodens' and not _guide['geodens_b14'] and not _guide.get('sheden_r1')):
         return goals
     rank = {label: i for i, label in enumerate(order)}
 
@@ -1330,8 +1331,12 @@ def install_guide_r1():
 
         def opening_goals(snapshot, remembered=None):
             # Part 5 (1PI+4M first) is switched off: the Geodens opening order follows B14 alone
-            # (user 2026-10-16 "기오덴 빼줘. 자료 대로 바꿔줘"); geodens_pi4_order stays for reference.
-            return inner_opening_goals(snapshot, remembered)
+            # (user 2026-10-16 "기오덴 빼줘. 자료 대로 바꿔줘"). The prior behaviour stays reachable
+            # for the A/B (geodens_b14 False, lab 064).
+            goals = inner_opening_goals(snapshot, remembered)
+            if remembered is not None or _guide['geodens_b14']:
+                return goals
+            return geodens_pi4_order(snapshot, goals)
         opening_goals.__wrapped__ = getattr(inner_opening_goals, '__wrapped__', inner_opening_goals)
         opening_goals._guide_r1 = True
         planning.goals = opening_goals
@@ -2317,6 +2322,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs):
 def install_former_use():
     _guide['former_use'] = True
     _wrap_rank('_former_use', former_first_scores)
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_geodens_prior(seed, **kwargs):
+    """Teacher factory: ..._ships as it played before 2026-10-16 for Geodens — guide_r1 part 5 (1PI+4M
+    first when ready) on, no B14 opening order. The A arm of lab 064; the other factions are unchanged."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['geodens_b14'] = False
+    return teacher
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_former(seed, **kwargs):

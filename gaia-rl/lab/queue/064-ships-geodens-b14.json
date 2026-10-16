@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-16 \"기오덴 빼줘. 자료 대로\" → \"테스트 굴려봐\"): A = vm_lf_ts_ships 이전 기오덴(1PI+4M 조건부 우선, B14 오프닝 순서 없음, geodens_prior), B = 지금 vm_lf_ts_ships(기오덴 B14 순서: 1AC+2M → 1RL+1TS+2M → 1PI+1TS+2M, 1PI+4M 우선 끔). 4종족 중 기오덴만 다름. 새 시드 6쌍, 4R 시작 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전), 기오덴 행을 주로 봄. 함께 볼 것: 기오덴 1R 건물(아카데미 완성 여부), 오류·미탐색 수.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-geodens-prior-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}

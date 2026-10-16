@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships as it played for Geodens before 2026-10-16: guide_r1 part 5 (1PI+4M first when its BGG-O2 conditions hold) on and no B14 opening order (guide_r1_charge3_lf_more_vm_lf_ts_ships_geodens_prior). Other factions identical to the ships stack.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_geodens_prior",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

@@ -1273,7 +1273,9 @@
      13 매드안드로이드·14 발타크·15 제노스·17 파이락·18 테란·19 하쉬·20 앰바스·21 타클론·22 하이브·23 아이타)이 어잌후 기반 트랙·오프닝과 어긋나는 곳 없음.
      PG08(기오덴 의회 뒤 테라·항해만 서두르면 중후반 경제 붕괴)은 economy 추가를 뒷받침. 확장 4종족은 PG24–25 첫인상뿐(발표자 미플레이) → sheden 기반 트랙은 근거 약함.
      코드 변경 없음.
-     062·063이 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
+     **lab 064 큐(사용자 "테스트 굴려봐", 같은 날)** `064-ships-geodens-b14` = A ships_geodens_prior(`_guide['geodens_b14']=False`: 1PI+4M 우선 켜고 B14 순서 없음 —
+     10-16 이전 기오덴) vs B 지금 ships(B14 순서만). 4종족 중 기오덴만 다름. 새 시드 6쌍(seeds.txt에 710953–730948 10개 추가), stop_round 3. 063 뒤에 돌아감.
+     062·063·064가 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
      봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
