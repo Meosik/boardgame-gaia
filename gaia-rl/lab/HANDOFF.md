@@ -1342,6 +1342,14 @@
      → 라벨 규칙을 "가이드 라벨과 도달 모양이 업그레이드 단계(AC·PI 미도달)로만 다를 때"로 좁힐지 결정(순서·범위 변경, 수치·종족 코드 없음)
      ⓑ 064 시드(699682…712850)로 A = ships vs B = ships_label 재실행 — 수정 없는 스택이 6판 중 5판 연구소에서 멈춘 시드라 수정이 실제로 발동하는 곳에서 시험
      ⓒ ships_label 보류, 합의 순서(former_use A/B → "연방 안 함" 계획 비교 포함)로 넘어감.
+     **065 제노스 원인(사용자가 ⓐ 실행, 2026-10-17, p002/game-0-A03 B step 50 = 프레임 51 PowerToOre)**: 목표 `1RL+5M` "kept"(previous 1RL+5M, observed_completion false)인데
+     그 계획의 rollout 도달 모양은 **광산 3·TS 1·RL 1** — rollout이 5번째 광산을 못 짓고 3,1을 교역소로 올림(목표에서 멀어짐). 비교 2개(목표 계획·current-choice)가
+     첫 수·값(228.8) 모두 같은 동일 rollout이라 항해 연구 계획은 비교 안 됨. 수정 전이면 도달 모양이 기억돼 완료 → 오프닝 모드 종료 → 값 기준(항해 연구, A의 선택).
+     B는 라벨이 살아 있어 매 턴 ① 광산 불가 → ② 파워→광석 → ③ 기본 1위(TS)로 흘러 광석·파워 소모, 2R 광산 0. `distance_to`는 None이 아니라(광산은 원칙상 가능) 탈락 안 함.
+     기오덴 1AC+2M(자원만 모이면 되는 업그레이드)에는 맞고 광산 수 목표에는 틀린 규칙.
+     **수정안(사용자 확인 대기, 미구현)**: `guide_label_forecast`에서 라벨 유지는 "비교된 가이드 계획의 forecast_r1_buildings가 목표까지 거리를 줄이거나 같을 때"만.
+     멀어지면(광산 감소·다른 건물로 샘) 원래 선택(도달 모양 기억)으로 — 가이드 다음 순위로 넘기지 않음. 순서·범위 규칙, 수치·종족 코드 없음.
+     그 뒤 A = ships vs B = 수정 label, 064 시드(699682…712850) 6쌍(ⓑ)으로 시험.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
