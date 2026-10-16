@@ -872,8 +872,8 @@ def guide_values(seed, **kwargs):
 #   B17 HadschHallas: 연구소+광산×4 "무난", 아카데미+광산 (경제 2 필수).
 #   B14 Geodens (user 2026-10-16 "자료랑 다른 부분들 바꿔"): 아카데미+광산+광산 "행성 의회보다 아카데미 스타트가 좋음"
 #       (1AC+2M, needs a home planet within range 3), 연구소+교역소+광산+광산 (1RL+1TS+2M, four home planets),
-#       행성 의회+교역소+광산+광산 "모행성이 없을 때의 기본" (1PI+1TS+2M). guide_r1 part 5 still puts 1PI+4M
-#       first when its BGG-O2 conditions hold (it wraps this order).
+#       행성 의회+교역소+광산+광산 "모행성이 없을 때의 기본" (1PI+1TS+2M). guide_r1 part 5 (BGG-O2 1PI+4M first)
+#       is switched off since the same day ("기오덴 빼줘"), so this order stands alone.
 #   Lost Fleet factions have no BGG table, so planning.goals proposes nothing for them; LOST_FLEET_OPENINGS
 #   (sheden #4 "종족 별 추천 빌드", rank 1 then rank 2 in the article's order, end-of-round-1 buildings) is
 #   turned into the same bgg-opening goals by install_uiqoo_openings.
@@ -1329,10 +1329,9 @@ def install_guide_r1():
         inner_opening_goals = planning.goals
 
         def opening_goals(snapshot, remembered=None):
-            goals = inner_opening_goals(snapshot, remembered)
-            if remembered is not None:
-                return goals
-            return geodens_pi4_order(snapshot, goals)
+            # Part 5 (1PI+4M first) is switched off: the Geodens opening order follows B14 alone
+            # (user 2026-10-16 "기오덴 빼줘. 자료 대로 바꿔줘"); geodens_pi4_order stays for reference.
+            return inner_opening_goals(snapshot, remembered)
         opening_goals.__wrapped__ = getattr(inner_opening_goals, '__wrapped__', inner_opening_goals)
         opening_goals._guide_r1 = True
         planning.goals = opening_goals

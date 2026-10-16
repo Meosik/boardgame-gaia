@@ -1267,6 +1267,8 @@
      `LOST_FLEET_OPENINGS`(sheden #4 빌드)에서 같은 bgg-opening 목표를 만들어 줌(`lost_fleet_opening_goals`, planning.goals가 빈 종족만).
      테스트 1개 고침(기오덴 트랙 밖 예시 Economy → Science). 스모크: 기오덴(geo-quartet-669360)·글린/발타크/모웨이드/틴커로이드(lf-check-900021) 오류 없음.
      063은 이 수정 포함(큐 commit 이후 푸시 — lab은 실행 시점 HEAD를 씀).
+     **사용자 "기오덴 빼줘. 자료 대로"(같은 날)**: guide_r1 5번(1PI+4M 조건부 우선, BGG-O2·사용자 10-06 결정)을 끔 → 기오덴 오프닝은 B14 순서만.
+     함수 `geodens_pi4_order`는 남겨 두고 `install_guide_r1`의 래퍼에서 호출만 제거. 지금 기오덴 종족 코드: geodens_guide(018, B14 기반)·guide_r1 6번(BGG 글의 연구 순서)·UIQOO B14.
      062·063이 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
      봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
