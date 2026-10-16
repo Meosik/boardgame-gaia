@@ -1,0 +1,16 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-17 \"진행해\"): A = 지금 vm_lf_ts_ships, B = ships_label 수정본(가이드 1R 오프닝 라벨은 그 계획의 rollout이 1R 끝에 도달한 모양이 아직 목표로 자랄 수 있을 때(distance_to ≠ None)만 유지, 아니면 원래대로 도달 모양을 기억 — 065에서 제노스 1RL+5M이 1RL+1TS+3M으로 샌 뒤에도 유지돼 광산 반감·−45충전이 난 것 수정, 14종족 공통). 시드는 064의 6개(수정 없는 스택이 6판 중 5판 기오덴 1AC+2M을 연구소에서 멈춘 시드) 재사용, 4R 시작 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전), 기오덴·제노스 행을 주로 봄. 함께 볼 것: 기오덴 1R 아카데미 완성 수(upgrade_targets.py --rounds 1-1 --faction Geodens, 064 B는 1/6), 제노스 1–3R 광산 수(action_counts.py --types Build, 065는 19→9), 오류·미탐색 수.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-label-cap20.json",
+  "seeds": [
+    "geo-quartet-699682",
+    "geo-quartet-703309",
+    "geo-quartet-710953",
+    "geo-quartet-711655",
+    "geo-quartet-712180",
+    "geo-quartet-712850"
+  ],
+  "comparisons": 2,
+  "stop_round": 3
+}

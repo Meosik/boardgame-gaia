@@ -984,10 +984,22 @@ def guide_label_forecast(original, rows, remembered, comparisons):
     moves to the guide's next opening when the current one becomes unreachable (it then
     drops out of planning.goals). Factions without a guide order, and decisions where no
     guide goal was compared, keep the original selection. Order only, no new numbers.
+
+    Lab 065 (Xenos −45 charges, mines halved): the label was also kept when the plan's own
+    rollout had already left the road to it — Xenos 1RL+5M "kept" while the forecast ended
+    round 1 at 1RL+1TS+3M (no mine site in reach, so the rollout upgraded a mine to a second
+    trading station instead), and the opening mode never ended. The label is therefore kept
+    only while the forecast's end-of-round-1 inventory can still grow into the target
+    (planning.distance_to is not None: a lab short of the academy qualifies, a second
+    upgrade chain or more mines than the target does not); otherwise the original selection
+    remembers the inventory actually reached, exactly as the unpatched teacher does.
     """
+    from bgg_openings.catalog import Buildings
+    from bgg_openings.planning import distance_to
     labels = guide_opening_labels(rows[0].faction) if rows else ()
     if not labels:
         return original(rows, remembered, comparisons)
+    faction = rows[0].faction
     rank = {label: i for i, label in enumerate(labels)}
     by_label = {row.label: row for row in rows}
     choices = []
@@ -996,6 +1008,13 @@ def guide_label_forecast(original, rows, remembered, comparisons):
         target = spec.get('target')
         if (spec.get('family') != 'bgg-opening' or target not in rank or target not in by_label
                 or not comparison.get('complete')):
+            continue
+        counts = comparison.get('r1_buildings')
+        try:
+            reached = Buildings(**counts) if counts is not None else None
+        except (TypeError, ValueError):
+            reached = None
+        if reached is None or distance_to(reached, by_label[target].buildings, faction) is None:
             continue
         choices.append((target != remembered, rank[target], order, comparison, by_label[target]))
     if not choices:

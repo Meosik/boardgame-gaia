@@ -607,6 +607,24 @@ class OpeningLabelTests(unittest.TestCase):
         _, opening = tp.guide_label_forecast(original, self.rows, '1RL+1TS+2M', [second, first])
         self.assertEqual(opening.label, '1RL+1TS+2M')
 
+    def test_a_forecast_that_left_the_road_to_the_label_falls_back_to_the_reached_inventory(self):
+        # Lab 065: Xenos 1RL+5M was kept while its rollout ended at 1RL+1TS+3M (a second upgrade
+        # chain), so the teacher chased a mine it could not build. The label now needs a forecast
+        # that can still grow into it; otherwise the frozen rule remembers what was reached.
+        from bgg_openings.catalog import load_catalog
+        from bgg_openings.planning import select_forecast as original
+        xenos = load_catalog()['Xenos']
+        astray = self.forecast('BGG-R1-1RL+5M', '1RL+5M', (3, 1, 1, 0, 0), 228.8)
+        _, opening = tp.guide_label_forecast(original, xenos, '1RL+5M', [astray, astray])
+        self.assertEqual(opening.label, '1RL+1TS+3M')          # what the unpatched teacher remembers
+        self.assertEqual(opening.label, original(xenos, '1RL+5M', [astray, astray])[1].label)
+        on_the_way = self.forecast('BGG-R1-1RL+5M', '1RL+5M', (4, 0, 1, 0, 0), 228.8)
+        _, opening = tp.guide_label_forecast(original, xenos, '1RL+5M', [on_the_way])
+        self.assertEqual(opening.label, '1RL+5M')              # one mine short: still on the road
+        too_many = self.forecast('BGG-R1-1AC+2M', '1AC+2M', (3, 0, 1, 0, 0), 250.0)
+        _, opening = tp.guide_label_forecast(original, self.rows, None, [too_many])
+        self.assertEqual(opening.label, '1RL+3M')              # more mines than the label: reached shape
+
     def test_without_a_guide_goal_or_a_guide_order_the_original_decides(self):
         from bgg_openings.planning import select_forecast as original
         pi = self.forecast('Geodens-PI@1,-2', None, (3, 0, 0, 1, 0), 280.6, family='colony')

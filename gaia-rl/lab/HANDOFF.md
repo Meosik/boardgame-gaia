@@ -1353,6 +1353,13 @@
      **step 51 확인(사용자 실행)**: 교역소 업그레이드가 "selected BGG-R1-1RL+5M via BGG-R1-1RL+5M"으로 뽑힘 — 라벨이 살아 있는 채로 TS가 선택됨. 기본 순위 6개에
      **광산(Build)이 하나도 없음**(닿거나 살 수 있는 자리 없음) → 목표 거리를 줄일 수가 없어 ③ 기본 1위 TS(73.5, penalty 12.4에도 연구 43.5보다 훨씬 높음)로 감.
      가설 확정: 라벨 유지 + 도달 불가 광산 목표 = 오프닝 모드가 안 끝남. step 52는 기오덴 B(1AC+2M, fallback-no-verified-route — 라벨은 있고 완료 rollout은 없음, 이 판 TS→RL→TS).
+     **수정 구현(사용자 "진행해", 2026-10-17)**: `guide_label_forecast`에서 가이드 라벨은 **그 계획의 forecast r1_buildings가 아직 목표로 자랄 수 있을 때
+     (`planning.distance_to` ≠ None)만** 유지. 연구소에서 멈춘 1AC+2M(거리 1)은 유지, 두 번째 업그레이드 줄(1RL+1TS+3M vs 1RL+5M)이나 목표보다 많은 광산은 탈락 →
+     원래 선택(도달 모양 기억, 수정 없는 교사와 동일). 가이드 다음 순위로 넘기지 않음. 순서·범위 규칙, 수치·종족 코드 없음. 공장·spec 이름은 ships_label 그대로(065 B는 커밋 9c34c94 시점 코드).
+     테스트 `OpeningLabelTests` 1개 추가(제노스 1RL+5M → 1RL+1TS+3M 기억, 광산 1개 모자람은 유지, 광산 초과는 도달 모양), 모듈 전체 통과.
+     **lab 066 큐** `066-ships-label-reachable` = A ships vs B ships_label(수정본), **064 시드 6개 재사용**(수정 없는 스택이 5/6 기오덴 연구소 정지), stop_round 3, 판정 1–3R 충전.
+     함께 볼 것: 기오덴 1R 아카데미 완성(064 B 1/6), 제노스 1–3R 광산(065 19→9), 오류·미탐색. 끝나면 사이클 문서 + 결과표 + 여기 갱신.
+     기오덴 아카데미 증가·제노스 광산 회복·전체 손해 없음이면 ships_label을 기준 스택 후보로 제안(사용자 확인).
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
