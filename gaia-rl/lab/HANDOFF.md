@@ -84,6 +84,7 @@
 | 059 | when_all_tech_fix(058 B + 058 리플레이 수정: ore_free_steps·pass_booster_late·booster_root·convert_when·setup_reach·form_early) — A = when_all, 새 시드 6쌍, 4R 시작 종료 | **1–3R 충전 −35.8** [−74.9, +3.3](쌍 6개 중 5개 음수). Ter −57.3(5쌍 음수, 057–059 18쌍 중 16쌍 음수), Xenos −51.1(B 84·74 vs A 239·251), Tak −25.7, Geo −9.0(p003 −114 빼면 ≈0). 참고 VP Geo **−7.0** [−11.0, −3.0](6좌석 모두 낮음). 오류 0, B 평균 14.9초(1.23×)·최대 51.5초(058 69.9초 → 한도 안) | 유의하지 않음(0 살짝 걸침), 세 번 중 최대 손해. 057–059 합산 약 −28, 테란 약 −61. 기준 스택 when_all 유지 |
 | 060 | **vm_lf_ts_ships vs when_all_tech_fix**(056 이후 세 층 전체) — A = vm_lf_ts_ships, B = 059 B, 새 시드 6쌍, **6R 끝까지** | **1–3R 충전 −25.0** [−41.4, −8.7](유의, 쌍 6개 모두 음수). **Xenos −45.5** [−74.1, −17.0](6쌍 모두 음수), Geo −36.8(4쌍 음수, p000 −146), Ter −23.5(4쌍 음수), Tak +5.7(3:3). 참고 최종 VP +2.2: **Tak +26.8**(유의), Geo +17.2, Ter −1.5, Xen −33.8. 오류 0, B 평균 13.7초(1.15×)·최대 52.7초 | 사전 조건 충족 → **기준 스택을 vm_lf_ts_ships로 되돌리고 PPO 교사로 쓰는 안 제안(사용자 확인 대기)** |
 | 061 | when_all_tech_fix + setup_one_near, 4좌석 같은 교사(관전용), 시드 2개 × 2판, 6R 끝까지 | 48분 뒤 사용자가 중단(SIGTERM, 종료 코드 −15). 측정 없음, 교사는 오류 없이 돌아감 | 중단, 큐는 external로 |
+| 062 | **vm_lf_ts_ships 20초 vs 40초 상한**(규칙·값 동일, 탐색 시간만) — 새 시드 6쌍, 4R 시작 종료 | **1–3R 충전 +11.5** [−4.7, +27.8]. Geo +22.9(p003 +116·p004 −82), Ter +23.7(p001 +108), Tak +0.4, Xenos −0.9. 쌍 4개 양수. 참고 VP −0.5. 오류 0, B 평균 19.5초(1.65×)·중앙값 19.0초·p90 40.2초·최대 43.7초(한도 60초 안). 비교 미탐색 645 vs 663(비교 예산 4에 묶여 시간과 무관) | 유의하지 않음, 방향 양수(기오덴·테란만). 배포 조건 미충족, 새 시드 12쌍 재확인 후보 |
 
 결정은 그대로 두고 속도만 높인 변경도 있다. `fast_teacher.py`에서 Taklons·Terrans 순위를 계산할 때 fork 대신 미리보기 상태를 쓴다. 두 판에서 결정이 동일했고 16~19% 빨라졌다.
 
@@ -1240,7 +1241,12 @@
      lab 062 큐 `062-ships-cap40` = A vm_lf_ts_ships 20초 vs B 같은 교사 40초(spec `...-ships-cap40.json`), 새 시드 6쌍, stop_round 3.
      봇 모델: `discord_claude.py` command()에 `--model`(기본 claude-fable-5-1, 환경 변수 CLAUDE_MODEL로 바꿈). 되돌리려면 기본값을 고치거나 CLAUDE_MODEL 지정.
      **061 중단 확인(2026-10-16 17:29)**: 사용자가 pkill, lab이 failed(−15)로 기록. 사이클 문서 `061-all-rules-selfplay-full.md`. 부분 판 4개는 runs/lab-061에 남음.
-     **062 상태**: `lab.py status` 대기, 새 시드 6개 확보(allocate(6)=6). lab watcher가 5분 주기로 자동 시작 — 봇이 따로 시작할 일 없음.
+     **062 결과(2026-10-16, 17:34→19:48)**: 1–3R 충전 **+11.5 [−4.7, +27.8]**, 유의하지 않음, 쌍 6개 중 4개 양수. Geo +22.9·Ter +23.7(둘 다 한두 쌍이 좌우: Geo p003 +116·p004 −82, Ter p001 +108),
+     Tak +0.4·Xen −0.9(효과 없음). B 시간: 평균 19.5초(1.65×), 중앙값 19.0초, p90 40.2초, 최대 43.7초(hard 한도 60초 안). 양 팔 모두 결정의 약 절반이 19–20초 이상 걸리고,
+     40초에서도 10% 이상이 상한에 걸림. "비교 미탐색 결정"(645 vs 663)은 비교 예산 4에 묶인 수라 시간과 무관 — 40초는 4개 비교를 끝까지 돌릴 뿐 후보 수는 안 늘림.
+     해석: 이 스택에서도 탐색량은 양수 방향이지만(023·025와 같은 방향) 크기가 작아 6쌍으로는 판정 불가. 배포 조건(유의한 양수) 미충족 → 대기 한도·병렬화 제안 없음.
+     사이클 문서 `062-ships-cap40.md`. **다음 제안(사용자 확인 대기, 큐 안 넣음)**: ⓐ 같은 A/B를 새 시드 12쌍으로 재확인(062과 합쳐 18쌍이면 +11 크기 판정 가능,
+     시드는 `find_seeds.py`로 먼저 확보) 또는 ⓑ 합의 순서대로 former_use(ships 기준 factory·spec 새로 필요) A/B로 넘어감. 063·064는 큐에서 차례로 돌아가는 중.
      **전 종족 교사(사용자 2026-10-16 "슬슬 모든 종족의 교사를 만들 때")** — 현황: 실서버 봇 풀(`dev_game.rs dev_bot_factions`)은 Terrans·Xenos·Taklons·
      HadschHallas·Geodens·Firaks·Nevlas·Tinkeroids·Moweyds 순서에서 사람 종족(과 뒷면)을 빼고 앞 3개 → 사람이 테란·제노스·타클론을 고를 때만 5번째 이후가 나옴.
      `teacher_patches.FACTION_TRACKS`(track_set)는 4종족만 있어 다른 종족이면 KeyError — when_all 계열은 4종족 밖에서 못 돈다. vm_lf_ts_ships는 종족별 코드가
@@ -1275,7 +1281,7 @@
      코드 변경 없음.
      **lab 064 큐(사용자 "테스트 굴려봐", 같은 날)** `064-ships-geodens-b14` = A ships_geodens_prior(`_guide['geodens_b14']=False`: 1PI+4M 우선 켜고 B14 순서 없음 —
      10-16 이전 기오덴) vs B 지금 ships(B14 순서만). 4종족 중 기오덴만 다름. 새 시드 6쌍(seeds.txt에 710953–730948 10개 추가), stop_round 3. 063 뒤에 돌아감.
-     062·063·064가 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
+     062는 기록 완료(위). 063·064가 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
      봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
