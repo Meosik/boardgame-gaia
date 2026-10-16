@@ -1231,6 +1231,11 @@
      **다음 실험 3개 제안(사용자 요청, 2026-10-16, 큐 안 넣음, 모두 A = vm_lf_ts_ships, stop_round 3, 가능하면 12쌍)**: ① vm + setup_one_near(제한 풀기, 규칙 추가 아님)
      ② vm + 셋업·시작 부스터 결정만 두 수입 rollout(셋업 비교값이 자리와 무관하게 같음 242.14, 결정 수 적어 시간 부담 작음) ③ vm 20초 → 40초 상한(060 A 결정 77%가 비교 미탐색 — 탐색 여유 진단, hard 한도 60초 안).
      시드 부족 → `find_seeds.py` 먼저.
+     **Fable 분석(사용자가 터미널에서 실행, 2026-10-16, 결과만 전달)**: Fable 제안 순서 40초 상한 → 051 셋업 부품 + setup_one_near → former_use(ships 기준 factory 필요).
+     060 A팔 1–3R: 탐색 결정 67%가 20초 상한, 완료 비교 평균 2.5개, 기오덴 가이아 진보 6·포밍 0, 함선 입장 51·낸 VP 255·액션 사용 45%.
+     리플레이 판별: ① 프레임 73 3충전 리치 수락·거절 6.80 동점 → 첫 후보(거절) ② 94·149 가이아 연구(포머 6R까지 미사용, 비교 1개만 완료)
+     ③ 118 위성 6개 연방(토큰 10→4, 4R 이클립스 입장 뒤 패스, 비교 4개 중 3개가 같은 첫 수) ④ 112·123·137 AI 2→5, 기본 순위 테라포밍 0.00(원인 미확인), 항해 0이라 지을 자리 없음.
+     봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
