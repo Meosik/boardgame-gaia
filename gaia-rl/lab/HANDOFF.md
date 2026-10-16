@@ -1250,6 +1250,11 @@
      "종족 별 추천 빌드(초보자용)"(`docs/references/discord/-_.pdf`, 18쪽) 11–18쪽이 **18종족 전부**의 1R 빌드 1·2순위 + 운영 팁(claims.csv에는 SH4-03~07로
      4종족 + "기타 종족" 1행만 들어감). 전 종족 오프닝 후보는 이것으로 바로 만들 수 있음(빌드 이름 → 1R 건물 조합, 3쪽 표). 제안(사용자 답 대기): ① 공용 스택이 전 종족에서 안 죽게(FACTION_TRACKS fallback) ② 종족별로는 오프닝 후보·
      연구 트랙 3개만 자료에서(순서만) ③ 실서버 풀 라인업 시드 세트 새로 만들어(find_seeds.py) hard 대비 1–3R 충전 A/B ④ 순서 Hadsch → Firaks·Nevlas → Tinkeroids·Moweyds.
+     **종족 자료 추가(2026-10-16, 사용자가 PDF 38개를 docs/references/discord/에 복사, 어잌후 B01–B20·LF1–4·sheden 전부·확장 4종족 글·한글 LF 룰북)**:
+     어잌후 B05 글린·B06 앰바스·B07 아이타·B08 네블라·B09 파이락·B11 발타크·B12 하이브·B13 매드안드로이드·B14 기오덴·B16 란티다를 claims.csv에
+     B5-01…B16-05 47행으로 추가(종족별 파워·연구·오프닝·운영·주의, 원문확인, Claude 해석 N). B14 기오덴은 10-05부터 로컬에 있었는데 행이 없었음.
+     요약표 `research/strategy/faction-tracks-openings.md`: 18종족 연구 트랙 우선순위·1R 오프닝(기본 14는 어잌후, 확장 4는 sheden #4 빌드 순위, 트랙 미정).
+     주의: B14는 기오덴 트랙을 terraforming·navigation 먼저, 1R economy/science, AI는 4R~로 둠 — 현재 FACTION_TRACKS (terraforming, navigation, ai)와 다름(사용자 판단).
      062가 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
      봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
