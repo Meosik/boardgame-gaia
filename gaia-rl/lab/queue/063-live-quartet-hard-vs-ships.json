@@ -1,0 +1,22 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-16 \"자료대로 해. 그 외 다 해\"): 전 종족 교사 1단계. 라인업 = 실서버 봇 풀 4종족(Terrans·Xenos·Taklons·HadschHallas — dev_bot_factions가 항상 이 넷에서 봇 3명을 뽑음). A = 실서버 hard(geodens_guide), B = vm_lf_ts_ships + 어잌후 14종족 오프닝 순서(UIQOO_OPENINGS 확장, 하쉬할라 B17: 연구소+광산×4, 아카데미+광산). 하쉬할라는 B 스택이 처음 두는 종족. 시드 live-quartet 12개(lab/seeds-live-quartet.txt, seeds.txt와 분리), 4R 시작 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전). 함께 볼 것: 하쉬할라 오류·미탐색 수, 결정 시간. 유의한 양수면 실서버 교사 교체 제안(배포는 사용자 확인).",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "seeds": [
+    "live-quartet-801319",
+    "live-quartet-804923",
+    "live-quartet-808394",
+    "live-quartet-808458",
+    "live-quartet-808539",
+    "live-quartet-808893",
+    "live-quartet-813918",
+    "live-quartet-813949",
+    "live-quartet-814338",
+    "live-quartet-816841",
+    "live-quartet-816980",
+    "live-quartet-818705"
+  ],
+  "comparisons": 2,
+  "stop_round": 3
+}

@@ -857,10 +857,34 @@ def guide_values(seed, **kwargs):
 #       연구소+광산×5 (1RL+5M).
 #   B15 Xenos §4: 연구소+광산×5 "가장 무난하고 강력" (1RL+5M), 연구소+광산+광산+4정보 (1RL+2M),
 #       아카데미+광산+광산 (1AC+2M).
+#   The other ten base factions (user 2026-10-16 "자료대로 해", claims B5-03 … B16-03; the authors' order,
+#   labels as the BGG catalog spells them — a label the catalog lacks for the faction is never proposed):
+#   B05 Gleens: 교역소+광산×5 "최고" (1TS+5M), 아카데미+광산 (1AC+1M), 연구소+교역소+광산+광산 (1RL+1TS+2M).
+#   B06 Ambas: 연구소+교역소+광산+광산, 연구소+광산×4, 아카데미+광산 "기본" (and +광산), 교역소+광산×6.
+#   B07 Itars: 행성 의회+교역소+광산+광산 (선의회), 아카데미+광산 "기본" (and +광산).
+#   B08 Nevlas: 행성 의회+연구소+광산, 행성 의회+광산+광산 (+4정보), 아카데미+광산 "가장 어려움".
+#   B09 Firaks: 행성 의회+연구소 "최고" (the Institute downgrades the lab: BGG's 1PI+1TS), 연구소+교역소+광산+광산,
+#       연구소+광산+광산 "기본" and its variants.
+#   B11 BalTaks: 아카데미+광산 "가장 좋음", 연구소+광산+광산 (+4정보), 연구소+교역소+광산+광산.
+#   B12 Ivits: 행성 의회+연구소+광산 "거의 항상" (the Institute is the starting structure).
+#   B13 Bescods: 연구소+교역소+광산+광산 "기본", 연구소+광산+광산, 연구소+연구소 (2기술), 아카데미+광산+광산 "가장 안 좋음".
+#   B16 Lantids: 행성 의회+광산+광산 "기본" (+광산 when affordable), 연구소+교역소+광산+광산 (and 연구소+광산+광산).
+#   B17 HadschHallas: 연구소+광산×4 "무난", 아카데미+광산 (경제 2 필수).
+#   Geodens stays with geodens_guide and guide_r1 part 5 (B14/BGG-O2 1PI+4M), not listed here.
 UIQOO_OPENINGS = {
     'Terrans': ('1AC+1M', '1PI+2M', '1PI+1TS+2M', '1RL+2M'),
     'Taklons': ('1AC+2M', '1RL+1TS+2M', '1RL+5M'),
     'Xenos': ('1RL+5M', '1RL+2M', '1AC+2M'),
+    'Gleens': ('1TS+5M', '1AC+1M', '1RL+1TS+2M'),
+    'Ambas': ('1RL+1TS+2M', '1RL+4M', '1AC+1M', '1AC+2M', '1TS+6M'),
+    'Itars': ('1PI+1TS+2M', '1AC+1M', '1AC+2M'),
+    'Nevlas': ('1PI+1RL+1M', '1PI+2M', '1AC+1M'),
+    'Firaks': ('1PI+1TS', '1RL+1TS+2M', '1RL+2M', '1RL+1TS+1M', '1RL+3M'),
+    'BalTaks': ('1AC+1M', '1RL+2M', '1RL+1TS+2M'),
+    'Ivits': ('1PI+1RL+1M', '1PI+1RL+2M', '1PI+1RL'),
+    'Bescods': ('1RL+1TS+2M', '1RL+2M', '2RL', '1AC+2M'),
+    'Lantids': ('1PI+2M', '1PI+3M', '1PI+4M', '1RL+1TS+2M', '1RL+2M'),
+    'HadschHallas': ('1RL+4M', '1AC+1M', '1AC+2M'),
 }
 
 
@@ -3747,10 +3771,27 @@ def _guide_last(env, snapshot, lifted, live, act, root):
 #   charges; this one fixes the tracks by faction instead.
 # Also (user 2026-10-15, "제안대로 해"): terrans_gaia_cond — the early Terrans Gaia ban keeps B04's condition;
 # tokens_lf — tokens above B02's need keep their price (LF1-02); mines_kept is dropped (B2-05 unclear).
+#   The other ten base factions (user 2026-10-16 "자료대로 해", claims B5-02 … B17-02, the authors' priority;
+#   see research/strategy/faction-tracks-openings.md): Gleens navigation then Gaia only; Ambas terraforming,
+#   economy, science; Itars Gaia (or terraforming), economy; Nevlas economy, science, navigation 2; Firaks
+#   economy 4 first, navigation 2, late Gaia; BalTaks Gaia 4 first then two of economy/terraforming/AI; Ivits
+#   economy, science, AI; Bescods science, economy, navigation 2; Lantids navigation 2, science, AI;
+#   HadschHallas economy 2·4, navigation 2, then science. Lost Fleet factions are not listed (no guide), so
+#   track_set and setup_reach leave them alone.
 FACTION_TRACKS = {'Geodens': ('terraforming', 'navigation', 'ai'),
                   'Xenos': ('gaia', 'navigation', 'economy'),
                   'Taklons': ('navigation', 'economy', 'science'),
-                  'Terrans': ('navigation', 'gaia', 'economy')}
+                  'Terrans': ('navigation', 'gaia', 'economy'),
+                  'Gleens': ('navigation', 'gaia'),
+                  'Ambas': ('terraforming', 'economy', 'science'),
+                  'Itars': ('gaia', 'economy', 'terraforming'),
+                  'Nevlas': ('economy', 'science', 'navigation'),
+                  'Firaks': ('economy', 'navigation', 'gaia'),
+                  'BalTaks': ('gaia', 'economy', 'terraforming', 'ai'),
+                  'Ivits': ('economy', 'science', 'ai'),
+                  'Bescods': ('science', 'economy', 'navigation'),
+                  'Lantids': ('navigation', 'science', 'ai'),
+                  'HadschHallas': ('economy', 'navigation', 'science')}
 
 
 def _faction_tracks(state, player):

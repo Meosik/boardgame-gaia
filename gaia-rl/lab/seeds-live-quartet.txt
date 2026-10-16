@@ -1,0 +1,21 @@
+# Seeds whose native lineup is the live bot quartet (Terrans, Xenos, Taklons, HadschHallas):
+# gaia-server dev_bot_factions takes the first three of Terrans, Xenos, Taklons, HadschHallas, … that are
+# not the human's faction or its board-side twin, so live bots are always drawn from these four.
+# tools/find_seeds.py 800000 830000 --prefix live-quartet --factions Terrans,Xenos,Taklons,HadschHallas
+# Not read by lab.py allocate (that is lab/seeds.txt, the geo-quartet set): list them in the queue file.
+live-quartet-801319
+live-quartet-804923
+live-quartet-808394
+live-quartet-808458
+live-quartet-808539
+live-quartet-808893
+live-quartet-813918
+live-quartet-813949
+live-quartet-814338
+live-quartet-816841
+live-quartet-816980
+live-quartet-818705
+live-quartet-822328
+live-quartet-822555
+live-quartet-825328
+live-quartet-826028

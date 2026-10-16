@@ -1255,7 +1255,13 @@
      B5-01…B16-05 47행으로 추가(종족별 파워·연구·오프닝·운영·주의, 원문확인, Claude 해석 N). B14 기오덴은 10-05부터 로컬에 있었는데 행이 없었음.
      요약표 `research/strategy/faction-tracks-openings.md`: 18종족 연구 트랙 우선순위·1R 오프닝(기본 14는 어잌후, 확장 4는 sheden #4 빌드 순위, 트랙 미정).
      주의: B14는 기오덴 트랙을 terraforming·navigation 먼저, 1R economy/science, AI는 4R~로 둠 — 현재 FACTION_TRACKS (terraforming, navigation, ai)와 다름(사용자 판단).
-     062가 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
+     **전 종족 1단계 실행(사용자 "자료대로 해. 그 외 다 해", 2026-10-16)**: ① `UIQOO_OPENINGS` 14종족(어잌후 순서, 기오덴은 geodens_guide·guide_r1 5번 유지, 카탈로그에
+     없는 라벨은 자동 무시) — vm_lf_ts_ships 스택에 바로 적용됨(guide_values_openings 경유). ② `FACTION_TRACKS` 14종족(when_all_tech 계열 track_set·setup_reach에만
+     쓰임, 확장 4종족은 없음 → 규칙 건너뜀; 원래 KeyError 아니었음 — `in FACTION_TRACKS` 가드 있음). 기오덴은 B19 (terraforming, navigation, ai) 유지.
+     ③ 실서버 봇은 `dev_bot_factions` 순서상 **항상 Terrans·Xenos·Taklons·HadschHallas 넷에서만** 뽑힘(사람 종족·뒷면 제외 후 앞 3개) → 실전 미학습 종족은 하쉬할라뿐.
+     시드 `lab/seeds-live-quartet.txt` 16개(find_seeds 800000–830000, allocate는 안 읽음 — 큐에 명시). 패치 테스트 44 통과, 스모크(ships, live-quartet-801319, 80결정) 오류 없음.
+     **lab 063 큐** `063-live-quartet-hard-vs-ships` = A hard vs B vm_lf_ts_ships, live-quartet 12시드(6쌍), stop_round 3. 062 뒤에 돌아감. 유의한 양수면 실서버 교사 교체 제안.
+     062·063이 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
      봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
