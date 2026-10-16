@@ -1222,6 +1222,9 @@
      **제안(사용자 확인 대기, 큐 안 넣음)**: ① 기준 스택을 vm_lf_ts_ships로 되돌리고 PPO 교사로(BC 연결·보상 1–3R 충전 정할 것).
      ② 묶음 쪼개기는 vm_lf_ts_ships 위에서: 061 = A vm_lf_ts_ships vs B vm_lf_ts_ships_when_all(056 층만), 새 시드 6쌍, stop_round 3 —
      056(−16.6) 재확인으로 손해가 첫 층에서 오는지 본다. ③ B 타클론 최종 VP +26.8은 결과 보고 고른 것이라 새 시드 확인 전엔 근거 아님.
+     **셋업 상대 인접(사용자, 2026-10-16 060 리플 보며 "모든 셋업이 다른 종족 근처일 필요 없음, 교역소 올릴 건물만 인접하면 됨")**: vm 스택은
+     `guide_r1_scores`(teacher_patches.py 1152)가 거리 2 안 상대 자리가 하나라도 있으면 **매 배치마다** 나머지 자리를 차단(051 setup_soft는 차단 대신 먼저, 미채택).
+     수정안(사용자 답 대기): 내 시작 건물 중 하나가 이미 상대 거리 2 안이면 이후 배치는 차단·우선 없이 기본 순위·비교에 맡김.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
