@@ -1,0 +1,35 @@
+{
+ "name": "061-all-rules-selfplay-full",
+ "kind": "ab",
+ "status": "failed",
+ "note": "사용자(2026-10-16 \"점수 좀 낮더라도 규칙을 다 넣어보고 아까 셋업도 좀 조정하고 A 섞인 종족 없이 전부 최선을 다해서 한 두겜만 끝까지\"): 4좌석 모두 같은 교사 = when_all_tech_fix + setup_one_near(내 건물 하나가 상대 거리 2 안이면 이후 시작 배치는 상대 근처 제한 없음). 양 팔이 같은 교사라 A/B 판정은 의미 없음 — 다시보기 관전용. 시드 2개 × 2판, 6라운드 끝까지.",
+ "host": "agentmaco",
+ "commit": "1541437",
+ "started_at": "2026-10-16T16:41:03+09:00",
+ "finished_at": "2026-10-16T17:29:27+09:00",
+ "seeds": [
+  "geo-quartet-683063",
+  "geo-quartet-683209"
+ ],
+ "command": [
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-tech-fix-setup-cap20.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-tech-fix-setup-cap20.json",
+  "--games",
+  "4",
+  "--seeds",
+  "geo-quartet-683063",
+  "geo-quartet-683209",
+  "--comparisons",
+  "2",
+  "--jobs",
+  "4",
+  "--fast-copy",
+  "--output",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-061-all-rules-selfplay-full"
+ ],
+ "exit_code": -15
+}
