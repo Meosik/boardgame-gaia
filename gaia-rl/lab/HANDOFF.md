@@ -1210,6 +1210,11 @@
      연구·부스터 집계는 봇에서 `research_counts.py` 거부로 못 봄. 사이클 문서 `059-when-all-tech-fix.md`. 기준 스택 when_all 유지, 배포 제안 없음.
      **다음 제안(사용자 확인 대기, 큐 안 넣음)**: 묶음을 쪼갠다 — 060 = A when_all vs B when_all_tech_fix에서 track_set(+테란 4R 전 가이아 금지)만 끈 것,
      새 시드 6쌍, stop_round 3. 손해가 사라지면 track_set이 원인, 남으면 테란 종족 규칙 묶음을 다음으로 끈다.
+     **lab 060 큐(사용자 "한번 해봐. 풀 라운드로", 2026-10-16)**: `060-ships-vs-when-all-tech-fix-full` = A vm_lf_ts_ships(when_all 이전) vs B when_all_tech_fix,
+     새 시드 6쌍, stop_round 0(6R 끝까지). 056 이후 세 층 전체가 손해인지 확인. B 유의 음수면 기준 스택을 vm_lf_ts_ships로 되돌리고 PPO 교사 후보로 제안.
+     seeds.txt에 11개 추가(680380–703309, find_seeds.py). 같은 날 사용자 질문: PPO 가능 여부 — 가능, 교사는 vm_lf_ts_ships 권장, BC 연결·보상(1–3R 충전) 정할 것.
+     059 리플레이 000-g1 제노스(B) 부스터 12(테라포밍)를 1R에 가이아 -6,2에 씀: 1단계 대상 행성 없음(-3,5만, 광석 4·QIC 2). 부스터 빌드 79.08 > 같은 자리 일반 빌드 76.73.
+     수정안(사용자 답 대기): ⓐ 시작 부스터 12 값은 사거리 안 테라포밍 필요 행성이 없으면 1단계 0 ⓑ 단계 안 쓰는 부스터 빌드는 일반 빌드보다 높게 두지 않음.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고

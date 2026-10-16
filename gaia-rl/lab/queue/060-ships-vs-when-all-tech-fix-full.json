@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-16 \"한번 해봐. 풀 라운드로\"): A = vm_lf_ts_ships(053 기준, when_all 이전), B = when_all_tech_fix(059 B). 056 이후 쌓은 세 층(when_all 시점 규칙, when_all_tech, 058 수정) 전체가 손해인지 직접 확인. 새 시드 6쌍, 6라운드 끝까지. 판정은 1–3라운드 충전량(1점 = 1.5충전), 최종 VP는 참고. B가 유의하게 음수면 기준 스택을 vm_lf_ts_ships로 되돌리고 PPO 교사 후보로 제안. 함께 볼 것: 결정 시간(059 B 최대 51.5초), 4–6R 점수 흐름.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-tech-fix-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 0
+}
