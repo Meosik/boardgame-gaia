@@ -598,7 +598,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'setup_reach': False,         # ..._when_all_tech_fix (see setup_reach_scores)
           'form_early': False,          # ..._when_all_tech_fix (see form_early_scores)
           'setup_one_near': False,      # ..._when_all_tech_fix_setup (see _one_near)
-          'geodens_b14': True}          # False: ..._ships_geodens_prior (1PI+4M first, no B14 opening order)
+          'geodens_b14': True,          # False: ..._ships_geodens_prior (1PI+4M first, no B14 opening order)
+          'opening_label': False}       # ..._ships_label (see guide_label_forecast)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -913,10 +914,17 @@ SHEDEN_OPENINGS = {
 }
 
 
+def guide_opening_labels(faction):
+    """The guide's round-1 opening order for a faction, () when no guide order applies."""
+    if faction == 'Geodens' and not _guide['geodens_b14'] and not _guide.get('sheden_r1'):
+        return ()
+    return (SHEDEN_OPENINGS if _guide.get('sheden_r1') else UIQOO_OPENINGS).get(faction) or ()
+
+
 def uiqoo_opening_order(snapshot, goals, remembered=None):
     faction = snapshot['state']['players'][snapshot['player']]['faction']
-    order = (SHEDEN_OPENINGS if _guide.get('sheden_r1') else UIQOO_OPENINGS).get(faction)
-    if not order or (faction == 'Geodens' and not _guide['geodens_b14'] and not _guide.get('sheden_r1')):
+    order = guide_opening_labels(faction)
+    if not order:
         return goals
     rank = {label: i for i, label in enumerate(order)}
 
@@ -962,6 +970,50 @@ def install_uiqoo_openings():
         return uiqoo_opening_order(snapshot, proposed, remembered)
     goals.__wrapped__ = original
     planning.goals = goals
+
+
+def guide_label_forecast(original, rows, remembered, comparisons):
+    """Remember the guide's opening under its own label, not the inventory its forecast reached.
+
+    planning.select_forecast maps a completed forecast to the catalog row matching its
+    end-of-round-1 buildings. A 1AC+2M plan whose rollout stops at the lab is therefore
+    remembered as 1RL+2M — a label outside the guide's order — and the academy is never
+    proposed again (lab 064 replays: every B-arm Geodens game). Here the guide-ordered
+    opening goal that was compared (the remembered one first, then the guide's order) keeps
+    its own label, so the teacher keeps funding the academy for the rest of round 1 and only
+    moves to the guide's next opening when the current one becomes unreachable (it then
+    drops out of planning.goals). Factions without a guide order, and decisions where no
+    guide goal was compared, keep the original selection. Order only, no new numbers.
+    """
+    labels = guide_opening_labels(rows[0].faction) if rows else ()
+    if not labels:
+        return original(rows, remembered, comparisons)
+    rank = {label: i for i, label in enumerate(labels)}
+    by_label = {row.label: row for row in rows}
+    choices = []
+    for order, comparison in enumerate(comparisons):
+        spec = comparison.get('goal_spec') or {}
+        target = spec.get('target')
+        if (spec.get('family') != 'bgg-opening' or target not in rank or target not in by_label
+                or not comparison.get('complete')):
+            continue
+        choices.append((target != remembered, rank[target], order, comparison, by_label[target]))
+    if not choices:
+        return original(rows, remembered, comparisons)
+    chosen = min(choices, key=lambda choice: choice[:3])
+    return chosen[3], chosen[4]
+
+
+def install_opening_label():
+    import bgg_openings.planning as planning
+    _guide['opening_label'] = True
+    if not getattr(planning.select_forecast, '_opening_label', False):
+        inner_forecast = planning.select_forecast
+
+        def select_forecast(rows, remembered, comparisons):
+            return guide_label_forecast(inner_forecast, rows, remembered, comparisons)
+        select_forecast._opening_label = True
+        planning.select_forecast = select_forecast
 
 
 def guide_values_openings(seed, **kwargs):
@@ -2329,6 +2381,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_geodens_prior(seed, **kwargs):
     first when ready) on, no B14 opening order. The A arm of lab 064; the other factions are unchanged."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     _guide['geodens_b14'] = False
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_label(seed, **kwargs):
+    """Teacher factory: ..._ships where the guide-ordered round-1 opening is remembered under its
+    own label instead of the inventory its forecast reached (opening_label, lab 064 follow-up)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_opening_label()
     return teacher
 
 

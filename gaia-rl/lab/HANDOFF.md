@@ -1312,6 +1312,19 @@
      도구 주의: `explain_ab_decisions.py`는 요청한 step까지 모든 결정을 실제 교사로 다시 두므로(결정당 최대 20초) 한 판에 수십 분 — 봇 턴(10분)에 한 판·초반 step만, 여러 판 동시 실행 금지.
      **수정 제안(사용자 확인 대기)**: ⓐ 결정 0에서 B14 목록 3개를 순서대로 모두 비교(지금은 첫 하나) ⓑ select_forecast가 목표를 계획 라벨(1AC+2M)로 기억하고 도달 모양으로
      바꾸지 않게 — 못 채우면 B14 다음 순위(1RL+1TS+2M)로 넘어가게. 둘 다 순서·탐색 범위 변경, 새 수치 없음. 이후 A = 지금 ships vs B = 수정본, 새 시드 6쌍 A/B.
+     **광석 수급 방식(사용자 질문, 2026-10-17)**: rollout·실전 모두 `bgg_openings/planning.py select_action` — ① 목표 건물 조합까지 거리를 줄이는 수(광산·업그레이드) 중
+     기본 순위 최고를 둠(광산 1광석이 싸서 먼저 뽑히기 쉬움) ② 없으면 다음 업그레이드(연구소→아카데미 6광석 6돈)에 모자란 자원을 **바로 늘리는** 무료·파워 행동
+     하나(파워→광석, QIC→광석, 파워 액션 광석, 타일 특수 행동; 기본 순위 상위 32개 안)를 둠 ③ 그것도 없으면 보통 최고 수(연구·함선·패스). 수입을 기다리거나 여러 턴 모으는
+     계획은 없음. 1AC+2M은 라벨이 1R 끝 보유 건물(시작 광산 포함)이라 TS 2 + RL 3 + AC 6 + 새 광산 1 = **광석 12**(시작 4 + 수입·부스터·변환) — p003은 QIC→광석 + 충전 3회로 채움.
+     **수정 ⓑ 구현(사용자 "일단 고쳐봐", 2026-10-17)**: `teacher_patches.guide_label_forecast` + `install_opening_label` + 공장 `..._vm_lf_ts_ships_label`
+     (spec `...-ships-label-cap20.json`, 플래그 `_guide['opening_label']`). select_forecast를 감싸 **가이드 순서(UIQOO/SHEDEN)에 있는 bgg-opening 계획이 비교됐으면
+     그 계획의 라벨 자체를 목표로 기억**(기억된 라벨 먼저, 다음 가이드 순서). 가이드 순서가 없는 종족·가이드 계획이 비교되지 않은 결정은 원래 선택 그대로.
+     목표가 못 닿게 되면(distance None) goals에서 빠져 다음 가이드 라벨이 첫 비교가 되므로 자동으로 넘어감. 14종족 공통(우이쿠 순서를 쓰는 종족 전부). ⓐ(3개 모두 비교)는 안 함 —
+     라벨 규칙이면 첫 도달 가능 라벨이 어차피 뽑혀 비교해도 선택이 안 바뀜. 테스트 `OpeningLabelTests` 3개 추가, 47개 통과. 스모크(ships_label, geo-quartet-699682, 60결정) 오류 없음.
+     확인(`explain_ab_decisions.py --spec …ships-label-cap20.json`, 064 p000/game-1 B 결정 0·13·25·36): 목표가 결정 0 "selected 1AC+2M" 뒤 세 결정 모두 "kept 1AC+2M"
+     (수정 전 같은 자리: 1RL+2M). 기록된 수를 다시 두는 재현이라 연구소 뒤 아카데미 자금 행동이 실제로 바뀌는지는 A/B에서 봄.
+     **다음(사용자 확인 대기, 큐 안 넣음)**: lab 065 = A ships(`…-ships-cap20.json`) vs B ships_label(`…-ships-label-cap20.json`), 새 시드 6쌍, stop_round 3, 판정 1–3R 충전.
+     함께 볼 것: 기오덴 1R 아카데미 완성 수(`upgrade_targets.py --rounds 1-1 --faction Geodens`), 다른 3종족 변화(공통 규칙이라 영향 가능), 오류·미탐색.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고

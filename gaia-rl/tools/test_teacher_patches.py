@@ -571,3 +571,48 @@ class ResearchDefendTests(unittest.TestCase):
         groups = tp._groups(['0,0', '2,0', '6,0', '4,0'])
         self.assertEqual(groups, [{'0,0', '2,0', '4,0', '6,0'}])
         self.assertEqual(len(tp._groups(['0,0', '3,0'])), 2)
+
+
+class OpeningLabelTests(unittest.TestCase):
+    """guide_label_forecast keeps the guide's opening under its own label (lab 064 follow-up)."""
+    def setUp(self):
+        from bgg_openings.catalog import load_catalog
+        self.rows = load_catalog()['Geodens']
+        self.saved = dict(tp._guide)
+        tp._guide.update(geodens_b14=True, sheden_r1=False)
+        self.addCleanup(lambda: tp._guide.update(self.saved))
+
+    @staticmethod
+    def forecast(name, target, counts, value, family='bgg-opening'):
+        buildings = dict(mine=counts[0], trading_station=counts[1], research_lab=counts[2],
+                         planetary_institute=counts[3], academy=counts[4])
+        return {'goal': name, 'goal_spec': {'family': family, 'target': target}, 'family': family,
+                'first': 0, 'complete': True, 'value': value, 'r1_buildings': buildings}
+
+    def test_academy_plan_that_stopped_at_the_lab_keeps_its_label(self):
+        from bgg_openings.planning import select_forecast as original
+        lab = self.forecast('BGG-R1-1AC+2M', '1AC+2M', (2, 0, 1, 0, 0), 264.1)
+        pi = self.forecast('Geodens-PI@1,-2', None, (3, 0, 0, 1, 0), 280.6, family='colony')
+        _, opening = original(self.rows, None, [lab, pi])
+        self.assertEqual(opening.label, '1PI+3M')        # the frozen rule: the reached inventory
+        plan, opening = tp.guide_label_forecast(original, self.rows, None, [lab, pi])
+        self.assertEqual((plan['goal'], opening.label), ('BGG-R1-1AC+2M', '1AC+2M'))
+
+    def test_remembered_guide_label_first_then_the_guide_order(self):
+        from bgg_openings.planning import select_forecast as original
+        second = self.forecast('BGG-R1-1RL+1TS+2M', '1RL+1TS+2M', (2, 1, 1, 0, 0), 300.0)
+        first = self.forecast('BGG-R1-1AC+2M', '1AC+2M', (2, 0, 1, 0, 0), 250.0)
+        _, opening = tp.guide_label_forecast(original, self.rows, None, [second, first])
+        self.assertEqual(opening.label, '1AC+2M')
+        _, opening = tp.guide_label_forecast(original, self.rows, '1RL+1TS+2M', [second, first])
+        self.assertEqual(opening.label, '1RL+1TS+2M')
+
+    def test_without_a_guide_goal_or_a_guide_order_the_original_decides(self):
+        from bgg_openings.planning import select_forecast as original
+        pi = self.forecast('Geodens-PI@1,-2', None, (3, 0, 0, 1, 0), 280.6, family='colony')
+        _, opening = tp.guide_label_forecast(original, self.rows, None, [pi])
+        self.assertEqual(opening.label, '1PI+3M')
+        tp._guide['geodens_b14'] = False
+        lab = self.forecast('BGG-R1-1AC+2M', '1AC+2M', (2, 0, 1, 0, 0), 264.1)
+        _, opening = tp.guide_label_forecast(original, self.rows, None, [lab])
+        self.assertEqual(opening.label, '1RL+2M')
