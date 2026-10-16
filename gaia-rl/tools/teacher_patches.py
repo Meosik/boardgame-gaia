@@ -870,8 +870,15 @@ def guide_values(seed, **kwargs):
 #   B13 Bescods: 연구소+교역소+광산+광산 "기본", 연구소+광산+광산, 연구소+연구소 (2기술), 아카데미+광산+광산 "가장 안 좋음".
 #   B16 Lantids: 행성 의회+광산+광산 "기본" (+광산 when affordable), 연구소+교역소+광산+광산 (and 연구소+광산+광산).
 #   B17 HadschHallas: 연구소+광산×4 "무난", 아카데미+광산 (경제 2 필수).
-#   Geodens stays with geodens_guide and guide_r1 part 5 (B14/BGG-O2 1PI+4M), not listed here.
+#   B14 Geodens (user 2026-10-16 "자료랑 다른 부분들 바꿔"): 아카데미+광산+광산 "행성 의회보다 아카데미 스타트가 좋음"
+#       (1AC+2M, needs a home planet within range 3), 연구소+교역소+광산+광산 (1RL+1TS+2M, four home planets),
+#       행성 의회+교역소+광산+광산 "모행성이 없을 때의 기본" (1PI+1TS+2M). guide_r1 part 5 still puts 1PI+4M
+#       first when its BGG-O2 conditions hold (it wraps this order).
+#   Lost Fleet factions have no BGG table, so planning.goals proposes nothing for them; LOST_FLEET_OPENINGS
+#   (sheden #4 "종족 별 추천 빌드", rank 1 then rank 2 in the article's order, end-of-round-1 buildings) is
+#   turned into the same bgg-opening goals by install_uiqoo_openings.
 UIQOO_OPENINGS = {
+    'Geodens': ('1AC+2M', '1RL+1TS+2M', '1PI+1TS+2M'),
     'Terrans': ('1AC+1M', '1PI+2M', '1PI+1TS+2M', '1RL+2M'),
     'Taklons': ('1AC+2M', '1RL+1TS+2M', '1RL+5M'),
     'Xenos': ('1RL+5M', '1RL+2M', '1AC+2M'),
@@ -918,12 +925,40 @@ def uiqoo_opening_order(snapshot, goals, remembered=None):
     return [goal for _, goal in sorted(enumerate(goals), key=key)]
 
 
+LOST_FLEET_OPENINGS = {   # sheden #4 pp. 16-18: 연=RL 의=PI 아=AC 교=TS N광=N mines
+    'Moweyds': ('1RL+4M', '1RL+1TS+2M', '1PI+1TS', '1PI+1TS+1M', '1PI+1RL', '1PI+2M'),
+    'SpaceGiants': ('1PI+1TS+2M', '1PI+1RL+1M', '1PI+4M', '1PI+1RL+2M'),
+    'Tinkeroids': ('1PI+1TS+2M', '1PI+1RL+2M', '1PI+4M'),
+    'Darkanians': ('1RL+4M', '1RL+1TS+2M', '1PI+1TS+2M', '1AC+1M'),
+}
+
+
+def lost_fleet_opening_goals(snapshot, remembered=None):
+    """bgg-opening goals for a Lost Fleet faction from LOST_FLEET_OPENINGS, as planning.goals builds
+    them from the catalog (round 1 only, reachable inventories only, the remembered label first)."""
+    from bgg_openings.catalog import parse_buildings
+    from bgg_openings.inventory import building_counts
+    from bgg_openings.planning import distance_to
+    from four_factions.preparation import Goal
+    if snapshot['state']['round'] > 1:
+        return []
+    player = snapshot['state']['players'][snapshot['player']]
+    labels = LOST_FLEET_OPENINGS.get(player['faction'], ())
+    current = building_counts(player)
+    ordered = sorted(labels, key=lambda label: label != remembered)
+    return [Goal(f'BGG-R1-{label}', 'bgg-opening', target=label, sources=('SH4',))
+            for label in ordered if distance_to(current, parse_buildings(label), player['faction']) is not None]
+
+
 def install_uiqoo_openings():
     import bgg_openings.planning as planning
     original = getattr(planning.goals, '__wrapped__', planning.goals)
 
     def goals(snapshot, remembered=None):
-        return uiqoo_opening_order(snapshot, original(snapshot, remembered), remembered)
+        proposed = original(snapshot, remembered)
+        if not proposed:
+            proposed = lost_fleet_opening_goals(snapshot, remembered)
+        return uiqoo_opening_order(snapshot, proposed, remembered)
     goals.__wrapped__ = original
     planning.goals = goals
 
@@ -3776,9 +3811,15 @@ def _guide_last(env, snapshot, lifted, live, act, root):
 #   economy, science; Itars Gaia (or terraforming), economy; Nevlas economy, science, navigation 2; Firaks
 #   economy 4 first, navigation 2, late Gaia; BalTaks Gaia 4 first then two of economy/terraforming/AI; Ivits
 #   economy, science, AI; Bescods science, economy, navigation 2; Lantids navigation 2, science, AI;
-#   HadschHallas economy 2·4, navigation 2, then science. Lost Fleet factions are not listed (no guide), so
-#   track_set and setup_reach leave them alone.
-FACTION_TRACKS = {'Geodens': ('terraforming', 'navigation', 'ai'),
+#   HadschHallas economy 2·4, navigation 2, then science. Geodens adds economy (B14-02: "1라운드에 경제나
+#   과학을 올리고 … 항해 2단계와 테라포밍 3단계", AI from round 4). Lost Fleet factions from the sheden
+#   faction articles (MW-04 "지식·AI 트랙", SG-02/03 "항해 트랙 위 고급 기술 … 테라포밍 꼭대기", TK-02 "지식·
+#   테라포밍 트랙 위", DK-02/03 "경제 2·4 … 경제·항해 위 고급 기술").
+FACTION_TRACKS = {'Geodens': ('terraforming', 'navigation', 'economy', 'ai'),
+                  'Moweyds': ('science', 'ai'),
+                  'SpaceGiants': ('navigation', 'terraforming'),
+                  'Tinkeroids': ('science', 'terraforming'),
+                  'Darkanians': ('economy', 'navigation'),
                   'Xenos': ('gaia', 'navigation', 'economy'),
                   'Taklons': ('navigation', 'economy', 'science'),
                   'Terrans': ('navigation', 'gaia', 'economy'),

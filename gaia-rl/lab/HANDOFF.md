@@ -1261,6 +1261,12 @@
      ③ 실서버 봇은 `dev_bot_factions` 순서상 **항상 Terrans·Xenos·Taklons·HadschHallas 넷에서만** 뽑힘(사람 종족·뒷면 제외 후 앞 3개) → 실전 미학습 종족은 하쉬할라뿐.
      시드 `lab/seeds-live-quartet.txt` 16개(find_seeds 800000–830000, allocate는 안 읽음 — 큐에 명시). 패치 테스트 44 통과, 스모크(ships, live-quartet-801319, 80결정) 오류 없음.
      **lab 063 큐** `063-live-quartet-hard-vs-ships` = A hard vs B vm_lf_ts_ships, live-quartet 12시드(6쌍), stop_round 3. 062 뒤에 돌아감. 유의한 양수면 실서버 교사 교체 제안.
+     **자료와 다른 부분 수정(사용자 "바꿀거 있으면 바꿔", 같은 날)**: ① 기오덴 오프닝을 B14 순서로 UIQOO에 추가(1AC+2M, 1RL+1TS+2M, 1PI+1TS+2M) — guide_r1 5번
+     1PI+4M(BGG-O2 조건부)은 그 위에서 그대로 먼저. ② 기오덴 트랙에 economy 추가(B14-02 1R 경제/과학) → (terraforming, navigation, economy, ai).
+     ③ 확장 4종족: 트랙 MW (science, ai)·SG (navigation, terraforming)·TK (science, terraforming)·DK (economy, navigation), 오프닝은 BGG 표가 없어
+     `LOST_FLEET_OPENINGS`(sheden #4 빌드)에서 같은 bgg-opening 목표를 만들어 줌(`lost_fleet_opening_goals`, planning.goals가 빈 종족만).
+     테스트 1개 고침(기오덴 트랙 밖 예시 Economy → Science). 스모크: 기오덴(geo-quartet-669360)·글린/발타크/모웨이드/틴커로이드(lf-check-900021) 오류 없음.
+     063은 이 수정 포함(큐 commit 이후 푸시 — lab은 실행 시점 HEAD를 씀).
      062·063이 끝나면: 사이클 문서 + 결과표 + 여기 갱신. 유의한 양수면 다음은 former_use(ships 기준 factory·spec 새로 필요) A/B, 그 다음 "연방 안 함" 계획을 비교에 넣는 탐색 수정.
      봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship

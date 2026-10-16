@@ -447,11 +447,11 @@ class GuideFinalTests(unittest.TestCase):
                   'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()},
                   'resources': {'ore': 1, 'credits': 1, 'knowledge': 4, 'qic': 0}}
         snapshot = {'player': 0, 'state': {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]},
-                    'candidates': [{'action': {'type': 'ResearchAdvance', 'track': 'Economy'}},
+                    'candidates': [{'action': {'type': 'ResearchAdvance', 'track': 'Science'}},
                                    {'action': {'type': 'ResearchAdvance', 'track': 'Terraforming'}}]}
         lifted = tp.guide_more_scores(None, snapshot, [(5.0, 'a'), (3.0, 'b')])
         self.assertGreater(lifted[1][0], lifted[0][0])
-        lifted = tp.guide_more_scores(None, snapshot, [(5.0, 'a; research when: Economy now'), (3.0, 'b')])
+        lifted = tp.guide_more_scores(None, snapshot, [(5.0, 'a; research when: Science now'), (3.0, 'b')])
         self.assertGreater(lifted[0][0], lifted[1][0])
         terrans = {**player, 'faction': 'Terrans'}
         self.assertEqual(tp._faction_tracks({}, terrans), ('navigation', 'gaia', 'economy'))
