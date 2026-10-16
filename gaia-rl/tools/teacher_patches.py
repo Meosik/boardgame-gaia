@@ -596,7 +596,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'booster_root': False,        # ..._when_all_tech_fix (see _booster_root)
           'convert_when': False,        # ..._when_all_tech_fix (see _convert_hold)
           'setup_reach': False,         # ..._when_all_tech_fix (see setup_reach_scores)
-          'form_early': False}          # ..._when_all_tech_fix (see form_early_scores)
+          'form_early': False,          # ..._when_all_tech_fix (see form_early_scores)
+          'setup_one_near': False}      # ..._when_all_tech_fix_setup (see _one_near)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -1088,6 +1089,13 @@ def _next_to_opponent(state, actor, coord):
                for c, cell in state['board']['hexes'].items() if cell['structures'])
 
 
+def _one_near(state, actor):
+    """setup_one_near: one of the actor's structures already lies next to an opponent (user 2026-10-16:
+    "교역소 올릴 건물만 인접해있으면 되는건데" — the cheap trading station needs one such building)."""
+    return any(_next_to_opponent(state, actor, c) for c, cell in state['board']['hexes'].items()
+               if any(s['owner'] == actor for s in cell['structures']))
+
+
 def _future_opponent_sites(state, actor):
     """Free home planets of opponents who still place starting structures (rule: a starting
     structure goes on the faction's home planet; counts from gaia-engine/data/factions.toml)."""
@@ -1149,7 +1157,8 @@ def guide_r1_scores(snapshot, scores):
         action = candidate['action']
         if blocked(scores[i]):
             continue
-        if action['type'] == 'PlaceStartingStructure' and near and i not in near and not _guide['setup_soft']:
+        if (action['type'] == 'PlaceStartingStructure' and near and i not in near and not _guide['setup_soft']
+                and not (_guide['setup_one_near'] and _one_near(state, actor))):
             # Setup comparisons end at the round-1/2 income and differ by noise (034: 154.3
             # vs 153.5), so ordering alone let an isolated start win; compare only the near ones.
             result[i] = (BLOCKED, PREFIX+'guide: start next to an opponent (LF4-02, B10-02)')
@@ -3305,6 +3314,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech_fix(seed, **kwargs):
     _guide['convert_when'] = _guide['setup_reach'] = _guide['form_early'] = True
     _wrap_rank('_setup_reach', setup_reach_scores)
     _wrap_rank('_form_early', form_early_scores)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech_fix_setup(seed, **kwargs):
+    """Teacher factory: ..._when_all_tech_fix, and the starting places are held to the opponent's side
+    only until one of the faction's structures is next to an opponent (setup_one_near)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_when_all_tech_fix(seed, **kwargs)
+    _guide['setup_one_near'] = True
     return teacher
 
 
