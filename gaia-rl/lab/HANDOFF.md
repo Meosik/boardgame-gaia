@@ -1235,6 +1235,9 @@
      060 A팔 1–3R: 탐색 결정 67%가 20초 상한, 완료 비교 평균 2.5개, 기오덴 가이아 진보 6·포밍 0, 함선 입장 51·낸 VP 255·액션 사용 45%.
      리플레이 판별: ① 프레임 73 3충전 리치 수락·거절 6.80 동점 → 첫 후보(거절) ② 94·149 가이아 연구(포머 6R까지 미사용, 비교 1개만 완료)
      ③ 118 위성 6개 연방(토큰 10→4, 4R 이클립스 입장 뒤 패스, 비교 4개 중 3개가 같은 첫 수) ④ 112·123·137 AI 2→5, 기본 순위 테라포밍 0.00(원인 미확인), 항해 0이라 지을 자리 없음.
+     **사용자(같은 날) "일단 지금 실험 멈추고, 넣어, 앞으로 fable로 설계"**: 061 큐는 kind external로 바꿔 다시 안 돌게 함(진행 중 프로세스는 사용자가 정지).
+     lab 062 큐 `062-ships-cap40` = A vm_lf_ts_ships 20초 vs B 같은 교사 40초(spec `...-ships-cap40.json`), 새 시드 6쌍, stop_round 3.
+     봇 모델: `discord_claude.py` command()에 `--model`(기본 claude-fable-5-1, 환경 변수 CLAUDE_MODEL로 바꿈). 되돌리려면 기본값을 고치거나 CLAUDE_MODEL 지정.
      봇 판단(사용자 답 대기): 40초 → former_use → "연방 안 함" 계획을 비교에 반드시 포함(탐색 수정) 순. TF 0.00은 explain_without로 분해. 리치 동점은 척도상 본전이라 후순위.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.

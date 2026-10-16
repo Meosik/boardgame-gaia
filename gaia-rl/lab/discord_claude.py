@@ -63,7 +63,9 @@ def chunks(text, size=1900):
 
 def command(claude, session_id):
     argv = [claude, '-p', '--output-format', 'json', '--permission-mode', 'dontAsk',
-            '--settings', str(SETTINGS), '--append-system-prompt', SYSTEM]
+            '--settings', str(SETTINGS), '--append-system-prompt', SYSTEM,
+            # User 2026-10-16 "앞으로 fable로 설계하고 싶은데"; CLAUDE_MODEL overrides.
+            '--model', os.environ.get('CLAUDE_MODEL') or 'claude-fable-5-1']
     if session_id:
         argv += ['--resume', session_id]
     return argv

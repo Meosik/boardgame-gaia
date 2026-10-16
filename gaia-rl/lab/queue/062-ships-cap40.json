@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-16 \"넣어\"): A = vm_lf_ts_ships(20초), B = 같은 교사 40초 상한. 060 A팔 1–3R에서 탐색 결정 67%가 20초 상한에 걸리고 완료 비교는 4개 중 평균 2.5개(Fable 집계) — 이 스택에서 탐색량이 아직 레버인지 진단. 새 시드 6쌍, 4R 시작 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전). 함께 볼 것: 결정 시간(B 최대가 hard 서버 한도 60초 안인지), 비교 미탐색 결정 수. 유의한 양수면 실서버 대기 한도·병렬화 검토를 제안(배포는 사용자 확인).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap40.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}

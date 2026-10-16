@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships with a 40 s cap instead of 20 s (lab only; the live hard wait limit is 60 s). Same factory and comparisons; only the time cap changes.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 40
+}
