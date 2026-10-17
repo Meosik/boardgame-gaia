@@ -541,6 +541,10 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'setup_soft': False,          # True: ..._vm_lf_ts_reach (opponent-adjacent starts first, none blocked)
           'research_focus': False,      # True: ..._vm_lf_ts_reach (see research_focus_scores)
           'former_use': False,          # True: ..._vm_lf_ts_former (see install_former_use)
+          'instant_forming': False,     # True: ..._ships_fix (see _colony_costs, _instant_forming_open)
+          'budget_guard': False,        # True: ..._ships_fix (see opening_budget_scores)
+          'opening_release': False,     # True: ..._ships_fix (see install_opening_release)
+          'geodens_b14_tech': False,    # True: ..._ships_fix (see geodens_b14_tech_scores)
           'research_when': False,       # True: ..._vm_lf_ts_when (see research_when_track)
           'contested_first': False,     # True: ..._vm_lf_ts_when (see contested_first_scores)
           'ship_when': False,           # True: ..._vm_lf_ts_when (see ship_when_scores)
@@ -1133,6 +1137,11 @@ def opening_budget_scores(env, snapshot, scores, target, deadline):
         return scores
     owed_ore, owed_credits = owed
     held = player['resources']
+    if _guide['budget_guard'] and not _budget_pays(held, owed_ore, owed_credits):
+        # 068 p001 Taklons (7 ore, 1 QIC, no bowl-III power; TS 2 + RL 3 + AC 6 owed): the chain
+        # cannot be paid from what is held, so reserving for it only loses the mine and the round
+        # ends at 1RL+1M. Nothing is blocked until a leech or an action makes the chain payable.
+        return scores
     distance = planning.distance_to(current, target, faction)
     masked = list(scores)
     for i, candidate in enumerate(snapshot['candidates']):
@@ -2094,7 +2103,25 @@ def _colony_costs(state, player, home):
         # and uses up one Gaia former.
         asteroids = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Asteroid',)))[:formers]
         options += [({'qic': qic}, 0, nav) for qic, nav in asteroids]
+    if _guide['instant_forming'] and _guide['former_use'] and _idle_formers(player) and _instant_forming_open(state, player):
+        # An instant forming at hand (the round booster's action or TF Mars, engine
+        # apply_immediate_gaia_formation_impl: no tokens, the planet is Gaia at once) makes the nearest
+        # Transdim planet in reach a mine option this round (user 2026-10-17: 068 p001 Terrans next to
+        # TF Mars; LF3-07 "즉발 가이아포밍은 가이아포머를 장기 운용하는 종족에게 좋음"). One action, one option.
+        transdim = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Transdim',)))[:1]
+        options += [({**MINE_COST, 'qic': qic}, 0, nav) for qic, nav in transdim]
     return options
+
+
+def _instant_forming_open(state, player):
+    """An immediate Gaia-forming action usable now: the booster's (unused this round) or TF Mars's
+    (explored, the shared action not yet used this round). Ship ids are read as numbers or names."""
+    booster = (player.get('booster') == IMMEDIATE_GAIA_BOOSTER
+               and not player.get('round_booster_special_action_used_this_round'))
+    explored = player.get('explored_ships') or []
+    tfmars = ((SHIP_NUMBER['TFMars'] in explored or 'TFMars' in explored)
+              and TFMARS_FORMING not in state.get('used_spaceship_actions', []))
+    return booster or tfmars
 
 
 def _idle_formers(player):
@@ -2577,6 +2604,130 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_former(seed, **kwargs):
     planet as a mine)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     install_former_use()
+    return teacher
+
+
+# ── ships_fix (user 2026-10-18 "지금 테스트 멈추고 고칠거 다 고친 후에 돌려야겠는데") ────────────────
+# The replay findings of 068 p001 in one bundle on the base stack (HANDOFF 5 ⑤–⑬), order and scope
+# only, engine costs and guide prices, no new number:
+# - former_use (above) and instant_forming (_colony_costs): a planet counts once it is being formed
+#   or can be formed at once;
+# - opening_budget with its first-step fix and budget_guard: the academy's ore is kept only while
+#   the chain can actually be paid;
+# - opening_release: once the round-1 target's upgrades are built, the rest of round 1 goes back to
+#   the search (068 p001 Geodens: the label's last mine took the ore of the Rebellion free TS while the
+#   search's first choice was the Eclipse entry, 17.1 vs 15.9);
+# - geodens_b14_tech: Geodens's first standard tile is the 4-charge tile 10 or the 1 ore 1 QIC tile 4
+#   (B14-01 "초반엔 4충전 기술", B18-03 first tiles), placed on Economy when it can be (B14-02 "경제
+#   트랙·4충전 기술의 파워 충전으로 테라포밍", B14-03 1AC+2M "3경제/3과학"), and no Gaia advance
+#   before round 5 (B14-02 "가이아는 못 가며 5라운드에 올린다면 한 번에 2단계", B14-05).
+GEODENS_FIRST_TILES = (10, 4)
+GEODENS_GAIA_FROM_ROUND = 5
+TRACK_ORDER = ('Terraforming', 'Navigation', 'ArtificialIntelligence', 'GaiaProject', 'Economy', 'Science')
+
+
+def _tile_track(state, choice):
+    """The track a standard tile choice advances: the chosen one, else the track of the slot the
+    tile sits in (engine standard_tech_tile_aligned_track; `advance_track: null` means that one)."""
+    if not isinstance(choice, dict) or choice.get('kind') != 'Standard':
+        return None
+    if choice.get('advance_track'):
+        return choice['advance_track']
+    slots = (state.get('research_board') or {}).get('tech_tile_slots') or []
+    for index, slot in enumerate(slots[:len(TRACK_ORDER)]):
+        if slot == choice.get('tile'):
+            return TRACK_ORDER[index]
+    return None
+
+
+def _advances_gaia(state, action):
+    if action.get('type') in ('ResearchAdvance', 'EclipseResearchBoost'):
+        return action.get('track') == 'GaiaProject'
+    return _tile_track(state, action.get('tech_tile_choice')) == 'GaiaProject'
+
+
+def geodens_b14_tech_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if player['faction'] != 'Geodens':
+        return scores
+    finite = [s[0] for s in scores if not blocked(s)]
+    if not finite:
+        return scores
+    bottom = min(finite)
+    candidates = snapshot['candidates']
+    lifted = list(scores)
+    if state['round'] < GEODENS_GAIA_FROM_ROUND:
+        for i, c in enumerate(candidates):
+            if not blocked(scores[i]) and _advances_gaia(state, c['action']):
+                lifted[i] = (scores[i][0]-abs(bottom)-1000,
+                             f'{scores[i][1]}; geodens_b14: no Gaia advance before round {GEODENS_GAIA_FROM_ROUND} (B14-02, B14-05)',
+                             *scores[i][2:])
+    if state['round'] == 1 and not player.get('tech_tiles'):
+        groups = {}
+        for i, c in enumerate(candidates):
+            action = c['action']
+            choice = action.get('tech_tile_choice')
+            if blocked(lifted[i]) or not isinstance(choice, dict) or choice.get('kind') != 'Standard':
+                continue
+            key = (action.get('type'), str(action.get('coord')), json.dumps(action.get('to'), sort_keys=True))
+            groups.setdefault(key, []).append(i)
+        for members in groups.values():
+            top = max(members, key=lambda i: lifted[i][0])
+            wanted = [i for i in members
+                      if candidates[i]['action']['tech_tile_choice'].get('tile') in GEODENS_FIRST_TILES
+                      and _tile_track(state, candidates[i]['action']['tech_tile_choice']) != 'GaiaProject']
+            if not wanted:
+                continue
+            economy = [i for i in wanted if _tile_track(state, candidates[i]['action']['tech_tile_choice']) == 'Economy']
+            best = max(economy or wanted, key=lambda i: lifted[i][0])
+            if best != top:
+                _swap(lifted, list(lifted), best, top,
+                      'geodens_b14: first tile 4-charge or 1 ore 1 QIC, on Economy (B14-01, B14-02)')
+    return lifted
+
+
+def install_geodens_b14_tech():
+    _guide['geodens_b14_tech'] = True
+    _wrap_rank('_geodens_b14_tech', geodens_b14_tech_scores)
+
+
+def install_opening_release():
+    """Once the round-1 target owes no upgrade (only mines, or nothing), planning.select_action
+    returns the search's own best move instead of the label's remaining mine."""
+    import bgg_openings.planning as planning
+    from bgg_openings.inventory import building_counts
+    from research_plans.teacher import best_index
+    _guide['opening_release'] = True
+    if getattr(planning.select_action, '_opening_release', False):
+        return
+    inner = planning.select_action
+
+    def select_action(env, snapshot, scores, target, policies, deadline):
+        state = snapshot['state']
+        if state['round'] == 1 and 'ActionPhase' in state['phase']:
+            player = state['players'][snapshot['player']]
+            if chain_costs(building_counts(player), target, player['faction']) == (0, 0):
+                return best_index(scores, range(len(scores)))
+        return inner(env, snapshot, scores, target, policies, deadline)
+    select_action._opening_release = True
+    select_action.__wrapped__ = getattr(inner, '__wrapped__', inner)
+    planning.select_action = select_action
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix(seed, **kwargs):
+    """Teacher factory: ..._ships plus former_use, instant_forming, opening_budget (first-step fix and
+    budget_guard), opening_release and geodens_b14_tech (see the ships_fix note above)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_former_use()
+    _guide['instant_forming'] = True
+    install_opening_budget()
+    _guide['budget_guard'] = True
+    install_opening_release()
+    install_geodens_b14_tech()
     return teacher
 
 

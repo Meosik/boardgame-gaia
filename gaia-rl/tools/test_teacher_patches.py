@@ -749,6 +749,72 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual([blocked(s) for s in masked], [False, True])
         self.assertIn('11 ore', masked[1][1])
 
+    def test_budget_guard_blocks_nothing_while_the_chain_cannot_be_paid(self):
+        # 068 p001 Taklons: 7 ore, 1 QIC, no bowl-III power against TS 2 + RL 3 + AC 6 = 11 ore.
+        from bgg_openings.catalog import parse_buildings
+        from current_actions.conservation import blocked
+        mines = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'Mine', 'hex': '1,0'}]
+        before = self.snapshot(7, 15, mines, [{'type': 'Build', 'coord': '2,0'}], qic=1)
+        after = [self.snapshot(6, 13, mines+[{'kind': 'Mine', 'hex': '2,0'}], [], qic=1)]
+        scores = [(9.0, 'mine')]
+        target = parse_buildings('1AC+2M')
+        masked = tp.opening_budget_scores(self.Env(after), before, scores, target, float('inf'))
+        self.assertTrue(blocked(masked[0]))                       # without the guard: reserved anyway
+        tp._guide['budget_guard'] = True
+        self.assertIs(tp.opening_budget_scores(self.Env(after), before, scores, target, float('inf')), scores)
+        # 7 ore + 1 QIC + 9 power/3 = 11 ore and 20 credits >= 17 pay the chain: the mine is budgeted again.
+        payable = self.snapshot(7, 20, mines, [{'type': 'Build', 'coord': '2,0'}], qic=1, bowl3=9)
+        masked = tp.opening_budget_scores(self.Env([self.snapshot(6, 18, mines+[{'kind': 'Mine', 'hex': '2,0'}], [], qic=1, bowl3=9)]),
+                                          payable, scores, target, float('inf'))
+        self.assertTrue(blocked(masked[0]))
+
+    def test_opening_release_hands_round_one_back_once_the_upgrades_are_built(self):
+        import bgg_openings.planning as planning
+        from bgg_openings.catalog import parse_buildings
+        saved = planning.select_action
+        self.addCleanup(setattr, planning, 'select_action', saved)
+        planning.select_action = lambda env, snapshot, scores, target, policies, deadline: 0
+        tp.install_opening_release()
+        academy = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': {'Academy': 'Science'}, 'hex': '1,0'}]
+        lab = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'ResearchLab', 'hex': '1,0'}]
+        candidates = [{'type': 'Build', 'coord': '2,0'}, {'type': 'ExploreSpaceship', 'ship': 'Eclipse'}]
+        scores = [(15.9, 'mine'), (17.1, 'ship')]
+        target = parse_buildings('1AC+2M')
+        done = self.snapshot(3, 9, academy, candidates)
+        self.assertEqual(planning.select_action(None, done, scores, target, None, float('inf')), 1)
+        owing = self.snapshot(6, 15, lab, candidates)
+        self.assertEqual(planning.select_action(None, owing, scores, target, None, float('inf')), 0)
+
+    def test_geodens_b14_first_tile_on_economy_and_no_early_gaia(self):
+        from current_actions.conservation import blocked
+        state = {'round': 1, 'phase': {'ActionPhase': {}},
+                 'research_board': {'tech_tile_slots': [9, 7, 8, 6, 4, 2, 3, 10, 5]},
+                 'players': [{'faction': 'Geodens', 'tech_tiles': []}]}
+        self.assertEqual(tp._tile_track(state, {'kind': 'Standard', 'tile': 4, 'advance_track': None}), 'Economy')
+        self.assertEqual(tp._tile_track(state, {'kind': 'Standard', 'tile': 2, 'advance_track': None}), 'Science')
+        self.assertIsNone(tp._tile_track(state, {'kind': 'Standard', 'tile': 10, 'advance_track': None}))
+        self.assertEqual(tp._tile_track(state, {'kind': 'Standard', 'tile': 10, 'advance_track': 'Economy'}), 'Economy')
+
+        def lab(tile, track):
+            return {'type': 'Upgrade', 'coord': '-3,0', 'to': 'ResearchLab',
+                    'tech_tile_choice': {'kind': 'Standard', 'tile': tile, 'advance_track': track}}
+        actions = [lab(5, 'GaiaProject'), lab(5, 'Economy'), lab(10, 'Economy'), lab(4, None),
+                   lab(10, 'GaiaProject'), {'type': 'ResearchAdvance', 'track': 'GaiaProject'},
+                   {'type': 'ResearchAdvance', 'track': 'Economy'}]
+        scores = [(22.0, 'a'), (20.8, 'b'), (19.5, 'c'), (18.0, 'd'), (20.6, 'e'), (6.4, 'f'), (0.0, 'g')]
+        snapshot = {'state': state, 'player': 0, 'candidates': [{'action': a} for a in actions]}
+        lifted = tp.geodens_b14_tech_scores(None, snapshot, scores)
+        best = max(range(len(lifted)), key=lambda i: lifted[i][0])
+        self.assertEqual(best, 2)                                 # the 4-charge tile on Economy leads the lab
+        self.assertEqual(lifted[2][0], 20.8)                      # with the group's best non-Gaia score
+        self.assertLess(lifted[0][0], -900)                       # tile 5 + Gaia and the Gaia research pushed down
+        self.assertLess(lifted[4][0], -900)
+        self.assertLess(lifted[5][0], -900)
+        self.assertEqual(lifted[6], scores[6])                    # other research untouched
+        self.assertFalse(any(blocked(s) for s in lifted))
+        state['players'][0]['faction'] = 'Terrans'
+        self.assertIs(tp.geodens_b14_tech_scores(None, snapshot, scores), scores)
+
     def test_ship_entries_and_ship_upgrades_are_not_budgeted(self):
         # User (2026-10-17): a ship entered with range QIC can make the chain cheaper — Twilight's
         # lab for 3 power + 2 ore instead of 3 ore 5 credits. The entry is never blocked and the
