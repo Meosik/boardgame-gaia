@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) where, while the round-1 opening target still owes upgrades, a move that would leave less ore or credits than those upgrades cost is blocked unless it is one of them — B14 §4 / IR01 'academy first, the mine last' (guide_r1_charge3_lf_more_vm_lf_ts_ships_budget).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_budget",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

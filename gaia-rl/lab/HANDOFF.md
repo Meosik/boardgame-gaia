@@ -1406,6 +1406,18 @@
      테라 1단계 또는 1광석1QIC 타일로** 채움(위 산식과 동일, 세 번째 독립 확인) ② **1R 선아카는 아이타·발타크·타클론만, 기오덴은 선의회·테란은 항해 연구소** — 적용 중인 어잌후 순서
      (기오덴 1AC+2M, 테란 1AC+1M)와 충돌, 저자도 종족 세부는 어잌후를 참고하라 함 → **적용 안 함, 사용자 판단 대기** ③ 3연방 21파워 계산법(큰 건물 2개면 건물 5개 남기고)·첫 연방
      기본형 [AC/PI+4광산]은 "연방 안 함/첫 연방 모양" 안건에 쓸 수 있는 계산 가능한 사실.
+     **opening_budget 구현(사용자 "1번 ㄱㄱ", 2026-10-17)**: `teacher_patches.opening_budget_scores` + `install_opening_budget` + 공장 `..._vm_lf_ts_ships_budget`
+     (spec `...-ships-budget-cap20.json`, 플래그 `_guide['opening_budget']`). `planning.select_action`을 감싸 1R 오프닝 목표에 **아직 안 지은 업그레이드가 남아 있으면**
+     (`chain_costs`: 목표까지 최단 경로의 업그레이드 원가 합, TS 2/6(상대 인접 광산 있으면 3)·RL 3/5·PI 4/6·AC 6/6, 광산은 미포함) 그 업그레이드가 아닌 수는 native fork 뒤
+     **광석 + QIC(1→1광석) + 3그릇 파워(3→1광석, 1→1돈)로 남은 원가를 더 못 낼 때** 차단(`_budget_pays`). 체인 업그레이드, 아무것도 안 쓰는 수(연구·충전·패스), 예산이 남는 수는 그대로.
+     모자란 몫은 동결 자금 탐색(QIC→광석·파워→광석·파워 액션 3)이 채움. 첫 판(광석·돈만 셈)은 066 p000 재현에서 1AC+2M rollout이 QIC를 광산에 써 아카데미가 2R로 밀렸고,
+     QIC·파워를 예산에 넣은 뒤 **결정 0 rollout: TS → RL → 파워→광석 → AC(1R) → 광산 −4,−2, 1AC+2M 선택(269.7 > current-choice 268.5)**, 결정 13·25·37 모두 "kept 1AC+2M".
+     결정 37: 기록된 수(파워 액션 6 −3,−1, QIC 소모 → AC 지불 불가) 대신 **−4,−2(1광석 2돈, QIC 유지)**를 고르고 rollout이 1R AC 완성(`explain_ab_decisions --spec`).
+     테스트 `OpeningBudgetTests` 3개 추가, 모듈 51개 통과. 스모크(`guide_values_smoke.py --factory ..._ships_budget`, 699682, 70결정, 비교 2) 오류 0 — 다만 짧은 시계·비교 2에선
+     결정 0 rollout이 못 끝나 목표가 1RL+2M으로 기억돼 기오덴 수순이 그대로(파워 액션 6 −3,−1)였음. hard spec(비교 4·20초) 재현에서는 위와 같이 작동. 순서·범위 규칙, 수치·종족 코드 없음.
+     **lab 067 큐** `067-ships-budget` = A ships vs B ships_budget, **064·066 시드 6개 재사용**, stop_round 3, 판정 1–3R 충전(기오덴 먼저, 공통 규칙이라 3종족도).
+     함께 볼 것: 기오덴 1R 아카데미(066 A 1/6·B 2/6), 제노스·테란 1–3R 광산(066 A Xen 12·Ter 14), `ore_sources.py --rounds 1-1`, 오류·미탐색. 끝나면 사이클 문서 + 결과표 + 여기 갱신.
+     기오덴 아카데미 증가·충전 양수·다른 종족 손해 없음이면 ships_budget을 기준 스택 후보로 제안(사용자 확인). 라벨 규칙(ships_label)은 안 넣음 — budget이면 rollout이 AC에 닿아 라벨이 저절로 맞음.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고

@@ -599,7 +599,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'form_early': False,          # ..._when_all_tech_fix (see form_early_scores)
           'setup_one_near': False,      # ..._when_all_tech_fix_setup (see _one_near)
           'geodens_b14': True,          # False: ..._ships_geodens_prior (1PI+4M first, no B14 opening order)
-          'opening_label': False}       # ..._ships_label (see guide_label_forecast)
+          'opening_label': False,       # ..._ships_label (see guide_label_forecast)
+          'opening_budget': False}      # ..._ships_budget (see opening_budget_scores)
 
 
 _POWER_VALUE = {'Mine': 1, 'TradingStation': 2, 'ResearchLab': 2, 'PlanetaryInstitute': 3, 'Academy': 3}
@@ -1033,6 +1034,137 @@ def install_opening_label():
             return guide_label_forecast(inner_forecast, rows, remembered, comparisons)
         select_forecast._opening_label = True
         planning.select_forecast = select_forecast
+
+
+# ── opening_budget (user 2026-10-17 "1번 ㄱㄱ"; labs 064–066) ─────────────────────────────
+# Why: with a round-1 target such as Geodens 1AC+2M, planning.select_action takes any move that
+# shortens the distance to the target, best base rank first. A new mine (1 ore, 3 more per
+# terraform step for Geodens) is cheaper than the academy (6 ore) and ranks earlier, so the ore
+# meant for the academy is spent on mines or on a second trading station, and the chain stops at
+# the research lab in 4 of 6 games (066, list_decisions). The guides say the opposite:
+# B14 §4 "아카데미부터 먼저 올리고, 광산은 맨 마지막에 1돈 1광석이 더 있으면; 광석이 부족하면 아카데미+
+# 광산으로 끝내고 광산은 2라운드에"; IR01 "최소 11광석 14돈, 광산까지 12광석 16돈, 3~4광석은 파워 프리액션·
+# 테라 1단계·1광석1QIC 타일로"; B11 the same arithmetic for BalTaks.
+# Rule (order and scope only, engine costs and rulebook conversion rates, no new number, every
+# faction with a round-1 target): while the target still owes upgrades, a move that is not one of
+# those upgrades is blocked when, on its native fork, what is left can no longer pay them — ore
+# plus QIC (1 QIC → 1 ore) plus bowl-III power (3 → 1 ore, 1 → 1 credit) against the owed ore and
+# credits. The chain upgrades themselves, moves that spend none of these (research, charging,
+# pass) and moves that keep the budget stay as they are; the frozen funding search (QIC→ore, the
+# 2-ore power action, power→ore) then pays what is missing, as in the one finished game (066 p003).
+# The first version counted ore and credits only; in the 066 p000 replay the 1AC+2M rollout then
+# spent its QIC on a mine (no ore moved) and the academy slipped to round 2.
+UPGRADE_COSTS = {'trading_station': (2, 6), 'research_lab': (3, 5),
+                 'planetary_institute': (4, 6), 'academy': (6, 6)}   # engine.rs::upgrade_cost
+BUDGET_KEYS = ('ore', 'credits', 'qic')
+
+
+def _budget_pays(resources, owed_ore, owed_credits):
+    """Can the owed upgrades still be paid from stock plus the rulebook free conversions?"""
+    power = resources['power']['bowl3']
+    gap = max(0, owed_ore - resources['ore'] - resources['qic'])
+    power -= 3*gap
+    return power >= 0 and resources['credits'] + power >= owed_credits
+
+
+def _trading_station_credits(snapshot, player):
+    """6 credits, or 3 when one of the player's mines has an opponent structure within range 2
+    (rulebook p.13; the same test funding_need makes per mine)."""
+    from four_factions.preparation import distance
+    hexes = snapshot['state']['board']['hexes']
+    mines = [s['hex'] for s in player['structures'] if s['kind'] == 'Mine']
+    for coord, cell in hexes.items():
+        if any(s['owner'] != snapshot['player'] for s in cell['structures']):
+            if any(distance(coord, mine) <= 2 for mine in mines):
+                return 3
+    return 6
+
+
+def chain_costs(current, target, faction, ts_credits=6):
+    """(ore, credits) still owed by the upgrades on a shortest path from `current` to `target`
+    in the opening topology; new mines on that path are not counted (they are deferred). None
+    when the target is unreachable."""
+    from dataclasses import asdict
+    import bgg_openings.planning as planning
+    from bgg_openings.catalog import Buildings, LIMITS
+    distances = planning._distances(target, faction)
+    if current not in distances:
+        return None
+    ore = credits = 0
+    state = current
+    while distances[state] > 0:
+        counts = asdict(state)
+        step = None
+        for old, new in planning._edges(faction):
+            if counts[old] and counts[new] < LIMITS[new]:
+                after = Buildings(**{**counts, old: counts[old]-1, new: counts[new]+1})
+                if distances.get(after) == distances[state]-1:
+                    step = (after, new)
+                    break
+        if step is None:
+            after = Buildings(**{**counts, 'mine': counts['mine']+1})
+            if distances.get(after) != distances[state]-1:
+                return None
+            state = after
+            continue
+        state, new = step
+        o, c = UPGRADE_COSTS[new]
+        ore += o
+        credits += (ts_credits if new == 'trading_station' else c)
+    return ore, credits
+
+
+def opening_budget_scores(env, snapshot, scores, target, deadline):
+    """Block the moves that would leave less than the owed upgrades cost (see above)."""
+    import bgg_openings.planning as planning
+    from bgg_openings.inventory import building_counts
+    from current_actions.conservation import BLOCKED, PREFIX, blocked
+    from four_factions.preparation import check_time
+    state = snapshot['state']
+    if state['round'] != 1 or 'ActionPhase' not in state['phase']:
+        return scores
+    actor = snapshot['player']
+    player = state['players'][actor]
+    faction = player['faction']
+    current = building_counts(player)
+    owed = chain_costs(current, target, faction, _trading_station_credits(snapshot, player))
+    if not owed or owed == (0, 0):
+        return scores
+    owed_ore, owed_credits = owed
+    held = player['resources']
+    distance = planning.distance_to(current, target, faction)
+    masked = list(scores)
+    for i, candidate in enumerate(snapshot['candidates']):
+        action = candidate['action']
+        if blocked(scores[i]) or action['type'] in ('Pass', 'ChargePower', 'ChooseIncomeOrder'):
+            continue
+        check_time(deadline)
+        after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
+        resources = after['state']['players'][actor]['resources']
+        if (all(resources[key] >= held[key] for key in BUDGET_KEYS)
+                and resources['power']['bowl3'] >= held['power']['bowl3']):
+            continue                                    # spends nothing of the budget
+        counts = building_counts(after['state']['players'][actor])
+        if action['type'] == 'Upgrade' and planning.distance_to(counts, target, faction) == distance-1:
+            continue                                    # a chain upgrade: that is what the budget is for
+        if not _budget_pays(resources, owed_ore, owed_credits):
+            masked[i] = (BLOCKED, PREFIX+f'opening budget: {owed_ore} ore {owed_credits} credits '
+                         f'still owed by the {target} upgrades')
+    return masked
+
+
+def install_opening_budget():
+    import bgg_openings.planning as planning
+    _guide['opening_budget'] = True
+    if not getattr(planning.select_action, '_opening_budget', False):
+        inner = planning.select_action
+
+        def select_action(env, snapshot, scores, target, policies, deadline):
+            masked = opening_budget_scores(env, snapshot, scores, target, deadline)
+            return inner(env, snapshot, masked, target, policies, deadline)
+        select_action._opening_budget = True
+        select_action.__wrapped__ = getattr(inner, '__wrapped__', inner)
+        planning.select_action = select_action
 
 
 def guide_values_openings(seed, **kwargs):
@@ -2408,6 +2540,15 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_label(seed, **kwargs):
     own label instead of the inventory its forecast reached (opening_label, lab 064 follow-up)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     install_opening_label()
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_budget(seed, **kwargs):
+    """Teacher factory: ..._ships where, while the round-1 opening target still owes upgrades, a
+    move that would leave less ore or credits than those upgrades cost is blocked unless it is one
+    of them (opening_budget; B14 §4 / IR01 academy ore recipe)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_opening_budget()
     return teacher
 
 

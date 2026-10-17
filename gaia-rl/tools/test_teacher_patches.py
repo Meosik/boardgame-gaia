@@ -634,3 +634,109 @@ class OpeningLabelTests(unittest.TestCase):
         lab = self.forecast('BGG-R1-1AC+2M', '1AC+2M', (2, 0, 1, 0, 0), 264.1)
         _, opening = tp.guide_label_forecast(original, self.rows, None, [lab])
         self.assertEqual(opening.label, '1RL+2M')
+
+
+class OpeningBudgetTests(unittest.TestCase):
+    """opening_budget keeps the ore and credits the round-1 target's upgrades still cost (B14 §4,
+    IR01: academy first, the mine last and only with 1 ore 1 credit to spare)."""
+    def setUp(self):
+        self.saved = dict(tp._guide)
+        self.addCleanup(lambda: tp._guide.update(self.saved))
+
+    def test_chain_costs_count_only_the_upgrades_still_owed(self):
+        from bgg_openings.catalog import parse_buildings as b
+        self.assertEqual(tp.chain_costs(b('2M'), b('1AC+2M'), 'Geodens'), (11, 17))
+        self.assertEqual(tp.chain_costs(b('2M'), b('1AC+2M'), 'Geodens', ts_credits=3), (11, 14))
+        self.assertEqual(tp.chain_costs(b('1TS+2M'), b('1AC+2M'), 'Geodens'), (9, 11))
+        self.assertEqual(tp.chain_costs(b('1RL+2M'), b('1AC+2M'), 'Geodens'), (6, 6))
+        self.assertEqual(tp.chain_costs(b('1AC+2M'), b('1AC+2M'), 'Geodens'), (0, 0))
+        self.assertEqual(tp.chain_costs(b('3M'), b('1RL+5M'), 'Xenos'), (5, 11))   # mines deferred
+        self.assertEqual(tp.chain_costs(b('2M'), b('1PI+1TS+2M'), 'Geodens'), (8, 18))
+        self.assertIsNone(tp.chain_costs(b('1PI+2M'), b('1AC+2M'), 'Terrans'))
+
+    @staticmethod
+    def snapshot(ore, credits, structures, candidates, qic=0, bowl3=0):
+        player = {'faction': 'Geodens', 'resources': {'ore': ore, 'credits': credits, 'knowledge': 3,
+                                                       'qic': qic, 'power': {'bowl3': bowl3}},
+                  'structures': structures}
+        return {'state': {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player],
+                          'board': {'hexes': {}}},
+                'player': 0, 'decision_id': 'd', 'candidates': [{'action': a} for a in candidates]}
+
+    class Env:
+        """fork(decision, i) returns the i-th prepared snapshot."""
+        def __init__(self, after):
+            self.after = after
+
+        def fork(self, decision_id, index):
+            text = json.dumps(self.after[index])
+            return type('Fork', (), {'snapshot_json': staticmethod(lambda: text)})()
+
+    def test_moves_that_break_the_budget_are_blocked_chain_upgrades_and_free_moves_are_not(self):
+        from bgg_openings.catalog import parse_buildings
+        from current_actions.conservation import blocked
+        lab = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'ResearchLab', 'hex': '1,0'}]
+        academy = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': {'Academy': 'Science'}, 'hex': '1,0'}]
+        three = lab+[{'kind': 'Mine', 'hex': '2,0'}]
+        before = self.snapshot(6, 15, lab, [
+            {'type': 'Build', 'coord': '2,0'},
+            {'type': 'Upgrade', 'coord': '1,0', 'to': {'Academy': 'Science'}},
+            {'type': 'ResearchAdvance', 'track': 'Science'},
+            {'type': 'PowerAction', 'id': 6, 'coord': '2,0'},
+            {'type': 'FreeAction', 'kind': 'QicToOre', 'count': 1},
+            {'type': 'Upgrade', 'coord': '0,0', 'to': 'TradingStation'},
+            {'type': 'Pass', 'booster_id': 1}])
+        after = [self.snapshot(5, 13, three, []),                      # the mine: 5 < 6 owed
+                 self.snapshot(0, 9, academy, []),                      # the academy itself
+                 self.snapshot(6, 15, lab, []),                         # research: nothing spent
+                 self.snapshot(4, 15, three, []),                       # terraform + mine
+                 self.snapshot(7, 15, lab, []),                         # funding
+                 self.snapshot(4, 9, [{'kind': 'TradingStation', 'hex': '0,0'}, lab[1]], []),
+                 self.snapshot(6, 15, lab, [])]
+        scores = [(10.0, 'mine'), (9.0, 'academy'), (8.0, 'research'), (7.0, 'power'),
+                  (6.0, 'qic'), (5.0, 'second ts'), (1.0, 'pass')]
+        target = parse_buildings('1AC+2M')
+        masked = tp.opening_budget_scores(self.Env(after), before, scores, target, float('inf'))
+        self.assertEqual([blocked(s) for s in masked], [True, False, False, True, False, True, False])
+        self.assertIn('6 ore 6 credits', masked[0][1])
+        # With ore to spare the mine stays: 8 - 1 = 7 >= 6.
+        roomy = self.snapshot(8, 15, lab, [{'type': 'Build', 'coord': '2,0'}])
+        masked = tp.opening_budget_scores(self.Env([self.snapshot(7, 13, three, [])]), roomy,
+                                          scores[:1], target, float('inf'))
+        self.assertFalse(blocked(masked[0]))
+        # A QIC (1 → 1 ore) and bowl-III power (3 → 1 ore, 1 → 1 credit) count as payment: after
+        # the mine 5 ore + 1 QIC pays the academy (066 p003 paid it with QIC→ore)...
+        funded = self.snapshot(6, 15, lab, [{'type': 'Build', 'coord': '2,0'},
+                                            {'type': 'PowerAction', 'id': 2, 'coord': '2,0'}], qic=1)
+        after = [self.snapshot(5, 13, three, [], qic=1), self.snapshot(5, 13, three, [], qic=0)]
+        masked = tp.opening_budget_scores(self.Env(after), funded, scores[:2], target, float('inf'))
+        self.assertEqual([blocked(s) for s in masked], [False, True])   # ...spending the QIC does not
+        powered = self.snapshot(6, 15, lab, [{'type': 'Build', 'coord': '2,0'}], bowl3=3)
+        masked = tp.opening_budget_scores(self.Env([self.snapshot(5, 13, three, [], bowl3=3)]),
+                                          powered, scores[:1], target, float('inf'))
+        self.assertFalse(blocked(masked[0]))
+        # Credits: 7 owed 6 after a 6-credit TS... power left after the ore gap pays credits too.
+        tight = self.snapshot(6, 9, lab, [{'type': 'Build', 'coord': '2,0'}], bowl3=3)
+        masked = tp.opening_budget_scores(self.Env([self.snapshot(5, 7, three, [], bowl3=3)]),
+                                          tight, scores[:1], target, float('inf'))
+        self.assertFalse(blocked(masked[0]))          # 5 ore + 3 power → 6 ore, 7 credits >= 6
+        masked = tp.opening_budget_scores(self.Env([self.snapshot(5, 5, three, [], bowl3=3)]),
+                                          tight, scores[:1], target, float('inf'))
+        self.assertTrue(blocked(masked[0]))           # power used for ore, 5 credits < 6
+        # Target reached, or not round 1: untouched.
+        done = self.snapshot(0, 9, academy, [{'type': 'Build', 'coord': '2,0'}])
+        one = scores[:1]
+        self.assertIs(tp.opening_budget_scores(self.Env([]), done, one, target, float('inf')), one)
+        before['state']['round'] = 2
+        self.assertIs(tp.opening_budget_scores(self.Env(after), before, scores, target, float('inf')),
+                      scores)
+
+    def test_install_wraps_select_action_once(self):
+        import bgg_openings.planning as planning
+        original = planning.select_action
+        self.addCleanup(setattr, planning, 'select_action', original)
+        tp.install_opening_budget()
+        tp.install_opening_budget()
+        self.assertTrue(planning.select_action._opening_budget)
+        self.assertIs(planning.select_action.__wrapped__, getattr(original, '__wrapped__', original))
+        self.assertTrue(tp._guide['opening_budget'])
