@@ -75,11 +75,42 @@ cd ~/projects/gaia-work/gaia-rl
 .venv/bin/python tools/ore_sources.py ../../gaia-lab/gaia-rl/runs/lab-068-ships-budget-ships --rounds 1-1
 ```
 
+**Counts, run after the bot's python permission was fixed (2026-10-17 22:40, lab-068):**
+
+Geodens round-1 upgrades (`upgrade_targets.py --rounds 1-1 --faction Geodens`), per pair, A → B:
+
+| Pair | A round-1 path | B round-1 path | Geodens B−A charges |
+|---|---|---|---:|
+| p000 | TS → RL | TS → RL → **AC** | +29 |
+| p001 | TS → RL → RL | TS → RL → **AC** | −52 |
+| p002 | TS → RL | TS → RL → **AC** | −22 |
+| p003 | TS → RL → AC | TS → RL → AC | −3 |
+| p004 | TS → RL → AC | TS → RL → AC | −3 |
+| p005 | TS → RL → AC | TS → **PI** | −14 |
+
+Round-1 academies: **A 3/6 → B 4/6** (plus one planetary institute in B on p005). So the rule does reach its goal: on the
+three seeds where A stopped at the lab (p000, p001, p002), B finished the academy in round 1. The charges did not follow:
+those three pairs are +29, −52, −22, and the three pairs where both arms built the academy are flat (−3, −3) or negative
+(−14, where B switched to the institute). The adoption condition's first clause (more academies) passes; the other two fail.
+
+Action counts rounds 1–3 (`action_counts.py --types Build Upgrade ExploreSpaceship`, 6 seats per arm), A / B: Geodens
+Build 4 / 9, Upgrade 24 / 27, ships 9 / 12; Taklons 6 / 8, 30 / 27, 4 / 7; Terrans 13 / 10, 29 / 27, 8 / 10; Xenos
+10 / 9, 31 / 28, 16 / 15. B Geodens does more of everything (more mines, more upgrades, more ship entries) and still gains
+fewer charges; Terrans lose three mines, Xenos one mine and three upgrades.
+
+Round-1 ore sources (`ore_sources.py --rounds 1-1`, 6 seats per arm): Geodens A 27 → B 34 (B adds power → ore 3, a
+pass-income ore 4); Taklons A 21 → B 34 (**6 ore from researching Terraforming** in round 1, none in A, plus QIC → ore 2,
+power action 2, power → ore 1); Terrans A 29 → B 28 (**4 from Terraforming research**, none in A; QIC → ore 3 → 1); **Xenos
+A 37 → B 26** (B loses power action 3 ore 4 → 0, power → ore 3 → 0, pass ore 4 → 0; QIC → ore 4 → 5). Mechanism visible
+for Taklons and Terrans: when mines are blocked by the budget, research (which spends only knowledge and is never blocked)
+becomes the chosen move, and Terraforming research pays ore — the opening turns into research-first. For Xenos the B seats
+convert far less power into ore in round 1, which fits the −18.9 charge row.
+
 Reading: the re-run reproduces 067 almost move for move and lands on the same answer: overall −9.6 (067 −10.1), Xenos the
 largest loss (−18.9, 067 −24.8), Geodens negative in both (−10.7, 067 −4.4), one positive pair out of six in both. Two
 readings of the same six seeds agree that opening_budget does not gain charges on the seeds it was built for and costs the
 mine-opening faction. The pre-set adoption condition (more Geodens academies, positive charges, no loss for the other
-factions) fails on the two clauses that were measured; the academy count remains unmeasured. ships_budget is **not** proposed
+factions) passes only its first clause (academies 3/6 → 4/6) and fails the two that matter for strength. ships_budget is **not** proposed
 for the base stack; the base stays vm_lf_ts_ships, the budget factory and spec remain opt-in, no code change, nothing to
 deploy.
 
@@ -87,10 +118,12 @@ What was learned about the lab itself: an exact re-run of an A/B is cheap eviden
 identically — so repeat samples must use new seeds, and the "drift" seen between cycles with different B arms is opponent
 divergence, not search noise.
 
-Candidate follow-ups (user decision pending, not queued): (a) run the three counts above on lab-068 (or lab-067) — if the
-Geodens academy count did not rise, the rule is not reaching its goal and the next step is `explain_ab_decisions.py --arm B`
-on pair-001/game-0-A23 (Geodens, −52 in both runs) and pair-000/game-0-A02 (Xenos, −138/−122), not more pairs; (b) if the
-Xenos reading holds, the narrower version from 067 (c): keep the budget only when the label's first building is an academy or
-planetary institute, leave lab-and-mines openings to the search — order and scope only, no numbers, no faction code — on
-**new** seeds; (c) otherwise shelve the Geodens academy line (064–068: five runs, no charge gain) and return to the agreed
-agenda (former_use on the ships base, then the "no federation" plan in the comparison set).
+Candidate follow-ups (user decision pending, not queued). The counts settle (a) of the earlier list: the academy does get
+built, so the question is no longer "does the rule fire" but "why does a round-1 academy not pay in charges by round 4".
+(a) `explain_ab_decisions.py --arm B` on pair-001/game-0-A23 (Geodens: academy built, −52) to see what the academy cost in
+rounds 2–3, and on pair-000/game-0-A02 (Xenos: −122, round-1 power-to-ore conversions gone); (b) the narrower version from
+067: keep the budget only when the label's first building is an academy or planetary institute, leave lab-and-mines openings
+(Xenos 1RL+5M) to the search — order and scope only, no numbers, no faction code — on **new** seeds; (c) shelve the Geodens
+academy line (064–068: five runs, the academy now completes but charges do not rise) and return to the agreed agenda
+(former_use on the ships base, then the "no federation" plan in the comparison set). The bot's recommendation is (c), with
+(a) only if the user wants to understand the Geodens cost first.
