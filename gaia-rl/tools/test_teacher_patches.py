@@ -877,7 +877,7 @@ class OpeningBudgetTests(unittest.TestCase):
         from four_factions.value import INCOME
         state = {'research_board': {'economy_research_tile_side': 'Power'}}
         economy = INCOME['economy']['Power']
-        player = {'faction': 'Terrans', 'research_tracks': {'economy': 3, 'science': 2}}
+        player = {'faction': 'Xenos', 'research_tracks': {'economy': 3, 'science': 2}}
         excess = tp._track_income_excess(state, player)
         expected = [a-b+c for a, b, c in zip(economy[3], economy[2], INCOME['science'][2])]
         self.assertEqual(excess, expected)                        # Economy above 2 and all Science uncounted
@@ -885,11 +885,48 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(tp._track_income_excess(state, player), INCOME['science'][2])
         player['faction'] = 'Taklons'                             # Science is a Taklons guide track
         self.assertEqual(tp._track_income_excess(state, player), [0]*7)
+        player['faction'] = 'Terrans'                             # Terrans: Economy counted to 4 (PG18-T20)
+        player['research_tracks']['economy'] = 4
+        self.assertEqual(tp._track_income_excess(state, player), INCOME['science'][2])
+        player['faction'] = 'Geodens'                             # Geodens: to 3 (B14-03)
+        self.assertEqual(tp._track_income_excess(state, player),
+                         [a-b+c for a, b, c in zip(economy[4], economy[3], INCOME['science'][2])])
         player['faction'] = 'HadschHallas'                        # Economy first: counted at every level
         player['research_tracks']['economy'] = 4
         self.assertEqual(tp._track_income_excess(state, player), [0]*7)
         self.assertTrue(any(INCOME['science'][2]))                # the table rows used above are not empty
         self.assertTrue(any(a != b for a, b in zip(economy[3], economy[2])))
+
+    def test_research_when_land_leads_range_without_land_and_economy_when_safe(self):
+        state = {'round': 2, 'phase': {'ActionPhase': {}},
+                 'players': [{'faction': 'Terrans', 'research_tracks': {'economy': 0}}]}
+        actions = [{'type': 'ResearchAdvance', 'track': 'ArtificialIntelligence'},
+                   {'type': 'ResearchAdvance', 'track': 'Navigation'},
+                   {'type': 'ResearchAdvance', 'track': 'Economy'},
+                   {'type': 'ResearchAdvance', 'track': 'Terraforming'},
+                   {'type': 'Build', 'coord': '2,0'}]
+        scores = [(4.7, 'ai'), (3.7, 'nav'), (0.0, 'eco'), (5.3, 'tf'), (30.0, 'mine')]
+        snapshot = {'state': state, 'player': 0, 'candidates': [{'action': a} for a in actions]}
+        with mock.patch.object(tp, '_land_counts', return_value=(0, 0)):
+            lifted = tp.research_when_land_scores(None, snapshot, scores)
+            self.assertEqual([s[0] for s in lifted], [4.7, 5.3, 0.0, 3.7, 30.0])   # Navigation takes the best research score
+            self.assertIn('no land', lifted[1][1])
+            snapshot['candidates'] = [{'action': a} for a in actions if a.get('track') != 'Navigation']
+            lifted = tp.research_when_land_scores(None, snapshot, scores[:1]+scores[2:])
+            self.assertEqual([s[0] for s in lifted], [4.7, 0.0, 5.3, 30.0])        # no Navigation offered: Terraforming already best
+        snapshot['candidates'] = [{'action': a} for a in actions]
+        with mock.patch.object(tp, '_land_counts', return_value=(5, 0)):
+            lifted = tp.research_when_land_scores(None, snapshot, scores)
+            self.assertEqual([s[0] for s in lifted], [4.7, 3.7, 5.3, 0.0, 30.0])   # safe land: Economy leads
+            self.assertIn('land safe', lifted[2][1])
+            state['players'][0]['research_tracks']['economy'] = 2
+            self.assertIs(tp.research_when_land_scores(None, snapshot, scores), scores)
+            state['players'][0]['research_tracks']['economy'] = 0
+        with mock.patch.object(tp, '_land_counts', return_value=(5, 2)):
+            self.assertIs(tp.research_when_land_scores(None, snapshot, scores), scores)   # contested: untouched
+        state['round'] = 4
+        with mock.patch.object(tp, '_land_counts', return_value=(0, 0)):
+            self.assertIs(tp.research_when_land_scores(None, snapshot, scores), scores)   # rounds 1-3 only
 
     def test_ship_entries_and_ship_upgrades_are_not_budgeted(self):
         # User (2026-10-17): a ship entered with range QIC can make the chain cheaper — Twilight's

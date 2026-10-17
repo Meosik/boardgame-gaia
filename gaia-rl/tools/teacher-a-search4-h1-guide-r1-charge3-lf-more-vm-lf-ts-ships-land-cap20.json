@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus research_when_land: in rounds 1-3 the research track follows the land at hand - no cheap planet in reach: Navigation (else Terraforming) leads the research moves; land in reach and none of it reachable by an opponent: Economy leads until level 2; contested land: untouched (guide_r1_charge3_lf_more_vm_lf_ts_ships_land).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_land",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

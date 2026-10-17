@@ -740,20 +740,24 @@ def _track_income(state, player):
 
 # track_income 'sweet' (user 2026-10-18 "track_income 다시 해봐. 단 모든 종족이 다 경제 좋다고 올려버리면
 # 안되고"): the Economy and Science levels' income counts again, but only where the faction guides send the
-# faction — Economy up to level 2 for everyone (B18-03 "메리트 없으면 경제 2", B17-03 "경제 2 필수", B15-03,
-# DK-02), above 2 only when Economy is the faction's first guide track (FACTION_TRACKS: Nevlas, Firaks, Ivits,
-# HadschHallas, Darkanians), Science only when it is a guide track at all. The rest stays priced once, at
-# 16 charges per level (install_guide_r1). Scope only, the levels are the sources'.
+# faction — Economy up to the level the faction's guide names (ECONOMY_COUNTED; the default 2 from B18-03
+# "메리트 없으면 경제 2", B17-03 "경제 2 필수", B15-03; Geodens 3 from B14-03 "3경제/3과학"; Terrans 4 from
+# PG18-T20 "경제 4에 머물고" and B4-02; HadschHallas and Darkanians 4 from "경제 2·4"), every level when
+# Economy is the faction's first guide track (FACTION_TRACKS: Nevlas, Firaks, Ivits, HadschHallas, Darkanians),
+# Science only when it is a guide track at all. The rest stays priced once, at 16 charges per level
+# (install_guide_r1). Scope only, the levels are the sources' (user 04:25 "경제 왜 2렙까지만이야").
 ECONOMY_SWEET = 2
+ECONOMY_COUNTED = {'Geodens': 3, 'Terrans': 4, 'HadschHallas': 4, 'Darkanians': 4}
 
 
 def _track_income_excess(state, player):
     """Track income left uncounted under track_income 'sweet' (see above)."""
     from four_factions.value import INCOME
-    tracks = FACTION_TRACKS.get(player['faction'], ())
+    faction = player['faction']
+    tracks = FACTION_TRACKS.get(faction, ())
     economy = INCOME['economy'][state['research_board']['economy_research_tile_side']]
     level = player['research_tracks']['economy']
-    counted = level if tracks[:1] == ('economy',) else min(level, ECONOMY_SWEET)
+    counted = level if tracks[:1] == ('economy',) else min(level, ECONOMY_COUNTED.get(faction, ECONOMY_SWEET))
     excess = [a-b for a, b in zip(economy[level], economy[counted])]
     if 'science' not in tracks:
         excess = [a+b for a, b in zip(excess, INCOME['science'][player['research_tracks']['science']])]
@@ -2794,6 +2798,83 @@ def academy_economy_scores(env, snapshot, scores):
 def install_academy_economy():
     _guide['academy_economy'] = True
     _wrap_rank('_academy_economy', academy_economy_scores)
+
+
+# research_when_land (user 2026-10-18 "항해술을 나중에 올려도 땅 뺏길 걱정이 없다 싶을 때 올리는 게 경제",
+# "알아서 처리해"): which track a round 1-3 research advance takes is decided by the land at hand, measured
+# as tools/contested_planets.py does — the empty planets of the home type, the ring types one step away,
+# Gaia and Transdim within range plus the QIC held (reach), and those an opponent reaches the same way
+# (contested). No reach: the Navigation advance leads the research moves (Terraforming when no Navigation
+# advance is offered). Reach and nothing contested: the Economy advance leads until level ECONOMY_SWEET.
+# Contested land: untouched, the search picks the mine or the range step. Order only, among research moves;
+# the one number is zero. 071/060 counts: round 2-3 reach falls to 0.3-8 planets a seat, lost planets
+# stay at 0-0.7 a round, so "no land" is the common case, "contested" the rarer one.
+LAND_ROUNDS = (1, 2, 3)
+
+
+def _cheap_types(home):
+    from economy.teacher import RING
+    types = {home, 'Gaia', 'Transdim'}
+    if home in RING:
+        i = RING.index(home)
+        types |= {RING[(i-1) % len(RING)], RING[(i+1) % len(RING)]}
+    return tuple(types)
+
+
+def _land_counts(state, player):
+    """(reach, contested) planets for the player, as in tools/contested_planets.py."""
+    def cheap(p):
+        return {coord for coord, _, _ in _value.targets(state, p, _cheap_types(_home_type(p)))}
+    mine = cheap(player)
+    theirs = set()
+    for other in state['players']:
+        if other is not player:
+            theirs |= cheap(other)
+    return len(mine), len(mine & theirs)
+
+
+def research_when_land_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or state['round'] not in LAND_ROUNDS:
+        return scores
+    player = state['players'][actor]
+    candidates = snapshot['candidates']
+    research = [i for i, c in enumerate(candidates)
+                if c['action'].get('type') == 'ResearchAdvance' and not blocked(scores[i])]
+    if len(research) < 2:
+        return scores
+    reach, contested = _land_counts(state, player)
+    if reach == 0:
+        wanted, why = ('Navigation', 'Terraforming'), 'research when: no land in reach, range first (user 2026-10-18)'
+    elif contested == 0 and player['research_tracks']['economy'] < ECONOMY_SWEET:
+        wanted, why = ('Economy',), 'research when: land safe, Economy first (user 2026-10-18, B18-03)'
+    else:
+        return scores
+    for track in wanted:
+        lead = [i for i in research if candidates[i]['action'].get('track') == track]
+        if lead:
+            break
+    else:
+        return scores
+    best = max(research, key=lambda i: scores[i][0])
+    if best in lead:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(scores), lead[0], best, why)
+    return lifted
+
+
+def install_research_when_land():
+    _guide['research_when_land'] = True
+    _wrap_rank('_research_when_land', research_when_land_scores)
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_land(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus research_when_land (above)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_research_when_land()
+    return teacher
 
 
 def install_opening_release():
