@@ -2569,6 +2569,17 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_budget(seed, **kwargs):
     return teacher
 
 
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_former(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus former_use — a Transdim planet is a colony
+    option only once it is being formed, an Asteroid per idle former, and an idle former is used
+    before the Gaia track is advanced again. Lab 069 (user 2026-10-17 "그렇게 진행해": 068 p001
+    Terrans had five Gaia-forming moves at -2.0 in round 1 because the idle former already priced the
+    planet as a mine)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_former_use()
+    return teacher
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_former(seed, **kwargs):
     """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts whose colony options count a Transdim
     planet only once it is being formed and an Asteroid per idle former, and which uses an idle
