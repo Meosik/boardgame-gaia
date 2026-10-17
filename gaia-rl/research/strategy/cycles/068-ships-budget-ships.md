@@ -118,6 +118,19 @@ What was learned about the lab itself: an exact re-run of an A/B is cheap eviden
 identically — so repeat samples must use new seeds, and the "drift" seen between cycles with different B arms is opponent
 divergence, not search noise.
 
+**Post-mortem (2026-10-17 evening, replays of pair-001/game-0-A23 with `explain_decision` / `explain_ab_decisions`).**
+Both B seats that opened with a ship entry (Geodens at decision 14, Terrans at 13 and again at 21) did so although the
+one-step rank and every trading-station plan scored higher (Terrans TS 357 vs the 1AC+1M plan 339 → 307; Geodens 1AC+2M
+279.8 was the lowest of four plans and was still selected by the guide-label rule). The ship was the plan's first move
+because of a bug in `opening_budget_scores`: the chain-upgrade exemption compared mine counts, so the first step of every
+chain — a mine becoming a trading station — was not exempt and was budgeted against the whole remaining chain (lab + academy,
+9 ore 11 credits). Terrans (7 ore, no bowl-III power) had the TS blocked all round and built nothing in round 1 (two ship
+entries, VP 10 → 0, Terraforming research, pass); Geodens had it blocked until two leeches filled bowl III. Ship entries are
+exempt from the budget, so they were the best allowed move. **067 and 068 therefore tested "block the TS, enter ships first",
+not the intended rule.** Fixed in the work tree (exemption = closer to the target with the same number of buildings; test
+added, 53 pass); on the fixed code the 1AC+1M / 1AC+2M plans start with the TS (Geodens 288.4 ← 279.8). The guide label
+still beats the comparison value (user decision pending). ships_budget needs a fresh A/B on new seeds.
+
 Candidate follow-ups (user decision pending, not queued). The counts settle (a) of the earlier list: the academy does get
 built, so the question is no longer "does the rule fire" but "why does a round-1 academy not pay in charges by round 4".
 (a) `explain_ab_decisions.py --arm B` on pair-001/game-0-A23 (Geodens: academy built, −52) to see what the academy cost in

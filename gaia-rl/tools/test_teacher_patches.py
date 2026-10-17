@@ -731,6 +731,24 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertIs(tp.opening_budget_scores(self.Env(after), before, scores, target, float('inf')),
                       scores)
 
+    def test_the_first_chain_step_mine_to_trading_station_is_never_budgeted(self):
+        # 067/068 p001: Geodens 9 ore, 1 QIC, no bowl-III power, target 1AC+2M. After the 2-ore TS
+        # the lab and academy still owe 9 ore 11 credits, more than 7 ore + 1 QIC — but the TS is
+        # the chain's own first step, so it must stay open; only the new mine is budgeted.
+        from bgg_openings.catalog import parse_buildings
+        from current_actions.conservation import blocked
+        mines = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'Mine', 'hex': '1,0'}]
+        ts = [{'kind': 'TradingStation', 'hex': '0,0'}, mines[1]]
+        before = self.snapshot(9, 15, mines, [
+            {'type': 'Upgrade', 'coord': '0,0', 'to': 'TradingStation'},
+            {'type': 'Build', 'coord': '2,0'}], qic=1)
+        after = [self.snapshot(7, 9, ts, [], qic=1),
+                 self.snapshot(8, 13, mines+[{'kind': 'Mine', 'hex': '2,0'}], [], qic=1)]
+        masked = tp.opening_budget_scores(self.Env(after), before, [(10.0, 'ts'), (9.0, 'mine')],
+                                          parse_buildings('1AC+2M'), float('inf'))
+        self.assertEqual([blocked(s) for s in masked], [False, True])
+        self.assertIn('11 ore', masked[1][1])
+
     def test_ship_entries_and_ship_upgrades_are_not_budgeted(self):
         # User (2026-10-17): a ship entered with range QIC can make the chain cheaper — Twilight's
         # lab for 3 power + 2 ore instead of 3 ore 5 credits. The entry is never blocked and the

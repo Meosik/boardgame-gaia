@@ -1116,6 +1116,7 @@ def chain_costs(current, target, faction, ts_credits=6):
 
 def opening_budget_scores(env, snapshot, scores, target, deadline):
     """Block the moves that would leave less than the owed upgrades cost (see above)."""
+    from dataclasses import asdict
     import bgg_openings.planning as planning
     from bgg_openings.inventory import building_counts
     from current_actions.conservation import BLOCKED, PREFIX, blocked
@@ -1150,8 +1151,15 @@ def opening_budget_scores(env, snapshot, scores, target, deadline):
             continue                                    # spends nothing of the budget
         counts = building_counts(after['state']['players'][actor])
         remaining = planning.distance_to(counts, target, faction)
-        if remaining is not None and remaining < distance and counts.mine == current.mine:
-            continue    # a chain upgrade, whatever action pays it (Upgrade, Twilight lab, Rebellion TS)
+        # A chain upgrade, whatever action pays it (Upgrade, Twilight lab, Rebellion TS): closer to
+        # the target with the same number of buildings. A new mine also comes closer but adds a
+        # building. (Until 2026-10-17 this compared mine counts, so the first step of every chain —
+        # a mine becoming a trading station — failed the test and was budgeted like a mine: in 067/068
+        # p001 the Geodens and Terrans TS were blocked at the first decision and the exempt ship
+        # entries were played instead; Terrans built nothing in round 1.)
+        if (remaining is not None and remaining < distance
+                and sum(asdict(counts).values()) == sum(asdict(current).values())):
+            continue
         still_owed = (chain_costs(counts, target, faction, _trading_station_credits(snapshot, player))
                       if remaining is not None else None) or (owed_ore, owed_credits)
         if still_owed == (0, 0):
