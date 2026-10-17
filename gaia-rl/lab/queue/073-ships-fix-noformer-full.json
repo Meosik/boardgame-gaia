@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-18 04:10 \"진행해\"): A = 기준 ships, B = ships_fix_noformer = ships_fix에서 former_use·instant_forming만 뺀 묶음(opening_budget 첫 단계 수정 + budget_guard + opening_release + geodens_b14_tech + academy_economy). 071에서 ships_fix 전체는 충전 −2.8(평평)인데 테란만 −45.3(유의, 1–3R 광산 11 → 2). p003-g0 테란 결정 31 재현: 다섯 플래그를 끄면 연구소 타일 5(광석 수입) 22.1 > 타일 2 20.1(A와 같은 선택), 켜면 타일 5만 18.8로 내려감 → former_use가 테란의 차원 변형 광산 옵션을 지워 광석 값이 떨어진 것이 유력. 질문: former_use를 빼면 테란 손해가 사라지고 기오덴(+12.8)·제노스(+20.6) 이득은 남는가. 새 시드 6쌍, 6라운드 끝까지. 판정 1–3라운드 충전량(1점 = 1.5충전) + 최종 VP 병독. 함께 볼 것: 테란 1–3R Build·GaiaFormation 수(action_counts.py --types GaiaFormation Build Upgrade EclipseAsteroidMine ExploreSpaceship ResearchAdvance --rounds 1-3; 071 B 테란 Build 2), 연구 단수(research_counts.py --rounds 1-3; 071 B 테란 AI 4·경제 10), 기오덴 1R 타일·경로(upgrade_targets.py --rounds 1-1 --faction Geodens), 1R 광석 출처(ore_sources.py --rounds 1-1), 결정 시간(071 A 최대 51.1초), 오류·미탐색. 충전 양수이고 테란이 안 떨어지고 최종 VP가 안 떨어지면 기준 스택 편입 후보(사용자 확인).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-fix-noformer-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 0
+}

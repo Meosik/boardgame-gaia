@@ -2833,6 +2833,20 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix(seed, **kwargs):
     return teacher
 
 
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_noformer(seed, **kwargs):
+    """Teacher factory: ships_fix without former_use and instant_forming (lab 073, user 2026-10-18
+    "진행해"): 071 pair-003 Terrans — with the five ships_fix flags off the lab tile 5 (ore income) scored
+    22.1 over tile 2 at 20.1 (the A arm's choice); with them on only tile 5 moved, to 18.8, which fits
+    former_use removing the Terrans' Transdim mine options and so the worth of ore."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_opening_budget()
+    _guide['budget_guard'] = True
+    install_opening_release()
+    install_geodens_b14_tech()
+    install_academy_economy()
+    return teacher
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_label(seed, **kwargs):
     """Teacher factory: ..._ships_fix where, among the guide openings whose forecast completes, the
     comparison value picks the one to follow (label_value, see guide_label_forecast)."""
