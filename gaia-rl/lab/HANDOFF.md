@@ -1418,6 +1418,12 @@
      **lab 067 큐** `067-ships-budget` = A ships vs B ships_budget, **064·066 시드 6개 재사용**, stop_round 3, 판정 1–3R 충전(기오덴 먼저, 공통 규칙이라 3종족도).
      함께 볼 것: 기오덴 1R 아카데미(066 A 1/6·B 2/6), 제노스·테란 1–3R 광산(066 A Xen 12·Ter 14), `ore_sources.py --rounds 1-1`, 오류·미탐색. 끝나면 사이클 문서 + 결과표 + 여기 갱신.
      기오덴 아카데미 증가·충전 양수·다른 종족 손해 없음이면 ships_budget을 기준 스택 후보로 제안(사용자 확인). 라벨 규칙(ships_label)은 안 넣음 — budget이면 rollout이 AC에 닿아 라벨이 저절로 맞음.
+     **함선 수정(사용자 질문 "자원 쓰는 거 말고는 남겨 뒀지? 함선을 QIC로 들어가서 함선 액션으로 비용을 아끼는 경우는?", 2026-10-17)**: 자원(광석·돈·QIC·3그릇 파워)을 안 쓰는 수는 전부 그대로
+     (연구는 지식, 충전·패스, 가이아 포밍은 다른 그릇). 함선 입장은 VP + 사거리 QIC(엔진 `apply_explore_spaceship`)라 첫 판에서는 QIC가 아카데미 돈일 때 차단됐고, 함선 업그레이드 액션
+     (`TwilightFreeResearchLab` 3파워+2광석 TS→RL, `RebellionFreeTradingStation` 3파워+1광석 M→TS)은 종류가 Upgrade가 아니라 체인으로 안 쳐서 수 전 원가로 비교돼 잘못 차단됨.
+     고침: ① `…ExploreSpaceship` 종류는 예산 검사 제외(탐색이 판단) ② 체인 단계는 fork 뒤 건물 수(거리 감소·광산 수 동일)로 판정, 종류 무관 ③ 남은 원가는 수 뒤 건물 기준으로 재계산.
+     테스트 1개 추가(52개 통과), 066 p000 재현(결정 0·37) 결과 동일. **067은 15:51에 첫 판 코드로 시작**(lab이 시작 시점 커밋을 씀) → 같은 A/B를 고친 코드로 `068-ships-budget-ships` 큐.
+     067 결과는 "함선 제외 전" 참고치. 067을 끊고 바로 068만 돌리려면 사용자가 `systemctl --user restart gaia-lab` 뒤 `lab/queue/067-ships-budget.json`을 지우고 푸시(봇은 삭제·재시작 불가).
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고

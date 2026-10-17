@@ -731,6 +731,32 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertIs(tp.opening_budget_scores(self.Env(after), before, scores, target, float('inf')),
                       scores)
 
+    def test_ship_entries_and_ship_upgrades_are_not_budgeted(self):
+        # User (2026-10-17): a ship entered with range QIC can make the chain cheaper — Twilight's
+        # lab for 3 power + 2 ore instead of 3 ore 5 credits. The entry is never blocked and the
+        # ship's upgrade counts as a chain step like any Upgrade; the owed sum is recomputed after it.
+        from bgg_openings.catalog import parse_buildings
+        from current_actions.conservation import blocked
+        ts = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'TradingStation', 'hex': '1,0'}]
+        lab = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'ResearchLab', 'hex': '1,0'}]
+        before = self.snapshot(8, 13, ts, [
+            {'type': 'ExploreSpaceship', 'ship': 'Rebellion'},
+            {'type': 'TwilightFreeResearchLab', 'coord': '1,0'},
+            {'type': 'Build', 'coord': '2,0'}], qic=1, bowl3=3)
+        after = [self.snapshot(8, 13, ts, [], qic=0, bowl3=3),           # entry: the range QIC
+                 self.snapshot(6, 13, lab, [], qic=1, bowl3=0),          # 2 ore + 3 power, lab reached
+                 self.snapshot(7, 11, ts+[{'kind': 'Mine', 'hex': '2,0'}], [], qic=1, bowl3=3)]
+        scores = [(9.0, 'rebellion'), (8.0, 'twilight lab'), (7.0, 'mine')]
+        masked = tp.opening_budget_scores(self.Env(after), before, scores, parse_buildings('1AC+2M'),
+                                          float('inf'))
+        # The mine: 7 ore + 1 QIC + 1 (3 power) = 9 ore, 11 credits against RL 3/5 + AC 6/6: it pays.
+        self.assertEqual([blocked(s) for s in masked], [False, False, False])
+        after[2] = self.snapshot(6, 11, ts+[{'kind': 'Mine', 'hex': '2,0'}], [], qic=1, bowl3=3)
+        masked = tp.opening_budget_scores(self.Env(after), before, scores, parse_buildings('1AC+2M'),
+                                          float('inf'))
+        self.assertEqual([blocked(s) for s in masked], [False, False, True])
+        self.assertIn('9 ore 11 credits', masked[2][1])
+
     def test_install_wraps_select_action_once(self):
         import bgg_openings.planning as planning
         original = planning.select_action

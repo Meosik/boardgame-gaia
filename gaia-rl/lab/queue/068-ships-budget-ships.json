@@ -1,0 +1,16 @@
+{
+  "kind": "ab",
+  "note": "067과 같은 A/B(A = ships, B = ships_budget), 067이 시작된 뒤(15:51) 고친 opening_budget으로 재실행: ① 함선 입장(ExploreSpaceship, VP·사거리 QIC 지불)은 예산 검사에서 제외 — 트와일라잇 2광석 연구소, 리벨리온 1광석 교역소·2지식→2돈1QIC 같은 함선 액션으로 체인이 싸질 수 있어 탐색이 판단(사용자 2026-10-17) ② 체인 업그레이드는 행동 종류와 무관하게(Upgrade·TwilightFreeResearchLab·RebellionFreeTradingStation) fork 뒤 건물 수로 판정, 남은 원가도 수 뒤 건물 기준으로 다시 계산(첫 판은 Upgrade 종류만 면제하고 수 전 원가로 비교해 함선 연구소가 잘못 차단됨). 시드·판정·함께 볼 것은 067과 동일(064·066 시드 6개, 4R 시작 종료, 1–3R 충전, 기오덴 1R 아카데미, 제노스·테란 광산, ore_sources, 오류·미탐색).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-budget-cap20.json",
+  "seeds": [
+    "geo-quartet-699682",
+    "geo-quartet-703309",
+    "geo-quartet-710953",
+    "geo-quartet-711655",
+    "geo-quartet-712180",
+    "geo-quartet-712850"
+  ],
+  "comparisons": 2,
+  "stop_round": 3
+}

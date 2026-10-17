@@ -1136,7 +1136,11 @@ def opening_budget_scores(env, snapshot, scores, target, deadline):
     masked = list(scores)
     for i, candidate in enumerate(snapshot['candidates']):
         action = candidate['action']
-        if blocked(scores[i]) or action['type'] in ('Pass', 'ChargePower', 'ChooseIncomeOrder'):
+        # Exploring a spaceship pays VP and range QIC for actions the chain can use afterwards
+        # (Twilight's 2-ore lab, Rebellion's 1-ore trading station and its 2-knowledge → 2 credits
+        # + 1 QIC); the search, not the budget, judges those (user 2026-10-17).
+        if (blocked(scores[i]) or action['type'] in ('Pass', 'ChargePower', 'ChooseIncomeOrder')
+                or action['type'].endswith('ExploreSpaceship')):
             continue
         check_time(deadline)
         after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
@@ -1145,10 +1149,15 @@ def opening_budget_scores(env, snapshot, scores, target, deadline):
                 and resources['power']['bowl3'] >= held['power']['bowl3']):
             continue                                    # spends nothing of the budget
         counts = building_counts(after['state']['players'][actor])
-        if action['type'] == 'Upgrade' and planning.distance_to(counts, target, faction) == distance-1:
-            continue                                    # a chain upgrade: that is what the budget is for
-        if not _budget_pays(resources, owed_ore, owed_credits):
-            masked[i] = (BLOCKED, PREFIX+f'opening budget: {owed_ore} ore {owed_credits} credits '
+        remaining = planning.distance_to(counts, target, faction)
+        if remaining is not None and remaining < distance and counts.mine == current.mine:
+            continue    # a chain upgrade, whatever action pays it (Upgrade, Twilight lab, Rebellion TS)
+        still_owed = (chain_costs(counts, target, faction, _trading_station_credits(snapshot, player))
+                      if remaining is not None else None) or (owed_ore, owed_credits)
+        if still_owed == (0, 0):
+            continue
+        if not _budget_pays(resources, *still_owed):
+            masked[i] = (BLOCKED, PREFIX+f'opening budget: {still_owed[0]} ore {still_owed[1]} credits '
                          f'still owed by the {target} upgrades')
     return masked
 
