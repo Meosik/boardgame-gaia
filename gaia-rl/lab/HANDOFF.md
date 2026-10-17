@@ -1375,6 +1375,16 @@
      기존 former spec은 vm_lf_ts 기준) → "연방 안 함" 계획을 비교에 넣는 탐색 수정 ⓑ 테란 광산 14→6 확인: 사용자가 gaia-work 루트에서
      `GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-20260917:gaia-rl/tools gaia-rl/.venv/bin/python gaia-rl/tools/explain_ab_decisions.py ~/projects/gaia-lab/gaia-rl/runs/lab-066-ships-label-reachable/pair-001/game-0-A23 --arm B --steps 40 --spec gaia-rl/tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-label-cap20.json`
      (테란 B 186.5 vs 거울 판 A 247.1) ⓒ 같은 A/B 새 시드 12쌍(18쌍 ±30) — 두 번 같은 방향이라 기대값 낮음.
+     **기오덴 광석 부족 원인(사용자 질문, 2026-10-17, `list_decisions.py --rounds 0-1`로 066 세 판 확인, 코드 변경 없음)**: 광석이 없는 게 아니라 **순서**다.
+     B14-03: 1AC+2M은 광석 12(시작 9 + 부스터 1 + 파워/프리 액션 2), 모행성 2개가 3사거리 안이어야 하고, **광석이 모자라면 아카데미+광산(1AC+1M)으로 끝내고
+     광산은 2R에**. 완성 판 p003/g0 B(부스터 13 = 광석1·지식1): TS → RL → QIC→광석 → **AC** → 과학 연구 → 패스(새 광산 0, 1AC+1M). 정지 판 p005/g1 B(부스터 13):
+     TS → RL → **광산 3,0 → 광산 2,0** → 트와일라잇·리벨리온 → 과학 → 패스. 정지 판 p000/g0 A(부스터 10 = 광석1): TS → RL → **파워 액션 6(−3,−1 테라포밍+광산)**
+     → 이클립스 → 패스. 즉 광석 부스터는 다 잡았는데 `planning.select_action` ①이 "목표 거리를 줄이는 수 중 기본 순위 최고"를 두므로 1광석 광산(기오덴은 테라 1단계라
+     테라포밍 1칸 3광석까지)이 아카데미(6광석)보다 먼저 뽑혀 광석을 써 버리고, 그 뒤 ②(자원 늘리는 무료·파워 행동)로도 6광석은 못 채워 ③ 일반 최고 수(함선·연구)로 흘러감.
+     광석 예산(이 광산을 지어도 이번 라운드 아카데미 6광석이 남는가)을 보는 계산이 없고, 모아 두는 수도 없음. 라벨(065·066)은 이 순서를 못 바꾸므로 효과가 없었던 것.
+     **수정 후보(사용자 확인 대기, 미구현)**: select_action ①에서 목표에 아직 안 지은 업그레이드(AC·PI)가 있으면 그 업그레이드를 먼저, 광산은 "지은 뒤에도 남은
+     업그레이드 비용(엔진 원가)이 손에 남을 때"만 — B14 "광석 부족 시 아카데미+광산, 광산은 2R" 그대로. 계산 가능한 사실(원가·보유)만 쓰고 새 수치·종족 코드 없음.
+     14종족 공통 코드라 다른 종족 영향은 A/B로 봄(ships 기준, 064 시드 6쌍 재사용 가능).
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
