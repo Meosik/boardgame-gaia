@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-18 \"제안대로 해봐\"): A = ships_fix(071 B), B = ships_fix_label = A + label_value(가이드가 오프닝 후보와 순서를 정하되, 1R 예측이 완성된 가이드 오프닝들 사이에서는 비교값이 고름; 동률이면 가이드 순서·기억 라벨, 가이드 밖 계획은 안 집음. 068 p001 기오덴: 기억된 1AC+2M 계획 279.8이 네 계획 중 꼴찌인데 가이드 2순위 의회 계획 339.7을 두고 라벨이 이김). 새 시드 6쌍, 6라운드 끝까지. 판정은 1–3라운드 충전량(1점 = 1.5충전)에 최종 VP 병독. 함께 볼 것: 1R 중 라벨이 바뀐 횟수(bgg_opening status switched; 부작용 확인), 종족별 1R 끝 재고(upgrade_targets.py --rounds 1-1), 결정 시간, 오류·미탐색. 071과 072는 큐 순서대로 이어서 돈다.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-fix-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-fix-label-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 0
+}
