@@ -123,3 +123,13 @@ footprint), fresh seeds, 6 pairs, full game, judged by Terrans and overall charg
 without former_use/instant_forming, same design; (c) the explain_decision above first, then only the half it points to.
 The bot's recommendation is (a), because the Geodens and Xenos gains come from rules that do not touch rounds 2–3, and
 academy_economy is the one rule the user asked for by hand (01:45) whose faction-wide effect was never measured alone.
+
+**Correction (user, 2026-10-18 "테란이 ai > qic 라인을 초반에 하나?").** The A arm's early Terrans AI line is not a line
+the sources back. PG18-T05/T07: the first Terrans advance is Science or Navigation, AI only as a Navigation substitute
+"not standard play"; `FACTION_TRACKS` Terrans = Navigation, Gaia, Economy; B04 and B19 never name AI. A's 19 AI advances
+in rounds 1–3 are the value-table artifact already recorded (guide_r1 4: every track 16 charges, track income excluded, so
+Economy and Science score 0.00 and the AI step's QIC, 4.67, is the largest one-off reward left). So the Terrans loss in
+071 is not "the AI line was lost" — it is the mines (11 → 2) and the round-1 academy slipping to round 2. B's Economy
+research is closer to the sources than A's AI, but it did not bring the mines back. Candidate (a) is therefore withdrawn
+as the first split; the first split is **(b) ships vs ships_fix without former_use/instant_forming**, or (c) the
+explain_decision above (one minute) before choosing. academy_economy stays in the bundle until a split says otherwise.
