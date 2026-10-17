@@ -2930,8 +2930,13 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_noformer(seed, **kwargs):
 
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_label(seed, **kwargs):
     """Teacher factory: ..._ships_fix where, among the guide openings whose forecast completes, the
-    comparison value picks the one to follow (label_value, see guide_label_forecast)."""
+    comparison value picks the one to follow (label_value, see guide_label_forecast).
+
+    Lab 072 ran this factory without install_opening_label(): the flag was set but the forecast hook
+    that reads it was never installed, so the B arm played the A arm's code (identical round-1
+    openings in all 12 games). The hook is installed here now; 072 measured nothing."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_fix(seed, **kwargs)
+    install_opening_label()
     _guide['label_value'] = True
     return teacher
 

@@ -873,6 +873,19 @@ class OpeningBudgetTests(unittest.TestCase):
             plan, opening = tp.guide_label_forecast(original, rows, '1AC+2M', plans)
             self.assertEqual(opening.label, '1AC+2M')                  # tie: the remembered, guide-first label
 
+    def test_ships_fix_label_factory_installs_the_forecast_hook(self):
+        # Lab 072: the factory set label_value without install_opening_label(), so the hook that reads
+        # the flag was never on planning.select_forecast and the B arm played the A arm's code.
+        # Built in a subprocess: the factory rebinds module-level functions for the whole process,
+        # which would leak into the tests that run after this one.
+        import subprocess
+        import sys
+        code = ("import teacher_patches as tp, bgg_openings.planning as p\n"
+                "tp.guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_label(%r)\n"
+                "print(getattr(p.select_forecast, '_opening_label', False), tp._guide['label_value'])" % SEED)
+        out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True).stdout
+        self.assertEqual(out.split(), ['True', 'True'])
+
     def test_track_income_sweet_counts_economy_to_two_and_science_on_guide_tracks(self):
         from four_factions.value import INCOME
         state = {'research_board': {'economy_research_tile_side': 'Power'}}
