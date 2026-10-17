@@ -1544,8 +1544,9 @@
 
      **사용자 결정(2026-10-18 01:00 "지금 테스트 멈추고 고칠거 다 고친 후에 돌려야겠는데")**: 069·070 큐 삭제(4fdc1f3, 푸시 뒤 lab이 빈 큐로 정상 대기 확인).
      **069는 시작도 못 했음**: `lab/seeds.txt`에 안 쓴 geo-quartet 시드가 **0개**라 lab이 23:27부터 1분마다 크래시 반복(restart 15회) → 큐 삭제로 멈춤. 다음 실험 전에 사용자가
-     시드를 보충해야 한다(봇은 cargo run 불가): `cd ~/projects/gaia-work/gaia-engine && cargo run --release --example faction_lineups -- geo-quartet 731000 Xenos,Taklons,Terrans,Geodens`
-     → 출력 시드를 `gaia-rl/lab/seeds.txt` 끝에 붙여 커밋·푸시(README "시드가 모자랄 때"; 마지막 시드 730948 다음 번호부터).
+     시드를 보충해야 한다. (처음 적은 cargo 명령은 틀렸다 — 예제는 `gaia-rl` 크레이트에 있고 둘째 인자는 훑을 한도다. 사용자가 그 오류를 보고함.)
+     **보충 완료(2026-10-18 01:25)**: 봇이 Python으로 `Environment(seed)` 종족을 직접 검사해 731000–771000에서 **22개**를 `seeds.txt`에 붙임(287 → 309줄, README에 명령 기록).
+     다음에 또 모자라면 README "시드가 모자랄 때"의 Python 명령을 771000부터.
      **ships_fix 묶음 구현(01:10, 작업 트리)**: 팩토리 `guide_r1_charge3_lf_more_vm_lf_ts_ships_fix`, spec `...-ships-fix-cap20.json` = ships +
      ① former_use ② instant_forming(즉시 포밍 수단이 있으면 가장 가까운 차원 변형 행성을 이번 라운드 광산 옵션으로) ③ opening_budget(첫 단계 수정 4bfa19c) + budget_guard(지금 보유로
      체인을 못 내면 아무것도 차단 안 함) ④ opening_release(목표의 업그레이드가 다 지어지면 1R 나머지는 탐색에) ⑤ geodens_b14_tech(기오덴 첫 표준 타일 10 또는 4, 경제 칸 우선;

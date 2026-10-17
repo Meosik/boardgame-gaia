@@ -93,9 +93,18 @@ PPO 정책이 교사처럼 수를 둘 수 있게 되면(정책을 불러오는 f
 
 ## 시드가 모자랄 때
 
-`lab/seeds.txt` 끝에 더 붙인다(4종족 고정 시드 생성).
+`lab/seeds.txt` 끝에 더 붙인다(4종족 고정 시드 생성). 예제는 `gaia-rl` 크레이트에 있다(`gaia-engine`이 아님).
+두 번째 인자는 시작 번호가 아니라 **0부터 몇 번까지 훑을지**이므로, 이미 있는 시드는 빼고 새 것만 붙인다.
 ```sh
-cargo run --release --example faction_lineups -- geo-quartet 400000 Xenos,Taklons,Terrans,Geodens
+cd ~/projects/gaia-work/gaia-rl && cargo run --release --example faction_lineups -- geo-quartet 800000 Xenos,Taklons,Terrans,Geodens
+```
+cargo 없이(봇에서) 같은 일을 하려면 Python으로 번호 구간을 훑는다(2026-10-18, 731000–771000에서 22개):
+```sh
+cd ~/projects/gaia-work && gaia-rl/.venv/bin/python -c "import json,os,sys;os.environ['GAIA_ENGINE_FIXES_2']='1';sys.path[:0]=['gaia-rl/python'];from gaia_rl import Environment;want={'Xenos','Taklons','Terrans','Geodens'};hits=[]
+for n in range(771000,811000):
+    s='geo-quartet-%d'%n
+    if {p['faction'] for p in json.loads(Environment(s,2000).snapshot_json())['state']['players']}==want: hits.append(s)
+open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len(hits))"
 ```
 
 ## 디스코드로 Claude에게 일 시키기 (호출식)
