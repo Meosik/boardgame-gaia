@@ -1423,7 +1423,8 @@
      (`TwilightFreeResearchLab` 3파워+2광석 TS→RL, `RebellionFreeTradingStation` 3파워+1광석 M→TS)은 종류가 Upgrade가 아니라 체인으로 안 쳐서 수 전 원가로 비교돼 잘못 차단됨.
      고침: ① `…ExploreSpaceship` 종류는 예산 검사 제외(탐색이 판단) ② 체인 단계는 fork 뒤 건물 수(거리 감소·광산 수 동일)로 판정, 종류 무관 ③ 남은 원가는 수 뒤 건물 기준으로 재계산.
      테스트 1개 추가(52개 통과), 066 p000 재현(결정 0·37) 결과 동일. **067은 15:51에 첫 판 코드로 시작**(lab이 시작 시점 커밋을 씀) → 같은 A/B를 고친 코드로 `068-ships-budget-ships` 큐.
-     067 결과는 "함선 제외 전" 참고치. 067을 끊고 바로 068만 돌리려면 사용자가 `systemctl --user restart gaia-lab` 뒤 `lab/queue/067-ships-budget.json`을 지우고 푸시(봇은 삭제·재시작 불가).
+     067 결과는 "함선 제외 전" 참고치. **사용자 결정(2026-10-17 "그냥 다음 큐에 넣어")**: 067은 그대로 끝내고 068이 뒤따름. 둘 다 끝나면 각각 사이클 문서 + 결과표 + 여기 갱신,
+     판정은 068(고친 코드)로 하고 067은 함선 제외 효과의 비교치로만 씀.
      **포밍 횟수(사용자 실행, 2026-10-13, `action_counts.py … --types GaiaFormation Build EclipseAsteroidMine ExploreSpaceship
      ResearchAdvance --rounds 1-3`, 12좌석 합; `--types`는 필수)**: GaiaFormation A Geo 6·Tak 4·Ter 21·Xen 0, B Geo 3·Tak 2·Ter 4·Xen 0.
      가이아 연구 대비: B Tak 19칸에 포밍 2, B Geo 15칸에 포밍 3(hard Ter 21칸에 21, hard Tak 2칸에 4) → **B는 가이아를 올리고
