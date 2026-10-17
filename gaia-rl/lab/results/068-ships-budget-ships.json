@@ -1,0 +1,576 @@
+{
+ "name": "068-ships-budget-ships",
+ "kind": "ab",
+ "status": "done",
+ "note": "067과 같은 A/B(A = ships, B = ships_budget), 067이 시작된 뒤(15:51) 고친 opening_budget으로 재실행: ① 함선 입장(ExploreSpaceship, VP·사거리 QIC 지불)은 예산 검사에서 제외 — 트와일라잇 2광석 연구소, 리벨리온 1광석 교역소·2지식→2돈1QIC 같은 함선 액션으로 체인이 싸질 수 있어 탐색이 판단(사용자 2026-10-17) ② 체인 업그레이드는 행동 종류와 무관하게(Upgrade·TwilightFreeResearchLab·RebellionFreeTradingStation) fork 뒤 건물 수로 판정, 남은 원가도 수 뒤 건물 기준으로 다시 계산(첫 판은 Upgrade 종류만 면제하고 수 전 원가로 비교해 함선 연구소가 잘못 차단됨). 시드·판정·함께 볼 것은 067과 동일(064·066 시드 6개, 4R 시작 종료, 1–3R 충전, 기오덴 1R 아카데미, 제노스·테란 광산, ore_sources, 오류·미탐색).",
+ "host": "agentmaco",
+ "commit": "fcf9074",
+ "started_at": "2026-10-17T17:44:35+09:00",
+ "finished_at": "2026-10-17T19:18:38+09:00",
+ "seeds": [
+  "geo-quartet-699682",
+  "geo-quartet-703309",
+  "geo-quartet-710953",
+  "geo-quartet-711655",
+  "geo-quartet-712180",
+  "geo-quartet-712850"
+ ],
+ "command": [
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-budget-cap20.json",
+  "--games",
+  "12",
+  "--seeds",
+  "geo-quartet-699682",
+  "geo-quartet-703309",
+  "geo-quartet-710953",
+  "geo-quartet-711655",
+  "geo-quartet-712180",
+  "geo-quartet-712850",
+  "--comparisons",
+  "2",
+  "--jobs",
+  "4",
+  "--fast-copy",
+  "--stop-round",
+  "3",
+  "--output",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-068-ships-budget-ships"
+ ],
+ "exit_code": 0,
+ "summary": {
+  "factions": {
+   "Geodens": {
+    "pairs": 6,
+    "mean_B_minus_A": 5,
+    "ci95": [
+     -5.4943563989598445,
+     15.494356398959845
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 184,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 123,
+    "A_unsearched_comparisons": 29226,
+    "B_decisions": 210,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 143,
+    "B_unsearched_comparisons": 31564
+   },
+   "Taklons": {
+    "pairs": 6,
+    "mean_B_minus_A": 1.1666666666666667,
+    "ci95": [
+     -5.074314525376809,
+     7.407647858710143
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 189,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 126,
+    "A_unsearched_comparisons": 22361,
+    "B_decisions": 191,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 128,
+    "B_unsearched_comparisons": 20389
+   },
+   "Terrans": {
+    "pairs": 6,
+    "mean_B_minus_A": 0.3333333333333333,
+    "ci95": [
+     -5.045130970039606,
+     5.711797636706272
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 229,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 157,
+    "A_unsearched_comparisons": 27211,
+    "B_decisions": 219,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 143,
+    "B_unsearched_comparisons": 25313
+   },
+   "Xenos": {
+    "pairs": 6,
+    "mean_B_minus_A": 1.6666666666666667,
+    "ci95": [
+     -7.688430601462625,
+     11.021763934795958
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 264,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 196,
+    "A_unsearched_comparisons": 44449,
+    "B_decisions": 240,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 178,
+    "B_unsearched_comparisons": 45122
+   },
+   "ALL": {
+    "pairs": 6,
+    "mean_B_minus_A": 2.0416666666666665,
+    "ci95": [
+     -1.7798380020733906,
+     5.863171335406724
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 866,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 602,
+    "A_unsearched_comparisons": 123247,
+    "B_decisions": 860,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 592,
+    "B_unsearched_comparisons": 122388
+   }
+  },
+  "failures": {},
+  "games_planned": 12,
+  "games_complete": 12,
+  "pairs_complete": 6
+ },
+ "timing": {
+  "A": {
+   "n": 866,
+   "mean": 12.349220554272517,
+   "median": 20.011,
+   "p90": 20.267,
+   "max": 22.568
+  },
+  "B": {
+   "n": 860,
+   "mean": 11.731524418604652,
+   "median": 20.005,
+   "p90": 20.271,
+   "max": 35.11
+  }
+ },
+ "final_scores": {
+  "Geodens": {
+   "A": [
+    15,
+    3,
+    4,
+    10,
+    1,
+    6
+   ],
+   "B": [
+    23,
+    8,
+    1,
+    0,
+    17,
+    20
+   ]
+  },
+  "Terrans": {
+   "A": [
+    8,
+    2,
+    10,
+    25,
+    7,
+    9
+   ],
+   "B": [
+    13,
+    2,
+    10,
+    18,
+    14,
+    6
+   ]
+  },
+  "Xenos": {
+   "A": [
+    17,
+    8,
+    12,
+    6,
+    17,
+    24
+   ],
+   "B": [
+    10,
+    23,
+    13,
+    13,
+    20,
+    15
+   ]
+  },
+  "Taklons": {
+   "A": [
+    20,
+    12,
+    8,
+    14,
+    7,
+    13
+   ],
+   "B": [
+    18,
+    15,
+    19,
+    15,
+    8,
+    6
+   ]
+  }
+ },
+ "charges": {
+  "factions": {
+   "Geodens": {
+    "pairs": 6,
+    "A": 168.64393939393946,
+    "B": 157.934696969697,
+    "mean_B_minus_A": -10.709242424242433,
+    "ci95": [
+     -38.780372841289406,
+     17.361887992804537
+    ]
+   },
+   "Taklons": {
+    "pairs": 6,
+    "A": 148.36742424242428,
+    "B": 144.58712121212127,
+    "mean_B_minus_A": -3.7803030303030027,
+    "ci95": [
+     -41.64079793066971,
+     34.08019187006371
+    ]
+   },
+   "Terrans": {
+    "pairs": 6,
+    "A": 194.08590909090913,
+    "B": 189.16000000000005,
+    "mean_B_minus_A": -4.9259090909090775,
+    "ci95": [
+     -47.81953747584204,
+     37.96771929402388
+    ]
+   },
+   "Xenos": {
+    "pairs": 6,
+    "A": 159.379696969697,
+    "B": 140.51268939393944,
+    "mean_B_minus_A": -18.867007575757565,
+    "ci95": [
+     -86.6808650242413,
+     48.94684987272616
+    ]
+   },
+   "ALL": {
+    "pairs": 6,
+    "mean_B_minus_A": -9.57061553030302,
+    "ci95": [
+     -29.597812171531444,
+     10.456581110925406
+    ]
+   }
+  },
+  "games": [
+   "pair-000/game-0-A02  Geodens(A) 170, Xenos(B) 124, Terrans(A) 221, Taklons(B) 192",
+   "pair-000/game-1-A13  Geodens(B) 199, Xenos(A) 245, Terrans(B) 234, Taklons(A) 143",
+   "pair-001/game-0-A23  Terrans(B) 197, Geodens(B) 158, Taklons(A) 170, Xenos(A) 152",
+   "pair-001/game-1-A01  Terrans(A) 277, Geodens(A) 210, Taklons(B) 166, Xenos(B) 111",
+   "pair-002/game-0-A03  Geodens(A) 140, Terrans(B) 160, Xenos(B) 150, Taklons(A) 128",
+   "pair-002/game-1-A12  Geodens(B) 119, Terrans(A) 139, Xenos(A) 165, Taklons(B) 134",
+   "pair-003/game-0-A13  Geodens(B) 159, Terrans(A) 158, Xenos(B) 157, Taklons(A) 133",
+   "pair-003/game-1-A02  Geodens(A) 161, Terrans(B) 192, Xenos(A) 87, Taklons(B) 83",
+   "pair-004/game-0-A01  Terrans(A) 162, Geodens(A) 164, Taklons(B) 117, Xenos(B) 143",
+   "pair-004/game-1-A23  Terrans(B) 160, Geodens(B) 160, Taklons(A) 156, Xenos(A) 121",
+   "pair-005/game-0-A12  Terrans(B) 192, Taklons(A) 160, Geodens(A) 168, Xenos(B) 159",
+   "pair-005/game-1-A03  Terrans(A) 206, Taklons(B) 175, Geodens(B) 154, Xenos(A) 186"
+  ],
+  "seats": {
+   "pair-000/game-0-A02": [
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 169.55454545454546
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 123.53295454545452
+    },
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 220.67000000000007
+    },
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 192.40454545454548
+    }
+   ],
+   "pair-000/game-1-A13": [
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 198.99454545454557
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 245.2
+    },
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 233.7500000000001
+    },
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 143.39545454545453
+    }
+   ],
+   "pair-001/game-0-A23": [
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 196.8000000000001
+    },
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 157.55454545454546
+    },
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 170.45
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 151.94000000000003
+    }
+   ],
+   "pair-001/game-1-A01": [
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 277.4454545454546
+    },
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 209.64545454545464
+    },
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 165.8
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 110.54999999999998
+    }
+   ],
+   "pair-002/game-0-A03": [
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 140.2545454545455
+    },
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 160.46000000000004
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 149.9000000000001
+    },
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 128.34545454545457
+    }
+   ],
+   "pair-002/game-1-A12": [
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 118.55454545454552
+    },
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 139.45000000000005
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 165.30000000000007
+    },
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 134.1045454545456
+    }
+   ],
+   "pair-003/game-0-A13": [
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 158.5045454545455
+    },
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 158.10000000000002
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 157.25454545454534
+    },
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 132.7045454545455
+    }
+   ],
+   "pair-003/game-1-A02": [
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 161.20000000000005
+    },
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 192.09999999999997
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 86.50454545454545
+    },
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 83.2045454545455
+    }
+   ],
+   "pair-004/game-0-A01": [
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 162.45
+    },
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 163.60909090909092
+    },
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 117.25909090909096
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 143.03409090909105
+    }
+   ],
+   "pair-004/game-1-A23": [
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 160.35000000000002
+    },
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 160.4454545454546
+    },
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 155.50909090909096
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 120.87909090909096
+    }
+   ],
+   "pair-005/game-0-A12": [
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 191.50000000000006
+    },
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 159.80000000000013
+    },
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 167.60000000000008
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 158.80454545454555
+    }
+   ],
+   "pair-005/game-1-A03": [
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 206.40000000000003
+    },
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 174.7500000000001
+    },
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 153.5545454545454
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 186.4545454545454
+    }
+   ]
+  }
+ },
+ "watch_replay": "다시보기 게시: pair-000/game-0-A02 좌석 1 — Xenos B팔 충전 124 (상대 팔 245)"
+}
