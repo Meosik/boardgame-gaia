@@ -873,6 +873,24 @@ class OpeningBudgetTests(unittest.TestCase):
             plan, opening = tp.guide_label_forecast(original, rows, '1AC+2M', plans)
             self.assertEqual(opening.label, '1AC+2M')                  # tie: the remembered, guide-first label
 
+    def test_track_income_sweet_counts_economy_to_two_and_science_on_guide_tracks(self):
+        from four_factions.value import INCOME
+        state = {'research_board': {'economy_research_tile_side': 'Power'}}
+        economy = INCOME['economy']['Power']
+        player = {'faction': 'Terrans', 'research_tracks': {'economy': 3, 'science': 2}}
+        excess = tp._track_income_excess(state, player)
+        expected = [a-b+c for a, b, c in zip(economy[3], economy[2], INCOME['science'][2])]
+        self.assertEqual(excess, expected)                        # Economy above 2 and all Science uncounted
+        player['research_tracks']['economy'] = 2
+        self.assertEqual(tp._track_income_excess(state, player), INCOME['science'][2])
+        player['faction'] = 'Taklons'                             # Science is a Taklons guide track
+        self.assertEqual(tp._track_income_excess(state, player), [0]*7)
+        player['faction'] = 'HadschHallas'                        # Economy first: counted at every level
+        player['research_tracks']['economy'] = 4
+        self.assertEqual(tp._track_income_excess(state, player), [0]*7)
+        self.assertTrue(any(INCOME['science'][2]))                # the table rows used above are not empty
+        self.assertTrue(any(a != b for a, b in zip(economy[3], economy[2])))
+
     def test_ship_entries_and_ship_upgrades_are_not_budgeted(self):
         # User (2026-10-17): a ship entered with range QIC can make the chain cheaper — Twilight's
         # lab for 3 power + 2 ore instead of 3 ore 5 credits. The entry is never blocked and the

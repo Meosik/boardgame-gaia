@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) with track_income 'sweet': the Economy and Science research levels' income counts again, but only where the faction guides send the faction - Economy up to level 2 for everyone, above 2 only when Economy is the faction's first guide track, Science only when it is a guide track (guide_r1_charge3_lf_more_vm_lf_ts_ships_income).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_income",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

@@ -738,6 +738,28 @@ def _track_income(state, player):
     return [a+b for a, b in zip(economy, science)]
 
 
+# track_income 'sweet' (user 2026-10-18 "track_income 다시 해봐. 단 모든 종족이 다 경제 좋다고 올려버리면
+# 안되고"): the Economy and Science levels' income counts again, but only where the faction guides send the
+# faction — Economy up to level 2 for everyone (B18-03 "메리트 없으면 경제 2", B17-03 "경제 2 필수", B15-03,
+# DK-02), above 2 only when Economy is the faction's first guide track (FACTION_TRACKS: Nevlas, Firaks, Ivits,
+# HadschHallas, Darkanians), Science only when it is a guide track at all. The rest stays priced once, at
+# 16 charges per level (install_guide_r1). Scope only, the levels are the sources'.
+ECONOMY_SWEET = 2
+
+
+def _track_income_excess(state, player):
+    """Track income left uncounted under track_income 'sweet' (see above)."""
+    from four_factions.value import INCOME
+    tracks = FACTION_TRACKS.get(player['faction'], ())
+    economy = INCOME['economy'][state['research_board']['economy_research_tile_side']]
+    level = player['research_tracks']['economy']
+    counted = level if tracks[:1] == ('economy',) else min(level, ECONOMY_SWEET)
+    excess = [a-b for a, b in zip(economy[level], economy[counted])]
+    if 'science' not in tracks:
+        excess = [a+b for a, b in zip(excess, INCOME['science'][player['research_tracks']['science']])]
+    return excess
+
+
 def guide_potential(state, actor, *, home=None, guide_tracks=False):
     import guide_value as gv
     v = _value
@@ -759,7 +781,9 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
         if not _guide['lf_frozen']:
             result += (.6 if player['faction'] == 'Terrans' else .2)*power['gaia_forming']
     income = v.production(state, player, include_booster=False)
-    if not _guide['track_income']:
+    if _guide['track_income'] == 'sweet':
+        income = [a-b for a, b in zip(income, _track_income_excess(state, player))]
+    elif not _guide['track_income']:
         # research_value already prices every level at 16 charges "for the research advance"
         # (LF01 §2.4), so the Economy/Science levels' income is not counted a second time.
         income = [a-b for a, b in zip(income, _track_income(state, player))]
@@ -2814,6 +2838,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_label(seed, **kwargs):
     comparison value picks the one to follow (label_value, see guide_label_forecast)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_fix(seed, **kwargs)
     _guide['label_value'] = True
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_income(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) with track_income 'sweet' — the Economy and Science
+    levels' income counts where the faction guides send the faction (see _track_income_excess)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['track_income'] = 'sweet'
     return teacher
 
 
