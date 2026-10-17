@@ -815,6 +815,64 @@ class OpeningBudgetTests(unittest.TestCase):
         state['players'][0]['faction'] = 'Terrans'
         self.assertIs(tp.geodens_b14_tech_scores(None, snapshot, scores), scores)
 
+    def test_academy_economy_leads_research_and_the_tile_track_until_economy_two(self):
+        state = {'round': 2, 'phase': {'ActionPhase': {}},
+                 'research_board': {'tech_tile_slots': [9, 7, 8, 6, 4, 2, 3, 10, 5]},
+                 'players': [{'faction': 'Taklons', 'research_tracks': {'economy': 0, 'science': 1},
+                              'structures': [{'kind': 'Mine', 'hex': '0,0'}, {'kind': {'Academy': 'Science'}, 'hex': '1,0'}]}]}
+        actions = [{'type': 'ResearchAdvance', 'track': 'Science'}, {'type': 'ResearchAdvance', 'track': 'Economy'},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                    'tech_tile_choice': {'kind': 'Standard', 'tile': 10, 'advance_track': 'Science'}},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                    'tech_tile_choice': {'kind': 'Standard', 'tile': 10, 'advance_track': 'Economy'}},
+                   {'type': 'Build', 'coord': '2,0'}]
+        scores = [(6.7, 'sci'), (0.0, 'eco'), (20.0, 'tile-sci'), (19.0, 'tile-eco'), (30.0, 'mine')]
+        snapshot = {'state': state, 'player': 0, 'candidates': [{'action': a} for a in actions]}
+        lifted = tp.academy_economy_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [0.0, 6.7, 19.0, 20.0, 30.0])   # swaps only, the mine untouched
+        self.assertIn('research when', lifted[1][1])
+        state['players'][0]['research_tracks']['economy'] = 2
+        self.assertIs(tp.academy_economy_scores(None, snapshot, scores), scores)
+        state['players'][0]['research_tracks']['economy'] = 0
+        state['players'][0]['faction'] = 'BalTaks'
+        self.assertIs(tp.academy_economy_scores(None, snapshot, scores), scores)
+        # No academy yet: only the tile of the upgrade that builds one is steered.
+        state['players'][0]['faction'] = 'Geodens'
+        state['players'][0]['structures'] = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'ResearchLab', 'hex': '1,0'}]
+        building = [{'type': 'Upgrade', 'coord': '1,0', 'to': {'Academy': 'Science'},
+                     'tech_tile_choice': {'kind': 'Standard', 'tile': 2, 'advance_track': None}},
+                    {'type': 'Upgrade', 'coord': '1,0', 'to': {'Academy': 'Science'},
+                     'tech_tile_choice': {'kind': 'Standard', 'tile': 4, 'advance_track': None}}]
+        snapshot['candidates'] = [{'action': a} for a in actions[:2]+building]
+        building.append({'type': 'Upgrade', 'coord': '1,0', 'to': {'Academy': 'Science'},
+                         'tech_tile_choice': {'kind': 'Standard', 'tile': 10, 'advance_track': 'Economy'}})
+        building.append({'type': 'Upgrade', 'coord': '1,0', 'to': {'Academy': 'Science'},
+                         'tech_tile_choice': {'kind': 'Standard', 'tile': 10, 'advance_track': 'Science'}})
+        snapshot['candidates'] = [{'action': a} for a in actions[:2]+building]
+        lifted = tp.academy_economy_scores(None, snapshot, [(6.7, 'sci'), (0.0, 'eco'), (31.2, 'tile-2'),
+                                                           (30.5, 'tile-4'), (29.0, 'tile-10-eco'), (30.0, 'tile-10-sci')])
+        # Research is not steered before the academy exists; which tile is taken is not steered either
+        # (tile 2 vs tile 4 stay); among one tile's track variants Economy leads (tile 10: 30.0 <-> 29.0).
+        self.assertEqual([s[0] for s in lifted], [6.7, 0.0, 31.2, 30.5, 30.0, 29.0])
+
+    def test_label_value_picks_the_best_completed_guide_opening(self):
+        from bgg_openings.catalog import Opening
+        rows = (Opening('Geodens', '1AC+2M', 123, 146, 4, 6), Opening('Geodens', '1PI+1TS+2M', 100, 140, 4, 7))
+        plans = [{'goal_spec': {'family': 'bgg-opening', 'target': '1AC+2M'}, 'complete': True, 'value': 279.8,
+                  'r1_buildings': {'mine': 2, 'trading_station': 0, 'research_lab': 0, 'planetary_institute': 0, 'academy': 1}},
+                 {'goal_spec': {'family': 'bgg-opening', 'target': '1PI+1TS+2M'}, 'complete': True, 'value': 339.7,
+                  'r1_buildings': {'mine': 2, 'trading_station': 1, 'research_lab': 0, 'planetary_institute': 1, 'academy': 0}}]
+        with mock.patch.object(tp, 'guide_opening_labels', return_value=('1AC+2M', '1PI+1TS+2M')):
+            original = lambda rows, remembered, comparisons: None
+            plan, opening = tp.guide_label_forecast(original, rows, '1AC+2M', plans)
+            self.assertEqual(opening.label, '1AC+2M')                  # guide order, as before
+            tp._guide['label_value'] = True
+            plan, opening = tp.guide_label_forecast(original, rows, '1AC+2M', plans)
+            self.assertEqual(opening.label, '1PI+1TS+2M')              # the better completed guide opening
+            plans[1]['value'] = 279.8
+            plan, opening = tp.guide_label_forecast(original, rows, '1AC+2M', plans)
+            self.assertEqual(opening.label, '1AC+2M')                  # tie: the remembered, guide-first label
+
     def test_ship_entries_and_ship_upgrades_are_not_budgeted(self):
         # User (2026-10-17): a ship entered with range QIC can make the chain cheaper — Twilight's
         # lab for 3 power + 2 ore instead of 3 ore 5 credits. The entry is never blocked and the

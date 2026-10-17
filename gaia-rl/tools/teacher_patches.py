@@ -545,6 +545,8 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'budget_guard': False,        # True: ..._ships_fix (see opening_budget_scores)
           'opening_release': False,     # True: ..._ships_fix (see install_opening_release)
           'geodens_b14_tech': False,    # True: ..._ships_fix (see geodens_b14_tech_scores)
+          'academy_economy': False,     # True: ..._ships_fix (see academy_economy_scores)
+          'label_value': False,         # True: ..._ships_fix_label (see guide_label_forecast)
           'research_when': False,       # True: ..._vm_lf_ts_when (see research_when_track)
           'contested_first': False,     # True: ..._vm_lf_ts_when (see contested_first_scores)
           'ship_when': False,           # True: ..._vm_lf_ts_when (see ship_when_scores)
@@ -1024,6 +1026,19 @@ def guide_label_forecast(original, rows, remembered, comparisons):
         choices.append((target != remembered, rank[target], order, comparison, by_label[target]))
     if not choices:
         return original(rows, remembered, comparisons)
+    if _guide['label_value']:
+        # label_value (user 2026-10-18 "라벨이 비교값에 크게 질 때는 고민이 많네", 068 p001 Geodens: the kept
+        # 1AC+2M plan 279.8 was the lowest of four, the guide's own PI opening 339.7): the guide still
+        # names the openings and their order, but among the guide openings whose forecast completes the
+        # comparison value decides; the guide order breaks ties and the remembered label is kept only
+        # while no other guide opening forecasts higher. No plan outside the guide list is taken.
+        import math
+
+        def value(choice):
+            v = choice[3].get('value')
+            return v if isinstance(v, (int, float)) and math.isfinite(v) else float('-inf')
+        chosen = min(choices, key=lambda choice: (-value(choice), *choice[:3]))
+        return chosen[3], chosen[4]
     chosen = min(choices, key=lambda choice: choice[:3])
     return chosen[3], chosen[4]
 
@@ -2695,6 +2710,68 @@ def install_geodens_b14_tech():
     _wrap_rank('_geodens_b14_tech', geodens_b14_tech_scores)
 
 
+# academy_economy (user 2026-10-18 "선 아카데미를 한 종족은 발타크 빼고 대부분 경제를 2레벨까진 가야하는데
+# 안간거"; B17-03 "아카데미+광산(경제 2 필수)", B14-03 1AC+2M "3경제/3과학", B15-03 "아카데미+광산+광산 …
+# 경제·과학 2", IT01 "아카데미+경제", B12-02 "1R 경제 2단계"; BalTaks go Gaia 4 first, B11-02): while a
+# player with an academy is below Economy 2 in rounds 1-3, the Economy advance leads the research moves
+# and, among the tech-tile choices of one upgrade (the academy's own tile included), the Economy variant
+# leads its tile. Order only; research against other moves and the tile itself are unchanged.
+ACADEMY_ECONOMY_LEVEL = 2
+ACADEMY_ECONOMY_ROUNDS = (1, 2, 3)
+ACADEMY_ECONOMY_EXCEPT = ('BalTaks',)
+
+
+def _has_academy(player):
+    return any(isinstance(s.get('kind'), dict) and 'Academy' in s['kind'] for s in player['structures'])
+
+
+def academy_economy_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or state['round'] not in ACADEMY_ECONOMY_ROUNDS:
+        return scores
+    player = state['players'][actor]
+    if (player['faction'] in ACADEMY_ECONOMY_EXCEPT
+            or player['research_tracks']['economy'] >= ACADEMY_ECONOMY_LEVEL):
+        return scores
+    academy = _has_academy(player)
+    candidates = snapshot['candidates']
+    lifted = list(scores)
+    why = 'research when: Economy 2 after the academy (user, B17-03, B14-03)'
+    if academy:
+        research = [i for i, c in enumerate(candidates)
+                    if c['action'].get('type') == 'ResearchAdvance' and not blocked(scores[i])]
+        economy = [i for i in research if candidates[i]['action'].get('track') == 'Economy']
+        if economy and research:
+            best = max(research, key=lambda i: lifted[i][0])
+            if candidates[best]['action'].get('track') != 'Economy':
+                _swap(lifted, list(lifted), economy[0], best, why)
+    groups = {}
+    for i, c in enumerate(candidates):
+        choice = c['action'].get('tech_tile_choice')
+        if blocked(lifted[i]) or not isinstance(choice, dict) or choice.get('kind') != 'Standard':
+            continue
+        # The academy's own tile counts: the upgrade that builds it is the first chance.
+        building = isinstance(c['action'].get('to'), dict) and 'Academy' in c['action']['to']
+        if not academy and not building:
+            continue
+        key = json.dumps({**c['action'], 'tech_tile_choice': {**choice, 'advance_track': None}}, sort_keys=True)
+        groups.setdefault(key, []).append(i)
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+        top = max(members, key=lambda i: lifted[i][0])
+        economy = [i for i in members if _tile_track(state, candidates[i]['action']['tech_tile_choice']) == 'Economy']
+        if economy and top not in economy:
+            _swap(lifted, list(lifted), max(economy, key=lambda i: lifted[i][0]), top, why)
+    return lifted
+
+
+def install_academy_economy():
+    _guide['academy_economy'] = True
+    _wrap_rank('_academy_economy', academy_economy_scores)
+
+
 def install_opening_release():
     """Once the round-1 target owes no upgrade (only mines, or nothing), planning.select_action
     returns the search's own best move instead of the label's remaining mine."""
@@ -2728,6 +2805,15 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix(seed, **kwargs):
     _guide['budget_guard'] = True
     install_opening_release()
     install_geodens_b14_tech()
+    install_academy_economy()
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_label(seed, **kwargs):
+    """Teacher factory: ..._ships_fix where, among the guide openings whose forecast completes, the
+    comparison value picks the one to follow (label_value, see guide_label_forecast)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_fix(seed, **kwargs)
+    _guide['label_value'] = True
     return teacher
 
 
