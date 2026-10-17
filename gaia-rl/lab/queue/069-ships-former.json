@@ -1,9 +1,0 @@
-{
-  "kind": "ab",
-  "note": "사용자(2026-10-17 \"그렇게 진행해\", 068 p001 테란 B 1R에 포밍 후보 5개가 전부 −2.0): A = 지금 기준 vm_lf_ts_ships, B = ships + former_use(052 때 찾은 lf_frozen 값 계산 수정: 빈 포머만으로 차원 변형 행성을 광산으로 세지 않고 포밍 중인 행성만 셈 + 빈 포머가 있으면 사거리 안 소행성을 광산 옵션에(비용 = 사거리 QIC만) + 포머가 놀면 포밍·소행성 광산을 가이아 연구 진보보다 먼저, 순서만). 새 시드 6쌍, 4R 시작 종료. 판정은 1–3라운드 충전량(1점 = 1.5충전), 테란·타클론 행 먼저. 함께 볼 것: 1–3R GaiaFormation·EclipseAsteroidMine·ResearchAdvance 수(action_counts.py --types GaiaFormation Build EclipseAsteroidMine ResearchAdvance --rounds 1-3; 052 기준 A Ter 포밍 21·Tak 4), 가이아 연구 단수(research_counts.py), 오류·미탐색·결정 시간. 양수이고 포밍이 늘면 기준 스택 편입 후보.",
-  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
-  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-former-cap20.json",
-  "pairs": 6,
-  "comparisons": 2,
-  "stop_round": 3
-}

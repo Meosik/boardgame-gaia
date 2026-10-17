@@ -1,9 +1,0 @@
-{
-  "kind": "ab",
-  "note": "사용자(2026-10-17 \"그렇게 진행해\"): A = 지금 기준 vm_lf_ts_ships, B = ships_budget 수정본(4bfa19c: 체인 첫 단계 광산→TS를 체인 업그레이드로 면제 — 067·068은 이 버그로 TS가 막히고 예산 면제인 함선 입장이 먼저 나가 테란이 1R에 건물 0이었음). 새 시드 6쌍, 6라운드 끝까지. 판정은 1–3라운드 충전량(1점 = 1.5충전)이 기본이고, 사용자 결정(\"아카데미 계열은 있어야지, 고점 뽑으려면\")에 따라 게임 끝 충전·최종 VP를 같이 읽는다(아카데미 선행의 복리는 4R 이후). 함께 볼 것: 기오덴 1R 아카데미 수(upgrade_targets.py --rounds 1-1 --faction Geodens; 068 A 3/6·B 4/6), 1R 첫 수가 TS인지(list_decisions), 1R 광석 출처(ore_sources.py --rounds 1-1; 068 B Xen 26·테라포밍 연구 광석 Tak 6·Ter 4), 제노스 1–3R 광산, 결정 시간(068 B 최대 35.1초), 오류·미탐색.",
-  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
-  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-budget-cap20.json",
-  "pairs": 6,
-  "comparisons": 2,
-  "stop_round": 0
-}
