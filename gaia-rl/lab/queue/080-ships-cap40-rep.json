@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-18 13:45 \"배포 다 하고 실험 다 시작하면 안되나\"): 062 재확인. A = vm_lf_ts_ships(20초), B = 같은 교사 40초 상한(규칙·값 동일, 탐색 시간만). 062: 1–3R 충전 +11.5 [−4.7, +27.8](기오덴·테란 양수, 4쌍 양수), B 평균 19.5초·최대 43.7초. 새 시드 12쌍, 4R 시작 종료 — 062와 합쳐 18쌍이면 +11 크기를 판정할 수 있다. 판정 1–3라운드 충전량(1점 = 1.5충전). 함께 볼 것: 결정 시간(B 최대가 hard 서버 한도 60초 안인지, p90), 비교 미탐색 결정 수. 18쌍 합산이 유의한 양수면 실서버 hard 대기 한도·병렬화(GAIA_AI_PARALLEL) 검토 제안(배포는 사용자 확인).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap40.json",
+  "pairs": 12,
+  "comparisons": 2,
+  "stop_round": 3
+}

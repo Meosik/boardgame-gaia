@@ -2949,6 +2949,31 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_income(seed, **kwargs):
     return teacher
 
 
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_noacademy(seed, **kwargs):
+    """Teacher factory: ships_fix_noformer without academy_economy (lab 077, user 2026-10-18 "배포 다 하고
+    실험 다 시작"): opening_budget with the first-step fix, budget_guard, opening_release and
+    geodens_b14_tech. 071 and 073 showed the same academy_economy footprint (AI -> Economy in rounds 1-3
+    for every academy faction, fewer end research levels) against a final VP of -9.5 in 073; this arm
+    reads the rest of the bundle without it."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_opening_budget()
+    _guide['budget_guard'] = True
+    install_opening_release()
+    install_geodens_b14_tech()
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_label_value(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus opening_label (the 066 form: a guide label is
+    kept while its forecast can still grow into the target) and label_value (among the guide openings
+    whose forecast completes, the comparison value picks the one to follow). Lab 078: 072 measured
+    nothing (hook not installed) and ships_fix never entered the base, so the rule is read on the base."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    install_opening_label()
+    _guide['label_value'] = True
+    return teacher
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_former(seed, **kwargs):
     """Teacher factory: guide_r1_charge3_lf_more_vm_lf_ts whose colony options count a Transdim
     planet only once it is being formed and an Asteroid per idle former, and which uses an idle

@@ -79,8 +79,12 @@ def main():
     import parallel_search
     from gaia_rl import Environment
     # Cycle 017: symmetric pass (+7.7 VP/seat, 95% CI [+0.1, +15.2]); cycle 018: Geodens
-    # guide order and look-ahead (Geodens +15.5, 95% CI [+3.9, +27.2]).
-    from teacher_patches import geodens_guide as make_teacher
+    # guide order and look-ahead (Geodens +15.5, 95% CI [+3.9, +27.2]) — the live teacher until
+    # 2026-10-18. Cycles 052 and 063: the vm_lf_ts_ships stack gains +50.5 / +52.2 charges in
+    # rounds 1-3 over geodens_guide at the hard level (12 seat-swapped pairs each, every pair
+    # positive; 063 on the live bot lineup Terrans/Xenos/Taklons/HadschHallas). The factory is
+    # shared by easy, normal and hard; only hard was measured (lab 082 measures normal).
+    from teacher_patches import guide_r1_charge3_lf_more_vm_lf_ts_ships as make_teacher
 
     teachers = {}
     out = sys.stdout

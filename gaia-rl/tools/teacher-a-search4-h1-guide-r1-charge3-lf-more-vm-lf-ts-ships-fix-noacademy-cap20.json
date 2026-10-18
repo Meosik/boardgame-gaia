@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus the ships_fix bundle without former_use, instant_forming and academy_economy: opening_budget with the first-step fix, budget_guard, opening_release and geodens_b14_tech (guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_noacademy).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_noacademy",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

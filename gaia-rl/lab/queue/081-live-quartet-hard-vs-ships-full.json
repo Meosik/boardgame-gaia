@@ -1,0 +1,16 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-18 13:45 \"배포 다 하고 실험 다 시작하면 안되나\"): 063 후속 ⓐ — 배포 전 최종 VP 확인. A = 실서버 hard(geodens_guide), B = vm_lf_ts_ships(교체할 교사), 실서버 봇 라인업 live-quartet(Terrans·Xenos·Taklons·HadschHallas) 새 시드 6쌍, 6라운드 끝까지. 배경: 063은 1–3R 충전 +52.2(12쌍 모두 양수)인데 참고 VP −8.6(4R 시작 시점), 4–6R·최종 VP는 미측정. 질문: 끝까지 두면 B의 최종 VP가 A보다 낮지 않은가(특히 테란·하지할라). 판정 1–3라운드 충전량(1점 = 1.5충전) + 최종 VP 병독. 함께 볼 것: game_profile.py(종족별 차례·광산·연방·끝 VP 내역), 하지할라 오류·미탐색, 결정 시간. 최종 VP가 안 떨어지면 교체 배포 근거 보강, 떨어지면 4–6R 규칙 원인 분리 제안.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "seeds": [
+    "live-quartet-822328",
+    "live-quartet-822555",
+    "live-quartet-825328",
+    "live-quartet-826028",
+    "live-quartet-830657",
+    "live-quartet-832122"
+  ],
+  "comparisons": 2,
+  "stop_round": 0
+}

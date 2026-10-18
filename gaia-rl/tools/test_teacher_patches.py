@@ -886,6 +886,24 @@ class OpeningBudgetTests(unittest.TestCase):
         out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True).stdout
         self.assertEqual(out.split(), ['True', 'True'])
 
+    def test_ships_label_value_and_fix_noacademy_factories_set_their_flags(self):
+        # Labs 077 and 078 (built in subprocesses, see the test above).
+        import subprocess
+        import sys
+        code = ("import teacher_patches as tp, bgg_openings.planning as p\n"
+                "tp.guide_r1_charge3_lf_more_vm_lf_ts_ships_label_value(%r)\n"
+                "print(getattr(p.select_forecast, '_opening_label', False), tp._guide['label_value'],"
+                " tp._guide['opening_budget'], tp._guide['academy_economy'])" % SEED)
+        out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True).stdout
+        self.assertEqual(out.split(), ['True', 'True', 'False', 'False'])
+        code = ("import teacher_patches as tp, bgg_openings.planning as p\n"
+                "tp.guide_r1_charge3_lf_more_vm_lf_ts_ships_fix_noacademy(%r)\n"
+                "print(tp._guide['opening_budget'], tp._guide['budget_guard'], tp._guide['opening_release'],"
+                " tp._guide['geodens_b14_tech'], tp._guide['academy_economy'], tp._guide['former_use'],"
+                " tp._guide['instant_forming'], getattr(p.select_forecast, '_opening_label', False))" % SEED)
+        out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True).stdout
+        self.assertEqual(out.split(), ['True', 'True', 'True', 'True', 'False', 'False', 'False', 'False'])
+
     def test_track_income_sweet_counts_economy_to_two_and_science_on_guide_tracks(self):
         from four_factions.value import INCOME
         state = {'research_board': {'economy_research_tile_side': 'Power'}}

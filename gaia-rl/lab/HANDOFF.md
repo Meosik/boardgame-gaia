@@ -114,6 +114,19 @@
     (DB 볼륨, 되돌리기용 이미지).
   - 디스크: 같은 날 LVM을 SSD 전체로 늘렸다(100GiB → 235GiB). `df -h /`로 가끔 확인한다.
   - 되돌리기: 이전 커밋으로 checkout한 뒤 `up -d --build`.
+- **2026-10-18 교사 교체 코드(푸시됨, 배포는 사용자)**: 사용자 "배포 다 하고 실험 다 시작" → `tools/ai_worker.py`의 factory를
+  geodens_guide → `guide_r1_charge3_lf_more_vm_lf_ts_ships`(052 +50.5·063 +52.2, 12쌍 모두 양수), `gaia-server/Dockerfile`
+  COPY에 `tools/guide_value.py` 추가(그 밖의 import는 전부 baseline-teacher 안). easy·normal·hard 공용이고 normal(비교 2·5초)은
+  미측정(lab 082가 잼). 함께 올라가는 미배포 변경: 웹소켓 30초 ping(cargo 미검증), `/assets` 캐시 헤더, 모바일 보드 가림·다시보기
+  조작(npm 미검증). 배포 전 확인 → 배포, 전부 사용자 명령:
+  ```sh
+  cd ~/projects/gaia-work && cargo test -p gaia-server
+  cd ~/projects/gaia-work/gaia-frontend && npm run test -- --run && npm run build
+  cd ~/gaia-live && git fetch origin claude/epic-goodall-0ot55w && git checkout --detach origin/claude/epic-goodall-0ot55w \
+    && docker compose -p gaia up -d --build && docker builder prune -f --keep-storage 10GB && docker image prune -f
+  docker compose -p gaia logs --tail 50 gaia-server      # 첫 AI 대전 뒤 "teacher" 오류가 없는지
+  ```
+  되돌리기: `~/gaia-live`에서 이전 커밋(`b4641fe` 이전)으로 checkout 뒤 `up -d --build`.
 - **2026-10-04 배포 내용**:
   - 레벨: geodens_guide 교사. easy는 비교 0, normal은 비교 2·5초, hard는 비교 4·20초(서버 대기 한도 60초).
   - AI 대전은 비딩으로 시작하고, 어려움 버튼이 있다.
@@ -1670,6 +1683,11 @@
      **다음 제안(큐에 안 넣음, 사용자 확인 대기)**: (ㄱ) **ships vs ships_income 새 시드 재확인**(6쌍, 6R, 같은 판정) — 두 종족 끝 VP 양수 vs 한 종족 충전 손해가 모두 6쌍 잡음 가장자리,
      "결과 보고 고른 것은 새 시드로" 원칙; 075 뒤 남은 시드 8개로 보충 없이 가능 (ㄴ) 그 전에 p000-g1 기오덴 B(충전 131 vs A 214)의 2–3R 첫 경제 선택 결정을 `explain_decision`으로
      읽어 경제 수입 값이 무엇을 밀어냈는지 확인 (ㄷ) 075가 양수면 04:40 계획대로 ships vs ships_income+land 합산 확인. 봇 추천은 (ㄴ) 지금, (ㄱ) 075 뒤.
+     **사용자(13:45 "배포 다 하고 실험 다 시작하면 안되나")** → 5a 목록을 전부 처리: ① 교사 교체 코드(`ai_worker.py` factory → ships, Dockerfile COPY `guide_value.py`) 푸시,
+     배포 명령은 3장(봇은 docker·cargo·npm 불가). ② 실험 7건 큐 **076–082**(5a 표, 075 뒤 번호 순, 전부 끝나면 약 19일 오후). 새 팩토리 `..._ships_fix_noacademy`(noformer −
+     academy_economy)·`..._ships_label_value`(ships + opening_label + label_value), 새 spec 3개(둘 + normal용 `search2-…-ships-cap5`), 팩토리 플래그 테스트 1개(62개 통과),
+     스모크 60결정 두 팩토리 오류 0. live-quartet 시드 830000–880000에서 9개 보충(081은 822328…832122), geo-quartet 831000–931000 스캔분을 seeds.txt에 추가.
+     각 결과마다 사이클 문서 + 결과표 + 여기 갱신, 편입·배포 제안은 그때.
      **사용자 질문(02:15) "PPO는 몇 점쯤 나와야 시작하려나"**: 기준 ships의 6R 자체 대국(060 A, 4AI 한 판 총점 ≈350) 좌석 평균 **≈87**(Tak 66·Geo 79·Ter 85·Xen 119; B 묶음도 ≈90).
      BGG 전문가 4인 평균은 130–155(기오덴 1AC+2M 146, 표 `bgg-openings-part2.csv`). 봇 기준 제안: ① 자체 대국 좌석 평균 **≈110**(전문가의 75%) ② 알려진 1R 결함 목록이 비어 있음
      (BC는 교사의 실수를 그대로 베낌) ③ 결정 12초/수라 온라인 RL 교사로는 못 쓰고 BC 워밍업·평가 상대로만 — 데이터는 lab 6R 판(판당 약 640결정)에서. 071이 수정 뒤 첫 6R 기준선.
@@ -1713,20 +1731,24 @@
 
 ## 5a. 사용자 답 대기 목록 (2026-10-18 13:40 정리, 060 이전 제안은 대체된 것으로 봄)
 
+**사용자(13:45) "배포 다 하고 실험 다 시작하면 안되나"** → D1 코드 준비(3장, 배포 명령은 사용자), E1–E6 전부 큐(076–082, 아래 상태).
+
 **배포·실서버**
-- D1. 실서버 hard 교사를 vm_lf_ts_ships로 교체(052·063 조건 충족, 10-16). 필요: `tools/ai_worker.py` factory import, Dockerfile COPY `guide_value.py`; normal 레벨·4–6R은 미측정.
-- D2. 미배포 변경 묶음: 웹소켓 30초 ping(cargo 미검증)·`/assets` 캐시 헤더·모바일 보드 가림·다시보기 조작(npm 미검증). 사용자가 테스트 확인 뒤 배포.
+- D1. 실서버 교사 교체 → **코드 푸시됨, 배포 명령은 3장(사용자 실행)**. normal은 082가 잼.
+- D2. 미배포 변경 묶음: 웹소켓 30초 ping(cargo 미검증)·`/assets` 캐시 헤더·모바일 보드 가림·다시보기 조작(npm 미검증) → D1과 같은 배포에 올라감(3장 명령의 테스트 먼저).
 - D3. normal 레벨 설정(027 유력안 비교 4·10초) — 10-13부터 대기.
 - D4. 옛 폴더 삭제는 사용자 명령: `rm -rf ~/projects/gaia ~/gaia-ai-7f3e1a9`(백업 폴더는 `ls -d ~/*backup* ~/projects/*backup*` 먼저).
 - D5. 작업 트리 루트의 미추적 파일 `tutorial-round1-ux.patch`·`tutorial-round1-transfer.mbox`(10-04 튜토리얼 패치 4건): 적용할지.
 
-**실험 제안(큐 안 넣음)**
-- E1. 074 후속: (ㄴ) p000-g1 기오덴 B explain → (ㄱ) ships vs ships_income 새 시드 6쌍 6R 재확인 → (ㄷ) 075 양수면 income+land 합산.
-- E2. 073 후속: (ㄱ) noformer 묶음에서 academy_economy만 뺀 A/B(추천) (ㄴ) geodens_b14_tech 단독.
-- E3. 072 후속: label_value 재실험 — (ㄴ) ships + opening_label + label_value 새 팩토리로 기준 위에 바로(추천).
-- E4. 063 후속: ⓐ live-quartet hard vs ships 6R 끝까지(배포 전 최종 VP) ⓑ normal 레벨 A/B.
-- E5. 062 후속: ships 20초 vs 40초 새 시드 12쌍 재확인(+11.5 방향 양수).
-- E6. 071 잔여: former_use vs instant_forming 어느 쪽이 테란 손해인지(`--off instant_forming` 한 번).
+**실험(13:45 지시로 전부 큐, 075 뒤 번호 순, 6R 한 판 약 3시간 20분·4R 종료 약 1.5시간)**
+- E1 → **076** `076-ships-income-rep-full`: ships vs ships_income 새 시드 6쌍 6R(074와 12쌍 합산). (ㄴ) explain은 미실행, (ㄷ) 합산은 075·076 뒤.
+- E2 → **077** `077-ships-fix-noacademy-full`: ships vs ships_fix_noacademy(새 팩토리 = noformer − academy_economy), 6쌍 6R.
+- E3 → **078** `078-ships-label-value-full`: ships vs ships_label_value(새 팩토리 = ships + opening_label + label_value), 6쌍 6R.
+- E6 → **079** `079-ships-former-full`: ships vs ships_former(former_use 단독, 기존 spec), 6쌍 6R.
+- E5 → **080** `080-ships-cap40-rep`: 20초 vs 40초 새 시드 12쌍, 4R 종료(062와 18쌍).
+- E4ⓐ → **081** `081-live-quartet-hard-vs-ships-full`: hard vs ships, live-quartet 6쌍(822328…832122, 시드 9개 보충), 6R.
+- E4ⓑ → **082** `082-normal-hard-vs-ships`: geodens cap5 vs ships cap5(새 spec `...-search2-...-ships-cap5.json`), 6쌍 4R 종료.
+- 새 팩토리 테스트 1개(62개 통과), 스모크 60결정(결과는 "진행 중" 끝). geo-quartet 미사용 시드 61 − 42 = 19 남음(831000–931000 스캔분은 아래).
 
 **규칙·코드 후보(미구현)**
 - R1. 팟캐스트 순서 규칙 후보 R1–R10(`paia-timing-rules-20261018.md` 3절). 충돌: 테란 1R(팟캐스트·IR01 의회/항해 연구소 vs 어잌후 1AC+1M, 지금 라벨은 어잌후).

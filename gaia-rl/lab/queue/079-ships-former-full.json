@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-18 13:45 \"배포 다 하고 실험 다 시작하면 안되나\"): 071 잔여 — former_use 단독. A = 기준 ships, B = ships_former = ships + former_use(차원 변형 행성은 포밍 중일 때만 광산 옵션, 빈 포머당 소행성 옵션, 포머가 놀면 포밍·소행성을 가이아 연구보다 먼저; instant_forming은 없음). 배경: 071 테란 −45.3(광산 11 → 2)이 073에서 former_use·instant_forming을 빼자 사라짐 — 둘 중 어느 것인지 분리. 질문: former_use만으로 테란 1R(테라포밍 연구 → AC → 광산)이 포밍 → 패스로 바뀌는가, 타클론·테란 1–3R 포밍 수가 느는가. 새 시드 6쌍, 6라운드 끝까지. 판정 1–3라운드 충전량(1점 = 1.5충전) + 최종 VP 병독, 테란 먼저. 함께 볼 것: 1–3R GaiaFormation·Build·EclipseAsteroidMine·ResearchAdvance(action_counts.py --types GaiaFormation Build EclipseAsteroidMine ResearchAdvance --rounds 1-3), 테란 1R 연구소 타일·AC 수(upgrade_targets.py --rounds 1-1 --faction Terrans), 결정 시간, 오류·미탐색. 테란 손해가 재현되면 former_use가 원인으로 확정, 양수면 기준 편입 후보(사용자 확인).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-former-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 0
+}

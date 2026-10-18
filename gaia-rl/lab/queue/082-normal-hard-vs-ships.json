@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-18 13:45 \"배포 다 하고 실험 다 시작하면 안되나\"): 063 후속 ⓑ — normal 레벨. A = 실서버 normal(geodens_guide, 비교 2·5초), B = vm_lf_ts_ships 같은 설정(비교 2·5초, 새 spec ...-ships-cap5.json). 배경: 교사 교체(ai_worker.py factory)는 easy·normal·hard 공용인데 측정은 hard(비교 4·20초)뿐이고, B 스택은 hard에서 중앙값 15.9초라 normal 5초 상한에서는 대부분 상한에 걸린다. 질문: 상한 5초에서도 B가 A보다 1–3R 충전이 높은가(실서버 기본 레벨이 normal). 새 시드 6쌍, 4R 시작 종료. 판정 1–3라운드 충전량(1점 = 1.5충전). 함께 볼 것: 결정 시간(B 평균·p90·상한 도달 비율), 비교 미탐색 결정 수, 오류. 양수면 교체 배포의 normal 근거, 음수면 normal만 geodens_guide로 두는 안(레벨별 factory) 제안.",
+  "teacher_a": "tools/teacher-a-search2-h1-geodens-cap5.json",
+  "teacher_b": "tools/teacher-a-search2-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap5.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 3
+}

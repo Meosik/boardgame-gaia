@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-18 13:45 \"배포 다 하고 실험 다 시작하면 안되나\"): 072 재실험 (ㄴ) — 기준 위에 바로. A = 기준 ships, B = ships_label_value = ships + opening_label(066 형태: 가이드 라벨은 예측이 아직 목표로 자랄 수 있을 때만 유지) + label_value(예측이 완성된 가이드 오프닝들 사이에서는 비교값이 고름, 동률이면 가이드 순서). 배경: 068 p001 기오덴은 1AC+2M 라벨(279.8)이 PI 계획(339.7)에 60 지는데도 라벨 때문에 선택됐고, 072는 팩토리가 훅을 안 깔아 무효. 질문: 가이드 목록 안에서 값이 고르게 하면 1–3R 충전·최종 VP가 오르는가, 065의 제노스 광산 손해(1RL+5M 라벨)가 재발하지 않는가. 새 시드 6쌍, 6라운드 끝까지. 판정 1–3라운드 충전량(1점 = 1.5충전) + 최종 VP 병독. 함께 볼 것: 기오덴·테란 1R 경로(upgrade_targets.py --rounds 1-1), 제노스 1–3R 광산(action_counts.py --types Build), 결정 시간, 오류·미탐색. 충전 양수·제노스 손해 없음·최종 VP 안 떨어지면 기준 스택 편입 후보(사용자 확인).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-label-value-cap20.json",
+  "pairs": 6,
+  "comparisons": 2,
+  "stop_round": 0
+}

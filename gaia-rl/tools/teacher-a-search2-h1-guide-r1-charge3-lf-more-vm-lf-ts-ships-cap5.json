@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships at the live normal level: 2 comparisons and the 5 s safety cap (the base stack as it would play on shgaia.com normal after the teacher swap).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 2,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 5
+}
