@@ -122,7 +122,8 @@
   조작(npm 미검증). 배포 전 확인 → 배포, 전부 사용자 명령:
   ```sh
   cd ~/projects/gaia-work && cargo test -p gaia-server
-  cd ~/projects/gaia-work/gaia-frontend && npm run test -- --run && npm run build
+  # 호스트에 npm·node가 없다(bun만 있음). 프론트 테스트·빌드는 배포 이미지와 같은 node:24 컨테이너로:
+  docker run --rm -v ~/projects/gaia-work/gaia-frontend:/app -w /app node:24.19.0-alpine sh -c "npm ci && npm run test -- --run && npm run build"
   cd ~/gaia-live && git fetch origin claude/epic-goodall-0ot55w && git checkout --detach origin/claude/epic-goodall-0ot55w \
     && docker compose -p gaia up -d --build && docker builder prune -f --keep-storage 10GB && docker image prune -f
   docker compose -p gaia logs --tail 50 gaia-server      # 첫 AI 대전 뒤 "teacher" 오류가 없는지
