@@ -34,11 +34,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('run_dir', type=Path)
     parser.add_argument('--rounds', default='1-6')
+    parser.add_argument('--seats', action='store_true', help='also print every seat (arm, faction, game)')
     args = parser.parse_args()
     from gaia_rl import Environment
     low, _, high = args.rounds.partition('-')
     low, high = int(low), int(high or low)
     counts = Counter()
+    seat_counts = Counter()
     for game_dir in sorted(args.run_dir.expanduser().glob('pair-*/game-*')):
         result = json.loads((game_dir/'result.json').read_text())
         if not result.get('complete'):
@@ -57,6 +59,7 @@ def main():
                     seat = snapshot['player']
                     arm = 'A' if seat in result['a_seats'] else 'B'
                     counts[(arm, state['players'][seat]['faction'], track)] += 1
+                    seat_counts[(arm, state['players'][seat]['faction'], game_dir.parent.name, track)] += 1
             env.step(row['decision_id'], row['index'])
     factions = sorted({faction for _, faction, _ in counts})
     short = {'Terraforming': 'TF', 'Navigation': 'Nav', 'ArtificialIntelligence': 'AI',
@@ -65,6 +68,14 @@ def main():
     for arm in ('A', 'B'):
         for faction in factions:
             print(f'{arm} {faction:<9}  ' + ' '.join(f'{counts[(arm, faction, t)]:>5}' for t in TRACKS))
+    if args.seats:
+        print()
+        print(f"per seat        " + ' '.join(f'{short[t]:>5}' for t in TRACKS))
+        for arm in ('A', 'B'):
+            for faction in factions:
+                for pair in sorted({p for a, f, p, _ in seat_counts if a == arm and f == faction}):
+                    print(f'{arm} {faction:<9} {pair[-4:]} '
+                          + ' '.join(f'{seat_counts[(arm, faction, pair, t)]:>5}' for t in TRACKS))
 
 
 if __name__ == '__main__':
