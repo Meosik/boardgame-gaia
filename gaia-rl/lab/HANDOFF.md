@@ -1711,6 +1711,35 @@
      ⓑ 가이아 2 이상 진보는 빈 포머가 없을 때만 앞 순위(순서만) ⓒ 경제·과학 0.0은 guide_r1 4번의 부작용이라 따로 검토.
 5. **Seraph PPO는 사용자가 직접 한다.** 결과는 `lab.py record`로 받는다(`lab/README.md`).
 
+## 5a. 사용자 답 대기 목록 (2026-10-18 13:40 정리, 060 이전 제안은 대체된 것으로 봄)
+
+**배포·실서버**
+- D1. 실서버 hard 교사를 vm_lf_ts_ships로 교체(052·063 조건 충족, 10-16). 필요: `tools/ai_worker.py` factory import, Dockerfile COPY `guide_value.py`; normal 레벨·4–6R은 미측정.
+- D2. 미배포 변경 묶음: 웹소켓 30초 ping(cargo 미검증)·`/assets` 캐시 헤더·모바일 보드 가림·다시보기 조작(npm 미검증). 사용자가 테스트 확인 뒤 배포.
+- D3. normal 레벨 설정(027 유력안 비교 4·10초) — 10-13부터 대기.
+- D4. 옛 폴더 삭제는 사용자 명령: `rm -rf ~/projects/gaia ~/gaia-ai-7f3e1a9`(백업 폴더는 `ls -d ~/*backup* ~/projects/*backup*` 먼저).
+- D5. 작업 트리 루트의 미추적 파일 `tutorial-round1-ux.patch`·`tutorial-round1-transfer.mbox`(10-04 튜토리얼 패치 4건): 적용할지.
+
+**실험 제안(큐 안 넣음)**
+- E1. 074 후속: (ㄴ) p000-g1 기오덴 B explain → (ㄱ) ships vs ships_income 새 시드 6쌍 6R 재확인 → (ㄷ) 075 양수면 income+land 합산.
+- E2. 073 후속: (ㄱ) noformer 묶음에서 academy_economy만 뺀 A/B(추천) (ㄴ) geodens_b14_tech 단독.
+- E3. 072 후속: label_value 재실험 — (ㄴ) ships + opening_label + label_value 새 팩토리로 기준 위에 바로(추천).
+- E4. 063 후속: ⓐ live-quartet hard vs ships 6R 끝까지(배포 전 최종 VP) ⓑ normal 레벨 A/B.
+- E5. 062 후속: ships 20초 vs 40초 새 시드 12쌍 재확인(+11.5 방향 양수).
+- E6. 071 잔여: former_use vs instant_forming 어느 쪽이 테란 손해인지(`--off instant_forming` 한 번).
+
+**규칙·코드 후보(미구현)**
+- R1. 팟캐스트 순서 규칙 후보 R1–R10(`paia-timing-rules-20261018.md` 3절). 충돌: 테란 1R(팟캐스트·IR01 의회/항해 연구소 vs 어잌후 1AC+1M, 지금 라벨은 어잌후).
+- R2. claims.csv "코드반영" 칸 채우기 → 빠진 오프닝 세부(B14-03 2R·3R, 부스터 선호, B14-05, B4-03)를 순서 규칙으로.
+- R3. FACTION_TRACKS(track_set) 단독 묶음(when_all_tech에만 있음).
+- R4. research_when 좁힌 판(항해 2는 지금 닿는 광산보다 쌀 때/닿는 광산 없을 때) — 075 ships_land가 reach 0 조건으로 일부 대체, 결과 뒤.
+- R5. 연구 트랙 목표(4과학 등) 순서 규칙 — 054·055에서 연구 시점 규칙은 손해였음.
+- R6. 새 수치가 필요한 것(원칙상 보류): 셋업 두 행성 거리 계수, 고립 스타트("10번 스타트") 가치, 파워 자유행동 미리 빼기(상대 수 예측 필요).
+
+**PPO 준비**
+- P1. 비딩: PPO 학습은 경매 없이, 사전값은 자체 대국 실측(종족×좌석 VP)으로, 입찰은 최선−차선 차이까지.
+- P2. PPO 시작 기준 제안: 자체 대국 좌석 평균 ≈110(지금 ≈87), 1R 결함 목록 비움, 교사는 BC 워밍업·평가 상대로만.
+
 ## 5b. 경기 다시보기 (사용자가 직접 보는 용도)
 
 - lab 경기 데이터는 `~/projects/gaia-lab/gaia-rl/runs/lab-<실험>/pair-*/game-*`에 있다.
