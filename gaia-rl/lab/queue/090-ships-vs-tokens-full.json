@@ -1,0 +1,16 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"그렇게 해\" — 녹색 토큰·트랙 경쟁 부품, 연방(089)과 따로 측정): A = ships(배포 교사), B = ships_tokens — token_compare(녹색 토큰을 뒤집는 수(5단계·고급 기술)를 비교 맨 앞에), track_race(상대도 그 트랙 4단계·녹색 토큰이면 내 5단계·그 트랙 고급 기술을 먼저), race_prune(5단계를 남이 가져갔거나 상대 4단계+녹색 토큰인데 나는 3단계 이하인 트랙의 5단계·고급 기술 목표는 비교에서 빼서 다른 곳에 비교를 씀 — 사용자 \"밀리는 것을 미리 인지하면 … 다른 곳에 투자\"), 전 종족. 근거: 060–084 좌석당 남은 녹색 토큰 0.45 중 0.40이 쓸 곳이 남은 채 안 씀(endgame_tech_counts missed). geo-quartet 새 시드 6쌍, 6R 끝까지. 판정: 사전 규칙대로 1–3라운드 충전량. 함께 볼 것(판정 아님, PPO 기준): 5단계·고급 기술·남은 녹색 토큰·missed(endgame_tech_counts.py), 연방 수, 최종 VP, 결정 시간.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-tokens-cap20.json",
+  "seeds": [
+    "geo-quartet-900577",
+    "geo-quartet-900771",
+    "geo-quartet-904542",
+    "geo-quartet-904675",
+    "geo-quartet-906719",
+    "geo-quartet-908572"
+  ],
+  "comparisons": 4,
+  "stop_round": 0
+}

@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus token_compare (a legal move that flips a green token - level 5 or an Advanced tile - is compared first), track_race (a level 5 / Advanced tile a rival at level 4 with a green token could take leads) and race_prune (level-5 and Advanced goals on lost tracks leave the comparisons), every faction (user 2026-10-20; guide_r1_charge3_lf_more_vm_lf_ts_ships_tokens).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_tokens",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

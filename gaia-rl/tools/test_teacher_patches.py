@@ -307,7 +307,8 @@ class OpeningBudgetTests(unittest.TestCase):
                     # byfaction: the wrappers are installed, the module flags stay off, the table decides.
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction': ['False']*6 + ['False', 'True'],
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide': ['False']*6 + ['False', 'True'],
-                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_fed': ['False']*6 + ['False', 'False']}
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_fed': ['False']*6 + ['False', 'False'],
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_tokens': ['False']*6 + ['False', 'False']}
         flags += ", tp._guide['byfaction']"
         for factory, want in expected.items():
             code = f"import teacher_patches as tp\ntp.{factory}({SEED!r})\nprint({flags})"
@@ -490,6 +491,59 @@ class OpeningBudgetTests(unittest.TestCase):
         lifted = tp.fed_cluster_scores(None, snapshot, [(9.0, 'far'), (6.0, 'bridge'), (5.0, 'next')])
         self.assertEqual([s[0] for s in lifted], [6.0, 9.0, 5.0])
         self.assertIn('satellites -1', lifted[1][1])
+
+    def _race_state(self, me, rival, rival_green=True):
+        levels = lambda sci: {'terraforming': 0, 'navigation': 0, 'ai': 0, 'gaia': 0, 'economy': 0, 'science': sci}
+        return {'round': 5, 'phase': {'ActionPhase': {}},
+                'players': [{'faction': 'Xenos', 'research_tracks': levels(me), 'federation_tokens': [4]},
+                            {'faction': 'Terrans', 'research_tracks': levels(rival),
+                             'federation_tokens': [3] if rival_green else []}]}
+
+    def test_race_reads_level_five_and_rival_tokens(self):
+        self.assertEqual(tp._race(self._race_state(4, 4), 0, 'Science'), 'contested')
+        self.assertEqual(tp._race(self._race_state(3, 4), 0, 'Science'), 'lost')
+        self.assertEqual(tp._race(self._race_state(4, 5), 0, 'Science'), 'lost')
+        self.assertIsNone(tp._race(self._race_state(4, 4, rival_green=False), 0, 'Science'))
+        self.assertIsNone(tp._race(self._race_state(4, 2), 0, 'Science'))
+
+    def test_track_race_leads_the_contested_level_five_and_advanced_tile(self):
+        state = self._race_state(4, 4)
+        actions = [{'type': 'ResearchAdvance', 'track': 'Economy'}, {'type': 'ResearchAdvance', 'track': 'Science'},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                    'tech_tile_choice': {'kind': 'Standard', 'tile': 3, 'advance_track': None}},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                    'tech_tile_choice': {'kind': 'Advanced', 'track': 'Science', 'covered_tile': 3,
+                                         'advance_track': None}}]
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': a} for a in actions]}
+        scores = [(6.0, 'eco'), (2.0, 'sci5'), (9.0, 'std'), (4.0, 'adv')]
+        self.assertIs(tp.track_race_scores(None, snapshot, scores), scores)    # part off
+        tp._guide['tokens'] = True                                              # restored by setUp's cleanup
+        lifted = tp.track_race_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [2.0, 6.0, 4.0, 9.0])
+        state['players'][1]['federation_tokens'] = []                           # rival cannot flip: no race
+        self.assertEqual([s[0] for s in tp.track_race_scores(None, snapshot, scores)], [6.0, 2.0, 9.0, 4.0])
+
+    def test_token_goals_compare_a_flip_and_drop_lost_races(self):
+        from four_factions.preparation import Goal
+        import four_factions.preparation as p
+        saved = p.goals_for
+        self.addCleanup(setattr, p, 'goals_for', saved)
+        lost5 = Goal('Science-5', 'research', target='Science', level=5)
+        keep5 = Goal('Economy-5', 'research', target='Economy', level=5)
+        lost_adv = Goal('advanced-9', 'advanced', target='Science', tile=9)
+        p.goals_for = lambda snapshot, **kwargs: [lost5, keep5, lost_adv]
+        tp.install_token_goals()
+        state = self._race_state(3, 4)                    # Science lost: rival at 4 with a token, we are at 3
+        state['players'][0]['research_tracks']['economy'] = 4
+        snapshot = {'player': 0, 'state': state,
+                    'candidates': [{'action': {'type': 'Pass'}},
+                                   {'action': {'type': 'ResearchAdvance', 'track': 'Economy'}}]}
+        tp.fed_remember_scores(None, snapshot, [(0.0, 'pass'), (-3.0, 'eco5')])
+        self.assertEqual(p.goals_for(snapshot), [lost5, keep5, lost_adv])     # parts off
+        tp._guide['tokens'] = True                                              # restored by setUp's cleanup
+        goals = p.goals_for(snapshot)
+        self.assertEqual((goals[0].name, goals[0].first), ('flip-1', 1))       # Economy 4 -> 5 flips the token
+        self.assertEqual(goals[1:], [keep5])
 
     def test_fed_compare_puts_the_best_federation_first_in_goals(self):
         import four_factions.preparation as p

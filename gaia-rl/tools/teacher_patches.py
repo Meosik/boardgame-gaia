@@ -176,6 +176,8 @@ def _faction_parts(faction):
         parts.update(GUIDE_FACTION_PARTS.get(faction, ()))
     if _guide['fed']:
         parts.update(FED_PARTS)
+    if _guide['tokens']:
+        parts.update(TOKEN_PARTS)
     return parts
 
 
@@ -302,6 +304,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'byfaction': False,           # True: ..._ships_byfaction (CANDIDATE_FACTION_PARTS on)
           'faction_guide': False,       # True: ..._ships_byfaction_guide (GUIDE_FACTION_PARTS on as well)
           'fed': False,                 # True: ..._ships_fed (fed_compare + fed_cluster for every faction)
+          'tokens': False,              # True: ..._ships_tokens (token_compare + track_race + race_prune)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -2435,6 +2438,146 @@ def _link_costs(state, own, touching):
 
 
 FED_PARTS = frozenset({'fed_compare', 'fed_cluster'})
+
+
+# ── green tokens and track races (user 2026-10-20 "잘 풀리면 다 쓰는거고 누가 5단계를 뺏었고 … 못 돌린거지",
+# "트랙 경쟁과 관련된 부품이 존재하나?", "내가 상대방에게 밀리는 것을 미리 인지하면 그걸 먹기 위해 하는 수들을 다른 곳에
+# 투자할 수 잇지 않았을까?", "그렇게 해") ────────────────────────────────────────────────────────────
+# 060–084: 0.45 green tokens a seat stayed unflipped, 0.40 of them while a free level 5 or an Advanced tile
+# above a level-4+ track remained (endgame_tech_counts 'missed'). No part looked at the race.
+# token_compare: with a green token, the best legal move that flips it (a level-5 advance, an upgrade
+#   taking an Advanced tile) is compared first, judged by the rollout. Scope only.
+# track_race: when an opponent is also at level 4 on a track with a green token, our level-5 advance there
+#   leads the research moves, and among one upgrade's tile choices the Advanced tile above that track leads.
+#   Order only.
+# race_prune: a research goal to level 5 or an Advanced-tile goal on a track already lost — level 5 taken,
+#   or an opponent at 4 with a green token while we are at 3 or below — leaves the compared goals, so the
+#   comparisons go elsewhere. Scope only.
+TOKEN_PARTS = frozenset({'token_compare', 'track_race', 'race_prune'})
+
+
+def _green(player):
+    return bool(player.get('federation_tokens'))
+
+
+def _race(state, actor, track):
+    """'lost', 'contested' or None for our level 5 / Advanced tile on `track` (TRACK_KEYS name)."""
+    key = TRACK_KEYS[track]
+    me = state['players'][actor]
+    others = [p for i, p in enumerate(state['players']) if i != actor]
+    if any(p['research_tracks'][key] >= 5 for p in others):
+        return 'lost'
+    rivals = [p for p in others if p['research_tracks'][key] >= 4 and _green(p)]
+    if not rivals:
+        return None
+    return 'lost' if me['research_tracks'][key] <= 3 else 'contested'
+
+
+def _flips_token(state, actor, action):
+    if action.get('type') == 'ResearchAdvance':
+        key = TRACK_KEYS.get(action.get('track'))
+        return key is not None and state['players'][actor]['research_tracks'][key] == 4
+    choice = action.get('tech_tile_choice') or {}
+    return choice.get('kind') in ('Advanced', 'LostFleetAdvanced')
+
+
+def token_compare_goal(snapshot):
+    from current_actions.conservation import blocked
+    from four_factions.preparation import Goal
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or not _part(state['players'][actor], 'token_compare') or not _green(state['players'][actor]):
+        return None
+    scores = _fed_scores.get(id(snapshot))
+    if scores is None or len(scores) != len(snapshot['candidates']):
+        return None
+    flips = [i for i, c in enumerate(snapshot['candidates'])
+             if not blocked(scores[i]) and _flips_token(state, actor, c['action'])]
+    if not flips:
+        return None
+    best = max(flips, key=lambda i: scores[i][0])
+    return Goal(f'flip-{best}', 'root', first=best)
+
+
+def race_prune_goals(snapshot, goals):
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or not _part(state['players'][actor], 'race_prune'):
+        return goals
+    kept = []
+    for goal in goals:
+        family, target = getattr(goal, 'family', None), getattr(goal, 'target', None)
+        lost = target in TRACK_KEYS and _race(state, actor, target) == 'lost' and (
+            (family == 'research' and goal.level >= 5) or family == 'advanced')
+        if not lost:
+            kept.append(goal)
+    return kept
+
+
+def install_token_goals():
+    import four_factions.preparation as p
+    if getattr(p.goals_for, '_token_goals', False):
+        return
+    inner = p.goals_for
+
+    def goals_for(snapshot, **kwargs):
+        goals = race_prune_goals(snapshot, inner(snapshot, **kwargs))
+        goal = token_compare_goal(snapshot)
+        return [goal, *goals] if goal is not None else goals
+    goals_for._token_goals = True
+    for name, value in vars(inner).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(goals_for, name, value)
+    goals_for.__wrapped__ = getattr(inner, '__wrapped__', inner)
+    p.goals_for = goals_for
+
+
+def track_race_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'track_race') or not _green(player):
+        return scores
+    candidates = snapshot['candidates']
+    act = {i: c['action'] for i, c in enumerate(candidates) if not blocked(scores[i])}
+    lifted = list(scores)
+    research = [i for i in act if act[i].get('type') == 'ResearchAdvance']
+    race5 = [i for i in research if act[i].get('track') in TRACK_KEYS
+             and player['research_tracks'][TRACK_KEYS[act[i]['track']]] == 4
+             and _race(state, actor, act[i]['track']) == 'contested']
+    if race5 and research:
+        best = max(research, key=lambda i: lifted[i][0])
+        if best not in race5:
+            _swap(lifted, list(lifted), max(race5, key=lambda i: lifted[i][0]), best,
+                  'level 5 before a rival with a green token (track_race)')
+    groups = {}
+    for i in act:
+        choice = act[i].get('tech_tile_choice')
+        if act[i].get('type') == 'Upgrade' and isinstance(choice, dict):
+            groups.setdefault(json.dumps({k: v for k, v in act[i].items() if k != 'tech_tile_choice'},
+                                         sort_keys=True), []).append(i)
+    for members in groups.values():
+        contested = [i for i in members if act[i]['tech_tile_choice'].get('kind') == 'Advanced'
+                     and act[i]['tech_tile_choice'].get('track') in TRACK_KEYS
+                     and _race(state, actor, act[i]['tech_tile_choice']['track']) == 'contested']
+        if not contested or len(members) < 2:
+            continue
+        top = max(members, key=lambda i: lifted[i][0])
+        if top not in contested:
+            _swap(lifted, list(lifted), max(contested, key=lambda i: lifted[i][0]), top,
+                  'Advanced tile before a rival with a green token (track_race)')
+    return lifted
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_tokens(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus token_compare, track_race and race_prune for every
+    faction (above). The root ranking is kept for goals_for by fed_remember_scores, installed last."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['tokens'] = True
+    _wrap_rank('_track_race', track_race_scores)
+    install_token_goals()
+    _wrap_rank('_fed_remember', fed_remember_scores)
+    return teacher
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_fed(seed, **kwargs):
