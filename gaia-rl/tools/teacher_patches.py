@@ -120,12 +120,14 @@ BASE_FACTION_PARTS = {
     'Geodens': frozenset({'geodens_guide',          # geodens_goals: B14 proposal order (018)
                           'geodens_two_incomes',    # install_geodens_guide: second-income look-ahead (018)
                           'geodens_r1_research'}),  # geodens_r1_goals: Economy/Science first after AC or 2RL (guide_r1 ⑥)
-    'Terrans': frozenset({'terrans_gaia_late'}),    # _early_terrans_gaia: Gaia research last in rounds 1-3 (guide_r1 ②)
+    'Terrans': frozenset({'terrans_gaia_late',      # _early_terrans_gaia: Gaia research last in rounds 1-3 (guide_r1 ②)
+                          'track_income'}),         # 'sweet' (074+076+084: 084 charges +31.3 [+8.2, +54.5] 6/6, VP +20.3;
+                                                    # user 2026-10-19 "배포 교사는 바꿔야지", E18)
     'Taklons': frozenset({'brainstone_ships',       # taklons_ship_timing_scores + brainstone_committed (053)
                           'taklons_pi_token'}),     # lf_leech_value: the PI's token per leech (046)
 }
 CANDIDATE_FACTION_PARTS = {
-    'Terrans': frozenset({'track_income'}),         # 074+076, 12 pairs: charges +15.0, final VP +17.0 [+0.3, +33.7]
+    # Terrans track_income moved to BASE_FACTION_PARTS on 2026-10-19 (084 passed, E18).
     'Geodens': frozenset({'former_use'}),           # 079, 6 pairs: charges +20.7 (4 pairs positive), thin
     'Taklons': frozenset({'opening_budget', 'budget_guard', 'opening_release'}),   # 077, 6 pairs: +23.6 (4 pairs), thin
     # Not on: Taklons track_income (076 charges -26.5 significant, VP +13.7 is not the verdict measure);

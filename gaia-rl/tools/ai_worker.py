@@ -84,6 +84,8 @@ def main():
     # rounds 1-3 over geodens_guide at the hard level (12 seat-swapped pairs each, every pair
     # positive; 063 on the live bot lineup Terrans/Xenos/Taklons/HadschHallas). The factory is
     # shared by easy, normal and hard; only hard was measured (lab 082 measures normal).
+    # 2026-10-19: Terrans track_income joined the base faction table (lab 084, E18), and Lost Fleet
+    # games no longer stop on a saved sheden opening label (teacher_patches._value_max).
     from teacher_patches import guide_r1_charge3_lf_more_vm_lf_ts_ships as make_teacher
 
     teachers = {}

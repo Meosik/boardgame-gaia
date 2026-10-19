@@ -319,7 +319,7 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(tp._faction_parts('Xenos'), set())
         self.assertEqual(tp._faction_parts('HadschHallas'), set())
         self.assertEqual(tp._faction_parts('Geodens'), {'geodens_guide', 'geodens_two_incomes', 'geodens_r1_research'})
-        self.assertEqual(tp._faction_parts('Terrans'), {'terrans_gaia_late'})
+        self.assertEqual(tp._faction_parts('Terrans'), {'terrans_gaia_late', 'track_income'})   # E18
         self.assertEqual(tp._faction_parts('Taklons'), {'brainstone_ships', 'taklons_pi_token'})
         self.assertTrue(tp._early_terrans_gaia({'round': 2, 'players': [{'faction': 'Terrans'}]}, 0))
         self.assertFalse(tp._early_terrans_gaia({'round': 2, 'players': [{'faction': 'Xenos'}]}, 0))
