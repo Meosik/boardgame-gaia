@@ -1263,6 +1263,74 @@ fn lost_fleet_advanced_tech_tile_25_vp_side_ignores_explored_ship_count() {
     assert!(state.research_board.lost_fleet_advanced_tech_tile.is_none());
 }
 
+// Rulebook p.10 "either ≥ 25 VP or 3 different spaceships; the latter only applies in 3-/4-player
+// games": on the 4-player side 25 VP qualifies without ships. And in order (user 2026-10-19): the
+// lab's own VP is scored before the tile is taken, so a lab that lifts the player to 25 VP can
+// take the tile in the same upgrade.
+#[test]
+fn lost_fleet_advanced_tech_tile_four_player_side_also_accepts_25_vp() {
+    let mut state = tech_tiles_state(vec![]);
+    state.research_board.lost_fleet_advanced_tech_tile = Some(AdvancedTechTile(20));
+    state.research_board.lost_fleet_advanced_tech_requirement =
+        gaia_engine::game_state::LostFleetAdvancedTechRequirement::ExplorationShuttles;
+    state.round_tiles[0].condition = gaia_engine::game_state::RoundCondition::FormFederation;
+    state.players[0].tech_tiles.push(TechTile(7));
+    state.players[0]
+        .federation_tokens
+        .push(gaia_engine::game_state::FederationToken(4));
+    state.players[0].explored_ships = vec![];
+    state.players[0].vp = 25;
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        upgrade_action(Some(TechTileChoice::LostFleetAdvanced {
+            covered_tile: TechTile(7),
+            advance_track: None,
+        })),
+    )
+    .unwrap_or_else(|e| panic!("25 VP should qualify on the 4-player side too: {e}"));
+    assert!(state.research_board.lost_fleet_advanced_tech_tile.is_none());
+}
+
+#[test]
+fn lost_fleet_advanced_tech_tile_counts_the_labs_own_vp_first() {
+    let base = || {
+        let mut state = tech_tiles_state(vec![]);
+        state.research_board.lost_fleet_advanced_tech_tile = Some(AdvancedTechTile(20));
+        state.research_board.lost_fleet_advanced_tech_requirement =
+            gaia_engine::game_state::LostFleetAdvancedTechRequirement::ExplorationShuttles;
+        state.players[0].tech_tiles.push(TechTile(7));
+        state.players[0]
+            .federation_tokens
+            .push(gaia_engine::game_state::FederationToken(4));
+        state.players[0].explored_ships = vec![];
+        state.players[0].vp = 22;
+        state
+    };
+    let choice = TechTileChoice::LostFleetAdvanced { covered_tile: TechTile(7), advance_track: None };
+
+    // No lab VP this round: 22 < 25, rejected.
+    let mut no_bonus = base();
+    no_bonus.round_tiles[0].condition = gaia_engine::game_state::RoundCondition::FormFederation;
+    assert!(RuleEngine::apply_action(&mut no_bonus, 0, upgrade_action(Some(choice.clone()))).is_err());
+
+    // A round tile scoring 3 VP per research lab: 22 + 3 = 25 before the tile is taken.
+    let mut with_bonus = base();
+    with_bonus.round_tiles[0].condition = gaia_engine::game_state::RoundCondition::UpgradeResearchLab;
+    with_bonus.round_tiles[0].vp_per_unit = 3;
+    let candidates = RuleEngine::ai_decisions(&with_bonus).expect("candidates");
+    assert!(candidates.iter().any(|d| matches!(d,
+        gaia_engine::rules::engine::AiDecision::Game(GameAction::Upgrade {
+            to: StructureType::ResearchLab,
+            tech_tile_choice: Some(TechTileChoice::LostFleetAdvanced { .. }),
+            ..
+        }))), "the AI candidates should offer the tile with the lab's VP counted");
+    RuleEngine::apply_action(&mut with_bonus, 0, upgrade_action(Some(choice)))
+        .unwrap_or_else(|e| panic!("the lab's 3 VP should count before the tile: {e}"));
+    assert!(with_bonus.research_board.lost_fleet_advanced_tech_tile.is_none());
+    assert_eq!(with_bonus.players[0].vp, 25);
+}
+
 #[test]
 fn lost_fleet_advanced_tech_tile_cannot_be_taken_once_already_gone() {
     let mut state = tech_tiles_state(vec![]);

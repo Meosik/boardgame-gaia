@@ -736,7 +736,8 @@ impl RuleEngine {
             let targets = upgrade_targets(player, s.kind);
             for to in targets {
                 if to == StructureType::PlanetaryInstitute && player.faction == Some(FactionId::SpaceGiants) {
-                    for choice in valid_tech_tile_choices(state, player_id) {
+                    let extra_vp = upgrade_vp_before_tech_tile(state, player_id, to);
+                    for choice in valid_tech_tile_choices_after_vp(state, player_id, extra_vp) {
                         let action = GameAction::Upgrade { coord: s.hex, to, tech_tile_choice: Some(choice) };
                         if Self::validate_action(state, player_id, &action).is_ok() { actions.push(action); }
                     }
@@ -2234,7 +2235,9 @@ fn validate_upgrade_impl(
     }
 
     if let Some(choice) = tech_tile_choice {
-        validate_tech_tile_choice(state, player_id, choice)?;
+        // In order: the upgrade scores first, then the tile is taken (apply_upgrade_impl).
+        let extra_vp = upgrade_vp_before_tech_tile(state, player_id, to);
+        validate_tech_tile_choice_after_vp(state, player_id, choice, extra_vp)?;
     }
 
     if free {
@@ -2510,6 +2513,43 @@ fn valid_standard_tech_tile_choices(state: &GameState, player_id: PlayerId) -> V
 }
 
 fn valid_tech_tile_choices(state: &GameState, player_id: PlayerId) -> Vec<TechTileChoice> {
+    valid_tech_tile_choices_after_vp(state, player_id, 0)
+}
+
+/// VP an upgrade to `to` scores before its Tech tile is taken: the active round tile and the
+/// "whenever you upgrade" tech tiles, exactly what `apply_upgrade_impl` grants ahead of
+/// `apply_tech_tile_choice`. Read-only twin of those two grants.
+pub(crate) fn upgrade_vp_before_tech_tile(state: &GameState, player_id: PlayerId, to: StructureType) -> i32 {
+    let condition = match to {
+        StructureType::TradingStation => RoundCondition::UpgradeTradingStation,
+        StructureType::PlanetaryInstitute | StructureType::Academy(_) => RoundCondition::UpgradeLargeBuilding,
+        StructureType::ResearchLab => RoundCondition::UpgradeResearchLab,
+        _ => return 0,
+    };
+    let mut vp = 0;
+    let round = state.round as usize;
+    if round >= 1 && round <= state.round_tiles.len() {
+        let tile = &state.round_tiles[round - 1];
+        if tile.condition == condition {
+            vp += i32::from(tile.vp_per_unit);
+        }
+    }
+    if let Some(player) = state.player(player_id) {
+        for tile_id in player_active_tech_tile_ids(player) {
+            vp += tech_tile_event_vp_per_unit(tile_id, &condition).unwrap_or(0);
+        }
+        for tile in &player.advanced_tech_tiles {
+            vp += advanced_tech_tile_event_vp_per_unit(tile.0, &condition).unwrap_or(0);
+        }
+    }
+    vp
+}
+
+pub(crate) fn valid_tech_tile_choices_after_vp(
+    state: &GameState,
+    player_id: PlayerId,
+    extra_vp: i32,
+) -> Vec<TechTileChoice> {
     let Some(player) = state.player(player_id) else {
         return Vec::new();
     };
@@ -2542,7 +2582,7 @@ fn valid_tech_tile_choices(state: &GameState, player_id: PlayerId) -> Vec<TechTi
                 covered_tile: covered_tile.clone(),
                 advance_track: *advance_track,
             };
-            if validate_tech_tile_choice(state, player_id, &choice).is_ok() {
+            if validate_tech_tile_choice_after_vp(state, player_id, &choice, extra_vp).is_ok() {
                 choices.push(choice);
             }
         }
@@ -2554,6 +2594,17 @@ fn validate_tech_tile_choice(
     state: &GameState,
     player_id: PlayerId,
     choice: &TechTileChoice,
+) -> Result<(), RuleError> {
+    validate_tech_tile_choice_after_vp(state, player_id, choice, 0)
+}
+
+/// `validate_tech_tile_choice` for a tile taken as part of an action that has already scored
+/// `extra_vp` by the time the tile is taken (an upgrade's round-tile / "whenever you upgrade" VP).
+fn validate_tech_tile_choice_after_vp(
+    state: &GameState,
+    player_id: PlayerId,
+    choice: &TechTileChoice,
+    extra_vp: i32,
 ) -> Result<(), RuleError> {
     let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
     match choice {
@@ -2643,7 +2694,7 @@ fn validate_tech_tile_choice(
                     "the Lost Fleet Advanced Tech tile has already been taken".to_string(),
                 ));
             }
-            validate_lost_fleet_advanced_tech_requirement(state, player)?;
+            validate_lost_fleet_advanced_tech_requirement(state, player, extra_vp)?;
             validate_advanced_tech_research_token_cost(player, *advance_track)?;
             if !player.tech_tiles.contains(covered_tile) {
                 return Err(RuleError::ActionNotAllowed(
@@ -2663,22 +2714,27 @@ fn validate_tech_tile_choice(
     Ok(())
 }
 
-/// The Lost Fleet extra Advanced Tech tile's first condition (expansion rulebook p.9: "you do not
+/// The Lost Fleet extra Advanced Tech tile's first condition (expansion rulebook p.10: "you do not
 /// need to meet the first condition for taking an Advanced Tech... instead, the conditions shown
-/// on the Scoring Board Extension are applied — either you have at least 25 victory points or
-/// have explored 3 different spaceships"). This project is fixed at 4 players, so
-/// `lost_fleet_advanced_tech_requirement` is always `ExplorationShuttles`; `VictoryPoints` is
-/// handled too since the field exists and nothing else pins it to one variant forever.
+/// on the Scoring Board Extension are applied (either you have at least 25 victory points or have
+/// explored 3 different spaceships in the Lost Fleet; the latter condition only applies in 3- and
+/// 4-player games)"). So 25 VP always qualifies and the 3-ships alternative is added in 3-/4-player
+/// games (`ExplorationShuttles`, this project's 4 players); `VictoryPoints` is the 25-VP-only side.
+/// `extra_vp` is VP the same action scores before the tile is taken (user 2026-10-19: build the
+/// lab and score it, then take the tech and score it, then advance and score it — in order), see
+/// `upgrade_vp_before_tech_tile`.
 fn validate_lost_fleet_advanced_tech_requirement(
     state: &GameState,
     player: &PlayerState,
+    extra_vp: i32,
 ) -> Result<(), RuleError> {
+    let enough_vp = player.vp + extra_vp >= 25;
     let met = match state.research_board.lost_fleet_advanced_tech_requirement {
         LostFleetAdvancedTechRequirement::ExplorationShuttles => {
             let distinct_ships: HashSet<ShipId> = player.explored_ships.iter().copied().collect();
-            distinct_ships.len() >= 3
+            enough_vp || distinct_ships.len() >= 3
         }
-        LostFleetAdvancedTechRequirement::VictoryPoints => player.vp >= 25,
+        LostFleetAdvancedTechRequirement::VictoryPoints => enough_vp,
     };
     if met {
         Ok(())

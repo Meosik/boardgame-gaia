@@ -132,15 +132,26 @@ impl RuleEngine {
                 for tile in &player.advanced_tech_tiles {
                     actions.push(GameAction::TechTileSpecialAction { tile: TechTileRef::Advanced { tile: tile.clone() } });
                 }
-                let choices = valid_tech_tile_choices(state, player_id);
+                // The upgrade scores before its tile is taken, so a tile can depend on that VP
+                // (Lost Fleet Advanced Tech at 25 VP): choices per upgrade target.
+                let mut choices_by_target: Vec<(StructureType, Vec<TechTileChoice>)> = Vec::new();
+                let mut choices_for = |to: StructureType| -> Vec<TechTileChoice> {
+                    if let Some((_, c)) = choices_by_target.iter().find(|(t, _)| *t == to) {
+                        return c.clone();
+                    }
+                    let extra_vp = upgrade_vp_before_tech_tile(state, player_id, to);
+                    let c = valid_tech_tile_choices_after_vp(state, player_id, extra_vp);
+                    choices_by_target.push((to, c.clone()));
+                    c
+                };
                 for structure in &player.structures {
                     for to in upgrade_targets(player, structure.kind) {
-                        for choice in &choices {
+                        for choice in &choices_for(to) {
                             actions.push(GameAction::Upgrade { coord: structure.hex, to, tech_tile_choice: Some(choice.clone()) });
                         }
                     }
                     if structure.kind == StructureType::TradingStation {
-                        for choice in &choices {
+                        for choice in &choices_for(StructureType::ResearchLab) {
                             actions.push(GameAction::TwilightFreeResearchLab { coord: structure.hex, tech_tile_choice: Some(choice.clone()) });
                         }
                     }
