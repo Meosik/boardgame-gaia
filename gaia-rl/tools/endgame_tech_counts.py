@@ -62,17 +62,30 @@ def main():
                     # Federation tokens held, green and flipped (the Gleens' own token counts too).
                     r['feds'] += len(player.get('federation_tokens', [])) + len(player.get('gray_federation_tokens', []))
                     r['green_left'] += len(player.get('federation_tokens', []))
+                    # User 2026-10-20: a token left green is a failure only when nothing was left to flip it
+                    # on (level 5 taken by others, no Advanced tile above our level-4+ tracks); otherwise missed.
+                    if player.get('federation_tokens'):
+                        open5 = any(player['research_tracks'][t] == 4 and not any(
+                            o is not player and o['research_tracks'][t] >= 5 for o in state['players'])
+                            for t in TRACKS)
+                        board = state['research_board'].get('advanced_tech_tiles') or []
+                        open_adv = any(tile is not None and player['research_tracks'][t] >= 4
+                                       for t, tile in zip(TRACKS, board))
+                        r['green_missed'] += len(player['federation_tokens']) if (open5 or open_adv) else 0
                     r['any_advanced'] += bool(player.get('advanced_tech_tiles'))
                     r['any_level5'] += any(level >= 5 for level in levels)
     print(f'games {games} (skipped {skipped} that no longer replay); per seat-game means; '
           f'VP is before final scoring (the log ends at the last decision)')
-    print(f"{'':22s}{'seats':>6}{'adv':>6}{'adv>0':>7}{'lvl5':>6}{'lvl5>0':>7}{'lvl4+':>7}{'feds':>6}{'green':>6}{'VP':>7}")
+    print('green = tokens never flipped; missed = of those, ones with a free level 5 on a level-4 track or an '
+          'Advanced tile above a level-4+ track still there at the end')
+    print(f"{'':22s}{'seats':>6}{'adv':>6}{'adv>0':>7}{'lvl5':>6}{'lvl5>0':>7}{'lvl4+':>7}{'feds':>6}{'green':>6}"
+          f"{'missed':>7}{'VP':>7}")
     for key in sorted(rows, key=lambda k: (k[0] != 'all', k[0], k[1] != 'ALL', k[1])):
         r = rows[key]
         n = r['seats']
         print(f"{key[0]+' '+key[1]:22s}{int(n):>6}{r['advanced']/n:>6.2f}{r['any_advanced']/n:>7.0%}"
               f"{r['level5']/n:>6.2f}{r['any_level5']/n:>7.0%}{r['level4']/n:>7.2f}"
-              f"{r['feds']/n:>6.2f}{r['green_left']/n:>6.2f}{r['vp']/n:>7.1f}")
+              f"{r['feds']/n:>6.2f}{r['green_left']/n:>6.2f}{r['green_missed']/n:>7.2f}{r['vp']/n:>7.1f}")
 
 
 if __name__ == '__main__':
