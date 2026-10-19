@@ -105,8 +105,44 @@ def symmetric_pass(seed, **kwargs):
 #    new type and later incomes, so Geodens decisions compare routes at the second income
 #    boundary (the frozen teacher's own horizon) while other seats keep the configured one.
 
-GEODENS_TWO_INCOMES = frozenset({'Geodens'})
 GUIDE = ('B14', 'B19')
+
+# ── faction parts (user 2026-10-19 "종족별로 적용한다", research/strategy/stack-parts.md D) ──────────
+# Every faction-specific switch of the stack is read from these two tables, so "which faction has
+# what" is one place. BASE_FACTION_PARTS: the parts of the base stack vm_lf_ts_ships that act on one
+# faction only (the common parts act on everyone). CANDIDATE_FACTION_PARTS: the opt-in parts measured
+# on the base stack (stack-parts.md B) that the ships_byfaction factory turns on for the factions where
+# the measurement was positive; a faction absent from a table has none of that table's parts — the
+# default for every faction not measured yet. Per-faction data tables (UIQOO_OPENINGS, ECONOMY_COUNTED,
+# FACTION_TRACKS) and rule facts (Terrans' Gaia-area tokens come back charged, a Brainstone exists only
+# for Taklons) stay where they are: they are not switches.
+BASE_FACTION_PARTS = {
+    'Geodens': frozenset({'geodens_guide',          # geodens_goals: B14 proposal order (018)
+                          'geodens_two_incomes',    # install_geodens_guide: second-income look-ahead (018)
+                          'geodens_r1_research'}),  # geodens_r1_goals: Economy/Science first after AC or 2RL (guide_r1 ⑥)
+    'Terrans': frozenset({'terrans_gaia_late'}),    # _early_terrans_gaia: Gaia research last in rounds 1-3 (guide_r1 ②)
+    'Taklons': frozenset({'brainstone_ships',       # taklons_ship_timing_scores + brainstone_committed (053)
+                          'taklons_pi_token'}),     # lf_leech_value: the PI's token per leech (046)
+}
+CANDIDATE_FACTION_PARTS = {
+    'Terrans': frozenset({'track_income'}),         # 074+076, 12 pairs: charges +15.0, final VP +17.0 [+0.3, +33.7]
+    'Geodens': frozenset({'former_use'}),           # 079, 6 pairs: charges +20.7 (4 pairs positive), thin
+    'Taklons': frozenset({'opening_budget', 'budget_guard', 'opening_release'}),   # 077, 6 pairs: +23.6 (4 pairs), thin
+    # Not on: Taklons track_income (076 charges -26.5 significant, VP +13.7 is not the verdict measure);
+    # Xenos track_income (+14.0, CI includes 0); Geodens track_income (-35.5 significant).
+}
+
+
+def _faction_parts(faction):
+    parts = set(BASE_FACTION_PARTS.get(faction, ()))
+    if _guide['byfaction']:
+        parts.update(CANDIDATE_FACTION_PARTS.get(faction, ()))
+    return parts
+
+
+def _part(player, name):
+    """Whether part `name` is on for this player's faction."""
+    return name in _faction_parts(player['faction'])
 
 
 def _colony_cost(state, player, coord):
@@ -140,7 +176,7 @@ def geodens_goals(snapshot, original):
     from four_factions.preparation import Goal
     state, actor = snapshot['state'], snapshot['player']
     player = state['players'][actor]
-    if player['faction'] != 'Geodens':
+    if not _part(player, 'geodens_guide'):
         return original
     tracks = player['research_tracks']
     pi = any(s['kind'] == 'PlanetaryInstitute' for s in player['structures'])
@@ -174,8 +210,7 @@ def install_geodens_guide():
     original_rollout = getattr(preparation.rollout, '__wrapped__', preparation.rollout)
 
     def rollout(env, snapshot, *args, **kwargs):
-        faction = snapshot['state']['players'][snapshot['player']]['faction']
-        if faction not in GEODENS_TWO_INCOMES:
+        if not _part(snapshot['state']['players'][snapshot['player']], 'geodens_two_incomes'):
             return rollout.__wrapped__(env, snapshot, *args, **kwargs)
         configured = preparation.reached_horizon   # budget_teacher.set_horizon may wrap it
         preparation.reached_horizon = getattr(configured, '__wrapped__', configured)
@@ -225,6 +260,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'knowledge_spend': False,     # True: guide_r1_charge3_lf_more_vm_lf_ts (see knowledge_spend_scores)
           'ship_setup': False,          # True: guide_r1_charge3_lf_more_vm_lf_ts (see ship_setup_scores)
           'value_max': False,           # True: guide_r1_charge3_lf_more_vm (see install_value_max)
+          'byfaction': False,           # True: ..._ships_byfaction (CANDIDATE_FACTION_PARTS on)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -402,9 +438,12 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
         if not _guide['lf_frozen']:
             result += (.6 if player['faction'] == 'Terrans' else .2)*power['gaia_forming']
     income = v.production(state, player, include_booster=False)
-    if _guide['track_income'] == 'sweet':
+    track_income = _guide['track_income']
+    if track_income is False and _part(player, 'track_income'):
+        track_income = 'sweet'
+    if track_income == 'sweet':
         income = [a-b for a, b in zip(income, _track_income_excess(state, player))]
-    elif not _guide['track_income']:
+    elif not track_income:
         # research_value already prices every level at 16 charges "for the research advance"
         # (LF01 §2.4), so the Economy/Science levels' income is not counted a second time.
         income = [a-b for a, b in zip(income, _track_income(state, player))]
@@ -704,7 +743,7 @@ def opening_budget_scores(env, snapshot, scores, target, deadline):
         return scores
     owed_ore, owed_credits = owed
     held = player['resources']
-    if _guide['budget_guard'] and not _budget_pays(held, owed_ore, owed_credits):
+    if (_guide['budget_guard'] or _part(player, 'budget_guard')) and not _budget_pays(held, owed_ore, owed_credits):
         # 068 p001 Taklons (7 ore, 1 QIC, no bowl-III power; TS 2 + RL 3 + AC 6 owed): the chain
         # cannot be paid from what is held, so reserving for it only loses the mine and the round
         # ends at 1RL+1M. Nothing is blocked until a leech or an action makes the chain payable.
@@ -746,14 +785,19 @@ def opening_budget_scores(env, snapshot, scores, target, deadline):
     return masked
 
 
-def install_opening_budget():
+def install_opening_budget(all_factions=True):
+    """all_factions=False (ships_byfaction): the budget acts only where CANDIDATE_FACTION_PARTS has
+    'opening_budget'; the guard likewise reads 'budget_guard' there."""
     import bgg_openings.planning as planning
-    _guide['opening_budget'] = True
+    _guide['opening_budget'] = _guide['opening_budget'] or all_factions
     if not getattr(planning.select_action, '_opening_budget', False):
         inner = planning.select_action
 
         def select_action(env, snapshot, scores, target, policies, deadline):
-            masked = opening_budget_scores(env, snapshot, scores, target, deadline)
+            player = snapshot['state']['players'][snapshot['player']]
+            masked = scores
+            if _guide['opening_budget'] or _part(player, 'opening_budget'):
+                masked = opening_budget_scores(env, snapshot, scores, target, deadline)
             return inner(env, snapshot, masked, target, policies, deadline)
         select_action._opening_budget = True
         select_action.__wrapped__ = getattr(inner, '__wrapped__', inner)
@@ -888,7 +932,7 @@ def _near_sites(state, actor, coord, sites):
 
 def _early_terrans_gaia(state, actor):
     player = state['players'][actor]
-    return player['faction'] == 'Terrans' and state['round'] < TERRANS_GAIA_FROM_ROUND
+    return _part(player, 'terrans_gaia_late') and state['round'] < TERRANS_GAIA_FROM_ROUND
 
 
 def _near_places(snapshot, scores):
@@ -941,7 +985,7 @@ def geodens_r1_goals(snapshot, goals):
     from strategy_teacher import kind
     state, actor = snapshot['state'], snapshot['player']
     player = state['players'][actor]
-    if player['faction'] != 'Geodens':
+    if not _part(player, 'geodens_r1_research'):
         return goals
     kinds = [kind(s['kind']) for s in player['structures']]
     late = [g for g in goals if g.name in GEODENS_LATE_RESEARCH]
@@ -1388,12 +1432,13 @@ def _colony_costs(state, player, home):
                    for cell in state['board']['hexes'].values())
     options += [(dict(MINE_COST), 0, 0)]*reserved
     room = _gaia_room(player)
-    if room and not _guide['former_use']:
+    former_use = _guide['former_use'] or _part(player, 'former_use')
+    if room and not former_use:
         transdim = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Transdim',)))[:room]
         options += [({**MINE_COST, 'qic': qic}, GAIA_TOKENS[level]*terrans, nav) for qic, nav in transdim]
     # Formers on a planet or in the Gaia area come back, so every former not yet used up counts.
     formers = (max(0, player['gaiaformers_total'] - player['resources']['spent_gaia_formers'])
-               if _guide['former_use'] else 0)
+               if former_use else 0)
     if formers:
         # Lost Fleet rulebook: a mine on an Asteroid costs no ore or credits, only the range QIC,
         # and uses up one Gaia former.
@@ -1463,7 +1508,7 @@ def lf_leech_value(state, player):
     v = _value
     power = player['resources']['power']
     tokens = sum(power[k] for k in ('bowl1', 'bowl2', 'bowl3'))
-    pi_token = (player['faction'] == 'Taklons'
+    pi_token = (_part(player, 'taklons_pi_token')
                 and any(v.kind(s['kind']) == 'PlanetaryInstitute' for s in player['structures'])
                 and tokens < gv.tokens_needed(player))
     per_round = []
@@ -1562,6 +1607,8 @@ def former_first_scores(env, snapshot, scores):
     state, actor = snapshot['state'], snapshot.get('player')
     if actor is None or 'ActionPhase' not in state['phase']:
         return scores
+    if not (_guide['former_use'] or _part(state['players'][actor], 'former_use')):
+        return scores
     if not _idle_formers(state['players'][actor]):
         return scores
     hexes = state['board']['hexes']
@@ -1613,7 +1660,7 @@ def taklons_ship_timing_scores(env, snapshot, scores):
     if actor is None or 'ActionPhase' not in state['phase']:
         return scores
     player = state['players'][actor]
-    if player['faction'] != 'Taklons':
+    if not _part(player, 'brainstone_ships'):
         return scores
     entries = [i for i, c in enumerate(snapshot['candidates']) if c['action'].get('type') in SHIP_ENTRIES
                and not blocked(scores[i]) and scores[i][0] > ENTRY_BEFORE_PASS]
@@ -1657,8 +1704,9 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs):
     return teacher
 
 
-def install_former_use():
-    _guide['former_use'] = True
+def install_former_use(all_factions=True):
+    """all_factions=False (ships_byfaction): former_use acts only where CANDIDATE_FACTION_PARTS has it."""
+    _guide['former_use'] = _guide['former_use'] or all_factions
     _wrap_rank('_former_use', former_first_scores)
 
 
@@ -1848,13 +1896,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_land(seed, **kwargs):
     return teacher
 
 
-def install_opening_release():
+def install_opening_release(all_factions=True):
     """Once the round-1 target owes no upgrade (only mines, or nothing), planning.select_action
-    returns the search's own best move instead of the label's remaining mine."""
+    returns the search's own best move instead of the label's remaining mine. all_factions=False
+    (ships_byfaction): only where CANDIDATE_FACTION_PARTS has 'opening_release'."""
     import bgg_openings.planning as planning
     from bgg_openings.inventory import building_counts
     from research_plans.teacher import best_index
-    _guide['opening_release'] = True
+    _guide['opening_release'] = _guide['opening_release'] or all_factions
     if getattr(planning.select_action, '_opening_release', False):
         return
     inner = planning.select_action
@@ -1863,7 +1912,8 @@ def install_opening_release():
         state = snapshot['state']
         if state['round'] == 1 and 'ActionPhase' in state['phase']:
             player = state['players'][snapshot['player']]
-            if chain_costs(building_counts(player), target, player['faction']) == (0, 0):
+            if ((_guide['opening_release'] or _part(player, 'opening_release'))
+                    and chain_costs(building_counts(player), target, player['faction']) == (0, 0)):
                 return best_index(scores, range(len(scores)))
         return inner(env, snapshot, scores, target, policies, deadline)
     select_action._opening_release = True
@@ -1876,6 +1926,20 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_income(seed, **kwargs):
     levels' income counts where the faction guides send the faction (see _track_income_excess)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     _guide['track_income'] = 'sweet'
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus the per-faction candidates of
+    CANDIDATE_FACTION_PARTS — Terrans track_income 'sweet', Geodens former_use, Taklons opening_budget
+    with budget_guard and opening_release; every other faction plays the base stack unchanged
+    (user 2026-10-19 "종족별로 적용한다", stack-parts.md B/D). The wrappers are installed for everyone and
+    read the table per actor, so the module flags of those parts stay False here."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['byfaction'] = True
+    install_former_use(all_factions=False)
+    install_opening_budget(all_factions=False)
+    install_opening_release(all_factions=False)
     return teacher
 
 

@@ -299,16 +299,37 @@ class OpeningBudgetTests(unittest.TestCase):
         flags = "tp._guide['former_use'], tp._guide['opening_budget'], tp._guide['budget_guard'], " \
                 "tp._guide['opening_release'], tp._guide['academy_economy'], tp._guide['research_when_land'], " \
                 "tp._guide['track_income']"
-        expected = {'guide_r1_charge3_lf_more_vm_lf_ts_ships': ['False']*6 + ['False'],
-                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_former': ['True'] + ['False']*5 + ['False'],
-                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_budget': ['False', 'True'] + ['False']*4 + ['False'],
-                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_land': ['False']*5 + ['True', 'False'],
-                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_income': ['False']*6 + ['sweet']}
+        expected = {'guide_r1_charge3_lf_more_vm_lf_ts_ships': ['False']*6 + ['False', 'False'],
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_former': ['True'] + ['False']*5 + ['False', 'False'],
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_budget': ['False', 'True'] + ['False']*4 + ['False', 'False'],
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_land': ['False']*5 + ['True', 'False', 'False'],
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_income': ['False']*6 + ['sweet', 'False'],
+                    # byfaction: the wrappers are installed, the module flags stay off, the table decides.
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction': ['False']*6 + ['False', 'True']}
+        flags += ", tp._guide['byfaction']"
         for factory, want in expected.items():
             code = f"import teacher_patches as tp\ntp.{factory}({SEED!r})\nprint({flags})"
             out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True,
                                  env=env).stdout
             self.assertEqual(out.split(), want, factory)
+
+    def test_faction_parts_come_from_the_tables(self):
+        # Base stack: only the faction parts of BASE_FACTION_PARTS; a faction not in the table has none.
+        self.assertEqual(tp._faction_parts('Xenos'), set())
+        self.assertEqual(tp._faction_parts('HadschHallas'), set())
+        self.assertEqual(tp._faction_parts('Geodens'), {'geodens_guide', 'geodens_two_incomes', 'geodens_r1_research'})
+        self.assertEqual(tp._faction_parts('Terrans'), {'terrans_gaia_late'})
+        self.assertEqual(tp._faction_parts('Taklons'), {'brainstone_ships', 'taklons_pi_token'})
+        self.assertTrue(tp._early_terrans_gaia({'round': 2, 'players': [{'faction': 'Terrans'}]}, 0))
+        self.assertFalse(tp._early_terrans_gaia({'round': 2, 'players': [{'faction': 'Xenos'}]}, 0))
+        # ships_byfaction adds the measured candidates and nothing for the others.
+        tp._guide['byfaction'] = True                      # restored by setUp's cleanup
+        self.assertEqual(tp._faction_parts('Terrans'), {'terrans_gaia_late', 'track_income'})
+        self.assertEqual(tp._faction_parts('Geodens') - tp.BASE_FACTION_PARTS['Geodens'], {'former_use'})
+        self.assertEqual(tp._faction_parts('Taklons') - tp.BASE_FACTION_PARTS['Taklons'],
+                         {'opening_budget', 'budget_guard', 'opening_release'})
+        self.assertEqual(tp._faction_parts('Xenos'), set())
+        self.assertFalse(tp._part({'faction': 'Taklons'}, 'track_income'))
 
     def test_academy_economy_leads_research_and_the_tile_track_until_economy_two(self):
         state = {'round': 2, 'phase': {'ActionPhase': {}},

@@ -60,8 +60,10 @@ ships_fix·ships_fix_noformer·ships_fix_noacademy·ships_fix_label 묶음 팩�
 - when 계열(054–060, 약 60개 플래그: research_when·contested_first·ship_when·research_defend·leech_when·not_yet 4종·academy_kind·tech_when·GUIDE_MORE/REST/LAST/FINAL·track_set(FACTION_TRACKS)·terrans_gaia_cond·faction_more·adv_immediate·r1_basics·gaia_both·ship_ids·taklons_brainstone·cover_tile·nav3_ai·tokens_lf·hold_no_pass, 수정 7종) — 060에서 세 층 전체 −25.0으로 기준을 ships로 되돌림. 개별 규칙 중 종족 공략에 맞는 것은 종족별 재시험 후보(예: taklons_brainstone, nav3_ai, track_set).
 - academy_r1(041 +4.2), sheden_r1(042 −11.8), distinct_search(030–033), booster_lookahead(026), calibrated_value·quartet_guide(019·022, 코드 삭제).
 
-## D. 종족별 편입에서 손댈 곳
+## D. 종족 표 (2026-10-19 구현, `teacher_patches.py` 상단 `BASE_FACTION_PARTS`·`CANDIDATE_FACTION_PARTS`)
 
-- 이미 종족 조건이 코드에 있는 부품: 2(기오덴), 4(라벨 표), 7②(테란)·⑥(기오덴), 14 일부, 18(타클론), geodens_b14_tech, academy_economy(발탁 제외), track_income(단 표).
-- 종족 조건이 없는 부품(former_use, opening_budget/guard/release, research_when_land, label 계열)은 install_*() 또는 *_scores()에 종족 집합 인자를 더해야 한다(순서·범위만, 수치 없음).
-- 제안하는 형태: 팩토리 `..._ships_byfaction` 하나 + 종족 → 부품 집합 표 한 개(근거 사이클 번호 주석), 미측정 종족은 빈 집합(= 기준 스택 그대로).
+- 종족 스위치는 전부 두 표에서 읽는다(`_part(player, name)`). 표에 없는 종족 = 그 표의 부품 없음 = 미측정 종족 기본값.
+- `BASE_FACTION_PARTS`(기준 스택의 종족 부품, 동작 불변): 기오덴 geodens_guide·geodens_two_incomes·geodens_r1_research, 테란 terrans_gaia_late, 타클론 brainstone_ships·taklons_pi_token.
+- `CANDIDATE_FACTION_PARTS`(B의 후보, `..._ships_byfaction` 팩토리에서만 켜짐): **테란 track_income**(074+076 12쌍), **기오덴 former_use**(079, 얇음), **타클론 opening_budget+budget_guard+opening_release**(077, 얇음). 안 켠 것: 타클론 track_income(076 충전 −26.5 유의), 제노스 track_income(+14.0, CI 0 포함), 기오덴 track_income(−35.5 유의).
+- 종족 조건이 아닌 것은 그대로: 데이터 표(UIQOO_OPENINGS, ECONOMY_COUNTED, FACTION_TRACKS), 규칙 사실(테란 가이아 구역 토큰은 충전돼 돌아옴, 브레인스톤은 타클론만).
+- 새 spec: `tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-cap20.json`. 편입 판정은 ships vs ships_byfaction 새 시드 6쌍 6R(충전 판정, 최종 VP 같이) 뒤.

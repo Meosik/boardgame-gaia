@@ -37,6 +37,8 @@
 ## 2. 지금까지의 결과 (사이클 문서 `research/strategy/cycles/`)
 
 부품 목록(기준 스택에 든 것 18개·opt-in·기각, 각각 언제·무엇·목적·근거·종족 조건): `research/strategy/stack-parts.md`(2026-10-19, 종족별 편입 설계용).
+**2026-10-19 정리(사용자 "제안대로 진행해")**: 기각 부품 전부 + 종족 후보 없는 opt-in을 `teacher_patches.py`에서 삭제(e4b21a0, 4558 → 1917줄, 복구는 `git show 12b1456:gaia-rl/tools/teacher_patches.py`),
+종족 스위치를 표 두 개(`BASE_FACTION_PARTS`·`CANDIDATE_FACTION_PARTS`)로 모으고 `..._ships_byfaction` 팩토리 추가. 기준 팩토리 동작 불변 확인: 비교 0 두 시드 160결정 동일 + 팩토리 테스트.
 
 | 사이클 | 내용 | 결과 | 상태 |
 |---|---|---:|---|
@@ -1811,6 +1813,17 @@
      (ㄴ) **ships cap5 vs ships cap10, normal**(새 spec `...-ships-cap10.json`, 비교 2, geo-quartet 새 시드 6쌍 4R, ≈ 20분) — 027(+18.7, 옛 교사)의 normal 상한 레버가 새 스택에도 있는지·제노스가 회복하는지 = **D3(normal 설정)를 실제 돌 교사로 결정**
      (ㄷ) 082 재확인 새 시드 6쌍(미사용 13개) — 제노스 −57.1 실재 여부, 전체 판정은 이미 유의라 후순위.
      봇 추천 (ㄱ) 지금, D3를 D1과 함께 정하려면 (ㄴ)을 다음 lab 슬롯에, 아니면 E13(ㄱ) 081 재확인이 슬롯 유지; 규칙 실험 슬롯 E9(ㄴ)·E7 그대로.
+     **부품 정리·종족 표(2026-10-19 오후, 사용자 "실험을 많이 돌렸는데 어떻게 넣을 생각이지? 종족별로 넣어야하는게 달랐던거 같은데" → "종족별로 적용한다" → "부품 리스트" →
+     "종족만 적용 가능한 내역은 분리해서 따로, 기각은 없애야 하나? B는 애매" → "제안대로 진행해")**: 부품 목록 `research/strategy/stack-parts.md`(A 기준 18개·B opt-in·C 기각·D 종족 표).
+     ① 삭제(e4b21a0): C 전부(booster_lookahead·distinct_search·academy_r1·sheden_r1·vp1·reach·when/tech_when/guide_more 60여 플래그) + B 중 종족 후보 없는 것(opening_label·label_value·
+     instant_forming·geodens_b14_tech·geodens_prior = guide_r1 ⑤·ships_fix 묶음 팩토리). `teacher_patches.py` 4558 → 1917줄, 테스트 996 → 470줄(17 → 18개 통과). 복구 `git show 12b1456:…`.
+     ② 종족 표(다음 커밋): `BASE_FACTION_PARTS`(기오덴 geodens_guide·two_incomes·r1_research, 테란 terrans_gaia_late, 타클론 brainstone_ships·pi_token — 기준 스택의 종족 스위치를 전부
+     `_part(player, name)`으로 읽음, 동작 불변) + `CANDIDATE_FACTION_PARTS`(테란 track_income, 기오덴 former_use, 타클론 opening_budget·budget_guard·opening_release; **타클론 track_income은
+     제외** — 사용자 질문에 답: 076 충전 −26.5 유의, VP +13.7은 판정 척도 아님) + 팩토리 `..._ships_byfaction`(표의 후보만 켬, 다른 종족은 기준 그대로) + spec `...-ships-byfaction-cap20.json`.
+     **검증**: 기준 팩토리 비교 0, geo-quartet-862133·live-quartet-822328 160결정씩 삭제 전·삭제 후·표 적용 후 **전부 동일**(`guide_values_smoke.py --output` + 새 `diff_lines.py`; 줄 범위 삭제는
+     새 `cut_lines.py`), 팩토리 테스트 통과, byfaction 스모크 160결정 오류 0(테란 값 +10 = 수입 계산, 기오덴 32번 결정 가이아 연구 → 광산 = former_use 작동). 파일 삭제는 사용자(5a D7 명령).
+     **다음(큐 안 넣음, 5a E15)**: ships vs ships_byfaction 새 시드 6쌍 6R → 종족별 충전 양수인 부품만 BASE 표로 이동. 미측정 9종족 측정 순서(앞 제안): ① 쿼텟 3개 스모크 1판씩
+     (란티드·이비츠·피락·네블라 / 발탁·베스코드·글린·이타르 / 암바스·하지할라+테란·제노스) ② 쿼텟별 hard vs ships 6쌍 4R(시드는 `find_seeds.py`로 새로) ③ 음수 종족만 리플레이 → 종족 표 후보.
      **사용자 질문(02:15) "PPO는 몇 점쯤 나와야 시작하려나"**: 기준 ships의 6R 자체 대국(060 A, 4AI 한 판 총점 ≈350) 좌석 평균 **≈87**(Tak 66·Geo 79·Ter 85·Xen 119; B 묶음도 ≈90).
      BGG 전문가 4인 평균은 130–155(기오덴 1AC+2M 146, 표 `bgg-openings-part2.csv`). 봇 기준 제안: ① 자체 대국 좌석 평균 **≈110**(전문가의 75%) ② 알려진 1R 결함 목록이 비어 있음
      (BC는 교사의 실수를 그대로 베낌) ③ 결정 12초/수라 온라인 RL 교사로는 못 쓰고 BC 워밍업·평가 상대로만 — 데이터는 lab 6R 판(판당 약 640결정)에서. 071이 수정 뒤 첫 6R 기준선.
@@ -1881,6 +1894,11 @@
 - E4ⓑ → **082** `082-normal-hard-vs-ships` **완료(11:44)**: 충전 **+43.8 [+17.8, +69.9] 유의, 6쌍 모두 양수**(기오덴 +133.0·테란 +58.7·타클론 +40.7 각 6쌍 양수·유의, **제노스 −57.1 5쌍 음수**(CI 0 걸침, hard 052·063에서는 양수)), 참고 VP −7.7, B 중앙값 5.02초 = 상한·최대 7.0초 → **양수 갈림: D1의 normal 근거 확보, 레벨별 factory 불필요**. 다음 제안 E14.
 - E14(082 뒤 새 제안, 미큐). (ㄱ) B 제노스 explain(p004 game-1-A23 좌석 0·p003 game-1-A02 좌석 1), lab 시간 0 / (ㄴ) **ships cap5 vs cap10 normal**(새 spec `...-ships-cap10.json`, 6쌍 4R, ≈ 20분) — D3(normal 설정, 10-13부터 대기)를 새 교사로 결정 + 제노스 회복 여부 / (ㄷ) 082 재확인 새 시드 6쌍(제노스 −57.1 실재 여부, 후순위). 봇 추천 (ㄱ) 지금, D3를 D1과 함께 정하면 (ㄴ)을 다음 lab 슬롯에, 아니면 E13(ㄱ)이 슬롯 유지.
 - 새 팩토리 테스트 1개(62개 통과), 스모크 60결정(결과는 "진행 중" 끝). geo-quartet 미사용 시드 61 − 48 = 13 남음(082가 6개 사용; 831000–931000 스캔분은 아래).
+
+**종족별 편입(2026-10-19, 사용자 "종족별로 적용한다", "제안대로 진행해")**
+- D7. **삭제된 팩토리의 잔재 파일은 사용자가 지움**(봇은 파일 삭제 안 함): `cd ~/projects/gaia-work/gaia-rl && git rm tools/test_distinct_search.py tools/geodens_pi4_check.py tools/teacher-a-search2-h1-booster.json tools/teacher-a-search2-h1-distinct-cap5.json tools/teacher-a-search4-h1-distinct-cap10.json tools/teacher-a-search4-h1-distinct-cap20.json tools/teacher-a-search4-h1-distinct-openings-cap10.json tools/teacher-a-search4-h1-distinct-openings-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-ac-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-sh-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-vp1-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-reach-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-reach-plus-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-reach-focus-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-reach-setup-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-former-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-when-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-defend-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-tech-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-tech-fix-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-when-all-tech-fix-setup-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-geodens-prior-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-label-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-label-value-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-fix-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-fix-noformer-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-fix-noacademy-cap20.json tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-fix-label-cap20.json && git commit -m "tools: remove specs and tests of the factories deleted on 2026-10-19" && git push origin HEAD:claude/epic-goodall-0ot55w`. 남는 spec은 기준·opt-in(ships, ships-cap5/40, ships-budget, ships-former, ships-land, ships-income, ships-byfaction)과 옛 체인(guide-values … vm-lf-ts, 역사 기록용).
+- E15(미큐, 사용자 확인 대기). **ships vs ships_byfaction** — A = ships(cap20), B = 새 spec `...-ships-byfaction-cap20.json`(테란 track_income, 기오덴 former_use, 타클론 opening_budget+guard+release; 제노스는 기준 그대로), geo-quartet 새 시드 6쌍(미사용 13개), **6R 끝까지**(≈ 3시간 20분). 판정 1–3R 충전(종족별로 봄: 테란·기오덴·타클론 각각 양수여야 그 종족 부품 편입), 최종 VP 같이. 통과한 종족 부품만 BASE_FACTION_PARTS로 옮김(편입 = 표 한 줄 이동).
+- 미측정 9종족(란티드·글린·암바스·이비츠·발탁·피락·베스코드·네블라·이타르)은 표에 없음 = 기준 스택 그대로. 측정 순서 제안은 "진행 중" 끝(스모크 → 쿼텟별 hard vs ships).
 
 **규칙·코드 후보(미구현)**
 - R1. 팟캐스트 순서 규칙 후보 R1–R10(`paia-timing-rules-20261018.md` 3절). 충돌: 테란 1R(팟캐스트·IR01 의회/항해 연구소 vs 어잌후 1AC+1M, 지금 라벨은 어잌후).
