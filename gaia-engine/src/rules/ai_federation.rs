@@ -266,6 +266,7 @@ pub(super) fn federation_candidates(state: &GameState, player_id: PlayerId) -> R
         }
     }
     let mut actions = BTreeMap::new();
+    let mut tile_choices_with_token: Option<Vec<TechTileChoice>> = None;
     for (_, (hexes, satellite_hexes)) in shapes {
         for token in &tokens {
             let kind = resolve_federation_token_choice(state, player_id, *token)?;
@@ -275,7 +276,12 @@ pub(super) fn federation_candidates(state: &GameState, player_id: PlayerId) -> R
                     bonuses = state.board.hexes.keys().map(|&c| (Some(c), None, None)).collect();
                 }
                 FederationTokenKind::LostFleetTechTileOfChoice => {
-                    for choice in valid_standard_tech_tile_choices(state, player_id) {
+                    // The token is held by the time its tile resolves (a level-5 step may flip it).
+                    let choices = tile_choices_with_token.get_or_insert_with(|| {
+                        let after = state_with_new_federation_token(state, player_id, kind);
+                        valid_standard_tech_tile_choices(&after, player_id)
+                    });
+                    for choice in choices.iter().cloned() {
                         if let TechTileChoice::Standard { tile, advance_track, bonus_build_coord } = choice {
                             bonuses.push((bonus_build_coord, Some(tile), advance_track));
                         }

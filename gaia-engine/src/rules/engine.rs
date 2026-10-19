@@ -5016,7 +5016,12 @@ fn validate_federation(
             if let Some(tile) = bonus.tech_tile {
                 let choice =
                     standard_tech_tile_choice(tile, bonus.research_track, bonus.build_coord);
-                validate_tech_tile_choice(state, player_id, &choice)?;
+                // In order (user 2026-10-19): the Federation token is gained first, then the tile,
+                // then its research step — so a level-5 step may flip this very token.
+                validate_tech_tile_choice(state, player_id, &choice).or_else(|_| {
+                    let after = state_with_new_federation_token(state, player_id, kind);
+                    validate_tech_tile_choice(&after, player_id, &choice)
+                })?;
             } else if !valid_standard_tech_tile_choices(state, player_id).is_empty() {
                 return Err(RuleError::ActionNotAllowed(
                     "this Federation token requires choosing a Tech tile".to_string(),
@@ -5101,6 +5106,16 @@ fn apply_federation_token_direct_reward(
             reason: VpReason::FederationToken { token_kind: kind },
         }]
     }
+}
+
+/// The state at the moment a new Federation's own reward resolves: `apply_federation` gives the
+/// player the token before the "Tech tile of choice" tile and its research step.
+pub(crate) fn state_with_new_federation_token(state: &GameState, player_id: PlayerId, kind: u8) -> GameState {
+    let mut after = state.clone();
+    if let Some(player) = after.player_mut(player_id) {
+        player.federation_tokens.push(FederationToken(kind));
+    }
+    after
 }
 
 fn apply_federation(

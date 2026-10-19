@@ -619,6 +619,43 @@ fn kind_12_grants_a_standard_tech_tile_of_choice() {
     assert_eq!(state.players[0].research_tracks.science, 1);
 }
 
+// In order (user 2026-10-19): the Federation token is gained first, then the tile, then its
+// research step — so the step to level 5 may flip this very token when no other green one is held.
+#[test]
+fn kind_12_tile_step_to_level_5_may_flip_the_new_token() {
+    let mut state = state_with_spaceship_token(12);
+    let chosen = TechTile(4);
+    state.research_board.tech_tile_slots = vec![None; 9];
+    state.players[0].research_tracks.science = 4;
+    state.players[0].federation_tokens.clear();
+    let action = GameAction::FormFederation {
+        satellite_hexes: vec![],
+        hexes: federation_hexes(),
+        token: FederationTokenChoice::Spaceship { ship: SpaceshipId::Twilight },
+        bonus_build_coord: None,
+        bonus_tech_tile: Some(chosen.clone()),
+        bonus_research_track: Some(ResearchTrack::Science),
+    };
+    let candidates = RuleEngine::ai_decisions(&state).expect("candidates");
+    assert!(
+        candidates.iter().any(|d| matches!(d,
+            gaia_engine::rules::engine::AiDecision::Game(GameAction::FormFederation {
+                bonus_tech_tile: Some(TechTile(4)),
+                bonus_research_track: Some(ResearchTrack::Science),
+                ..
+            }))),
+        "the AI candidates should offer the level-5 step paid by the new token"
+    );
+
+    RuleEngine::apply_action(&mut state, 0, action)
+        .unwrap_or_else(|e| panic!("the new token should pay the level-5 step: {e}"));
+
+    assert!(state.players[0].tech_tiles.contains(&chosen));
+    assert_eq!(state.players[0].research_tracks.science, 5);
+    assert!(state.players[0].federation_tokens.is_empty());
+    assert_eq!(state.players[0].gray_federation_tokens, vec![FederationToken(12)]);
+}
+
 #[test]
 fn kind_12_requires_choosing_an_available_tech_tile() {
     let mut state = state_with_spaceship_token(12);
