@@ -306,7 +306,8 @@ class OpeningBudgetTests(unittest.TestCase):
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_income': ['False']*6 + ['sweet', 'False'],
                     # byfaction: the wrappers are installed, the module flags stay off, the table decides.
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction': ['False']*6 + ['False', 'True'],
-                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide': ['False']*6 + ['False', 'True']}
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide': ['False']*6 + ['False', 'True'],
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_fed': ['False']*6 + ['False', 'False']}
         flags += ", tp._guide['byfaction']"
         for factory, want in expected.items():
             code = f"import teacher_patches as tp\ntp.{factory}({SEED!r})\nprint({flags})"
@@ -426,6 +427,56 @@ class OpeningBudgetTests(unittest.TestCase):
             return result['memory'].get('_bgg_targets', {})
         self.assertEqual(run('BalTaks', '1AC+1M'), {'1': '1AC+1M'})
         self.assertEqual(run('Moweyds', '1RL+4M'), {})      # Lost Fleet: no BGG table, nothing saved
+
+    def test_fed_cluster_moves_the_mine_next_to_our_unfederated_buildings(self):
+        player = {'faction': 'Terrans', 'research_tracks': {},
+                  'structures': [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'Mine', 'hex': '5,5'}],
+                  'federated_hexes': ['5,5']}
+        snapshot = {'player': 0, 'state': {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]},
+                    'candidates': [{'action': {'type': 'Build', 'coord': '3,0'}},     # far
+                                   {'action': {'type': 'Build', 'coord': '1,0'}},     # next to 0,0
+                                   {'action': {'type': 'Build', 'coord': '5,6'}},     # next to a federated mine only
+                                   {'action': {'type': 'Pass'}}]}
+        scores = [(9.0, 'far'), (5.0, 'near'), (7.0, 'fed'), (8.0, 'pass')]
+        self.assertIs(tp.fed_cluster_scores(None, snapshot, scores), scores)   # part off
+        tp._guide['fed'] = True                                                 # restored by setUp's cleanup
+        lifted = tp.fed_cluster_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [5.0, 9.0, 7.0, 8.0])
+        self.assertIn('fed_cluster', lifted[1][1])
+        snapshot['state']['round'] = 6
+        self.assertIs(tp.fed_cluster_scores(None, snapshot, scores), scores)   # round 6 is free
+        snapshot['state']['round'] = 2
+        best_near = [(5.0, 'far'), (9.0, 'near'), (7.0, 'fed'), (8.0, 'pass')]
+        self.assertIs(tp.fed_cluster_scores(None, snapshot, best_near), best_near)
+        # No adjacent mine: distance 2 (one satellite) is the nearest and leads over distance 3.
+        snapshot['candidates'][1] = {'action': {'type': 'Build', 'coord': '2,0'}}
+        lifted = tp.fed_cluster_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [5.0, 9.0, 7.0, 8.0])
+        # Nearest at distance 3 or more: nothing near, untouched.
+        snapshot['candidates'][1] = {'action': {'type': 'Build', 'coord': '0,4'}}
+        self.assertIs(tp.fed_cluster_scores(None, snapshot, scores), scores)
+
+    def test_fed_compare_puts_the_best_federation_first_in_goals(self):
+        import four_factions.preparation as p
+        saved = p.goals_for
+        self.addCleanup(setattr, p, 'goals_for', saved)
+        p.goals_for = lambda snapshot, **kwargs: ['other-goal']
+        tp.install_fed_compare()
+        sats = lambda n: [f'{i},9' for i in range(n)]
+        snapshot = {'player': 0, 'state': {'round': 6, 'phase': {'ActionPhase': {}}, 'players': [{'faction': 'Xenos'}]},
+                    'candidates': [{'action': {'type': 'Pass'}},
+                                   {'action': {'type': 'FormFederation', 'satellite_hexes': sats(6)}},
+                                   {'action': {'type': 'FormFederation', 'satellite_hexes': sats(3)}},
+                                   {'action': {'type': 'FormFederation', 'satellite_hexes': sats(1)}}]}
+        scores = [(0.0, 'pass'), (-16.0, 'f6'), (-16.0, 'f3'), (-20.0, 'f1')]
+        tp.fed_remember_scores(None, snapshot, scores)
+        self.assertEqual(p.goals_for(snapshot), ['other-goal'])                # part off
+        tp._guide['fed'] = True                                                 # restored by setUp's cleanup
+        goals = p.goals_for(snapshot)
+        self.assertEqual((goals[0].family, goals[0].first), ('root', 2))       # best score, fewer satellites on a tie
+        self.assertEqual(goals[1:], ['other-goal'])
+        other = dict(snapshot)                                                  # another snapshot: no ranking kept
+        self.assertEqual(p.goals_for(other), ['other-goal'])
 
     def test_track_caps_close_a_guide_track_at_its_level(self):
         tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup

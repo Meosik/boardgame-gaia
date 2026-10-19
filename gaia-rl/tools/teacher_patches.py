@@ -174,6 +174,8 @@ def _faction_parts(faction):
         parts.update(CANDIDATE_FACTION_PARTS.get(faction, ()))
     if _guide['faction_guide']:
         parts.update(GUIDE_FACTION_PARTS.get(faction, ()))
+    if _guide['fed']:
+        parts.update(FED_PARTS)
     return parts
 
 
@@ -299,6 +301,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'value_max': False,           # True: guide_r1_charge3_lf_more_vm (see install_value_max)
           'byfaction': False,           # True: ..._ships_byfaction (CANDIDATE_FACTION_PARTS on)
           'faction_guide': False,       # True: ..._ships_byfaction_guide (GUIDE_FACTION_PARTS on as well)
+          'fed': False,                 # True: ..._ships_fed (fed_compare + fed_cluster for every faction)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -2238,6 +2241,116 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs):
     _wrap_rank('_building_limits', building_limits_scores)
     install_opening_only()
     install_fixed_academy()
+    return teacher
+
+
+# ── federations (user 2026-10-19 "연방을 왜 먹지 않지? … 파워 토큰을 너무 많이 쓰는거 아냐?", "그렇게 해") ──────
+# 084 (tools/federation_chances.py): a federation was legal 3-8 times a seat-game but 0.7-2.0 were formed,
+# 28 passes with one legal (5 in round 6); in the replay of pair-001/game-0-A23 step 241 every federation
+# scored -16 in the one-step ranking against Pass 0 and none reached the 4 compared plans. And the cheapest
+# legal federation usually needed 6-11 satellites, formed ones 3.4-5.9 — the buildings are spread. Guides:
+# 0-2 satellites with adjacent buildings (B15-01, B13-04, PG15-T12), at least 3 federations (C001).
+#
+# fed_compare: when a federation is legal, the best-ranked one (fewest satellites on a tie) is compared
+# first after the current choice, so the rollout to the horizon — not the one-step preview — judges it.
+# Order and scope only. fed_cluster: in rounds 1-5, the legal mines nearest to our buildings outside a
+# federation (distance 1 = no satellite, 2 = one satellite; farther does not count) are "near"; when
+# the best mine is farther than that, it swaps scores with the best near one. Order only. (084 step 129:
+# no adjacent mine was legal, 0,-4 at distance 2 was, the teacher built at distance 3.)
+FED_CLUSTER_LAST_ROUND = 5
+FED_CLUSTER_MAX_GAP = 2   # distance 1: adjacent, no satellite; 2: one satellite between
+_fed_scores = {}   # id(snapshot) -> its root ranking, for goals_for (the last one only)
+
+
+def _hex_distance(a, b):
+    (q1, r1), (q2, r2) = (tuple(int(x) for x in str(c).split(',')) for c in (a, b))
+    return (abs(q1-q2) + abs(r1-r2) + abs(q1+r1-q2-r2)) // 2
+
+
+def fed_remember_scores(env, snapshot, scores):
+    _fed_scores.clear()
+    _fed_scores[id(snapshot)] = scores
+    return scores
+
+
+def fed_compare_goal(snapshot):
+    """Goal comparing the best legal federation, or None (no federation, part off, no ranking)."""
+    from current_actions.conservation import blocked
+    from four_factions.preparation import Goal
+    actor = snapshot.get('player')
+    if actor is None or not _part(snapshot['state']['players'][actor], 'fed_compare'):
+        return None
+    scores = _fed_scores.get(id(snapshot))
+    if scores is None or len(scores) != len(snapshot['candidates']):
+        return None
+    feds = [i for i, c in enumerate(snapshot['candidates'])
+            if c['action'].get('type') == 'FormFederation' and not blocked(scores[i])]
+    if not feds:
+        return None
+    best = max(feds, key=lambda i: (scores[i][0], -len(snapshot['candidates'][i]['action'].get('satellite_hexes', []))))
+    # Family 'root': not remembered as a multi-step plan (preparation.search keeps other families).
+    return Goal(f'federation-{best}', 'root', first=best)
+
+
+def install_fed_compare():
+    import four_factions.preparation as p
+    if getattr(p.goals_for, '_fed_compare', False):
+        return
+    inner = p.goals_for
+
+    def goals_for(snapshot, **kwargs):
+        goals = inner(snapshot, **kwargs)
+        goal = fed_compare_goal(snapshot)
+        return [goal, *goals] if goal is not None else goals
+    goals_for._fed_compare = True
+    goals_for.__wrapped__ = inner
+    p.goals_for = goals_for
+
+
+def fed_cluster_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or state['round'] > FED_CLUSTER_LAST_ROUND:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'fed_cluster'):
+        return scores
+    federated = {str(h) for h in player.get('federated_hexes', [])}
+    own = [s['hex'] for s in player['structures'] if str(s['hex']) not in federated]
+    if not own:
+        return scores
+    candidates = snapshot['candidates']
+    builds = [i for i, c in enumerate(candidates)
+              if c['action'].get('type') == 'Build' and c['action'].get('coord') is not None and not blocked(scores[i])]
+    if len(builds) < 2:
+        return scores
+
+    def gap(i):
+        coord = candidates[i]['action']['coord']
+        return min(_hex_distance(coord, h) for h in own)
+    best = max(builds, key=lambda i: scores[i][0])
+    nearest = min(gap(i) for i in builds)
+    # 1 = joins without a satellite, 2 = one satellite (rulebook adjacency); farther is not "near".
+    if nearest > FED_CLUSTER_MAX_GAP or gap(best) <= nearest:
+        return scores
+    near = [i for i in builds if gap(i) == nearest]
+    lifted = list(scores)
+    _swap(lifted, list(scores), max(near, key=lambda i: scores[i][0]), best,
+          'mine next to our buildings for a federation (fed_cluster)')
+    return lifted
+
+
+FED_PARTS = frozenset({'fed_compare', 'fed_cluster'})
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_fed(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus fed_compare and fed_cluster for every faction
+    (above). fed_remember_scores is installed last so it keeps the final root ranking."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['fed'] = True
+    _wrap_rank('_fed_cluster', fed_cluster_scores)
+    install_fed_compare()
+    _wrap_rank('_fed_remember', fed_remember_scores)
     return teacher
 
 

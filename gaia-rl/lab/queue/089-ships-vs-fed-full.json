@@ -1,0 +1,16 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"그렇게 해\" — 연방 개선 두 가지): A = ships(배포 교사, 테란 track_income 포함), B = ships_fed — fed_compare(연방이 가능하면 가장 나은 연방을 비교 계획 맨 앞에, 롤아웃이 판정) + fed_cluster(1–5R 광산: 연방 안 묶인 내 건물에서 거리 1–2인 가장 가까운 자리가 있고 최고점 자리가 더 멀면 순서 바꿈), 전 종족. 근거: 084 연방 가능 결정 판당 3–8회·결성 0.7–2.0, 가능 상태 패스 28회(6R 5회), 가장 싼 연방도 대개 6–11위성(결성 3.4–5.9). geo-quartet 새 시드 6쌍, 6R 끝까지(연방은 3–6R). 판정: 사전 규칙대로 1–3라운드 충전량(1점 = 1.5충전). 함께 볼 것(판정 아님): 판당 연방 수·위성 수(federation_chances.py), 끝 고급 기술·5단계(endgame_tech_counts.py), 최종 VP, 결정 시간.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-fed-cap20.json",
+  "seeds": [
+    "geo-quartet-893984",
+    "geo-quartet-894516",
+    "geo-quartet-897651",
+    "geo-quartet-899050",
+    "geo-quartet-899794",
+    "geo-quartet-900197"
+  ],
+  "comparisons": 4,
+  "stop_round": 0
+}
