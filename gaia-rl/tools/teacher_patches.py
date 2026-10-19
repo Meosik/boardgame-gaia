@@ -2463,6 +2463,9 @@ def _green(player):
 LEVEL5_KNOWLEDGE = 4                       # rulebook research cost
 SCIENCE_INCOME = (0, 1, 2, 3, 4, 0)        # knowledge a round by Science level (rulebook p.22)
 UPGRADE_TO_TECH = (('TradingStation', 3, 5), ('ResearchLab', 6, 6))   # -> lab / academy (ore, credits)
+TWILIGHT = 0                 # ship id in explored_ships (engine spaceship_id_to_ship_id)
+TWILIGHT_LAB_ORE = 2         # engine TWILIGHT_RESEARCH_LAB_ORE_COST
+ITARS_TILE_TOKENS = 4        # Itars institute: 4 Gaia-area tokens for a tech tile
 
 
 def _rival_ready(player, path):
@@ -2473,9 +2476,23 @@ def _rival_ready(player, path):
     if path == 'level5':
         knowledge = res.get('knowledge', 0)
         return knowledge + SCIENCE_INCOME[player['research_tracks'].get('science', 0)] >= LEVEL5_KNOWLEDGE
+    # Every way an Advanced tile comes (engine valid_tech_tile_choices callers; user 2026-10-20 "고급 기술의 경로는
+    # 건물 건설만 있는 것이 아니야"): a lab or academy upgrade, Twilight's free lab (2 ore, a trading station,
+    # Twilight explored), the Itars' Gaia-phase tile (institute + 4 tokens in the Gaia area), the Space Giants'
+    # institute tile (once). Rebellion's tile action and the federation tile token give Standard tiles only.
     kinds = {s['kind'] for s in player.get('structures', []) if isinstance(s.get('kind'), str)}
-    return any(kind in kinds and res.get('ore', 0) >= ore and res.get('credits', 0) >= credits
-               for kind, ore, credits in UPGRADE_TO_TECH)
+    ore, credits = res.get('ore', 0), res.get('credits', 0)
+    if any(kind in kinds and ore >= o and credits >= c for kind, o, c in UPGRADE_TO_TECH):
+        return True
+    if 'TradingStation' in kinds and TWILIGHT in player.get('explored_ships', []) and ore >= TWILIGHT_LAB_ORE:
+        return True
+    faction = player.get('faction')
+    gaia_area = (res.get('power') or {}).get('gaia_forming', 0)
+    if faction == 'Itars' and 'PlanetaryInstitute' in kinds and gaia_area >= ITARS_TILE_TOKENS:
+        return True
+    if faction == 'SpaceGiants' and not player.get('pi_ability_used'):
+        return 'PlanetaryInstitute' in kinds or ('TradingStation' in kinds and ore >= 4 and credits >= 6)
+    return False
 
 
 def _race(state, actor, track, path='level5'):

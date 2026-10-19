@@ -519,6 +519,22 @@ class OpeningBudgetTests(unittest.TestCase):
         poor['players'][1]['resources']['knowledge'] = 2
         self.assertEqual(tp._race(poor, 0, 'Economy'), 'lost')                  # 2 now + 2 next income
         self.assertEqual(tp._race(self._race_state(3, 4), 0, 'Science', 'advanced'), 'lost')
+        # Advanced tiles come by other ways too: Twilight's free lab, the Itars' Gaia phase, Space Giants' institute.
+        rival = poor['players'][1]
+        rival['structures'] = [{'kind': 'TradingStation', 'hex': '5,5'}]
+        rival['explored_ships'] = [0]
+        rival['resources']['ore'] = 2
+        self.assertTrue(tp._rival_ready(rival, 'advanced'))                    # Twilight lab
+        rival['explored_ships'] = []
+        self.assertFalse(tp._rival_ready(rival, 'advanced'))
+        rival.update(faction='Itars', structures=[{'kind': 'PlanetaryInstitute', 'hex': '5,5'}])
+        rival['resources']['power'] = {'gaia_forming': 4}
+        self.assertTrue(tp._rival_ready(rival, 'advanced'))
+        rival.update(faction='SpaceGiants', pi_ability_used=False)
+        rival['resources']['power'] = {}
+        self.assertTrue(tp._rival_ready(rival, 'advanced'))
+        rival['pi_ability_used'] = True
+        self.assertFalse(tp._rival_ready(rival, 'advanced'))
 
     def test_track_race_leads_the_contested_level_five_and_advanced_tile(self):
         state = self._race_state(4, 4)
