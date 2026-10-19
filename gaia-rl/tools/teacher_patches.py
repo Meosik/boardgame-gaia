@@ -139,10 +139,36 @@ CANDIDATE_FACTION_PARTS = {
 }
 
 
+# The rest of the faction guides (user 2026-10-19 "반영 안된거부터 처리해야지"): what
+# faction-tracks-openings.md says beyond the track priority — round targets for a track level
+# (track_steps), level caps (track_caps) and buildings a faction does not build (building_limits) —
+# plus track_set for the four Lost Fleet factions (sheden faction articles MW/SG/TK/DK, claims.csv).
+# On only in ..._ships_byfaction_guide, on top of CANDIDATE_FACTION_PARTS, so byfaction (085–087) stays
+# reproducible and byfaction vs byfaction_guide measures these parts alone. Order only (swaps).
+GUIDE_FACTION_PARTS = {
+    'Gleens': frozenset({'track_steps', 'track_caps'}),
+    'Ambas': frozenset({'track_caps', 'building_limits'}),
+    'Itars': frozenset({'track_caps'}),
+    'Nevlas': frozenset({'track_caps'}),
+    'Firaks': frozenset({'track_steps', 'track_caps', 'building_limits'}),
+    'BalTaks': frozenset({'track_steps', 'track_caps', 'building_limits'}),
+    'Ivits': frozenset({'track_steps', 'track_caps'}),
+    'Bescods': frozenset({'track_steps', 'track_caps'}),
+    'Lantids': frozenset({'track_steps', 'track_caps'}),
+    'HadschHallas': frozenset({'track_steps', 'track_caps'}),
+    'Moweyds': frozenset({'track_set'}),
+    'SpaceGiants': frozenset({'track_set'}),
+    'Tinkeroids': frozenset({'track_set'}),
+    'Darkanians': frozenset({'track_set', 'track_steps'}),
+}
+
+
 def _faction_parts(faction):
     parts = set(BASE_FACTION_PARTS.get(faction, ()))
     if _guide['byfaction']:
         parts.update(CANDIDATE_FACTION_PARTS.get(faction, ()))
+    if _guide['faction_guide']:
+        parts.update(GUIDE_FACTION_PARTS.get(faction, ()))
     return parts
 
 
@@ -267,6 +293,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'ship_setup': False,          # True: guide_r1_charge3_lf_more_vm_lf_ts (see ship_setup_scores)
           'value_max': False,           # True: guide_r1_charge3_lf_more_vm (see install_value_max)
           'byfaction': False,           # True: ..._ships_byfaction (CANDIDATE_FACTION_PARTS on)
+          'faction_guide': False,       # True: ..._ships_byfaction_guide (GUIDE_FACTION_PARTS on as well)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -1972,7 +1999,10 @@ def track_set_scores(env, snapshot, scores):
     player = state['players'][actor]
     if not _part(player, 'track_set') or player['faction'] not in FACTION_TRACKS:
         return scores
-    tracks = FACTION_TRACKS[player['faction']]
+    caps = TRACK_CAPS.get(player['faction'], {}) if _part(player, 'track_caps') else {}
+    levels = player.get('research_tracks') or {}
+    # A guide track at its cap counts as off the faction's tracks (track_caps).
+    tracks = tuple(t for t in FACTION_TRACKS[player['faction']] if levels.get(t, 0) < caps.get(t, 99))
     candidates = snapshot['candidates']
     act = {i: c['action'] for i, c in enumerate(candidates) if not blocked(scores[i])}
 
@@ -1998,6 +2028,140 @@ def track_set_scores(env, snapshot, scores):
             _swap(lifted, list(lifted), max(own, key=lambda i: lifted[i][0]), best,
                   f'{player["faction"]} research on its tracks (track_set)')
     return lifted
+
+
+# ── faction guide rest (GUIDE_FACTION_PARTS; faction-tracks-openings.md, B05–B17, DK-03) ────────
+# track_caps: the level the guide stops a track at before round 6 (track_set treats a capped track as
+# off the faction's tracks). Ambas Gaia 1 (B06), Itars Navigation 2 (B07), Nevlas / Firaks / Lantids /
+# HadschHallas / Bescods Navigation 2, Ivits Navigation 2 and Gaia 1 (B12), Gleens Navigation 4
+# ("끝 4", B05), BalTaks AI 4 (B11), Bescods Economy 4, Lantids Science 4, HadschHallas Economy 4
+# ("2·4 sweet spot", B17).
+TRACK_CAPS = {'Ambas': {'gaia': 1},
+              'Itars': {'navigation': 2},
+              'Nevlas': {'navigation': 2},
+              'Firaks': {'navigation': 2},
+              'Ivits': {'navigation': 2, 'gaia': 1},
+              'Gleens': {'navigation': 4},
+              'BalTaks': {'ai': 4},
+              'Bescods': {'navigation': 2, 'economy': 4},
+              'Lantids': {'navigation': 2, 'science': 4},
+              'HadschHallas': {'navigation': 2, 'economy': 4}}
+
+# track_steps: (from round, track, level) in the guide's order — from that round until round 5, while
+# the level is not reached, that track's advance leads the research moves and the track variants of a
+# tile choice (the first unmet entry that is offered). Gleens Navigation 2 in round 1 (B05), BalTaks
+# Gaia 4 in round 1 ("필수", B11), Ivits Economy 2 in round 1 (B12), Bescods Science 2 in round 1,
+# Economy 2 in round 2, Navigation 2 in round 3 (B13), Firaks Economy 4 first, Navigation 2 from round 3
+# (B09), Lantids Navigation 2 first (B16), HadschHallas Economy 2 (B17), Darkanians Economy 2 (DK-03).
+# Research against other moves is unchanged (order only).
+TRACK_STEPS = {'Gleens': ((1, 'navigation', 2),),
+               'BalTaks': ((1, 'gaia', 4),),
+               'Ivits': ((1, 'economy', 2),),
+               'Bescods': ((1, 'science', 2), (2, 'economy', 2), (3, 'navigation', 2)),
+               'Firaks': ((1, 'economy', 4), (3, 'navigation', 2)),
+               'Lantids': ((1, 'navigation', 2),),
+               'HadschHallas': ((1, 'economy', 2),),
+               'Darkanians': ((1, 'economy', 2),)}
+TRACK_STEPS_LAST_ROUND = 5
+TRACK_NAMES = {key: name for name, key in TRACK_KEYS.items()}
+
+
+def track_steps_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or state['round'] > TRACK_STEPS_LAST_ROUND:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'track_steps'):
+        return scores
+    levels = player.get('research_tracks') or {}
+    wanted = [TRACK_NAMES[t] for start, t, level in TRACK_STEPS.get(player['faction'], ())
+              if start <= state['round'] and levels.get(t, 0) < level]
+    if not wanted:
+        return scores
+    candidates = snapshot['candidates']
+    act = {i: c['action'] for i, c in enumerate(candidates) if not blocked(scores[i])}
+
+    def track_of(i):
+        if act[i].get('type') == 'ResearchAdvance':
+            return act[i].get('track')
+        return _tile_track(state, act[i].get('tech_tile_choice'))
+    research = [i for i in act if act[i].get('type') == 'ResearchAdvance']
+    groups = {}
+    for i in act:
+        choice = act[i].get('tech_tile_choice')
+        if isinstance(choice, dict) and choice.get('kind') == 'Standard':
+            key = json.dumps({**act[i], 'tech_tile_choice': {**choice, 'advance_track': None}}, sort_keys=True)
+            groups.setdefault(key, []).append(i)
+    lifted = list(scores)
+    for group in [research, *groups.values()]:
+        if len(group) < 2:
+            continue
+        best = max(group, key=lambda i: lifted[i][0])
+        for track in wanted:
+            lead = [i for i in group if track_of(i) == track]
+            if lead:
+                break
+        else:
+            continue
+        if best not in lead:
+            _swap(lifted, list(lifted), max(lead, key=lambda i: lifted[i][0]), best,
+                  f'{player["faction"]} {track} to its guide level (track_steps)')
+    return lifted
+
+
+# building_limits: buildings the guide says a faction does not build, through a round. Firaks never an
+# academy ("아카데미 안 지음", B09), BalTaks no planetary institute before round 6 ("의회 안 지음(6R 티어 외)",
+# B11), Ambas the institute in rounds 3–4 ("의회 3–4R", B06), so not in rounds 1–2. When the best move
+# builds one, it swaps scores with the best move that does not (order only).
+BUILDING_LIMITS = {'Firaks': (('Academy', 6),),
+                   'BalTaks': (('PlanetaryInstitute', 5),),
+                   'Ambas': (('PlanetaryInstitute', 2),)}
+
+
+def _upgrade_target(action):
+    if action.get('type') != 'Upgrade':
+        return None
+    target = action.get('to')
+    return next(iter(target)) if isinstance(target, dict) else target
+
+
+def building_limits_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'building_limits'):
+        return scores
+    limited = {building for building, last in BUILDING_LIMITS.get(player['faction'], ()) if state['round'] <= last}
+    if not limited:
+        return scores
+    candidates = snapshot['candidates']
+    open_ = [i for i in range(len(candidates)) if not blocked(scores[i])]
+    if not open_:
+        return scores
+    best = max(open_, key=lambda i: scores[i][0])
+    if _upgrade_target(candidates[best]['action']) not in limited:
+        return scores
+    others = [i for i in open_ if _upgrade_target(candidates[i]['action']) not in limited]
+    if not others:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(scores), max(others, key=lambda i: scores[i][0]), best,
+          f'{player["faction"]} does not build this (building_limits)')
+    return lifted
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs):
+    """Teacher factory: ..._ships_byfaction plus GUIDE_FACTION_PARTS — track_steps, track_caps and
+    building_limits from the faction guides, and track_set for the Lost Fleet factions (user 2026-10-19
+    "반영 안된거부터 처리해야지"). track_steps runs after track_set, so a round target wins over the priority."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction(seed, **kwargs)
+    _guide['faction_guide'] = True
+    _wrap_rank('_track_steps', track_steps_scores)
+    _wrap_rank('_building_limits', building_limits_scores)
+    return teacher
 
 
 # ── helpers kept from the removed families ─────────────────────────────────────────────

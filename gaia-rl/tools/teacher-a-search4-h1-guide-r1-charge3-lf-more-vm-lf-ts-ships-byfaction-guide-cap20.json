@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction (hard, 4 comparisons, 20 s cap) plus GUIDE_FACTION_PARTS, the rest of the faction guides (user 2026-10-19 \"반영 안된거부터 처리해야지\"): track_steps (round targets: Gleens Nav 2 R1, BalTaks Gaia 4 R1, Ivits Eco 2 R1, Bescods Sci 2 R1 / Eco 2 R2 / Nav 2 R3, Firaks Eco 4 then Nav 2 from R3, Lantids Nav 2, HadschHallas Eco 2, Darkanians Eco 2), track_caps (level caps before round 6), building_limits (Firaks no academy, BalTaks no institute before R6, Ambas institute from R3), track_set for the four Lost Fleet factions (guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

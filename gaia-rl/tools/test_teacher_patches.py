@@ -305,7 +305,8 @@ class OpeningBudgetTests(unittest.TestCase):
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_land': ['False']*5 + ['True', 'False', 'False'],
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_income': ['False']*6 + ['sweet', 'False'],
                     # byfaction: the wrappers are installed, the module flags stay off, the table decides.
-                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction': ['False']*6 + ['False', 'True']}
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction': ['False']*6 + ['False', 'True'],
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide': ['False']*6 + ['False', 'True']}
         flags += ", tp._guide['byfaction']"
         for factory, want in expected.items():
             code = f"import teacher_patches as tp\ntp.{factory}({SEED!r})\nprint({flags})"
@@ -355,6 +356,100 @@ class OpeningBudgetTests(unittest.TestCase):
         tp._guide['byfaction'] = False
         player['faction'] = 'Gleens'
         self.assertIs(tp.track_set_scores(None, snapshot, scores), scores)   # base stack: off
+
+    def test_faction_guide_parts_are_on_only_with_the_guide_flag(self):
+        tp._guide['byfaction'] = True                      # restored by setUp's cleanup
+        self.assertEqual(tp._faction_parts('BalTaks'), {'track_set'})
+        self.assertEqual(tp._faction_parts('Moweyds'), set())
+        tp._guide['faction_guide'] = True
+        self.assertEqual(tp._faction_parts('BalTaks'), {'track_set', 'track_steps', 'track_caps', 'building_limits'})
+        self.assertEqual(tp._faction_parts('Moweyds'), {'track_set'})
+        self.assertEqual(tp._faction_parts('Darkanians'), {'track_set', 'track_steps'})
+        self.assertEqual(tp._faction_parts('Xenos'), set())
+        self.assertEqual(tp._faction_parts('Terrans'), {'terrans_gaia_late', 'track_income'})
+        for faction in tp.GUIDE_FACTION_PARTS:
+            self.assertIn(faction, tp.FACTION_TRACKS, faction)
+            for _, track, _ in tp.TRACK_STEPS.get(faction, ()):
+                self.assertIn(track, tp.TRACK_NAMES)
+        for faction, caps in tp.TRACK_CAPS.items():
+            self.assertTrue(set(caps) <= set(tp.TRACK_NAMES), faction)
+
+    def test_track_caps_close_a_guide_track_at_its_level(self):
+        tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+        levels = {t: 0 for t in tp.TRACK_KEYS.values()}
+        levels['navigation'] = 4
+        player = {'faction': 'Gleens', 'research_tracks': levels}
+        snapshot = {'player': 0, 'state': {'round': 3, 'phase': {'ActionPhase': {}}, 'players': [player]},
+                    'candidates': [{'action': {'type': 'ResearchAdvance', 'track': 'Navigation'}},
+                                   {'action': {'type': 'ResearchAdvance', 'track': 'GaiaProject'}}]}
+        lifted = tp.track_set_scores(None, snapshot, [(5.0, 'nav'), (3.0, 'gaia')])
+        self.assertEqual([s[0] for s in lifted], [3.0, 5.0])     # Navigation 4 is the end: Gaia leads
+        levels['navigation'] = 3
+        scores = [(5.0, 'nav'), (3.0, 'gaia')]
+        self.assertEqual(tp.track_set_scores(None, snapshot, scores), scores)
+        tp._guide['faction_guide'] = False
+        levels['navigation'] = 4
+        self.assertEqual(tp.track_set_scores(None, snapshot, scores), scores)   # caps off: both on-guide
+
+    def test_track_steps_lead_research_until_the_guide_level(self):
+        tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+        levels = {t: 0 for t in tp.TRACK_KEYS.values()}
+        levels['gaia'] = 1
+        player = {'faction': 'BalTaks', 'research_tracks': levels}
+        state = {'round': 1, 'phase': {'ActionPhase': {}},
+                 'research_board': {'tech_tile_slots': [9, 7, 8, 6, 4, 2, 3, 10, 5]}, 'players': [player]}
+        actions = [{'type': 'ResearchAdvance', 'track': 'Economy'}, {'type': 'ResearchAdvance', 'track': 'GaiaProject'},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                    'tech_tile_choice': {'kind': 'Standard', 'tile': 10, 'advance_track': 'Economy'}},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                    'tech_tile_choice': {'kind': 'Standard', 'tile': 10, 'advance_track': 'GaiaProject'}},
+                   {'type': 'Build', 'coord': '2,0'}]
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': a} for a in actions]}
+        scores = [(6.0, 'eco'), (2.0, 'gaia'), (20.0, 'tile-eco'), (19.0, 'tile-gaia'), (30.0, 'mine')]
+        lifted = tp.track_steps_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [2.0, 6.0, 19.0, 20.0, 30.0])   # swaps only, the mine untouched
+        self.assertIn('track_steps', lifted[1][1])
+        levels['gaia'] = 4
+        self.assertIs(tp.track_steps_scores(None, snapshot, scores), scores)    # level reached
+        levels['gaia'] = 1
+        state['round'] = 6
+        self.assertIs(tp.track_steps_scores(None, snapshot, scores), scores)    # round 6 is free
+        # Bescods: the round-2 entry waits for round 2; Science 2 leads in round 1.
+        state['round'] = 1
+        player['faction'] = 'Bescods'
+        snapshot['candidates'] = [{'action': {'type': 'ResearchAdvance', 'track': t}}
+                                  for t in ('Economy', 'Science', 'Navigation')]
+        lifted = tp.track_steps_scores(None, snapshot, [(6.0, 'eco'), (2.0, 'sci'), (1.0, 'nav')])
+        self.assertEqual([s[0] for s in lifted], [2.0, 6.0, 1.0])
+        levels['science'] = 2
+        scores = [(6.0, 'eco'), (2.0, 'sci'), (1.0, 'nav')]
+        self.assertIs(tp.track_steps_scores(None, snapshot, scores), scores)    # Economy waits for round 2
+        tp._guide['faction_guide'] = False
+        levels['science'] = 0
+        self.assertIs(tp.track_steps_scores(None, snapshot, scores), scores)    # byfaction alone: off
+
+    def test_building_limits_swap_the_limited_upgrade_away(self):
+        tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+        player = {'faction': 'Firaks', 'research_tracks': {}}
+        state = {'round': 4, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        actions = [{'type': 'Upgrade', 'coord': '0,0', 'to': {'Academy': 'Science'}},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': 'PlanetaryInstitute'},
+                   {'type': 'Build', 'coord': '2,0'}]
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': a} for a in actions]}
+        scores = [(9.0, 'ac'), (4.0, 'pi'), (7.0, 'mine')]
+        lifted = tp.building_limits_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [7.0, 4.0, 9.0])
+        self.assertIn('building_limits', lifted[2][1])
+        player['faction'] = 'Ambas'
+        self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # Ambas: academy allowed
+        state['round'] = 2
+        scores = [(4.0, 'ac'), (9.0, 'pi'), (7.0, 'mine')]
+        self.assertEqual([s[0] for s in tp.building_limits_scores(None, snapshot, scores)], [4.0, 7.0, 9.0])
+        state['round'] = 3
+        self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # Ambas institute from round 3
+        player['faction'] = 'BalTaks'
+        state['round'] = 6
+        self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # BalTaks round 6 tier
 
     def test_academy_economy_leads_research_and_the_tile_track_until_economy_two(self):
         state = {'round': 2, 'phase': {'ActionPhase': {}},
