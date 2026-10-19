@@ -2253,12 +2253,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs):
 #
 # fed_compare: when a federation is legal, the best-ranked one (fewest satellites on a tie) is compared
 # first after the current choice, so the rollout to the horizon — not the one-step preview — judges it.
-# Order and scope only. fed_cluster: in rounds 1-5, the legal mines nearest to our buildings outside a
-# federation (distance 1 = no satellite, 2 = one satellite; farther does not count) are "near"; when
-# the best mine is farther than that, it swaps scores with the best near one. Order only. (084 step 129:
-# no adjacent mine was legal, 0,-4 at distance 2 was, the teacher built at distance 3.)
+# Order and scope only. fed_cluster: in rounds 1-5, each legal mine is scored by how it changes the
+# satellites needed to link all our buildings outside a federation (_link_costs: 0 = adjacent, 1 = one
+# satellite, negative = it bridges two groups, user 2026-10-20 "원래 3칸 돌아가야 했던 건물이 … 더 적은
+# 칸으로 줄어드는 경우"); when the best mine changes it more than the best-linking mine (and that one adds at
+# most one satellite), the two swap scores. Order only. (084 step 129: the teacher built at distance 3
+# while 0,-4 joined with one satellite.)
 FED_CLUSTER_LAST_ROUND = 5
-FED_CLUSTER_MAX_GAP = 2   # distance 1: adjacent, no satellite; 2: one satellite between
+FED_CLUSTER_MAX_DELTA = 1   # a mine "links" when it adds at most one satellite to linking our buildings
 _fed_scores = {}   # id(snapshot) -> its root ranking, for goals_for (the last one only)
 
 
@@ -2333,37 +2335,103 @@ def fed_cluster_scores(env, snapshot, scores):
               if c['action'].get('type') == 'Build' and c['action'].get('coord') is not None and not blocked(scores[i])]
     if len(builds) < 2:
         return scores
-    hexes = state['board']['hexes']
-    ship_tiles = {str(c) for c in (state['board'].get('spaceship_tiles') or {}).values()}
-
-    def satellite_room(coord):
-        """A satellite may stand there: no planet, no building, no spaceship tile (validate_satellite_hex)."""
-        cell = hexes.get(coord)
-        return cell is not None and not cell.get('planet') and not cell.get('structures') and coord not in ship_tiles
-
-    def gap(i):
-        """1 = next to one of our seeds, 2 = one satellite between (through an empty hex), else 9."""
-        coord = str(candidates[i]['action']['coord'])
-        if coord in touching:
-            return 9
-        best_gap = 9
-        for h in own:
-            d = _hex_distance(coord, h)
-            if d == 1:
-                return 1
-            if d == 2 and any(satellite_room(n) for n in set(_hex_neighbors(coord)) & set(_hex_neighbors(h))):
-                best_gap = 2
-        return best_gap
+    link = _link_costs(state, own, touching)
+    delta = {i: link(str(candidates[i]['action']['coord'])) for i in builds}
     best = max(builds, key=lambda i: scores[i][0])
-    nearest = min(gap(i) for i in builds)
-    # 1 = joins without a satellite, 2 = one satellite (rulebook adjacency); farther is not "near".
-    if nearest > FED_CLUSTER_MAX_GAP or gap(best) <= nearest:
+    lead = min(delta.values())
+    # A mine that joins with at most one satellite or shortens the links counts; farther does not.
+    if lead > FED_CLUSTER_MAX_DELTA or delta[best] <= lead:
         return scores
-    near = [i for i in builds if gap(i) == nearest]
+    near = [i for i in builds if delta[i] == lead]
     lifted = list(scores)
     _swap(lifted, list(scores), max(near, key=lambda i: scores[i][0]), best,
-          'mine next to our buildings for a federation (fed_cluster)')
+          f'mine that links our buildings for a federation, satellites {lead:+d} (fed_cluster)')
     return lifted
+
+
+def _link_costs(state, own, touching):
+    """Function coord -> change in the satellites needed to link all our free buildings if a mine
+    stands on coord (negative: it bridges two groups; 9: it cannot be linked or touches a federation).
+
+    Facts only (rulebook p.14, engine validate_satellite_hex): our free buildings are 0-cost nodes,
+    adjacent ones form one group; an empty space (no planet, building or spaceship tile, not next to
+    one of our federations) takes a satellite (cost 1); anything else blocks. The cost of linking the
+    groups is a minimum spanning tree over group-to-group shortest paths (0-1 BFS)."""
+    hexes = state['board']['hexes']
+    ship_tiles = {str(c) for c in (state['board'].get('spaceship_tiles') or {}).values()}
+    seeds = set(own)
+
+    def satellite_room(coord):
+        cell = hexes.get(coord)
+        return (cell is not None and not cell.get('planet') and not cell.get('structures')
+                and coord not in ship_tiles and coord not in touching)
+
+    groups = []
+    for h in own:
+        if any(h in g for g in groups):
+            continue
+        group, stack = {h}, [h]
+        while stack:
+            for n in _hex_neighbors(stack.pop()):
+                if n in seeds and n not in group:
+                    group.add(n)
+                    stack.append(n)
+        groups.append(group)
+
+    def bfs(sources):
+        from collections import deque
+        dist = {h: 0 for h in sources}
+        queue = deque(sources)
+        while queue:
+            h = queue.popleft()
+            for n in _hex_neighbors(h):
+                step = 0 if n in seeds else 1 if satellite_room(n) else None
+                if step is None or dist.get(n, 99) <= dist[h] + step:
+                    continue
+                dist[n] = dist[h] + step
+                (queue.appendleft if step == 0 else queue.append)(n)
+        return dist
+    reach = [bfs(g) for g in groups]
+    pair = {(a, b): min((reach[a].get(h, 99) for h in groups[b]), default=99)
+            for a in range(len(groups)) for b in range(len(groups)) if a < b}
+
+    def tree(nodes, cost):
+        """Minimum spanning forest weight over `nodes` with edge costs `cost(a, b)` (99 = no link)."""
+        parent = {n: n for n in nodes}
+
+        def root(n):
+            while parent[n] != n:
+                parent[n] = parent[parent[n]]
+                n = parent[n]
+            return n
+        total = 0
+        edges = [(cost(a, b), a, b) for a in nodes for b in nodes if str(a) < str(b)]
+        for c, a, b in sorted(edges, key=lambda e: (e[0], str(e[1]), str(e[2]))):
+            if c >= 99:
+                break
+            ra, rb = root(a), root(b)
+            if ra != rb:
+                parent[ra] = rb
+                total += c
+        return total
+    base = tree(range(len(groups)), lambda a, b: pair[(min(a, b), max(a, b))])
+
+    def change(coord):
+        if coord in touching:
+            return 9
+        # The mine is a 0-cost node; its link to a group is the cheapest neighbour of it.
+        to_group = [min(((reach[k].get(n, 99) if n in seeds or satellite_room(n) else 99)
+                         for n in _hex_neighbors(coord)), default=99) for k in range(len(groups))]
+        if min(to_group, default=99) >= 99:
+            return 9
+        nodes = [*range(len(groups)), 'mine']
+
+        def cost(a, b):
+            if 'mine' in (a, b):
+                return to_group[b if a == 'mine' else a]
+            return pair[(min(a, b), max(a, b))]
+        return tree(nodes, cost) - base
+    return change
 
 
 FED_PARTS = frozenset({'fed_compare', 'fed_cluster'})

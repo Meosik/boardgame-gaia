@@ -472,6 +472,25 @@ class OpeningBudgetTests(unittest.TestCase):
         snapshot['candidates'][1] = {'action': {'type': 'Build', 'coord': '3,5'}}      # next to 4,5 only
         self.assertIs(tp.fed_cluster_scores(None, snapshot, scores), scores)
 
+    def test_fed_cluster_prefers_a_mine_that_bridges_two_groups(self):
+        tp._guide['fed'] = True                                                 # restored by setUp's cleanup
+        empty = {'planet': None, 'structures': [], 'satellites': []}
+        board = {'hexes': {f'{q},{r}': dict(empty) for q in range(-6, 9) for r in range(-6, 9)},
+                 'spaceship_tiles': {}}
+        player = {'faction': 'Xenos', 'research_tracks': {}, 'federated_hexes': [],
+                  'structures': [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'Mine', 'hex': '4,0'}]}
+        state = {'round': 3, 'phase': {'ActionPhase': {}}, 'players': [player], 'board': board}
+        # Linking 0,0 and 4,0 takes 3 satellites; a mine on 2,0 leaves 2 (one each side): -1.
+        link = tp._link_costs(state, ['0,0', '4,0'], set())
+        self.assertEqual((link('2,0'), link('1,0'), link('0,3')), (-1, -1, 2))
+        snapshot = {'player': 0, 'state': state,
+                    'candidates': [{'action': {'type': 'Build', 'coord': '0,3'}},
+                                   {'action': {'type': 'Build', 'coord': '2,0'}},
+                                   {'action': {'type': 'Build', 'coord': '1,0'}}]}
+        lifted = tp.fed_cluster_scores(None, snapshot, [(9.0, 'far'), (6.0, 'bridge'), (5.0, 'next')])
+        self.assertEqual([s[0] for s in lifted], [6.0, 9.0, 5.0])
+        self.assertIn('satellites -1', lifted[1][1])
+
     def test_fed_compare_puts_the_best_federation_first_in_goals(self):
         import four_factions.preparation as p
         saved = p.goals_for
