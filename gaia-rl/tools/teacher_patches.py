@@ -2473,10 +2473,24 @@ def _race(state, actor, track):
     return 'lost' if me['research_tracks'][key] <= 3 else 'contested'
 
 
+# Economy and Science level 5 replace the level-4 income with a one-time gain (rulebook p.22): Economy
+# 3 ore 6 credits charge 6 against 2 ore 4 credits charge 4 a round (1.5 rounds), Science 9 knowledge
+# against 4 a round (2.25 rounds). The step pays only when no more income phases are left than that:
+# Economy from round 5, Science from round 4 (user 2026-10-20 "경제나 과학 5단계 올라가면 기존 수입을 못받는데").
+LEVEL5_INCOME_ROUNDS = {'Economy': 1.5, 'Science': 2.25}
+LAST_ROUND = 6
+
+
+def _level5_pays(state, track):
+    rounds = LEVEL5_INCOME_ROUNDS.get(track)
+    return rounds is None or LAST_ROUND - state['round'] <= rounds
+
+
 def _flips_token(state, actor, action):
     if action.get('type') == 'ResearchAdvance':
         key = TRACK_KEYS.get(action.get('track'))
-        return key is not None and state['players'][actor]['research_tracks'][key] == 4
+        return (key is not None and state['players'][actor]['research_tracks'][key] == 4
+                and _level5_pays(state, action['track']))
     choice = action.get('tech_tile_choice') or {}
     return choice.get('kind') in ('Advanced', 'LostFleetAdvanced')
 
@@ -2544,6 +2558,7 @@ def track_race_scores(env, snapshot, scores):
     research = [i for i in act if act[i].get('type') == 'ResearchAdvance']
     race5 = [i for i in research if act[i].get('track') in TRACK_KEYS
              and player['research_tracks'][TRACK_KEYS[act[i]['track']]] == 4
+             and _level5_pays(state, act[i]['track'])
              and _race(state, actor, act[i]['track']) == 'contested']
     if race5 and research:
         best = max(research, key=lambda i: lifted[i][0])

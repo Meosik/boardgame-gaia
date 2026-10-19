@@ -522,6 +522,14 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual([s[0] for s in lifted], [2.0, 6.0, 4.0, 9.0])
         state['players'][1]['federation_tokens'] = []                           # rival cannot flip: no race
         self.assertEqual([s[0] for s in tp.track_race_scores(None, snapshot, scores)], [6.0, 2.0, 9.0, 4.0])
+        # Science 5 replaces the level-4 income (9 knowledge once vs 4 a round): from round 4 only.
+        state['players'][1]['federation_tokens'] = [3]
+        state['round'] = 3
+        self.assertEqual([s[0] for s in tp.track_race_scores(None, snapshot, scores)], [6.0, 2.0, 4.0, 9.0])
+        self.assertTrue(tp._level5_pays({'round': 4}, 'Science'))
+        self.assertFalse(tp._level5_pays({'round': 4}, 'Economy'))              # Economy from round 5
+        self.assertTrue(tp._level5_pays({'round': 5}, 'Economy'))
+        self.assertTrue(tp._level5_pays({'round': 2}, 'Terraforming'))
 
     def test_token_goals_compare_a_flip_and_drop_lost_races(self):
         from four_factions.preparation import Goal
