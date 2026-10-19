@@ -1281,6 +1281,8 @@
      **사용자(같은 날) "일단 지금 실험 멈추고, 넣어, 앞으로 fable로 설계"**: 061 큐는 kind external로 바꿔 다시 안 돌게 함(진행 중 프로세스는 사용자가 정지).
      lab 062 큐 `062-ships-cap40` = A vm_lf_ts_ships 20초 vs B 같은 교사 40초(spec `...-ships-cap40.json`), 새 시드 6쌍, stop_round 3.
      봇 모델: `discord_claude.py` command()에 `--model`(기본 claude-fable-5-1, 환경 변수 CLAUDE_MODEL로 바꿈). 되돌리려면 기본값을 고치거나 CLAUDE_MODEL 지정.
+     (2026-10-19 사용자 "채팅마다 모델 구분, fable 못 쓸 때만 opus") 답장 끝에 `🧠 모델명`(json modelUsage, haiku 제외) 표시.
+     Fable 실행이 작업 전에 모델·한도 오류로 끝나면(model_unavailable) Opus로 한 번 다시 실행하고 `⚠️ … 사용 불가` 표시. 실행 중 과부하는 `--fallback-model`.
      **061 중단 확인(2026-10-16 17:29)**: 사용자가 pkill, lab이 failed(−15)로 기록. 사이클 문서 `061-all-rules-selfplay-full.md`. 부분 판 4개는 runs/lab-061에 남음.
      **062 결과(2026-10-16, 17:34→19:48)**: 1–3R 충전 **+11.5 [−4.7, +27.8]**, 유의하지 않음, 쌍 6개 중 4개 양수. Geo +22.9·Ter +23.7(둘 다 한두 쌍이 좌우: Geo p003 +116·p004 −82, Ter p001 +108),
      Tak +0.4·Xen −0.9(효과 없음). B 시간: 평균 19.5초(1.65×), 중앙값 19.0초, p90 40.2초, 최대 43.7초(hard 한도 60초 안). 양 팔 모두 결정의 약 절반이 19–20초 이상 걸리고,

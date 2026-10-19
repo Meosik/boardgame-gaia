@@ -61,14 +61,52 @@ def chunks(text, size=1900):
     return parts
 
 
-def command(claude, session_id):
+# User 2026-10-16 "앞으로 fable로 설계하고 싶은데"; 2026-10-19 "fable을 사용하지 못할 때만 opus로".
+# CLAUDE_MODEL overrides the first choice.
+FALLBACK_MODEL = 'claude-opus-5-5'
+
+
+def primary_model():
+    return os.environ.get('CLAUDE_MODEL') or 'claude-fable-5-1'
+
+
+def command(claude, session_id, model):
     argv = [claude, '-p', '--output-format', 'json', '--permission-mode', 'dontAsk',
-            '--settings', str(SETTINGS), '--append-system-prompt', SYSTEM,
-            # User 2026-10-16 "앞으로 fable로 설계하고 싶은데"; CLAUDE_MODEL overrides.
-            '--model', os.environ.get('CLAUDE_MODEL') or 'claude-fable-5-1']
+            '--settings', str(SETTINGS), '--append-system-prompt', SYSTEM, '--model', model]
+    if model != FALLBACK_MODEL:
+        argv += ['--fallback-model', FALLBACK_MODEL]  # mid-turn overload
     if session_id:
         argv += ['--resume', session_id]
     return argv
+
+
+UNAVAILABLE = re.compile(r'model|overloaded|rate.?limit|usage limit|hit your limit|quota|\b(403|404|429|529)\b', re.I)
+
+
+def model_unavailable(stdout, stderr):
+    """True when a run failed before doing any work because its model could not be used."""
+    try:
+        result = json.loads(stdout)
+    except ValueError:
+        return bool(UNAVAILABLE.search(stderr or stdout))
+    return (bool(result.get('is_error')) and (result.get('num_turns') or 0) <= 1
+            and bool(UNAVAILABLE.search(result.get('result') or '')))
+
+
+def model_label(model_id):
+    """'claude-fable-5-1' -> 'Fable 5.1'."""
+    match = re.match(r'claude-([a-z]+)-(\d+)-(\d+)', model_id)
+    return f'{match.group(1).title()} {match.group(2)}.{match.group(3)}' if match else model_id
+
+
+def models_used(stdout):
+    """Main models a run used (Claude Code's small helper model left out), by output tokens."""
+    try:
+        usage = json.loads(stdout).get('modelUsage') or {}
+    except (ValueError, AttributeError):
+        return []
+    main = {m: u for m, u in usage.items() if 'haiku' not in m} or usage
+    return sorted(main, key=lambda m: -(main[m] or {}).get('outputTokens', 0))
 
 
 def summarize(stdout, stderr, code):
@@ -207,25 +245,37 @@ def main():
 
     async def locked_turn(channel, key, prompt, resume):
         async with lock:
+            note = ''
             async with channel.typing():
-                proc = await asyncio.create_subprocess_exec(
-                    *command(claude, state.get(key) if resume else None), cwd=workdir,
-                    stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE)
-                running['proc'] = proc
-                try:
-                    out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), turn_seconds)
-                except asyncio.TimeoutError:
-                    proc.kill()
-                    await proc.wait()
-                    out, err = b'', f'{turn_seconds/60:.0f}분 제한 초과로 중단'.encode()
-                finally:
-                    running.pop('proc', None)
-            reply, session = summarize(out.decode(errors='replace'), err.decode(errors='replace'), proc.returncode)
+                model = primary_model()
+                out, err, code = await claude_run(command(claude, state.get(key) if resume else None, model), prompt)
+                if model != FALLBACK_MODEL and model_unavailable(out, err):
+                    note = f'⚠️ {model_label(model)} 사용 불가 → {model_label(FALLBACK_MODEL)}로 다시 실행\n'
+                    out, err, code = await claude_run(
+                        command(claude, state.get(key) if resume else None, FALLBACK_MODEL), prompt)
+            reply, session = summarize(out, err, code)
+            used = models_used(out)
+            tag = f"🧠 {' + '.join(model_label(m) for m in used)}" if used else ''
             if session:
                 state[key] = session
                 save()
-            await send(channel, reply)
+            await send(channel, '\n'.join(p for p in (note + reply, tag) if p))
+
+    async def claude_run(argv, prompt):
+        """(stdout, stderr, exit code) of one `claude -p` process, killed after the turn limit."""
+        proc = await asyncio.create_subprocess_exec(
+            *argv, cwd=workdir, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE)
+        running['proc'] = proc
+        try:
+            out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), turn_seconds)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            out, err = b'', f'{turn_seconds/60:.0f}분 제한 초과로 중단'.encode()
+        finally:
+            running.pop('proc', None)
+        return out.decode(errors='replace'), err.decode(errors='replace'), proc.returncode
 
     async def review_result(message):
         """A lab result notice: record it automatically in a fresh conversation in the first channel."""
