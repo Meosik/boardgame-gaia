@@ -362,7 +362,9 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(tp._faction_parts('BalTaks'), {'track_set'})
         self.assertEqual(tp._faction_parts('Moweyds'), set())
         tp._guide['faction_guide'] = True
-        self.assertEqual(tp._faction_parts('BalTaks'), {'track_set', 'track_steps', 'track_caps', 'building_limits'})
+        self.assertEqual(tp._faction_parts('BalTaks'), {'track_set', 'track_steps', 'track_caps', 'building_limits',
+                                                        'opening_only', 'fixed_academy', 'opening_budget', 'budget_guard',
+                                                        'opening_release'})
         self.assertEqual(tp._faction_parts('Moweyds'), {'track_set'})
         self.assertEqual(tp._faction_parts('Darkanians'), {'track_set', 'track_steps'})
         self.assertEqual(tp._faction_parts('Xenos'), set())
@@ -373,6 +375,45 @@ class OpeningBudgetTests(unittest.TestCase):
                 self.assertIn(track, tp.TRACK_NAMES)
         for faction, caps in tp.TRACK_CAPS.items():
             self.assertTrue(set(caps) <= set(tp.TRACK_NAMES), faction)
+
+    def test_opening_only_cuts_the_baltaks_catalog_to_the_academy_openings(self):
+        import bgg_openings.catalog as catalog
+        import bgg_openings.planning as planning
+        saved = catalog.load_catalog, planning.load_catalog
+        self.addCleanup(lambda: (setattr(catalog, 'load_catalog', saved[0]),
+                                 setattr(planning, 'load_catalog', saved[1])))
+        tp.install_opening_only()
+        full = saved[0]()
+        self.assertEqual(catalog.load_catalog()['BalTaks'], full['BalTaks'])      # part off: unchanged
+        tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+        rows = catalog.load_catalog()
+        self.assertEqual([r.label for r in rows['BalTaks']], ['1AC+1M', '1AC+2M'])
+        self.assertEqual(rows['Taklons'], full['Taklons'])
+        self.assertIs(planning.load_catalog, catalog.load_catalog)
+
+    def test_fixed_academy_wraps_rank_for_the_faction_with_the_part_in_round_one(self):
+        import bgg_openings.fixed as fixed
+        import four_factions.preparation as p
+        saved_rank, saved_targets = p.Policies.rank, dict(fixed.TARGETS)
+        self.addCleanup(setattr, p.Policies, 'rank', saved_rank)
+        self.addCleanup(lambda: (fixed.TARGETS.clear(), fixed.TARGETS.update(saved_targets)))
+        calls = []
+        p.Policies.rank = lambda self, env, snapshot: [(1.0, 'x')]
+        with mock.patch.object(fixed, 'enforce', lambda env, snap, scores, memory: (calls.append(1) or [(2.0, 'y')], {})):
+            tp.install_fixed_academy()
+            self.assertEqual(fixed.TARGETS['BalTaks'], 'Science')
+            self.assertEqual(fixed.target_kind('BalTaks'), {'Academy': 'Science'})
+            policies = mock.Mock(memory={})
+            snapshot = {'player': 0, 'state': {'round': 1, 'phase': {'ActionPhase': {}},
+                                               'players': [{'faction': 'BalTaks'}]}}
+            self.assertEqual(p.Policies.rank(policies, None, snapshot), [(1.0, 'x')])   # part off
+            tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+            self.assertEqual(p.Policies.rank(policies, None, snapshot), [(2.0, 'y')])
+            snapshot['state']['round'] = 2
+            self.assertEqual(p.Policies.rank(policies, None, snapshot), [(1.0, 'x')])   # round 1 only
+            snapshot['state'].update(round=1, players=[{'faction': 'Taklons'}])
+            self.assertEqual(p.Policies.rank(policies, None, snapshot), [(1.0, 'x')])   # no part
+        self.assertEqual(len(calls), 1)
 
     def test_track_caps_close_a_guide_track_at_its_level(self):
         tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup

@@ -151,7 +151,10 @@ GUIDE_FACTION_PARTS = {
     'Itars': frozenset({'track_caps'}),
     'Nevlas': frozenset({'track_caps'}),
     'Firaks': frozenset({'track_steps', 'track_caps', 'building_limits'}),
-    'BalTaks': frozenset({'track_steps', 'track_caps', 'building_limits'}),
+    # BalTaks academy start (user 2026-10-19 "발타크는 아카데미 스타트 시켜야지"; 086 R1 academies 0 / 12):
+    # only the academy openings are targets, with the Taklons budget tools that keep the academy's ore.
+    'BalTaks': frozenset({'track_steps', 'track_caps', 'building_limits', 'opening_only', 'fixed_academy',
+                          'opening_budget', 'budget_guard', 'opening_release'}),
     'Ivits': frozenset({'track_steps', 'track_caps'}),
     'Bescods': frozenset({'track_steps', 'track_caps'}),
     'Lantids': frozenset({'track_steps', 'track_caps'}),
@@ -2153,6 +2156,70 @@ def building_limits_scores(env, snapshot, scores):
     return lifted
 
 
+# opening_only: the round-1 openings a faction is held to. The BGG catalog rows are the targets the
+# search compares and the forecast it keeps (preparation.choose → select_forecast picks the best
+# completed forecast among them, so the guide order alone did not hold: 086 BalTaks 1RL, 0 academies).
+# With the part on, the faction's catalog is cut to these labels (B11 "아카데미+광산 가장 좋음", BGG
+# BalTaks rows 1 and 3). When no academy forecast completes, the teacher falls back to the search as before.
+OPENING_ONLY = {'BalTaks': ('1AC+1M', '1AC+2M')}
+
+
+def install_opening_only():
+    import bgg_openings.catalog as catalog
+    import bgg_openings.planning as planning
+    if getattr(catalog.load_catalog, '_opening_only', False):
+        return
+    inner = catalog.load_catalog
+
+    def load_catalog(*args, **kwargs):
+        rows = dict(inner(*args, **kwargs))
+        for faction, labels in OPENING_ONLY.items():
+            if faction in rows and _part({'faction': faction}, 'opening_only'):
+                rows[faction] = tuple(r for r in rows[faction] if r.label in labels)
+        return rows
+    load_catalog._opening_only = True
+    load_catalog.__wrapped__ = inner
+    catalog.load_catalog = load_catalog
+    planning.load_catalog = load_catalog
+
+
+# fixed_academy: the frozen teacher's fixed-opening coach (bgg_openings.fixed.enforce — round 1 keeps only
+# the moves that advance the most advanced site to the academy or fund it, then the second mine) for a
+# faction with the part, in round 1 only. The 20 s search completes about one forecast a decision, so the
+# academy forecast rarely completes and opening_only alone left BalTaks at the research lab (smoke
+# 2026-10-19: forecasts completed 0–1 per decision, "local-baseline" picks, TS → RL → Gaia research).
+# Science academy as for the other fixed factions (B11-03 "연구소→4지식"). The module dict is extended at
+# run time; the frozen file is not edited, and its own fixed_openings switch stays off.
+FIXED_ACADEMY = {'BalTaks': 'Science'}
+
+
+def install_fixed_academy():
+    import bgg_openings.fixed as fixed
+    import four_factions.preparation as p
+    for faction, kind in FIXED_ACADEMY.items():
+        fixed.TARGETS.setdefault(faction, kind)
+    inner_rank = p.Policies.rank
+    if getattr(inner_rank, '_fixed_academy', False):
+        return
+
+    def rank(self, env, snapshot):
+        scores = inner_rank(self, env, snapshot)
+        actor = snapshot.get('player')
+        state = snapshot['state']
+        if actor is None or state['round'] != 1 or 'ActionPhase' not in state['phase']:
+            return scores
+        if not _part(state['players'][actor], 'fixed_academy'):
+            return scores
+        scores, _ = fixed.enforce(env, snapshot, scores, self.memory)
+        return scores
+    for name, value in vars(inner_rank).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(rank, name, value)
+    rank.__wrapped__ = getattr(inner_rank, '__wrapped__', inner_rank)
+    rank._fixed_academy = True
+    p.Policies.rank = rank
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs):
     """Teacher factory: ..._ships_byfaction plus GUIDE_FACTION_PARTS — track_steps, track_caps and
     building_limits from the faction guides, and track_set for the Lost Fleet factions (user 2026-10-19
@@ -2161,6 +2228,8 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs):
     _guide['faction_guide'] = True
     _wrap_rank('_track_steps', track_steps_scores)
     _wrap_rank('_building_limits', building_limits_scores)
+    install_opening_only()
+    install_fixed_academy()
     return teacher
 
 
