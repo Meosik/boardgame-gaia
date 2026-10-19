@@ -366,10 +366,10 @@ class OpeningBudgetTests(unittest.TestCase):
         tp._guide['faction_guide'] = True
         self.assertEqual(tp._faction_parts('BalTaks'), {'track_set', 'track_steps', 'track_caps', 'building_limits',
                                                         'opening_only', 'fixed_academy', 'opening_budget', 'budget_guard',
-                                                        'opening_release'})
+                                                        'opening_release', 'tile_prefs'})
         self.assertEqual(tp._faction_parts('Moweyds'), {'track_set'})
         self.assertEqual(tp._faction_parts('Darkanians'), {'track_set', 'track_steps'})
-        self.assertEqual(tp._faction_parts('Xenos'), set())
+        self.assertEqual(tp._faction_parts('Xenos'), {'niche_tracks'})
         self.assertEqual(tp._faction_parts('Terrans'), {'terrans_gaia_late', 'track_income'})
         for faction in tp.GUIDE_FACTION_PARTS:
             self.assertIn(faction, tp.FACTION_TRACKS, faction)
@@ -582,6 +582,48 @@ class OpeningBudgetTests(unittest.TestCase):
         goals = p.goals_for(snapshot)
         self.assertEqual((goals[0].name, goals[0].first), ('flip-1', 1))       # Economy 4 -> 5 flips the token
         self.assertEqual(goals[1:], [keep5])
+
+    def test_tile_prefs_follow_the_guide_tiles(self):
+        tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+        player = {'faction': 'HadschHallas', 'research_tracks': {}}
+        state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        up = lambda tile, track=None: {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                                       'tech_tile_choice': {'kind': 'Standard', 'tile': tile, 'advance_track': track}}
+        snapshot = {'player': 0, 'state': state,
+                    'candidates': [{'action': up(3)}, {'action': up(2)}, {'action': up(5)}, {'action': {'type': 'Pass'}}]}
+        scores = [(9.0, 't3'), (4.0, 't2'), (6.0, 't5'), (1.0, 'pass')]
+        lifted = tp.tile_prefs_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [4.0, 9.0, 6.0, 1.0])          # prefers 2 over the 4-credit tile 3
+        player['faction'] = 'Ambas'                                             # avoids 2 only
+        scores = [(4.0, 't3'), (9.0, 't2'), (6.0, 't5'), (1.0, 'pass')]
+        self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [4.0, 6.0, 9.0, 1.0])
+        player['faction'] = 'Geodens'                                           # 10 early, 9 from round 4
+        snapshot['candidates'][1] = {'action': up(9)}
+        snapshot['candidates'][2] = {'action': up(10)}
+        scores = [(9.0, 't3'), (4.0, 't9'), (6.0, 't10'), (1.0, 'pass')]
+        self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [6.0, 4.0, 9.0, 1.0])
+        state['round'] = 4
+        self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [4.0, 9.0, 6.0, 1.0])
+        player['faction'] = 'Terrans'                                           # no table entry: untouched
+        self.assertIs(tp.tile_prefs_scores(None, snapshot, scores), scores)
+
+    def test_niche_tracks_for_hadsch_hallas_and_xenos(self):
+        tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+        lv = lambda **k: {**{t: 0 for t in tp.TRACK_KEYS.values()}, **k}
+        me = {'faction': 'HadschHallas', 'research_tracks': lv(economy=2)}
+        rival = {'faction': 'Geodens', 'research_tracks': lv(terraforming=3, gaia=0, ai=1)}
+        state = {'round': 3, 'phase': {'ActionPhase': {}}, 'players': [me, rival]}
+        research = lambda t: {'action': {'type': 'ResearchAdvance', 'track': t}}
+        snapshot = {'player': 0, 'state': state,
+                    'candidates': [research('Economy'), research('Terraforming'), research('GaiaProject')]}
+        scores = [(9.0, 'eco'), (6.0, 'tf'), (2.0, 'gaia')]
+        self.assertEqual([s[0] for s in tp.niche_tracks_scores(None, snapshot, scores)], [2.0, 6.0, 9.0])
+        me['research_tracks'] = lv(economy=1)                                  # before Economy 2 / Navigation 2
+        self.assertIs(tp.niche_tracks_scores(None, snapshot, scores), scores)
+        me.update(faction='Xenos', research_tracks=lv())                        # no Gaia faction: Gaia leads
+        self.assertEqual([s[0] for s in tp.niche_tracks_scores(None, snapshot, scores)], [2.0, 6.0, 9.0])
+        rival['faction'] = 'Terrans'                                            # a Gaia faction plays: untouched
+        self.assertIs(tp.niche_tracks_scores(None, snapshot, scores), scores)
 
     def test_fed_compare_puts_the_best_federation_first_in_goals(self):
         import four_factions.preparation as p

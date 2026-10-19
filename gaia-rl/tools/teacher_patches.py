@@ -149,18 +149,21 @@ CANDIDATE_FACTION_PARTS = {
 # reproducible and byfaction vs byfaction_guide measures these parts alone. Order only (swaps).
 GUIDE_FACTION_PARTS = {
     'Gleens': frozenset({'track_steps', 'track_caps'}),
-    'Ambas': frozenset({'track_caps', 'building_limits'}),
-    'Itars': frozenset({'track_caps'}),
+    'Ambas': frozenset({'track_caps', 'building_limits', 'tile_prefs'}),
+    'Itars': frozenset({'track_caps', 'tile_prefs'}),
     'Nevlas': frozenset({'track_caps'}),
     'Firaks': frozenset({'track_steps', 'track_caps', 'building_limits'}),
     # BalTaks academy start (user 2026-10-19 "발타크는 아카데미 스타트 시켜야지"; 086 R1 academies 0 / 12):
     # only the academy openings are targets, with the Taklons budget tools that keep the academy's ore.
     'BalTaks': frozenset({'track_steps', 'track_caps', 'building_limits', 'opening_only', 'fixed_academy',
-                          'opening_budget', 'budget_guard', 'opening_release'}),
-    'Ivits': frozenset({'track_steps', 'track_caps'}),
-    'Bescods': frozenset({'track_steps', 'track_caps'}),
-    'Lantids': frozenset({'track_steps', 'track_caps'}),
-    'HadschHallas': frozenset({'track_steps', 'track_caps'}),
+                          'opening_budget', 'budget_guard', 'opening_release', 'tile_prefs'}),
+    'Ivits': frozenset({'track_steps', 'track_caps', 'tile_prefs'}),
+    'Bescods': frozenset({'track_steps', 'track_caps', 'tile_prefs'}),
+    'Lantids': frozenset({'track_steps', 'track_caps', 'tile_prefs'}),
+    'HadschHallas': frozenset({'track_steps', 'track_caps', 'tile_prefs', 'niche_tracks'}),
+    # Geodens and Xenos (user 2026-10-20 "기존 자료에 있는 내용 쓸만하면 반영"): B14-01 tile timing, B15-02 Gaia.
+    'Geodens': frozenset({'tile_prefs'}),
+    'Xenos': frozenset({'niche_tracks'}),
     'Moweyds': frozenset({'track_set'}),
     'SpaceGiants': frozenset({'track_set'}),
     'Tinkeroids': frozenset({'track_set'}),
@@ -2234,6 +2237,115 @@ def install_fixed_academy():
     p.Policies.rank = rank
 
 
+# tile_prefs (user 2026-10-20 "기존 자료에 있는 내용 쓸만하면 반영"): the standard tiles a faction guide asks
+# for or avoids (engine ids: 2 ore+charge income, 3 four credits income, 4 ore+QIC now, 5 knowledge+credit
+# income, 6 big buildings power 4, 7 VP now, 8 VP per Gaia mine, 9 knowledge per planet type, 10 charge-4
+# action). Among the tile variants of one move, an avoided tile on top swaps with the best allowed one, and
+# a preferred tile (in the guide's order) that is offered leads. Order only.
+#   HadschHallas: avoid 3 (B17-01, H01, LF2-01 "4돈보다 1광석1충전"), prefer 2.  Bescods: avoid 3 (IR01-03),
+#   prefer 6 (B13-04 "큰 건물 4티어 확보").  Ambas: avoid 2 (B6-01 "1광석 1충전을 제외한 … 모두 좋음").
+#   BalTaks: prefer 3, 5, 10 (B11-03 "추천 기술 4돈·1지식1돈·4충전"), avoid 2.  Itars: prefer 6, 8, 4, 10, 7
+#   (B7-01).  Ivits: prefer 10, then 4 or 9 (B12-01).  Lantids: prefer 3, avoid 10 (B16-01).
+#   Geodens: prefer 10 in rounds 1-3, 9 from round 4 (B14-01).
+TILE_PREFS = {
+    'HadschHallas': {'prefer': (2,), 'avoid': (3,)},
+    'Bescods': {'prefer': (6,), 'avoid': (3,)},
+    'Ambas': {'prefer': (), 'avoid': (2,)},
+    'BalTaks': {'prefer': (3, 5, 10), 'avoid': (2,)},
+    'Itars': {'prefer': (6, 8, 4, 10, 7), 'avoid': ()},
+    'Ivits': {'prefer': (10, 4, 9), 'avoid': ()},
+    'Lantids': {'prefer': (3,), 'avoid': (10,)},
+    'Geodens': {'prefer': (10,), 'avoid': (), 'late_prefer': (9,), 'late_from': 4},
+}
+
+
+def tile_prefs_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    prefs = TILE_PREFS.get(player['faction'])
+    if prefs is None or not _part(player, 'tile_prefs'):
+        return scores
+    prefer = prefs['prefer']
+    if prefs.get('late_from') and state['round'] >= prefs['late_from']:
+        prefer = prefs['late_prefer']
+    candidates = snapshot['candidates']
+    groups = {}
+    for i, c in enumerate(candidates):
+        choice = c['action'].get('tech_tile_choice')
+        if blocked(scores[i]) or not isinstance(choice, dict) or choice.get('kind') != 'Standard':
+            continue
+        key = json.dumps({k: v for k, v in c['action'].items() if k != 'tech_tile_choice'}, sort_keys=True)
+        groups.setdefault(key, []).append(i)
+    lifted = list(scores)
+    tile = lambda i: candidates[i]['action']['tech_tile_choice'].get('tile')
+    for members in groups.values():
+        if len({tile(i) for i in members}) < 2:
+            continue
+        top = max(members, key=lambda i: lifted[i][0])
+        wanted = next(([i for i in members if tile(i) == t] for t in prefer if any(tile(i) == t for i in members)), [])
+        if wanted and top not in wanted:
+            _swap(lifted, list(lifted), max(wanted, key=lambda i: lifted[i][0]), top,
+                  f'{player["faction"]} guide tile {tile(wanted[0])} (tile_prefs)')
+            continue
+        if tile(top) in prefs['avoid']:
+            allowed = [i for i in members if tile(i) not in prefs['avoid']]
+            if allowed:
+                _swap(lifted, list(lifted), max(allowed, key=lambda i: lifted[i][0]), top,
+                      f'{player["faction"]} avoids tile {tile(top)} (tile_prefs)')
+    return lifted
+
+
+# niche_tracks: a track the others leave alone (user 2026-10-20 "하드쉬나 제노스 자료중에 남들이 안가는 테크 가라는
+# 내용"). HadschHallas (B19-03 "남들이 안 가는 테크(가이아·테라포밍·QIC 액션)를 찾음"): once Economy 2 or Navigation 2
+# is reached, among the research moves the one on Gaia, Terraforming or AI with the lowest sum of the
+# opponents' levels leads. Xenos (B15-02 "가이아 특화 종족이 없으면 가이아 트랙을 가장 추천 … 항해 1+가이아 2"): with
+# no Gaia faction among the opponents (Terrans, Itars, BalTaks, Gleens — bot's reading, not in the guide),
+# the Gaia advance leads the research moves in rounds 1-3 until Gaia 2. Order only.
+NICHE_TRACKS = {'HadschHallas': ('GaiaProject', 'Terraforming', 'ArtificialIntelligence')}
+GAIA_FACTIONS = frozenset({'Terrans', 'Itars', 'BalTaks', 'Gleens'})
+XENOS_GAIA_LEVEL = 2
+XENOS_GAIA_LAST_ROUND = 3
+
+
+def niche_tracks_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'niche_tracks'):
+        return scores
+    candidates = snapshot['candidates']
+    research = [i for i, c in enumerate(candidates)
+                if c['action'].get('type') == 'ResearchAdvance' and not blocked(scores[i])]
+    if len(research) < 2:
+        return scores
+    levels = player['research_tracks']
+    others = [p for i, p in enumerate(state['players']) if i != actor]
+    lead, why = [], ''
+    if player['faction'] == 'HadschHallas' and (levels['economy'] >= 2 or levels['navigation'] >= 2):
+        niche = [i for i in research if candidates[i]['action'].get('track') in NICHE_TRACKS['HadschHallas']]
+        if niche:
+            crowd = lambda i: sum(p['research_tracks'][TRACK_KEYS[candidates[i]['action']['track']]] for p in others)
+            least = min(crowd(i) for i in niche)
+            lead, why = [i for i in niche if crowd(i) == least], 'HadschHallas track the others leave (niche_tracks)'
+    elif (player['faction'] == 'Xenos' and state['round'] <= XENOS_GAIA_LAST_ROUND
+          and levels['gaia'] < XENOS_GAIA_LEVEL and not any(p['faction'] in GAIA_FACTIONS for p in others)):
+        lead = [i for i in research if candidates[i]['action'].get('track') == 'GaiaProject']
+        why = 'Xenos Gaia with no Gaia faction in the game (niche_tracks)'
+    if not lead:
+        return scores
+    best = max(research, key=lambda i: scores[i][0])
+    if best in lead:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(scores), max(lead, key=lambda i: scores[i][0]), best, why)
+    return lifted
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs):
     """Teacher factory: ..._ships_byfaction plus GUIDE_FACTION_PARTS — track_steps, track_caps and
     building_limits from the faction guides, and track_set for the Lost Fleet factions (user 2026-10-19
@@ -2244,6 +2356,8 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs):
     _wrap_rank('_building_limits', building_limits_scores)
     install_opening_only()
     install_fixed_academy()
+    _wrap_rank('_tile_prefs', tile_prefs_scores)
+    _wrap_rank('_niche_tracks', niche_tracks_scores)
     return teacher
 
 
