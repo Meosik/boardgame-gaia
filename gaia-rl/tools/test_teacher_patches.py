@@ -415,6 +415,18 @@ class OpeningBudgetTests(unittest.TestCase):
             self.assertEqual(p.Policies.rank(policies, None, snapshot), [(1.0, 'x')])   # no part
         self.assertEqual(len(calls), 1)
 
+    def test_value_max_keeps_only_catalog_labels_as_the_saved_target(self):
+        def run(faction, target):
+            snapshot = {'player': 1, 'state': {'players': [{'faction': 'Xenos'}, {'faction': faction}]}}
+            result = {'index': 0, 'selected': 'x', 'memory': {},
+                      'plans': [{'complete': True, 'value': 5.0, 'first': 3, 'goal': f'BGG-R1-{target}',
+                                 'family': 'bgg-opening', 'goal_spec': {'target': target}}]}
+            tp._value_max(snapshot, result)
+            self.assertEqual(result['index'], 3)
+            return result['memory'].get('_bgg_targets', {})
+        self.assertEqual(run('BalTaks', '1AC+1M'), {'1': '1AC+1M'})
+        self.assertEqual(run('Moweyds', '1RL+4M'), {})      # Lost Fleet: no BGG table, nothing saved
+
     def test_track_caps_close_a_guide_track_at_its_level(self):
         tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
         levels = {t: 0 for t in tp.TRACK_KEYS.values()}

@@ -1228,7 +1228,13 @@ def _value_max(snapshot, result):
     result.update(index=best['first'], selected=f'value-max {best["goal"]}')
     target = (best.get('goal_spec') or {}).get('target')
     if best.get('family') == 'bgg-opening' and target and isinstance(result.get('memory'), dict):
-        result['memory'].setdefault('_bgg_targets', {})[str(snapshot['player'])] = target
+        # Only a label of the faction's BGG table is kept: preparation.search raises on a saved target
+        # outside it, and the Lost Fleet labels (LOST_FLEET_OPENINGS) have no table (smoke 2026-10-19:
+        # every Lost Fleet game stopped with "Saved BGG target does not belong to the actual faction").
+        from bgg_openings.catalog import load_catalog
+        faction = snapshot['state']['players'][snapshot['player']]['faction']
+        if target in {row.label for row in load_catalog().get(faction, ())}:
+            result['memory'].setdefault('_bgg_targets', {})[str(snapshot['player'])] = target
 
 
 def ts_chain_scores(env, snapshot, scores):

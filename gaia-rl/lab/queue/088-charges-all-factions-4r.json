@@ -1,0 +1,16 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-19 \"추천 순서대로 해. 대신 6라운드는 멀었고 골고루 4라운드로 해서 제일 충전 못받는 종족이 뭔지 봐야게썽\", \"확장 종족 빌드 고정이 맞나? 연구소나 아카데미 스타트 해도 되잖아?\" → 확장 종족 빌드 고정 안 함): 18종족 1–3R 충전 수준표. byfaction_guide 자체 대국(A = B, 판정 없음), 쿼텟 6개 × 시드 6개 × 좌석 교대 2판 = 72판, 4R 시작 종료, hard 예산(비교 4·20초). 쿼텟: a 란티드·이비츠·파이락·네블라, b 발타크·베스코드·글린·이타르, c 앰바스·하지할라·테란·제노스, geo 제노스·타클론·테란·기오덴, d 모웨이드·팅커로이드 + 타클론·기오덴, e 스페이스자이언트·다카니안 + 테란·제노스(확장 종족끼리 홈 행성이 겹쳐 4종 한 판 불가). 볼 것: 종족별 충전(양팔 합쳐 좌석판 평균) 최하위 종족, 종족별 오류·타임아웃·미탐색, 1–3R 연구·업그레이드(research_counts·upgrade_counts). 쿼텟마다 상대가 달라 종족 간 비교는 근사.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap20.json",
+  "seeds": [
+    "quartet-a-18334", "quartet-a-19444", "quartet-a-21268", "quartet-a-21567", "quartet-a-21686", "quartet-a-21831",
+    "quartet-b-16679", "quartet-b-19271", "quartet-b-20210", "quartet-b-20853", "quartet-b-21625", "quartet-b-21684",
+    "quartet-c-11429", "quartet-c-14468", "quartet-c-21485", "quartet-c-21807", "quartet-c-24649", "quartet-c-25940",
+    "geo-quartet-883946", "geo-quartet-886588", "geo-quartet-889308", "geo-quartet-891813", "geo-quartet-892798", "geo-quartet-893733",
+    "quartet-d-2145", "quartet-d-8024", "quartet-d-8427", "quartet-d-11359", "quartet-d-11786", "quartet-d-23068",
+    "quartet-e-2697", "quartet-e-2706", "quartet-e-3469", "quartet-e-4644", "quartet-e-11722", "quartet-e-12626"
+  ],
+  "comparisons": 4,
+  "stop_round": 3
+}
