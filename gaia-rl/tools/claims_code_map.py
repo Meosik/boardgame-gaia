@@ -15,12 +15,14 @@ status, the guide condition and the first words of the advice, so a reader sees 
 """
 import argparse
 import csv
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
 CSV = Path(__file__).resolve().parents[1]/'research/strategy/gaia-strategy-claims.csv'
 COLUMN = '코드반영(Codex기입)'
 
+NEW_ID = re.compile(r'^PG\d\d-S\d+$')
 GEO = {'제노스', '타클론', '테란', '기오덴', '지오덴'}
 TRACK_SET_10 = {'글린', '앰바스', '아이타', '아이타(이타르)', '네블라', '네뷸라', '파이락', '발타크', '하이브(아이비츠)', '이비츠',
                 '매드안드로이드(베스코드)', '란티다', '란티드', '하드쉬할라', '하쉬할라'}
@@ -65,6 +67,8 @@ def value_for(row):
     rid = (row.get('id') or '').strip()
     if rid in BY_ID:
         return BY_ID[rid]
+    if NEW_ID.match(rid):
+        return 'N'   # transcript claims (claims-new/) are detailed: reflected only by explicit id
     faction, topic = row['종족'].strip(), row['주제']
     for factions, keyword, value in RULES:
         if faction in factions and keyword in topic:
@@ -72,24 +76,54 @@ def value_for(row):
     return 'N'
 
 
+# Claims read in full from the podcast transcripts (2026-10-20, one file per episode, kept apart for
+# provenance; same columns as the main list).
+NEW_DIR = CSV.parent/'claims-new'
+
+
+def _read(path):
+    with path.open(encoding='utf-8-sig', newline='') as f:
+        reader = csv.DictReader(f)
+        fields = [name.lstrip('﻿') for name in reader.fieldnames]
+        rows = [{k.lstrip('﻿'): v for k, v in row.items()} for row in reader]
+    return fields, rows
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
-    with CSV.open(encoding='utf-8-sig', newline='') as f:
-        reader = csv.DictReader(f)
-        fields, rows = reader.fieldnames, list(reader)
+    fields, rows = _read(CSV)
+    files = [(CSV, fields, rows)]
+    seen = {row['id'] for row in rows}
+    for path in sorted(NEW_DIR.glob('*.csv')) if NEW_DIR.exists() else []:
+        new_fields, new_rows = _read(path)
+        problems = []
+        if new_fields != fields:
+            problems.append('header differs')
+        problems += [f"row {row.get('id')}: extra or missing cells" for row in new_rows
+                     if None in row or any(v is None for v in row.values())]
+        problems += [f"duplicate id {row['id']}" for row in new_rows if row['id'] in seen]
+        seen |= {row['id'] for row in new_rows}
+        print(f'{path.name}: {len(new_rows)} rows' + (f" — PROBLEMS: {'; '.join(problems[:5])}" if problems else ''))
+        if not problems:
+            files.append((path, new_fields, new_rows))
     summary = defaultdict(Counter)
-    for row in rows:
-        if row['종족'].strip().startswith('공통'):
-            continue
-        row[COLUMN] = value_for(row)
-        summary[row['종족'].strip()][row[COLUMN].split(' ')[0]] += 1
+    every = []
+    for _, _, file_rows in files:
+        for row in file_rows:
+            every.append(row)
+            if row['종족'].strip().startswith('공통'):
+                continue
+            row[COLUMN] = value_for(row)
+            summary[row['종족'].strip()][row[COLUMN].split(' ')[0]] += 1
     if not args.dry_run:
-        with CSV.open('w', encoding='utf-8-sig', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=fields, lineterminator='\n')   # the file is LF
-            writer.writeheader()
-            writer.writerows(rows)
+        for path, file_fields, file_rows in files:
+            with path.open('w', encoding='utf-8-sig' if path == CSV else 'utf-8', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=file_fields, lineterminator='\n')   # LF files
+                writer.writeheader()
+                writer.writerows(file_rows)
+    rows = every
     total = Counter()
     for faction, counts in sorted(summary.items(), key=lambda kv: -sum(kv[1].values())):
         total.update(counts)
@@ -109,7 +143,8 @@ def write_status(rows, summary, total):
         text = ' '.join(str(text).split()).replace('|', '/')
         return text if len(text) <= width else text[:width-1]+'…'
     lines = ['# 종족 자료 현황표 (생성 파일 — `tools/claims_code_map.py`가 씀)', '',
-             '출처: `gaia-strategy-claims.csv`의 종족 행. 상태 Y(기준) = 배포 교사, Y(실험) = 실험 교사에만, N = 미반영.',
+             '출처: `gaia-strategy-claims.csv`의 종족 행 + `claims-new/PGxx.csv`(팟캐스트 회차 자막 정독, 2026-10-20). '
+             '상태 Y(기준) = 배포 교사, Y(실험) = 실험 교사에만, N = 미반영.',
              '사용: 교사 코드는 이 표를 읽지 않는다. 다음에 넣을 자료를 고르는 작업 목록이고, 부품을 넣으면 도구의 규칙을 고쳐 다시 만든다.',
              '', f"전체: Y(기준) {total.get('Y(기준)', 0)} · Y(실험) {total.get('Y(실험)', 0)} · N {total.get('N', 0)}", '']
     by_faction = {}
