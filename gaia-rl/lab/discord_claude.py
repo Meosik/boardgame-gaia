@@ -43,7 +43,13 @@ SYSTEM = (
     'working directory (no -C), one command per call, and prefer the Read/Grep/Glob tools for '
     'files; a pipe or && chain is refused if any part is outside the allow list. A command '
     'containing a newline is refused too: write commit messages on one line with repeated -m '
-    'flags (git commit -m "subject" -m "body" -m "trailer"), never a multi-line string.')
+    'flags (git commit -m "subject" -m "body" -m "trailer"), never a multi-line string. '
+    'Never run anything in the background (run_in_background, background agents, sleep or Monitor '
+    'polling): `claude -p` does not exit while background work runs, so the bot kills the turn at its '
+    'time limit and the reply is lost. Anything that may take more than about 5 minutes (games, A/B, '
+    'smokes, repeated analysis runs) goes to the lab queue instead: add gaia-rl/lab/queue/<name>.json '
+    '(kind "ab" or "command", see gaia-rl/lab/README.md), commit, push and end the turn; lab runs it and '
+    'its result notice starts a review turn automatically.')
 
 
 def chunks(text, size=1900):
