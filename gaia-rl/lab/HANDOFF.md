@@ -1903,6 +1903,7 @@
 - E15 → **084** `084-ships-vs-byfaction-full` **큐(사용자 "종족별 규칙 넣고 실험 시작")**: A = ships(cap20), B = `...-ships-byfaction-cap20.json`(테란 track_income, 기오덴 former_use, 타클론 opening_budget+guard+release; 제노스는 기준 그대로), geo-quartet 새 시드 6쌍, **6R 끝까지**(≈ 3시간 20분). 판정 1–3R 충전 종족별(테란·기오덴·타클론 각각 양수여야 그 종족 부품 편입), 최종 VP 같이. 통과한 종족 부품만 BASE_FACTION_PARTS로 옮김.
 - E16 → **083·085·086·087 큐**: 미측정 10종족에 **track_set**(공략 트랙 우선순위, 순서만; `CANDIDATE_FACTION_PARTS`)을 넣고 측정. **083** 스모크(byfaction 자체 대국, 쿼텟 3개 × 1시드 4R, ≈45분, 오류·타임아웃·미탐색만), **085** 쿼텟 a 란티드·이비츠·피락·네블라, **086** b 발탁·베스코드·글린·이타르, **087** c 암바스·하지할라·테란·제노스 — 각 A = 실서버 hard vs B = byfaction, 새 시드 6쌍(`find_seeds.py 0 60000 --prefix quartet-{a,b,c} --factions …`), 4R 종료, ≈1.5시간씩. 판정 종족별 충전; 음수 종족은 리플레이 → `faction-tracks-openings.md`의 그 종족 규칙(발탁 1R 가이아 4, 글린 두 트랙만, 파이락 아카데미 없음 등)을 종족 표 후보로. 전부 끝나면 ≈ 내일 오전(순서 083 → 084 → 085 → 086 → 087, 총 ≈ 9시간).
 - 로스트플릿 4종족(모웨이드·스페이스자이언트·팅커로이드·다카니안)은 트랙 표가 "미정"이라 track_set 없음, 이번 측정에서 제외(사용자 답 대기).
+- 쿼텟 시드 스캔 결과(0–60000): `lab/seeds-quartet-a.txt` 35개(083·085가 6개 사용), `seeds-quartet-b.txt` 32개(7개 사용), `seeds-quartet-c.txt` 29개(7개 사용). 재확인 실험은 여기서 다음 6개를 쓰면 됨(lab 자동 할당은 seeds.txt만 보므로 큐에 `seeds`로 직접 적을 것).
 
 **규칙·코드 후보(미구현)**
 - R1. 팟캐스트 순서 규칙 후보 R1–R10(`paia-timing-rules-20261018.md` 3절). 충돌: 테란 1R(팟캐스트·IR01 의회/항해 연구소 vs 어잌후 1AC+1M, 지금 라벨은 어잌후).
