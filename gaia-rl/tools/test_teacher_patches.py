@@ -432,7 +432,11 @@ class OpeningBudgetTests(unittest.TestCase):
         player = {'faction': 'Terrans', 'research_tracks': {},
                   'structures': [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'Mine', 'hex': '5,5'}],
                   'federated_hexes': ['5,5']}
-        snapshot = {'player': 0, 'state': {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]},
+        empty = {'planet': None, 'structures': [], 'satellites': []}
+        board = {'hexes': {f'{q},{r}': dict(empty) for q in range(-6, 8) for r in range(-6, 8)},
+                 'spaceship_tiles': {}}
+        snapshot = {'player': 0, 'state': {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player],
+                                           'board': board},
                     'candidates': [{'action': {'type': 'Build', 'coord': '3,0'}},     # far
                                    {'action': {'type': 'Build', 'coord': '1,0'}},     # next to 0,0
                                    {'action': {'type': 'Build', 'coord': '5,6'}},     # next to a federated mine only
@@ -452,8 +456,20 @@ class OpeningBudgetTests(unittest.TestCase):
         snapshot['candidates'][1] = {'action': {'type': 'Build', 'coord': '2,0'}}
         lifted = tp.fed_cluster_scores(None, snapshot, scores)
         self.assertEqual([s[0] for s in lifted], [5.0, 9.0, 7.0, 8.0])
+        # Distance 2 but the hex between (2,0 and 0,0 share only 1,0) is a planet: no satellite can
+        # link it, not near.
+        board['hexes']['1,0'] = {**empty, 'planet': {'planet_type': 'Terra', 'owner': None}}
+        self.assertIs(tp.fed_cluster_scores(None, snapshot, scores), scores)
+        board['hexes']['1,0'] = dict(empty)
+        self.assertEqual([s[0] for s in tp.fed_cluster_scores(None, snapshot, scores)], [5.0, 9.0, 7.0, 8.0])
         # Nearest at distance 3 or more: nothing near, untouched.
         snapshot['candidates'][1] = {'action': {'type': 'Build', 'coord': '0,4'}}
+        self.assertIs(tp.fed_cluster_scores(None, snapshot, scores), scores)
+        # A mine next to a federation joins it, and a building next to a federation seeds none.
+        snapshot['candidates'][1] = {'action': {'type': 'Build', 'coord': '5,4'}}      # next to federated 5,5
+        self.assertIs(tp.fed_cluster_scores(None, snapshot, scores), scores)
+        player['structures'].append({'kind': 'Mine', 'hex': '4,5'})                  # next to the federation
+        snapshot['candidates'][1] = {'action': {'type': 'Build', 'coord': '3,5'}}      # next to 4,5 only
         self.assertIs(tp.fed_cluster_scores(None, snapshot, scores), scores)
 
     def test_fed_compare_puts_the_best_federation_first_in_goals(self):

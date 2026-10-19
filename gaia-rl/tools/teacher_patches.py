@@ -2267,6 +2267,11 @@ def _hex_distance(a, b):
     return (abs(q1-q2) + abs(r1-r2) + abs(q1+r1-q2-r2)) // 2
 
 
+def _hex_neighbors(coord):
+    q, r = (int(x) for x in str(coord).split(','))
+    return [f'{q+dq},{r+dr}' for dq, dr in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1))]
+
+
 def fed_remember_scores(env, snapshot, scores):
     _fed_scores.clear()
     _fed_scores[id(snapshot)] = scores
@@ -2315,8 +2320,12 @@ def fed_cluster_scores(env, snapshot, scores):
     player = state['players'][actor]
     if not _part(player, 'fed_cluster'):
         return scores
+    # Federation rules (rulebook p.14; engine validate_federation / apply_build): a mine next to one of
+    # our federations joins it, and a new federation may not touch an existing one. So a hex next to a
+    # federation (satellites included) is no seed for a new one, neither as a mine nor as a neighbour.
     federated = {str(h) for h in player.get('federated_hexes', [])}
-    own = [s['hex'] for s in player['structures'] if str(s['hex']) not in federated]
+    touching = federated | {n for h in federated for n in _hex_neighbors(h)}
+    own = [str(s['hex']) for s in player['structures'] if str(s['hex']) not in touching]
     if not own:
         return scores
     candidates = snapshot['candidates']
@@ -2324,10 +2333,27 @@ def fed_cluster_scores(env, snapshot, scores):
               if c['action'].get('type') == 'Build' and c['action'].get('coord') is not None and not blocked(scores[i])]
     if len(builds) < 2:
         return scores
+    hexes = state['board']['hexes']
+    ship_tiles = {str(c) for c in (state['board'].get('spaceship_tiles') or {}).values()}
+
+    def satellite_room(coord):
+        """A satellite may stand there: no planet, no building, no spaceship tile (validate_satellite_hex)."""
+        cell = hexes.get(coord)
+        return cell is not None and not cell.get('planet') and not cell.get('structures') and coord not in ship_tiles
 
     def gap(i):
-        coord = candidates[i]['action']['coord']
-        return min(_hex_distance(coord, h) for h in own)
+        """1 = next to one of our seeds, 2 = one satellite between (through an empty hex), else 9."""
+        coord = str(candidates[i]['action']['coord'])
+        if coord in touching:
+            return 9
+        best_gap = 9
+        for h in own:
+            d = _hex_distance(coord, h)
+            if d == 1:
+                return 1
+            if d == 2 and any(satellite_room(n) for n in set(_hex_neighbors(coord)) & set(_hex_neighbors(h))):
+                best_gap = 2
+        return best_gap
     best = max(builds, key=lambda i: scores[i][0])
     nearest = min(gap(i) for i in builds)
     # 1 = joins without a satellite, 2 = one satellite (rulebook adjacency); farther is not "near".
