@@ -51,13 +51,5 @@ class ParallelSearchTests(unittest.TestCase):
               f"{searched} searched decisions", file=sys.stderr)
 
 
-    def test_booster_lookahead_decisions_are_identical_in_parallel(self):
-        sequential = run(1, 90, factory='booster_lookahead')
-        parallel = run(3, 90, factory='booster_lookahead')
-        self.assertEqual(parallel['decisions'], sequential['decisions'])
-        self.assertTrue(any(str(d[2]).startswith('booster-') or d[2] == 'current-choice'
-                            for d in sequential['decisions']))
-
-
 if __name__ == '__main__':
     unittest.main()

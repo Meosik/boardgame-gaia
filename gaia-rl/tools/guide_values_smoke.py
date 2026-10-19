@@ -29,7 +29,9 @@ def main():
     parser.add_argument('--rows', type=int, default=12)
     parser.add_argument('--factory', default='guide_values', help='teacher_patches factory to play')
     parser.add_argument('--comparisons', type=int, default=0)
+    parser.add_argument('--output', type=Path, help='also write every decision line to this file')
     args = parser.parse_args()
+    out = open(args.output, 'w') if args.output else None
     sys.setrecursionlimit(10000)
     import budget_teacher
     budget_teacher.install(args.comparisons, max_seconds=5 if not args.comparisons else 20)
@@ -59,9 +61,11 @@ def main():
         home = profiles()[faction].home
         old = teacher_patches._original(state, actor, home=home)
         new = teacher_patches.guide_potential(state, actor, home=home)
-        print(f'{n:3d} R{state["round"]} {faction:8s} old {old:7.1f} new {new:7.1f}  '
-              f'{action["type"]} {json.dumps({k: v for k, v in action.items() if k != "type"})[:70]}',
-              flush=True)
+        line = (f'{n:3d} R{state["round"]} {faction:8s} old {old:7.1f} new {new:7.1f}  '
+                f'{action["type"]} {json.dumps({k: v for k, v in action.items() if k != "type"})[:70]}')
+        print(line, flush=True)
+        if out:
+            print(line, file=out, flush=True)
         if n in args.explain:
             base = teacher_patches.guide_potential(state, actor, home=home)
             rows = []

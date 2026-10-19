@@ -48,7 +48,12 @@
 | research_when_land | 1–3R 연구 트랙 | 닿는 땅 0 → 항해(없으면 테라포밍) 선두; 땅 있고 경쟁 0·경제 < 2 → 경제 선두 | 075 +0.4(Tak −13.7 / VP +6.7), 경제 분기 거의 미발동 → E7 safe ≥ 1 재설계 | 없음 |
 | geodens_prior (geodens_b14=False) | 1R | 1PI+4M 우선 + B14 순서 없음(10-16 이전) | 064 A팔, B14가 +7.4 | 기오덴 |
 
-## C. 기각·되돌린 부품 (opt-in으로 남아 있음, 재시험은 단독으로만)
+## C. 기각·되돌린 부품 — **2026-10-19 코드에서 삭제**(사용자 "기각은 없애야")
+
+복구는 git: `git show 12b1456:gaia-rl/tools/teacher_patches.py`(삭제 직전 판, 4558줄). 삭제 뒤 2,000줄 안팎.
+B에서 같이 삭제한 것: opening_label·label_value(065·066·078), instant_forming, geodens_prior(= guide_r1 ⑤ 1PI+4M 코드), geodens_b14_tech,
+ships_fix·ships_fix_noformer·ships_fix_noacademy·ships_fix_label 묶음 팩토리(부품 opening_budget·budget_guard·opening_release·academy_economy는 opt-in으로 남김).
+동작 불변 확인: 기준 팩토리를 비교 0으로 두 시드(geo-quartet-862133·live-quartet-822328) 160결정씩 삭제 전후 비교(`guide_values_smoke.py --output` + `diff_lines.py`) + 팩토리 테스트.
 
 - reach 계열(048–051): setup_roots/setup_soft(셋업은 서로 다른 자리·부스터만 50초 비교, 인접 자리 우선), reach_plus(식민지 옵션에 항해 +1 단), research_focus(한 트랙 집중) — 048 −10.9, 049 −20.9, 050 −3.8, 051 +16.6(셋업만, 유의 아님).
 - vp1 + 리치 규칙(045 −3.1).
