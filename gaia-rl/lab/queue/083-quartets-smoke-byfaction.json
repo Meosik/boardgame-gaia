@@ -1,0 +1,13 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-19 \"종족별 규칙 넣고 실험 시작\"): 미측정 종족 스모크. ships_byfaction(종족 표: 테란 track_income, 기오덴 former_use, 타클론 opening_budget+guard+release, 미측정 10종족 track_set) 자체 대국, 쿼텟 3개 × 1시드(좌석 교대 2판) = 6판, 4R 시작 종료, hard 예산(비교 4·20초). 쿼텟: a 란티드·이비츠·피락·네블라, b 발탁·베스코드·글린·이타르, c 암바스·하지할라·테란·제노스. 판정 없음(A = B). 볼 것: 오류·타임아웃·폴백·미탐색·결정 시간 — 특수 규칙 종족(이비츠 우주정거장, 란티드 기생 광산, 발탁 포머 변환, 네블라 파워)이 스택에서 처음 돎. 깨끗하면 085–087(쿼텟별 hard vs byfaction)이 유효.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-cap20.json",
+  "seeds": [
+    "quartet-a-2470",
+    "quartet-b-5187",
+    "quartet-c-60"
+  ],
+  "comparisons": 4,
+  "stop_round": 3
+}

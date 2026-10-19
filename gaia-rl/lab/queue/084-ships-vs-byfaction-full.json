@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-19 \"종족별로 적용한다\", \"종족별 규칙 넣고 실험 시작\"): 종족 표 편입 판정(5a E15). A = ships(기준 스택), B = ships_byfaction — 측정된 4종족 중 테란 track_income(074+076), 기오덴 former_use(079), 타클론 opening_budget+budget_guard+opening_release(077)만 켜고 제노스는 기준 그대로. geo-quartet 새 시드 6쌍, 6R 끝까지. 판정 1–3라운드 충전량(1점 = 1.5충전)을 **종족별로**: 테란·기오덴·타클론 각각 양수면 그 종족 부품을 BASE_FACTION_PARTS로 옮김(편입 = 표 한 줄), 제노스는 양팔 같은 코드라 드리프트 기준. 최종 VP 병독(074·076·077의 충전↔VP 엇갈림 확인). 함께 볼 것: game_profile.py 종족별, 테란 1–3R 연구 경제 단, 기오덴 포밍·소행성 수, 타클론 1R AC 완성 수, 오류·미탐색·시간.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-cap20.json",
+  "pairs": 6,
+  "comparisons": 4,
+  "stop_round": 0
+}

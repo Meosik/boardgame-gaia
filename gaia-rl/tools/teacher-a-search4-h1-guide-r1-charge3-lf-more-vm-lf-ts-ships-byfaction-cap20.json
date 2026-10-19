@@ -1,5 +1,5 @@
 {
-  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus the per-faction candidates of CANDIDATE_FACTION_PARTS: Terrans track_income 'sweet' (074+076), Geodens former_use (079), Taklons opening_budget + budget_guard + opening_release (077); other factions unchanged (guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction).",
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus the per-faction candidates of CANDIDATE_FACTION_PARTS: Terrans track_income 'sweet' (074+076), Geodens former_use (079), Taklons opening_budget + budget_guard + opening_release (077), the guide track priority track_set for the ten base factions not measured in the lab (Gleens, Ambas, Itars, Nevlas, Firaks, BalTaks, Ivits, Bescods, Lantids, HadschHallas); Xenos unchanged (guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction).",
   "source": "gaia-rl/baseline-teacher-20260917",
   "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction",
   "kwargs": {

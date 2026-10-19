@@ -65,5 +65,6 @@ ships_fix·ships_fix_noformer·ships_fix_noacademy·ships_fix_label 묶음 팩�
 - 종족 스위치는 전부 두 표에서 읽는다(`_part(player, name)`). 표에 없는 종족 = 그 표의 부품 없음 = 미측정 종족 기본값.
 - `BASE_FACTION_PARTS`(기준 스택의 종족 부품, 동작 불변): 기오덴 geodens_guide·geodens_two_incomes·geodens_r1_research, 테란 terrans_gaia_late, 타클론 brainstone_ships·taklons_pi_token.
 - `CANDIDATE_FACTION_PARTS`(B의 후보, `..._ships_byfaction` 팩토리에서만 켜짐): **테란 track_income**(074+076 12쌍), **기오덴 former_use**(079, 얇음), **타클론 opening_budget+budget_guard+opening_release**(077, 얇음). 안 켠 것: 타클론 track_income(076 충전 −26.5 유의), 제노스 track_income(+14.0, CI 0 포함), 기오덴 track_income(−35.5 유의).
+- **미측정 10종족(글린·암바스·이타르·네블라·피락·발탁·이비츠·베스코드·란티드·하지할라)은 `track_set`**(사용자 2026-10-19 "종족별 규칙 넣고 실험 시작"): 공략이 이름 붙인 트랙(`FACTION_TRACKS`, `faction-tracks-openings.md`)만 5R까지 올리는 순서 규칙. 최고 연구 수가 다른 트랙이고 상황 규칙("research when")이 고른 게 아니면 종족 트랙의 최고 수와 점수를 맞바꿈. 단계 상한·"아카데미 안 지음" 같은 조건은 안 넣음(리플레이 뒤). when 묶음(057–060)에 들어 있던 규칙을 종족 부품으로 다시 씀.
 - 종족 조건이 아닌 것은 그대로: 데이터 표(UIQOO_OPENINGS, ECONOMY_COUNTED, FACTION_TRACKS), 규칙 사실(테란 가이아 구역 토큰은 충전돼 돌아옴, 브레인스톤은 타클론만).
 - 새 spec: `tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-cap20.json`. 편입 판정은 ships vs ships_byfaction 새 시드 6쌍 6R(충전 판정, 최종 VP 같이) 뒤.

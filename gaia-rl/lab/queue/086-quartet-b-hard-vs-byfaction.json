@@ -1,0 +1,16 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-19 \"종족별 규칙 넣고 실험 시작\"): 미측정 종족 2/3 — 발탁·베스코드·글린·이타르. A = 실서버 hard(geodens_guide, 비교 4·20초), B = ships_byfaction(이 네 종족은 공통 스택 + 오프닝 순서 + track_set: 발탁 가이아·경제·테라포밍·AI, 베스코드 과학·경제·항해, 글린 항해·가이아, 이타르 가이아·경제·테라포밍). 새 시드 6쌍, 4R 시작 종료(063 형식). 판정 1–3라운드 충전량(1점 = 1.5충전) 종족별: 음수 종족은 리플레이로 원인 → faction-tracks-openings.md의 그 종족 규칙(발탁 1R 가이아 4, 글린 두 트랙만 등)을 종족 표 후보로. 함께 볼 것: 종족별 오류·타임아웃·미탐색(발탁 포머 변환, 베스코드 트랙 교환, 글린 가이아 광석), 1–3R 연구 트랙 분포(research_counts.py), 결정 시간.",
+  "teacher_a": "tools/teacher-a-search4-h1-geodens-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-cap20.json",
+  "seeds": [
+    "quartet-b-5744",
+    "quartet-b-6886",
+    "quartet-b-7905",
+    "quartet-b-10311",
+    "quartet-b-10743",
+    "quartet-b-12087"
+  ],
+  "comparisons": 4,
+  "stop_round": 3
+}

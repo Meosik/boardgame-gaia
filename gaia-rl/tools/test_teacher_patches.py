@@ -330,6 +330,31 @@ class OpeningBudgetTests(unittest.TestCase):
                          {'opening_budget', 'budget_guard', 'opening_release'})
         self.assertEqual(tp._faction_parts('Xenos'), set())
         self.assertFalse(tp._part({'faction': 'Taklons'}, 'track_income'))
+        for faction in ('Gleens', 'Ambas', 'Itars', 'Nevlas', 'Firaks', 'BalTaks', 'Ivits', 'Bescods', 'Lantids', 'HadschHallas'):
+            self.assertEqual(tp._faction_parts(faction), {'track_set'}, faction)
+        self.assertNotIn('track_set', tp._faction_parts('Terrans'))
+
+    def test_track_set_orders_research_onto_the_faction_tracks_unless_a_rule_chose(self):
+        tp._guide['byfaction'] = True                      # restored by setUp's cleanup
+        player = {'faction': 'Gleens', 'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()}}
+        snapshot = {'player': 0, 'state': {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]},
+                    'candidates': [{'action': {'type': 'ResearchAdvance', 'track': 'Economy'}},
+                                   {'action': {'type': 'ResearchAdvance', 'track': 'Navigation'}},
+                                   {'action': {'type': 'Build', 'coord': '0,0'}}]}
+        lifted = tp.track_set_scores(None, snapshot, [(5.0, 'a'), (3.0, 'b'), (9.0, 'c')])
+        self.assertEqual([s[0] for s in lifted], [3.0, 5.0, 9.0])          # Gleens: Navigation over Economy, the mine untouched
+        self.assertIn('track_set', lifted[1][1])
+        lifted = tp.track_set_scores(None, snapshot, [(5.0, 'a; research when: Economy now'), (3.0, 'b'), (9.0, 'c')])
+        self.assertEqual([s[0] for s in lifted], [5.0, 3.0, 9.0])          # a situational rule chose: untouched
+        snapshot['state']['round'] = 6
+        scores = [(5.0, 'a'), (3.0, 'b'), (9.0, 'c')]
+        self.assertIs(tp.track_set_scores(None, snapshot, scores), scores)   # round 6 is free
+        snapshot['state']['round'] = 2
+        player['faction'] = 'Xenos'
+        self.assertIs(tp.track_set_scores(None, snapshot, scores), scores)   # not a track_set faction
+        tp._guide['byfaction'] = False
+        player['faction'] = 'Gleens'
+        self.assertIs(tp.track_set_scores(None, snapshot, scores), scores)   # base stack: off
 
     def test_academy_economy_leads_research_and_the_tile_track_until_economy_two(self):
         state = {'round': 2, 'phase': {'ActionPhase': {}},

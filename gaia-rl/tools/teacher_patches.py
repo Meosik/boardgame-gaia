@@ -130,6 +130,12 @@ CANDIDATE_FACTION_PARTS = {
     'Taklons': frozenset({'opening_budget', 'budget_guard', 'opening_release'}),   # 077, 6 pairs: +23.6 (4 pairs), thin
     # Not on: Taklons track_income (076 charges -26.5 significant, VP +13.7 is not the verdict measure);
     # Xenos track_income (+14.0, CI includes 0); Geodens track_income (-35.5 significant).
+    # The ten base factions without a lab measurement (user 2026-10-19 "종족별 규칙 넣고 실험 시작"): the
+    # guide's research-track priority as an order rule (track_set_scores, FACTION_TRACKS from
+    # research/strategy/faction-tracks-openings.md), nothing else — level caps, "never builds an
+    # academy" and the like are left for the replays (HANDOFF 1: order and scope only, no new number).
+    **{faction: frozenset({'track_set'}) for faction in
+       ('Gleens', 'Ambas', 'Itars', 'Nevlas', 'Firaks', 'BalTaks', 'Ivits', 'Bescods', 'Lantids', 'HadschHallas')},
 }
 
 
@@ -1932,15 +1938,66 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_income(seed, **kwargs):
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction(seed, **kwargs):
     """Teacher factory: ..._ships (the base stack) plus the per-faction candidates of
     CANDIDATE_FACTION_PARTS — Terrans track_income 'sweet', Geodens former_use, Taklons opening_budget
-    with budget_guard and opening_release; every other faction plays the base stack unchanged
-    (user 2026-10-19 "종족별로 적용한다", stack-parts.md B/D). The wrappers are installed for everyone and
+    with budget_guard and opening_release, and the guide track priority (track_set) for the ten base
+    factions not measured in the lab; Xenos plays the base stack unchanged (user 2026-10-19 "종족별로
+    적용한다", "종족별 규칙 넣고 실험 시작", stack-parts.md B/D). The wrappers are installed for everyone and
     read the table per actor, so the module flags of those parts stay False here."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     _guide['byfaction'] = True
     install_former_use(all_factions=False)
     install_opening_budget(all_factions=False)
     install_opening_release(all_factions=False)
+    _wrap_rank('_track_set', track_set_scores)
     return teacher
+
+
+# ── track_set (user 2026-10-15 "흩뿌리진 말아야지. 종족마다 좋은 트랙 정해져 있잖아"; re-added 2026-10-19 as a
+# per-faction part after the when family was removed): before round 6 a faction advances only the tracks
+# its guide names (SH1-10 "중구난방으로 올리지 말 것 … 트랙 두세 개는 아예 포기", B19-07 "올릴 트랙을 초반에 정해
+# 거기만"); round 6 is free (B19-07). Order only, and only as the default: when the best research move or
+# tile advance is on another track and no situational rule ("research when": academy_economy,
+# research_when_land) picked it, it swaps scores with the best one on the faction's tracks; nothing is
+# held. The 057–060 bundle that carried this rule lost, so it is on only where CANDIDATE_FACTION_PARTS
+# says and is judged per faction.
+TRACK_KEYS = {'Terraforming': 'terraforming', 'Navigation': 'navigation', 'ArtificialIntelligence': 'ai',
+              'GaiaProject': 'gaia', 'Economy': 'economy', 'Science': 'science'}
+TRACK_FREE_ROUND = 6
+
+
+def track_set_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or state['round'] >= TRACK_FREE_ROUND:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'track_set') or player['faction'] not in FACTION_TRACKS:
+        return scores
+    tracks = FACTION_TRACKS[player['faction']]
+    candidates = snapshot['candidates']
+    act = {i: c['action'] for i, c in enumerate(candidates) if not blocked(scores[i])}
+
+    def track_of(i):
+        choice = act[i].get('tech_tile_choice')
+        return act[i].get('track') if act[i].get('type') == 'ResearchAdvance' else (choice or {}).get('advance_track')
+    research = [i for i in act if act[i].get('type') == 'ResearchAdvance']
+    groups = {}
+    for i in act:
+        choice = act[i].get('tech_tile_choice')
+        if isinstance(choice, dict) and choice.get('advance_track'):
+            key = json.dumps({**act[i], 'tech_tile_choice': {**choice, 'advance_track': None}}, sort_keys=True)
+            groups.setdefault(key, []).append(i)
+    lifted = list(scores)
+    for group in [research, *groups.values()]:
+        if len(group) < 2:
+            continue
+        best = max(group, key=lambda i: lifted[i][0])
+        if 'research when' in str(lifted[best][1]):
+            continue   # a situational rule chose this track (user: "트랙은 언제나 상황 맞춰가는 거")
+        own = [i for i in group if TRACK_KEYS.get(track_of(i)) in tracks]
+        if own and TRACK_KEYS.get(track_of(best)) not in tracks:
+            _swap(lifted, list(lifted), max(own, key=lambda i: lifted[i][0]), best,
+                  f'{player["faction"]} research on its tracks (track_set)')
+    return lifted
 
 
 # ── helpers kept from the removed families ─────────────────────────────────────────────
