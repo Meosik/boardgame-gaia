@@ -42,6 +42,30 @@ fn deep_space_footprint(sector: &Sector) -> HashSet<HexCoord> {
         .collect()
 }
 
+// Expansion rulebook p.10: 1-2 players use the 25 VP side; 3-4 players may use either side of the
+// Scoring Board Extension (user 2026-10-19). The 4-player setup draws it per seed, reproducibly.
+#[test]
+fn four_player_setup_draws_either_lost_fleet_requirement_side() {
+    use gaia_engine::game_state::LostFleetAdvancedTechRequirement;
+    let mut sides = HashSet::new();
+    for seed in 0..SEEDS {
+        let seed_str = format!("lf-map-{seed}");
+        let setup = setup(&seed_str);
+        let state = MapEngine::init_game_state(&seed_str, &seed_str, &four_players(), &setup);
+        let again = MapEngine::init_game_state(&seed_str, &seed_str, &four_players(), &setup);
+        assert_eq!(
+            state.research_board.lost_fleet_advanced_tech_requirement,
+            again.research_board.lost_fleet_advanced_tech_requirement,
+            "seed {seed}: the side must be reproducible"
+        );
+        sides.insert(match state.research_board.lost_fleet_advanced_tech_requirement {
+            LostFleetAdvancedTechRequirement::ExplorationShuttles => "ships",
+            LostFleetAdvancedTechRequirement::VictoryPoints => "25 VP",
+        });
+    }
+    assert_eq!(sides.len(), 2, "both sides should appear over {SEEDS} seeds: {sides:?}");
+}
+
 #[test]
 fn standard_sectors_cover_exactly_190_unique_hexes() {
     for seed in 0..SEEDS {

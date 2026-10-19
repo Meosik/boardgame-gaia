@@ -820,12 +820,19 @@ impl MapEngine {
                     });
                 rb.lost_fleet_advanced_tech_tile =
                     lost_fleet_advanced_tech_id.map(crate::game_state::AdvancedTechTile);
-                // Rulebook p.309: for 3-4 players, use the Scoring Board Extension side
-                // showing "3 Exploration Shuttles"; the "25 victory points" side is only
-                // for 2-player games. This project is fixed at 4 players (see project
-                // memory), so this is never randomized between the two sides.
-                rb.lost_fleet_advanced_tech_requirement =
-                    crate::game_state::LostFleetAdvancedTechRequirement::ExplorationShuttles;
+                // Scoring Board Extension side (expansion rulebook p.10: "either you have at
+                // least 25 victory points or have explored 3 different spaceships ...; the
+                // latter condition only applies in 3- and 4-player games"). 1-2 players are
+                // fixed to the 25 VP side; with 3-4 players either side may be in play (user
+                // 2026-10-19 "1-2인일때 25점 고정이란거지 3-4인에 나오지 말아야하는 이유는 없어"),
+                // so this 4-player project draws the side per seed like the Economy tile below.
+                let mut requirement_rng =
+                    Randomizer::new(&format!("{seed}:lost-fleet-advanced-requirement"));
+                rb.lost_fleet_advanced_tech_requirement = if requirement_rng.random_int(2) == 0 {
+                    crate::game_state::LostFleetAdvancedTechRequirement::ExplorationShuttles
+                } else {
+                    crate::game_state::LostFleetAdvancedTechRequirement::VictoryPoints
+                };
                 // Base game Federation token supply: 18 tokens across 6 reward kinds — three
                 // copies of each standard reward. The 1 ore + 1 knowledge + 2 credits token is
                 // Gleens-only and is granted as id 16 by their Planetary Institute.

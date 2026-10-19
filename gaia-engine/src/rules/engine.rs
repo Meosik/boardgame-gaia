@@ -2718,23 +2718,22 @@ fn validate_tech_tile_choice_after_vp(
 /// need to meet the first condition for taking an Advanced Tech... instead, the conditions shown
 /// on the Scoring Board Extension are applied (either you have at least 25 victory points or have
 /// explored 3 different spaceships in the Lost Fleet; the latter condition only applies in 3- and
-/// 4-player games)"). So 25 VP always qualifies and the 3-ships alternative is added in 3-/4-player
-/// games (`ExplorationShuttles`, this project's 4 players); `VictoryPoints` is the 25-VP-only side.
-/// `extra_vp` is VP the same action scores before the tile is taken (user 2026-10-19: build the
-/// lab and score it, then take the tech and score it, then advance and score it — in order), see
-/// `upgrade_vp_before_tech_tile`.
+/// 4-player games)"). The board side in play decides: `ExplorationShuttles` (3-/4-player only) or
+/// `VictoryPoints` (fixed for 1-2 players, also possible with 3-4; the side is drawn per seed in
+/// map setup). `extra_vp` is VP the same action scores before the tile is taken (user 2026-10-19:
+/// build the lab and score it, then take the tech and score it, then advance and score it — in
+/// order), see `upgrade_vp_before_tech_tile`.
 fn validate_lost_fleet_advanced_tech_requirement(
     state: &GameState,
     player: &PlayerState,
     extra_vp: i32,
 ) -> Result<(), RuleError> {
-    let enough_vp = player.vp + extra_vp >= 25;
     let met = match state.research_board.lost_fleet_advanced_tech_requirement {
         LostFleetAdvancedTechRequirement::ExplorationShuttles => {
             let distinct_ships: HashSet<ShipId> = player.explored_ships.iter().copied().collect();
-            enough_vp || distinct_ships.len() >= 3
+            distinct_ships.len() >= 3
         }
-        LostFleetAdvancedTechRequirement::VictoryPoints => enough_vp,
+        LostFleetAdvancedTechRequirement::VictoryPoints => player.vp + extra_vp >= 25,
     };
     if met {
         Ok(())
