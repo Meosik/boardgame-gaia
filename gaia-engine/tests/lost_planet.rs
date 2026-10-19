@@ -135,6 +135,50 @@ fn navigation_five_requires_and_resolves_lost_planet_before_play_continues() {
     assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 1 });
 }
 
+// Base rulebook p.22, Navigation level 5: "place the Lost Planet token on an accessible space that
+// does not contain a planet, satellite, or space station" — any player's satellite blocks the space.
+#[test]
+fn lost_planet_rejects_a_space_with_any_players_satellite() {
+    let mut state = lost_planet_state(1);
+    for (coord, owner) in [(HexCoord::new(3, 0), 1), (HexCoord::new(2, 0), 0)] {
+        state
+            .board
+            .hexes
+            .get_mut(&coord)
+            .unwrap_or_else(|| unreachable!())
+            .satellites
+            .push(owner);
+    }
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::ResearchAdvance {
+            track: ResearchTrack::Navigation,
+        },
+    )
+    .unwrap_or_else(|error| panic!("Navigation advance failed: {error}"));
+
+    for coord in [HexCoord::new(3, 0), HexCoord::new(2, 0)] {
+        assert!(
+            matches!(
+                RuleEngine::apply_action(&mut state, 0, GameAction::PlaceLostPlanet { coord }),
+                Err(RuleError::TargetOccupied(_))
+            ),
+            "a satellite on {coord:?} must block the Lost Planet"
+        );
+        assert!(!RuleEngine::get_valid_actions(&state, 0)
+            .contains(&GameAction::PlaceLostPlanet { coord }));
+    }
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::PlaceLostPlanet {
+            coord: HexCoord::new(4, 0),
+        },
+    )
+    .unwrap_or_else(|error| panic!("an empty space should still take the Lost Planet: {error}"));
+}
+
 #[test]
 fn lost_planet_rejects_occupied_out_of_range_and_wrong_phase_targets() {
     let mut state = lost_planet_state(0);
