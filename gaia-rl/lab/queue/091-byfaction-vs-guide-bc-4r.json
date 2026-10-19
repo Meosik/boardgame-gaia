@@ -1,0 +1,12 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"기존 자료에 있는 내용 쓸만하면 반영 … 그 후에 실험 시작하자\"): 종족 자료 나머지 부품의 단독 효과. A = ships_byfaction(085–087 B팔), B = ships_byfaction_guide — track_steps·track_caps·building_limits·발타크 아카데미 스타트(opening_only·fixed_academy)·확장 4종족 track_set·tile_prefs(하드쉬 할라·매드 안드로이드·앰바스·발타크·아이타·하이브·란티다·기오덴 기술 타일 선호)·niche_tracks(하드쉬 할라 남들이 덜 간 가이아·테라·AI, 제노스 가이아 특화 종족 없을 때 가이아). 쿼텟 b(발타크·매드 안드로이드·글린·아이타) 6시드 + 쿼텟 c(앰바스·하드쉬 할라·테란·제노스) 6시드, 12쌍, 4R 시작 종료(≈ 1.5시간). 판정: 사전 규칙대로 1–3라운드 충전량, 종족별. 함께 볼 것: 발동 확인(research_counts — 단계 목표·상한·틈새 트랙, upgrade_counts — 발타크 1R 아카데미, 고른 기술 타일 번호), 결정 시간, 오류. 나쁘면 HANDOFF 1장 판단 순서(잡음 → 발동 → 구현 → 충돌 → 지표 → 조건 → 자료).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap20.json",
+  "seeds": [
+    "quartet-b-22815", "quartet-b-23084", "quartet-b-26518", "quartet-b-32942", "quartet-b-34244", "quartet-b-42996",
+    "quartet-c-27375", "quartet-c-27804", "quartet-c-29939", "quartet-c-32509", "quartet-c-36748", "quartet-c-37103"
+  ],
+  "comparisons": 4,
+  "stop_round": 3
+}

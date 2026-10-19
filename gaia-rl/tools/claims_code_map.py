@@ -9,6 +9,9 @@ Rows of '공통' factions are left as they are. The mapping is by faction, topic
 RULES / BY_ID when a part lands, then rerun. Prints a per-faction summary.
 
   .venv/bin/python tools/claims_code_map.py [--dry-run]
+
+It also writes research/strategy/faction-claims-status.md: per faction the counts and every claim with its
+status, the guide condition and the first words of the advice, so a reader sees what is still missing.
 """
 import argparse
 import csv
@@ -34,8 +37,18 @@ BY_ID = {
     'B10-01': 'Y(기준) 브레인스톤 함선 시점(brainstone_ships); 토큰 적정량 N',
     'B04-01': 'Y(기준) 테란 가이아 연구 1–3R 최하위(terrans_gaia_late)',
     'B4-01': 'Y(기준) 테란 가이아 연구 1–3R 최하위(terrans_gaia_late)',
-    'B15-02': 'N (가이아 특화 종족 없을 때 가이아 — 미반영)',
-    'B19-03': 'N (남들이 안 가는 테크 — 미반영)',
+    'B15-02': 'Y(실험) 가이아 특화 종족 없으면 1–3R 가이아 2까지(niche_tracks, byfaction_guide); 파워 운용 N',
+    'B19-03': 'Y(실험) 경제2·항해2 뒤 남들이 덜 간 가이아·테라·AI(niche_tracks, byfaction_guide); 라운드 보너스 N',
+    'B17-01': 'Y(실험) 4돈 기술 피함(tile_prefs, byfaction_guide); 교역소·의회 운용 N',
+    'H01': 'Y(실험) 4돈 기술 피함(tile_prefs, byfaction_guide)',
+    'LF2-01': 'Y(실험) 하드쉬 할라 1광석1충전 기술 선호(tile_prefs); 함선별 자원 밸런스 N',
+    'IR01-03': 'Y(실험) 하드쉬 할라·매드 안드로이드 4돈 기술 피함(tile_prefs); 교역소 운용 N',
+    'B13-04': 'Y(실험) 큰 건물 4티어 기술 선호(tile_prefs); 4연방 계획 N',
+    'B6-01': 'Y(실험) 1광석1충전 기술 피함(tile_prefs); 의회 이동·고급 기술 N',
+    'B7-01': 'Y(실험) 의회 기술 선호(tile_prefs); 파워 운용 N',
+    'B12-01': 'Y(실험) 4충전 → 1광석1정보·행성종류당 지식 기술(tile_prefs); 파워 운용 N',
+    'B16-01': 'Y(실험) 4돈 기술 선호·4충전 기술 피함(tile_prefs); 기생 시점 N',
+    'B14-01': 'Y(실험) 초반 4충전, 4R부터 행성종류당 지식 기술(tile_prefs); 파워 액션 순서 N',
 }
 # (faction set, topic keyword) -> value; first match wins.
 RULES = [
@@ -82,6 +95,40 @@ def main():
         total.update(counts)
         print(f"{faction:16s} " + '  '.join(f'{k} {v}' for k, v in sorted(counts.items())))
     print('total            ' + '  '.join(f'{k} {v}' for k, v in sorted(total.items())))
+    if not args.dry_run:
+        write_status(rows, summary, total)
+
+
+STATUS_MD = CSV.parent/'faction-claims-status.md'
+ORDER = {'N': 0, 'Y(실험)': 1, 'Y(기준)': 2}
+
+
+def write_status(rows, summary, total):
+    """Readable per-faction table of the column (generated; edit the CSV / this tool, not the md)."""
+    def cell(text, width):
+        text = ' '.join(str(text).split()).replace('|', '/')
+        return text if len(text) <= width else text[:width-1]+'…'
+    lines = ['# 종족 자료 현황표 (생성 파일 — `tools/claims_code_map.py`가 씀)', '',
+             '출처: `gaia-strategy-claims.csv`의 종족 행. 상태 Y(기준) = 배포 교사, Y(실험) = 실험 교사에만, N = 미반영.',
+             '사용: 교사 코드는 이 표를 읽지 않는다. 다음에 넣을 자료를 고르는 작업 목록이고, 부품을 넣으면 도구의 규칙을 고쳐 다시 만든다.',
+             '', f"전체: Y(기준) {total.get('Y(기준)', 0)} · Y(실험) {total.get('Y(실험)', 0)} · N {total.get('N', 0)}", '']
+    by_faction = {}
+    for row in rows:
+        faction = row['종족'].strip()
+        if faction.startswith('공통'):
+            continue
+        by_faction.setdefault(faction, []).append(row)
+    for faction, items in sorted(by_faction.items(), key=lambda kv: -len(kv[1])):
+        counts = summary[faction]
+        lines += [f'## {faction} — Y(기준) {counts.get("Y(기준)", 0)} · Y(실험) {counts.get("Y(실험)", 0)} · N {counts.get("N", 0)}',
+                  '', '| 상태 | id | 주제 | 조건 | 자료 내용(앞부분) | 반영 부품 |', '|---|---|---|---|---|---|']
+        for row in sorted(items, key=lambda r: (ORDER.get(r[COLUMN].split(' ')[0], 0), r['id'])):
+            status, _, part = row[COLUMN].partition(' ')
+            lines.append(f"| {status} | {row['id']} | {cell(row['주제'], 14)} | {cell(row['조건'], 24)} | "
+                         f"{cell(row['추천_판단'], 70)} | {cell(part, 60)} |")
+        lines.append('')
+    STATUS_MD.write_text('\n'.join(lines)+'\n', encoding='utf-8')
+    print(f'status table -> {STATUS_MD}')
 
 
 if __name__ == '__main__':
