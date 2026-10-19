@@ -74,7 +74,7 @@ def main():
         summary[row['종족'].strip()][row[COLUMN].split(' ')[0]] += 1
     if not args.dry_run:
         with CSV.open('w', encoding='utf-8-sig', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=fields)
+            writer = csv.DictWriter(f, fieldnames=fields, lineterminator='\n')   # the file is LF
             writer.writeheader()
             writer.writerows(rows)
     total = Counter()
