@@ -2460,14 +2460,34 @@ def _green(player):
     return bool(player.get('federation_tokens'))
 
 
-def _race(state, actor, track):
-    """'lost', 'contested' or None for our level 5 / Advanced tile on `track` (TRACK_KEYS name)."""
+LEVEL5_KNOWLEDGE = 4                       # rulebook research cost
+SCIENCE_INCOME = (0, 1, 2, 3, 4, 0)        # knowledge a round by Science level (rulebook p.22)
+UPGRADE_TO_TECH = (('TradingStation', 3, 5), ('ResearchLab', 6, 6))   # -> lab / academy (ore, credits)
+
+
+def _rival_ready(player, path):
+    """Whether a rival can pay the step soon (user 2026-10-20 "상대방의 자원도 카운팅해야하지 않을까? 아니면
+    앞으로 자원을 먹을 수 있는지"): 'level5' — 4 knowledge now or after the next Science income;
+    'advanced' — a lab or academy upgrade it can pay now (a tile comes with the upgrade)."""
+    res = player.get('resources') or {}
+    if path == 'level5':
+        knowledge = res.get('knowledge', 0)
+        return knowledge + SCIENCE_INCOME[player['research_tracks'].get('science', 0)] >= LEVEL5_KNOWLEDGE
+    kinds = {s['kind'] for s in player.get('structures', []) if isinstance(s.get('kind'), str)}
+    return any(kind in kinds and res.get('ore', 0) >= ore and res.get('credits', 0) >= credits
+               for kind, ore, credits in UPGRADE_TO_TECH)
+
+
+def _race(state, actor, track, path='level5'):
+    """'lost', 'contested' or None for our level 5 (path 'level5') or the Advanced tile (path 'advanced')
+    on `track` (TRACK_KEYS name). A rival counts when it is at level 4+, holds a green token and can pay
+    the step soon; level 5 already taken is lost for both paths' level-5 goals."""
     key = TRACK_KEYS[track]
     me = state['players'][actor]
     others = [p for i, p in enumerate(state['players']) if i != actor]
-    if any(p['research_tracks'][key] >= 5 for p in others):
+    if path == 'level5' and any(p['research_tracks'][key] >= 5 for p in others):
         return 'lost'
-    rivals = [p for p in others if p['research_tracks'][key] >= 4 and _green(p)]
+    rivals = [p for p in others if p['research_tracks'][key] >= 4 and _green(p) and _rival_ready(p, path)]
     if not rivals:
         return None
     return 'lost' if me['research_tracks'][key] <= 3 else 'contested'
@@ -2519,8 +2539,9 @@ def race_prune_goals(snapshot, goals):
     kept = []
     for goal in goals:
         family, target = getattr(goal, 'family', None), getattr(goal, 'target', None)
-        lost = target in TRACK_KEYS and _race(state, actor, target) == 'lost' and (
-            (family == 'research' and goal.level >= 5) or family == 'advanced')
+        lost = target in TRACK_KEYS and (
+            (family == 'research' and goal.level >= 5 and _race(state, actor, target, 'level5') == 'lost')
+            or (family == 'advanced' and _race(state, actor, target, 'advanced') == 'lost'))
         if not lost:
             kept.append(goal)
     return kept
@@ -2574,7 +2595,7 @@ def track_race_scores(env, snapshot, scores):
     for members in groups.values():
         contested = [i for i in members if act[i]['tech_tile_choice'].get('kind') == 'Advanced'
                      and act[i]['tech_tile_choice'].get('track') in TRACK_KEYS
-                     and _race(state, actor, act[i]['tech_tile_choice']['track']) == 'contested']
+                     and _race(state, actor, act[i]['tech_tile_choice']['track'], 'advanced') == 'contested']
         if not contested or len(members) < 2:
             continue
         top = max(members, key=lambda i: lifted[i][0])

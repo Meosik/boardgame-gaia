@@ -494,10 +494,13 @@ class OpeningBudgetTests(unittest.TestCase):
 
     def _race_state(self, me, rival, rival_green=True):
         levels = lambda sci: {'terraforming': 0, 'navigation': 0, 'ai': 0, 'gaia': 0, 'economy': 0, 'science': sci}
+        rich = {'ore': 6, 'credits': 6, 'knowledge': 4, 'qic': 0}
         return {'round': 5, 'phase': {'ActionPhase': {}},
-                'players': [{'faction': 'Xenos', 'research_tracks': levels(me), 'federation_tokens': [4]},
+                'players': [{'faction': 'Xenos', 'research_tracks': levels(me), 'federation_tokens': [4],
+                             'resources': dict(rich), 'structures': [{'kind': 'TradingStation', 'hex': '0,0'}]},
                             {'faction': 'Terrans', 'research_tracks': levels(rival),
-                             'federation_tokens': [3] if rival_green else []}]}
+                             'federation_tokens': [3] if rival_green else [], 'resources': dict(rich),
+                             'structures': [{'kind': 'ResearchLab', 'hex': '5,5'}]}]}
 
     def test_race_reads_level_five_and_rival_tokens(self):
         self.assertEqual(tp._race(self._race_state(4, 4), 0, 'Science'), 'contested')
@@ -505,6 +508,17 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(tp._race(self._race_state(4, 5), 0, 'Science'), 'lost')
         self.assertIsNone(tp._race(self._race_state(4, 4, rival_green=False), 0, 'Science'))
         self.assertIsNone(tp._race(self._race_state(4, 2), 0, 'Science'))
+        # A rival that cannot pay soon is no threat (user: count the rival's resources).
+        poor = self._race_state(0, 0)
+        poor['players'][0]['research_tracks']['economy'] = 3
+        poor['players'][1]['research_tracks']['economy'] = 4                     # Economy race, rival Science 0
+        poor['players'][1]['resources'].update(knowledge=0, ore=0, credits=0)
+        self.assertIsNone(tp._race(poor, 0, 'Economy'))                         # 0 knowledge, no Science income
+        self.assertIsNone(tp._race(poor, 0, 'Economy', 'advanced'))             # no upgrade it can pay
+        poor['players'][1]['research_tracks']['science'] = 2
+        poor['players'][1]['resources']['knowledge'] = 2
+        self.assertEqual(tp._race(poor, 0, 'Economy'), 'lost')                  # 2 now + 2 next income
+        self.assertEqual(tp._race(self._race_state(3, 4), 0, 'Science', 'advanced'), 'lost')
 
     def test_track_race_leads_the_contested_level_five_and_advanced_tile(self):
         state = self._race_state(4, 4)
