@@ -1,6 +1,8 @@
 import { matchesTutorialAction, tutorialNotice } from '../tutorial/round1';
 import { controlledPlayer } from '../devControl';
-import { create } from 'zustand';
+// Selectors pass `shallow` as the hook's second argument; zustand 4.4+ moved that form to
+// 'zustand/traditional' (the plain `create` logs a deprecation warning for it).
+import { createWithEqualityFn } from 'zustand/traditional';
 import type { ClientCommand, GameAction, GameState, HexCoord, PlayerId } from '../types/game';
 import { GaiaWebSocket } from '../api/websocket';
 import { useRoomStore } from './roomStore';
@@ -75,7 +77,7 @@ const initialState = {
   finalResult: null as FinalResult | null,
 };
 
-export const useGameStore = create<GameStore>((set, get) => {
+export const useGameStore = createWithEqualityFn<GameStore>((set, get) => {
   let stopCommandState: (() => void) | null = null;
   const sendCommand = (command: ClientCommand): string | null => {
     const { readOnly, wsClient } = get();

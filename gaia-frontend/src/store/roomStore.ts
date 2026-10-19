@@ -1,5 +1,5 @@
 import { useGameStore } from './gameStore';
-import { create } from 'zustand';
+import { createWithEqualityFn } from 'zustand/traditional';   // see gameStore.ts
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { api, type AiLevel } from '../api/rest';
 import { rememberRoom, type RecentRoom } from './recentRoom';
@@ -68,7 +68,7 @@ const initialState = {
   lastError: null as { code: string; message: string } | null,
 };
 
-export const useRoomStore = create<RoomStore>()(
+export const useRoomStore = createWithEqualityFn<RoomStore>()(
   persist(
     (set, get) => ({
       ...initialState,
