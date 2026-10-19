@@ -31,6 +31,8 @@ def main():
     seats = Counter()          # faction -> seat-games
     first_chance = defaultdict(list)   # faction -> round of the seat's first legal federation
     instead = defaultdict(Counter)     # faction -> move types played while a federation was legal
+    cheapest = defaultdict(list)       # faction -> fewest satellites among the legal federations, per decision
+    used = defaultdict(list)           # faction -> (satellites, buildings, fewest legal) of each formed one
     for game_dir in sorted(args.run_dir.expanduser().glob('pair-*/game-*')):
         result = json.loads((game_dir/'result.json').read_text())
         if not result.get('complete'):
@@ -47,8 +49,15 @@ def main():
             if 'ActionPhase' in str(state['phase']) and snapshot.get('player') is not None:
                 seat = snapshot['player']
                 faction = state['players'][seat]['faction']
-                legal = any(c['action'].get('type') == 'FormFederation' for c in snapshot['candidates'])
-                played = snapshot['candidates'][row['index']]['action'].get('type')
+                feds = [c['action'] for c in snapshot['candidates'] if c['action'].get('type') == 'FormFederation']
+                legal = bool(feds)
+                chosen = snapshot['candidates'][row['index']]['action']
+                played = chosen.get('type')
+                if legal:
+                    cheapest[faction].append(min(len(a.get('satellite_hexes', [])) for a in feds))
+                if played == 'FormFederation':
+                    used[faction].append((len(chosen.get('satellite_hexes', [])), len(chosen.get('hexes', [])),
+                                          min(len(a.get('satellite_hexes', [])) for a in feds)))
                 if legal:
                     chances[(faction, state['round'])] += 1
                     if seat not in seen:
@@ -73,6 +82,14 @@ def main():
         cells = ''.join(f'{chances[(faction, r)]/n:>6.1f}/{formed[(faction, r)]/n:<4.1f}' for r in range(1, 7))
         never = sum(r is None for r in first_chance[faction])
         print(f'{faction:14s}{cells}{never:>8}/{n}')
+    print('\nsatellites: formed federations (mean satellites / buildings / fewest legal at that decision), '
+          'and the fewest-satellite legal federation at every decision with one')
+    for faction in sorted(seats):
+        formed_rows = used[faction]
+        mean = (lambda i: sum(r[i] for r in formed_rows)/len(formed_rows)) if formed_rows else (lambda i: float('nan'))
+        dist = Counter(cheapest[faction])
+        print(f'{faction:14s}formed {len(formed_rows):>3}: sat {mean(0):.1f} / bld {mean(1):.1f} / fewest {mean(2):.1f}'
+              f'   fewest legal: ' + ', '.join(f'{k} sat x{v}' for k, v in sorted(dist.items())))
     print('\nmoves played while a federation was legal (top 6)')
     for faction in sorted(instead):
         print(f'{faction:14s}' + ', '.join(f'{k} {v}' for k, v in instead[faction].most_common(6)))
