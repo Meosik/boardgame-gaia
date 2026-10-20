@@ -99,6 +99,16 @@ def model_unavailable(stdout, stderr):
             and bool(UNAVAILABLE.search(result.get('result') or '')))
 
 
+def failure_text(stdout, stderr, size=300):
+    """The error message of a failed run, one line, for the fallback note."""
+    try:
+        text = json.loads(stdout).get('result') or ''
+    except (ValueError, AttributeError):
+        text = ''
+    text = ' '.join((text or stderr or stdout or '').split())
+    return text[:size].replace('`', "'")
+
+
 def model_label(model_id):
     """'claude-fable-5-1' -> 'Fable 5.1'."""
     match = re.match(r'claude-([a-z]+)-(\d+)-(\d+)', model_id)
@@ -256,7 +266,9 @@ def main():
                 model = primary_model()
                 out, err, code = await claude_run(command(claude, state.get(key) if resume else None, model), prompt)
                 if model != FALLBACK_MODEL and model_unavailable(out, err):
-                    note = f'⚠️ {model_label(model)} 사용 불가 → {model_label(FALLBACK_MODEL)}로 다시 실행\n'
+                    # The original error text too (user 2026-10-20: "한도 초과라는데 웹에서는 0% 썻다는데 버근가?").
+                    note = (f'⚠️ {model_label(model)} 사용 불가 → {model_label(FALLBACK_MODEL)}로 다시 실행\n'
+                            f'원래 오류: `{failure_text(out, err)}`\n')
                     out, err, code = await claude_run(
                         command(claude, state.get(key) if resume else None, FALLBACK_MODEL), prompt)
             reply, session = summarize(out, err, code)
