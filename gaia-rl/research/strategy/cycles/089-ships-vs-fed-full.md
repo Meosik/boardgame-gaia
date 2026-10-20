@@ -72,7 +72,8 @@ summed over rounds, A → B):** Geodens 4.0 / 0.9 → 2.1 / 1.1, Taklons 4.0 / 0
 Xenos 4.8 → 5.8. Reading: **fed_compare does its job — B forms when a federation is legal instead of sitting on it**
 (Terrans' wasted round-6 chances vanish, at the price of more satellites), but the number of federation chances per game
 is small on both arms (≈ 1–2 distinct groups reach power 7). The ceiling is the number of buildable groups, i.e.
-placement.
+placement. Moves played while a federation was legal: **passes A 13 → B 4** (Geodens 4 → 0, Taklons 2 → 2, Terrans
+7 → 2, Xenos 0 → 0); Terrans A's 38 FreeActions → 2.
 
 The rules work in the intended direction but at a size far from the user's PPO gate (≥ 3 per seat): placement, not the
 compare order, holds federations down (cheapest legal federation 7+ satellites most of the time).
