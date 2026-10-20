@@ -3663,6 +3663,14 @@ FACTION_MENU = {
     'Ivits': ('ability', 'tile', 'federation', 'token', 'track'),     # B12: station, then federation or expansion
     'Xenos': ('federation', 'tile', 'token', 'track', 'ability'),     # B15-01: federations early (2.2 a game, 084)
     'Ambas': ('tile', 'federation', 'ability', 'token', 'track'),     # B06: institute swap feeds the federation
+    'Geodens': ('tile', 'ability', 'federation', 'token', 'track'),   # B14 §4: the institute's new planet types are the engine
+    'Gleens': ('tile', 'ability', 'federation', 'token', 'track'),    # B05, G4: natural Gaia colonies, then 3 federations
+    'Nevlas': ('tile', 'ability', 'federation', 'token', 'track'),    # B08: power → knowledge funds the research
+    'Firaks': ('tile', 'ability', 'federation', 'token', 'track'),    # weak-factions.md: lab → institute → downgrade cycle
+    'Lantids': ('tile', 'ability', 'federation', 'token', 'track'),   # B16, L2: cohabit colonies, 3 federations
+    'BalTaks': ('tile', 'track', 'ability', 'federation', 'token'),   # B11-02, B3: Gaia 4 in round 1 before the former QIC
+    'HadschHallas': ('tile', 'track', 'federation', 'token', 'ability'),  # B17-03 Economy 2 first, federation about 3R
+    # Terrans, Taklons and the Lost Fleet factions: MENU_DEFAULT (T5, K3/K4: 3 federations, no ability plan).
 }
 _menu_front = set()      # id() of the goals plan_menu put in front, read by the interleave wrapper
 

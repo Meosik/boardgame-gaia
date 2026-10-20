@@ -1280,6 +1280,8 @@ class OpeningBudgetTests(unittest.TestCase):
 
     def test_plan_menu_orders_the_front_by_the_faction_row(self):
         from four_factions.preparation import Goal
+        for faction, row in tp.FACTION_MENU.items():
+            self.assertEqual(sorted(row), sorted(tp.MENU_DEFAULT), faction)        # every row names each family once
         state = self.track_plan_state()
         state['round_tiles'] = [{'condition': 'BuildMineOnGaia', 'vp_per_unit': 3}]*6
         state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
