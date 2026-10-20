@@ -395,10 +395,58 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(rows['HadschHallas'], full['HadschHallas'])               # weak_factions off
         tp._guide['weak_factions'] = True
         rows = catalog.load_catalog()
-        for faction, labels in tp.OPENING_ONLY.items():
-            self.assertEqual({r.label for r in rows[faction]}, set(labels), faction)   # every label in the table
+        for faction in tp.WEAK_FACTION_PARTS:
+            self.assertEqual({r.label for r in rows[faction]}, set(tp.OPENING_ONLY[faction]), faction)
         self.assertFalse(any('PI' in r.label for r in rows['HadschHallas']))
         self.assertFalse(any(r.label.startswith('1RL') and 'TS' not in r.label for r in rows['Itars']))
+        self.assertEqual(rows['Ambas'], full['Ambas'])                             # source_parts off
+        tp._guide.update(weak_factions=False, source_parts=True)
+        rows = catalog.load_catalog()
+        for faction, labels in tp.OPENING_ONLY.items():
+            if faction in tp.SOURCE_FACTION_PARTS and 'opening_only' in tp.SOURCE_FACTION_PARTS[faction]:
+                self.assertEqual({r.label for r in rows[faction]}, set(labels), faction)   # every label in the table
+        self.assertEqual(rows['HadschHallas'], full['HadschHallas'])
+
+    def test_track_steps_src_replaces_the_guide_order(self):
+        tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+        player = {'faction': 'Nevlas', 'research_tracks': {'economy': 1, 'science': 1}}
+        state = {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        actions = [{'type': 'ResearchAdvance', 'track': 'Economy'}, {'type': 'ResearchAdvance', 'track': 'Science'}]
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': a} for a in actions]}
+        scores = [(9.0, 'eco'), (4.0, 'sci')]
+        self.assertIs(tp.track_steps_scores(None, snapshot, scores), scores)        # Nevlas has no track_steps
+        tp._guide['source_parts'] = True
+        self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [4.0, 9.0])
+        player['research_tracks']['science'] = 3
+        self.assertIs(tp.track_steps_scores(None, snapshot, scores), scores)        # Science 3 reached
+        player.update(faction='Lantids', research_tracks={'economy': 1, 'navigation': 1})
+        actions[1] = {'type': 'ResearchAdvance', 'track': 'Navigation'}
+        scores = [(4.0, 'eco'), (9.0, 'nav')]
+        self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [9.0, 4.0])   # Economy 2 first
+        tp._guide['source_parts'] = False
+        self.assertEqual(tp.track_steps_scores(None, snapshot, scores), scores)     # guide order: Navigation 2
+
+    def test_building_due_puts_the_institute_first_among_big_buildings(self):
+        tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+        player = {'faction': 'Firaks', 'research_tracks': {}, 'structures': [{'kind': 'ResearchLab', 'hex': '0,0'}]}
+        state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        actions = [{'type': 'Upgrade', 'coord': '1,0', 'to': 'ResearchLab'},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': 'PlanetaryInstitute'},
+                   {'type': 'Build', 'coord': '2,0'}]
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': a} for a in actions]}
+        scores = [(8.0, 'rl'), (5.0, 'pi'), (9.0, 'mine')]
+        self.assertIs(tp.building_due_scores(None, snapshot, scores), scores)       # part off
+        tp._guide['source_parts'] = True
+        self.assertEqual([s[0] for s in tp.building_due_scores(None, snapshot, scores)], [5.0, 8.0, 9.0])
+        state['round'] = 1
+        self.assertIs(tp.building_due_scores(None, snapshot, scores), scores)       # before the due round
+        state['round'] = 2
+        player['structures'].append({'kind': 'PlanetaryInstitute', 'hex': '3,0'})
+        self.assertIs(tp.building_due_scores(None, snapshot, scores), scores)       # already built
+        player.update(faction='Itars', structures=[])
+        self.assertIs(tp.building_due_scores(None, snapshot, scores), scores)       # Itars due round 3
+        state['round'] = 3
+        self.assertEqual([s[0] for s in tp.building_due_scores(None, snapshot, scores)], [5.0, 8.0, 9.0])
 
     def test_weak_faction_parts_are_on_only_with_their_flag(self):
         tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup

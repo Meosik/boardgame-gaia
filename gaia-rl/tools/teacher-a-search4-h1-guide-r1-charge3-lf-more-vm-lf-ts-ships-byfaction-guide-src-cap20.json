@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide (hard, 4 comparisons, 20 s cap) plus SOURCE_FACTION_PARTS, the source conflicts resolved in research/strategy/conflicts/ (user 2026-10-20 \"아직 테스트 하지 않은 종족들의 부품을 구현하거나, 미구현 부분 해결해\"): opening_only — Ambas 1RL+4M / 1AC+2M / 1RL+5M / 1RL+6M, Bescods 1RL+4M / 1RL+5M / 2RL+1M, Gleens 1RL+4M / 6M / 7M, Nevlas 1PI+1RL+1M / 1PI+1RL+2M / 1PI+1TS+2M, Lantids 1PI+3M..6M; track_steps_src — Nevlas Science 3, Lantids Economy 2, Ivits Science 2 in round 1 (PG order); building_due — Firaks institute by round 2, Itars by round 3 (guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

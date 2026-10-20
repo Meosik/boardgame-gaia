@@ -1,0 +1,13 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"아직 테스트 하지 않은 종족들의 부품을 구현하거나, 미구현 부분 해결해\"): 자료 충돌 정리(research/strategy/conflicts/)에서 결론 난 부품의 단독 효과. A = ships_byfaction_guide, B = ships_byfaction_guide_src — opening_only(앰바스 1RL+4M·1AC+2M·1RL+5M·1RL+6M, 매드 안드로이드 1RL+4M·1RL+5M·2RL+1M, 글린 1RL+4M·6M·7M, 네블라 1PI+1RL+1M·1PI+1RL+2M·1PI+1TS+2M, 란티다 1PI+3~6M) + track_steps_src(PG 순서: 네블라 1R 과학 3, 란티다 경제 2 먼저, 하이브 과학 2 먼저 — 실험 교사의 B 블로그 순서와 반대였던 N1·L1·I1) + building_due(파이락 2R·아이타 3R까지 의회를 대형건물 후보 맨 앞). 쿼텟 a(란티다·하이브·파이락·네블라) 6 + b(매드 안드로이드·글린·아이타·발타크) 6 + c(앰바스) 4 = 16쌍, 4R 시작 종료(≈ 3.5시간). 판정: 1–3R 충전, 종족별(발타크·하드쉬 할라·테란·제노스 = 같은 코드 드리프트 잣대). 함께 볼 것: 발동(upgrade_counts 1R 건물·의회 라운드, research_counts 1R 트랙), 결정 시간, 오류. 나쁘면 HANDOFF 1장 판단 순서.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-src-cap20.json",
+  "seeds": [
+    "quartet-a-28079", "quartet-a-28757", "quartet-a-29744", "quartet-a-30904", "quartet-a-36030", "quartet-a-37776",
+    "quartet-b-56281", "quartet-b-56363", "quartet-b-57506", "quartet-b-58554", "quartet-b-58796", "quartet-b-59242",
+    "quartet-c-52367", "quartet-c-55265", "quartet-c-55522", "quartet-c-57268"
+  ],
+  "comparisons": 4,
+  "stop_round": 3
+}

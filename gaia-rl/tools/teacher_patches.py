@@ -180,6 +180,23 @@ WEAK_FACTION_PARTS = {
     'Firaks': frozenset({'opening_only'}),
 }
 
+# Source parts (user 2026-10-20 "아직 테스트 하지 않은 종족들의 부품을 구현하거나, 미구현 부분 해결해"): what
+# research/strategy/conflicts/ resolved for the other base factions — the BGG openings the sources agree on
+# (opening_only), the PG track orders that the experiment teacher had reversed (track_steps_src: Nevlas
+# Science, Lantids Economy 2, Ivits Science first) and an institute due round (building_due: Firaks, Itars).
+# On only in ..._ships_byfaction_guide_src, on top of GUIDE_FACTION_PARTS (not weak_factions), so 092 and
+# 093 measure separate sets. Order and scope only.
+SOURCE_FACTION_PARTS = {
+    'Ambas': frozenset({'opening_only'}),
+    'Bescods': frozenset({'opening_only'}),
+    'Gleens': frozenset({'opening_only'}),
+    'Nevlas': frozenset({'opening_only', 'track_steps_src'}),
+    'Lantids': frozenset({'opening_only', 'track_steps_src'}),
+    'Ivits': frozenset({'track_steps_src'}),
+    'Firaks': frozenset({'building_due'}),
+    'Itars': frozenset({'building_due'}),
+}
+
 
 def _faction_parts(faction):
     parts = set(BASE_FACTION_PARTS.get(faction, ()))
@@ -189,6 +206,8 @@ def _faction_parts(faction):
         parts.update(GUIDE_FACTION_PARTS.get(faction, ()))
     if _guide['weak_factions']:
         parts.update(WEAK_FACTION_PARTS.get(faction, ()))
+    if _guide['source_parts']:
+        parts.update(SOURCE_FACTION_PARTS.get(faction, ()))
     if _guide['fed']:
         parts.update(FED_PARTS)
     if _guide['tokens']:
@@ -319,6 +338,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'byfaction': False,           # True: ..._ships_byfaction (CANDIDATE_FACTION_PARTS on)
           'faction_guide': False,       # True: ..._ships_byfaction_guide (GUIDE_FACTION_PARTS on as well)
           'weak_factions': False,       # True: ..._ships_byfaction_guide_weak (WEAK_FACTION_PARTS on as well)
+          'source_parts': False,        # True: ..._ships_byfaction_guide_src (SOURCE_FACTION_PARTS on as well)
           'fed': False,                 # True: ..._ships_fed (fed_compare + fed_cluster for every faction)
           'tokens': False,              # True: ..._ships_tokens (token_compare + track_race + race_prune)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
@@ -2095,6 +2115,13 @@ TRACK_STEPS = {'Gleens': ((1, 'navigation', 2),),
                'Lantids': ((1, 'navigation', 2),),
                'HadschHallas': ((1, 'economy', 2),),
                'Darkanians': ((1, 'economy', 2),)}
+# track_steps_src (SOURCE_FACTION_PARTS): the PG order where conflicts/base-factions.md found the B blog
+# order in TRACK_STEPS against a "상" podcast source; replaces the faction's TRACK_STEPS entry. Nevlas
+# Science 3 in round 1, Economy first is "a trap" (N1: PG10-S18·S19); Lantids Economy 2 first, round-1
+# Navigation "completely wrong" (L1: PG06-S04·S12·S25, PG25-S07 LF); Ivits Science first (I1: PG22-S14·S16).
+TRACK_STEPS_SRC = {'Nevlas': ((1, 'science', 3),),
+                   'Lantids': ((1, 'economy', 2),),
+                   'Ivits': ((1, 'science', 2),)}
 TRACK_STEPS_LAST_ROUND = 5
 TRACK_NAMES = {key: name for name, key in TRACK_KEYS.items()}
 
@@ -2105,10 +2132,12 @@ def track_steps_scores(env, snapshot, scores):
     if actor is None or 'ActionPhase' not in state['phase'] or state['round'] > TRACK_STEPS_LAST_ROUND:
         return scores
     player = state['players'][actor]
-    if not _part(player, 'track_steps'):
+    src = _part(player, 'track_steps_src') and player['faction'] in TRACK_STEPS_SRC
+    if not (src or _part(player, 'track_steps')):
         return scores
     levels = player.get('research_tracks') or {}
-    wanted = [TRACK_NAMES[t] for start, t, level in TRACK_STEPS.get(player['faction'], ())
+    table = TRACK_STEPS_SRC if src else TRACK_STEPS
+    wanted = [TRACK_NAMES[t] for start, t, level in table.get(player['faction'], ())
               if start <= state['round'] and levels.get(t, 0) < level]
     if not wanted:
         return scores
@@ -2189,6 +2218,48 @@ def building_limits_scores(env, snapshot, scores):
     return lifted
 
 
+# building_due (SOURCE_FACTION_PARTS): from the due round, while the faction has no such building, an upgrade to
+# it leads the other big-building upgrades (research lab, academy) — "2R 시작 때 의회가 없으면 대형건물 후보 중
+# 의회를 맨 앞에" (conflicts/weak-factions.md). Firaks institute by round 2 (PG17-S16, BGGO1-S20, B19-S51,
+# LF4-06), Itars by round 3 (B19-S62, B07-S21, PG23-S08, MISC1-S34). Mines, research and actions keep their
+# place (order among upgrades only).
+BUILDING_DUE = {'Firaks': ('PlanetaryInstitute', 2),
+                'Itars': ('PlanetaryInstitute', 3)}
+BIG_BUILDINGS = frozenset({'PlanetaryInstitute', 'ResearchLab', 'Academy'})
+
+
+def _structure_kind(structure):
+    kind = structure.get('kind')
+    return next(iter(kind)) if isinstance(kind, dict) else kind
+
+
+def building_due_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    due = BUILDING_DUE.get(player['faction'])
+    if due is None or not _part(player, 'building_due') or state['round'] < due[1]:
+        return scores
+    building = due[0]
+    if any(_structure_kind(s) == building for s in player['structures']):
+        return scores
+    candidates = snapshot['candidates']
+    big = [i for i in range(len(candidates)) if not blocked(scores[i])
+           and _upgrade_target(candidates[i]['action']) in BIG_BUILDINGS]
+    lead = [i for i in big if _upgrade_target(candidates[i]['action']) == building]
+    if not lead or len(big) < 2:
+        return scores
+    best = max(big, key=lambda i: scores[i][0])
+    if best in lead:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(scores), max(lead, key=lambda i: scores[i][0]), best,
+          f'{player["faction"]} {building} due by round {due[1]} (building_due)')
+    return lifted
+
+
 # opening_only: the round-1 openings a faction is held to. The BGG catalog rows are the targets the
 # search compares and the forecast it keeps (preparation.choose → select_forecast picks the best
 # completed forecast among them, so the guide order alone did not hold: 086 BalTaks 1RL, 0 academies).
@@ -2202,7 +2273,17 @@ def building_limits_scores(env, snapshot, scores):
 OPENING_ONLY = {'BalTaks': ('1AC+1M', '1AC+2M'),
                 'HadschHallas': ('1AC+2M', '1RL+4M', '1AC+1M', '1RL+5M'),
                 'Itars': ('1AC+1M', '1AC+2M', '1PI+2M', '1PI+1M'),
-                'Firaks': ('1PI+1TS', '1RL+1TS+2M', '1RL+1TS+1M')}
+                'Firaks': ('1PI+1TS', '1RL+1TS+2M', '1RL+1TS+1M'),
+                # source_parts (conflicts/base-factions.md): Ambas lab with 4-6 mines or academy, not lab + trading
+                # station (A1: RL+5M 159, RL+6M 169, AC+2M 153 vs RL+TS+2M 142); Bescods lab with 4-5 mines or
+                # 2 labs (M1: 145, 150, 145 vs RL+TS+2M 136); Gleens mines only or lab + 4 mines (G1: 6M 151,
+                # 7M 158, RL+4M 147); Nevlas institute + lab, or + trading station (N2: 154, 168, PI+TS+2M 148);
+                # Lantids institute with 3-6 mines (agreement: PI 142 vs 134, PI+4M 151, PI+5M 162).
+                'Ambas': ('1RL+4M', '1AC+2M', '1RL+5M', '1RL+6M'),
+                'Bescods': ('1RL+4M', '1RL+5M', '2RL+1M'),
+                'Gleens': ('1RL+4M', '6M', '7M'),
+                'Nevlas': ('1PI+1RL+1M', '1PI+1RL+2M', '1PI+1TS+2M'),
+                'Lantids': ('1PI+3M', '1PI+4M', '1PI+5M', '1PI+6M')}
 
 
 def install_opening_only():
@@ -2390,6 +2471,16 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_weak(seed, **kwargs)
     HadschHallas, Itars and Firaks and HadschHallas' no institute before round 3 (088's lowest charges)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs)
     _guide['weak_factions'] = True
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src(seed, **kwargs):
+    """Teacher factory: ..._ships_byfaction_guide plus SOURCE_FACTION_PARTS — the openings, PG track orders and
+    institute due rounds resolved in research/strategy/conflicts/ for Ambas, Bescods, Gleens, Nevlas, Lantids,
+    Ivits, Firaks and Itars."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs)
+    _guide['source_parts'] = True
+    _wrap_rank('_building_due', building_due_scores)
     return teacher
 
 
