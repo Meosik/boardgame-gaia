@@ -1,0 +1,14 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_menu (plan_menu, see ...-ships-menu-cap20.json) with the lab measurement budget: 4 comparisons, 60 s cap, comparisons in 4 processes (HANDOFF E55).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_menu",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 60,
+  "parallel": 4
+}

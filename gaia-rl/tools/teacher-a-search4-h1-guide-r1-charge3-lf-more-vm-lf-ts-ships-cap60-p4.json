@@ -1,0 +1,14 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships — the deployment stack with the lab measurement budget: 4 comparisons, 60 s cap, and the decision's four comparisons in 4 processes (tools/parallel_search.py, same decisions, 024): one active seat per game x 4 games = the notebook's 16 cores (HANDOFF E55). Same rules and values as ...-ships-cap20.json.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 60,
+  "parallel": 4
+}
