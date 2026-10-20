@@ -216,7 +216,7 @@ RESOLVED_FACTION_PARTS = {
     'Itars': frozenset({'track_by_opening'}),
     # Third batch (user 2026-10-20 "미구현 항목들 개선해"): BalTaks' fixed academy is the credit (QIC) one (B2:
     # PG16-T26, PG02-S05, PG01-S12), HadschHallas keeps the no-institute rule of rounds 1-2 with the LF
-    # exception (weak-factions.md 2: SH04-S23, H06 — the Rebellion ship within reach and no rival closer).
+    # exception (weak-factions.md 2: SH04-S23, H06 — the Rebellion in our reach, no rival able to press its 3 QIC).
     'BalTaks': frozenset({'qic_academy'}),
     'HadschHallas': frozenset({'building_limits', 'institute_rebellion'}),
 }
@@ -2311,20 +2311,24 @@ BUILDING_LIMITS = {'Firaks': (('Academy', 6),),
                    'HadschHallas': (('PlanetaryInstitute', 2),)}
 
 
+REBELLION = 1                # ship id in explored_ships (engine spaceship_id_to_ship_id)
+REBELLION_TECH_QIC = 3       # engine REBELLION_GAIN_TECH_TILE_QIC_COST (once a round for everyone)
+
+
 def rebellion_reachable(snapshot):
-    """The Rebellion ship tile is within SHIP_SETUP_RANGE of our buildings and no rival building is closer to it
-    (the LF exception's "3 QIC 확정" read from facts: SH04-S23, H06; the contest itself is not simulated)."""
+    """The LF exception's "3 QIC 확정" read from facts (SH04-S23, H06; user 2026-10-20 "일단 그렇게 해"): we have
+    explored the Rebellion or its tile is within SHIP_SETUP_RANGE of our buildings, and no rival can press its
+    3-QIC action now — explored the Rebellion and holding 3 QIC (engine.rs validate_rebellion_gain_tech_tile).
+    Next round's income and the turn order are not predicted."""
     from strategy_teacher import distance
     state, actor = snapshot['state'], snapshot['player']
+    player = state['players'][actor]
     at = (state['board'].get('spaceship_tiles') or {}).get('Rebellion')
-    if at is None:
+    if REBELLION not in (player.get('explored_ships') or ()) and (at is None or not any(
+            distance(s['hex'], at) <= SHIP_SETUP_RANGE for s in player['structures'])):
         return False
-    ours = min((distance(s['hex'], at) for s in state['players'][actor]['structures']), default=None)
-    if ours is None or ours > SHIP_SETUP_RANGE:
-        return False
-    theirs = min((distance(s['hex'], at) for i, p in enumerate(state['players']) if i != actor
-                  for s in p['structures']), default=SHIP_SETUP_RANGE+1)
-    return ours <= theirs
+    return not any(REBELLION in (p.get('explored_ships') or ()) and p['resources']['qic'] >= REBELLION_TECH_QIC
+                   for i, p in enumerate(state['players']) if i != actor)
 
 
 def _upgrade_target(action):

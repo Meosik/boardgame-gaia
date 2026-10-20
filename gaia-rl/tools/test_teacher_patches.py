@@ -539,9 +539,12 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(fixed.target_kind('BalTaks'), {'Academy': 'Qic'})
         self.assertEqual(fixed.target_kind('Xenos'), {'Academy': 'Science'})
         self.assertEqual(fixed.target_kind('Terrans'), 'PlanetaryInstitute')
-        # HadschHallas: no institute in rounds 1-2 unless the Rebellion ship is in reach and no rival is closer.
-        player = {'faction': 'HadschHallas', 'research_tracks': {}, 'structures': [{'kind': 'Mine', 'hex': '0,0'}]}
-        rival = {'faction': 'Terrans', 'structures': [{'kind': 'Mine', 'hex': '8,0'}]}
+        # HadschHallas: no institute in rounds 1-2 unless the Rebellion is ours to reach and no rival (explored,
+        # 3 QIC) can press its 3-QIC action now.
+        player = {'faction': 'HadschHallas', 'research_tracks': {}, 'structures': [{'kind': 'Mine', 'hex': '0,0'}],
+                  'explored_ships': [], 'resources': {'qic': 1}}
+        rival = {'faction': 'Terrans', 'structures': [{'kind': 'Mine', 'hex': '8,0'}], 'explored_ships': [],
+                 'resources': {'qic': 3}}
         state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player, rival],
                  'board': {'spaceship_tiles': {}}}
         actions = [{'type': 'Upgrade', 'coord': '0,0', 'to': {'Academy': 'Science'}},
@@ -551,13 +554,17 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertFalse(tp.rebellion_reachable(snapshot))
         self.assertEqual([s[0] for s in tp.building_limits_scores(None, snapshot, scores)], [9.0, 4.0])
         state['board']['spaceship_tiles'] = {'Rebellion': '2,0'}
-        self.assertTrue(tp.rebellion_reachable(snapshot))
+        self.assertTrue(tp.rebellion_reachable(snapshot))                           # rival not explored
         self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # exception: institute allowed
-        rival['structures'] = [{'kind': 'Mine', 'hex': '3,0'}]                     # the rival is closer to the ship
+        rival['explored_ships'] = [tp.REBELLION]                                    # explored and 3 QIC: a rival
         self.assertFalse(tp.rebellion_reachable(snapshot))
-        rival['structures'] = []
-        state['board']['spaceship_tiles'] = {'Rebellion': '6,0'}                   # out of range
+        rival['resources']['qic'] = 2                                               # explored but short of QIC
+        self.assertTrue(tp.rebellion_reachable(snapshot))
+        state['board']['spaceship_tiles'] = {'Rebellion': '6,0'}                   # out of range, not explored
         self.assertFalse(tp.rebellion_reachable(snapshot))
+        player['explored_ships'] = [tp.REBELLION]                                   # already on the ship
+        self.assertTrue(tp.rebellion_reachable(snapshot))
+        player['explored_ships'] = []
         tp._guide['resolved_parts'] = False
         self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # no building_limits without a flag
 
