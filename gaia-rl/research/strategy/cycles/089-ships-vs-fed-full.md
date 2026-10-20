@@ -59,6 +59,13 @@ was 7 satellites at 70 of 119 decisions; the move played instead was mostly a Fr
 Geodens 4, Taklons 4, Terrans 9. With both arms pooled, a B-only gain shows at half size. No sign of a large rise.
 `federation_chances.py --by-arm` was added to split A and B.
 
+**End state by arm (`endgame_tech_counts.py`, owner run, 6 seat-games per cell; A → B):** federations Geodens
+0.83 → 1.00, Taklons 0.83 → 1.00, Terrans 0.83 → 1.00, Xenos 2.33 → 2.33 — **one extra federation per six seat-games**
+on three factions, none on Xenos. Advanced tiles Terrans 0 → 0.33, Xenos 0.17 → 0.33, Geodens 0.17 → 0; level 5
+unchanged (0.50–1.00); green tokens left Geodens 0.17 → 0.50, Taklons 0 → 0.33, Terrans 0.33 → 0.17, Xenos 1.17 → 1.00.
+The rules work in the intended direction but at a size far from the user's PPO gate (≥ 3 per seat): placement, not the
+compare order, holds federations down (cheapest legal federation 7+ satellites most of the time).
+
 ## Reading
 
 - **Verdict (pre-registered, rounds 1–3 charges): not shown.** +4.4 with CI [−8.8, +17.7]; no faction's CI excludes 0.
