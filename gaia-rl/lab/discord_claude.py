@@ -294,16 +294,18 @@ def main():
                 # A resumed Fable run goes without --fallback-model (2026-10-20 "왜 아직 opus지?": the replies kept
                 # coming from Opus with no warning, i.e. the CLI fell back by itself), so its failure reaches the
                 # new-session retry below instead of turning into a silent Opus turn.
-                out, err, code = await claude_run(command(claude, session_id, model, fallback=not session_id), prompt)
+                # A new session goes without it too (2026-10-20 "왜 아직 opus인건데": a fresh turn still came from
+                # Opus, the CLI's own fallback), so only the visible fallback below can switch to Opus.
+                out, err, code = await claude_run(command(claude, session_id, model, fallback=False), prompt)
                 if model != FALLBACK_MODEL and session_id and (model_unavailable(out, err) or failed_early(out, code)):
                     # User 2026-10-20 "너가 바꿀수 없어?": Fable worked from the terminal while the resumed channel
                     # session failed, so try Fable once in a new session before falling back to Opus.
                     print(f'{model} failed on resume: {failure_text(out, err)}', flush=True)
-                    fresh = await claude_run(command(claude, None, model), FRESH_PREFIX + prompt)
+                    fresh = await claude_run(command(claude, None, model, fallback=False), FRESH_PREFIX + prompt)
                     if not model_unavailable(*fresh[:2]):
                         note = f'🔄 이전 대화를 {model_label(model)}로 이을 수 없어 새 대화로 실행 (맥락은 HANDOFF에서)\n'
                         out, err, code = fresh
-                if model != FALLBACK_MODEL and (model_unavailable(out, err) or (session_id and failed_early(out, code))):
+                if model != FALLBACK_MODEL and (model_unavailable(out, err) or failed_early(out, code)):
                     # The original error text too (user 2026-10-20: "한도 초과라는데 웹에서는 0% 썻다는데 버근가?").
                     note = (f'⚠️ {model_label(model)} 사용 불가 → {model_label(FALLBACK_MODEL)}로 다시 실행\n'
                             f'원래 오류: `{failure_text(out, err)}`\n')
