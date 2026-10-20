@@ -1,0 +1,22 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"테스트 오래 걸리는데 미리 만드는거 어때\"; 091 아이타 −63.4 6/6 = tile_prefs 범위 오류, HANDOFF E35 (ㄱ)+(ㄴ)): 091과 같은 설계 — A = ships_byfaction, B = ships_byfaction_guide — 에서 tile_prefs 범위를 고친 뒤 재측정. 수정: 아이타 타일 목록(6·8·4·10·7, B7-01 \"의회로 가져갈 기술\")은 의회 가이아 단계 타일(ItarsGaiaTechTile)에만, 매드 안드로이드 타일 6(B13-04 연구소 2개 뒤 의회·아카데미 단계)은 의회·아카데미 업그레이드 타일에만; 두 종족의 연구소 타일은 탐색에 맡김. 쿼텟 b 091과 같은 6시드(아이타 −63 재현 여부 = 수정 확인) + 091에 쓰지 않은 6시드(seeds-quartet-b.txt 앞 6개, 083·086·088에서 다른 비교에 쓰임; 발타크 아카데미 스타트 +15.5 5/6의 두 번째 표본, 091과 합산 12쌍 판정), 12쌍 4R 시작 종료(≈ 1.5시간). 판정: 사전 규칙대로 1–3라운드 충전량, 종족별 — 아이타는 0 근처로 돌아와야 하고(아니면 ③ 다른 원인), 발타크는 12쌍 합산. 함께 볼 것: tile_counts(아이타·매드 안드로이드 타일 2·5 복귀, 타일 6 횟수), research_counts·upgrade_counts(발타크 1R 아카데미), 결정 시간, 오류.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap20.json",
+  "seeds": [
+    "quartet-b-22815",
+    "quartet-b-23084",
+    "quartet-b-26518",
+    "quartet-b-32942",
+    "quartet-b-34244",
+    "quartet-b-42996",
+    "quartet-b-5187",
+    "quartet-b-5744",
+    "quartet-b-6886",
+    "quartet-b-7905",
+    "quartet-b-10311",
+    "quartet-b-10743"
+  ],
+  "comparisons": 4,
+  "stop_round": 3
+}

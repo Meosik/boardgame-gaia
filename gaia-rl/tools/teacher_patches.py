@@ -2607,16 +2607,39 @@ def install_fixed_academy():
 #   BalTaks: prefer 3, 5, 10 (B11-03 "추천 기술 4돈·1지식1돈·4충전"), avoid 2.  Itars: prefer 6, 8, 4, 10, 7
 #   (B7-01).  Ivits: prefer 10, then 4 or 9 (B12-01).  Lantids: prefer 3, avoid 10 (B16-01).
 #   Geodens: prefer 10 in rounds 1-3, 9 from round 4 (B14-01).
+# Scope (091: Itars −63.4 charges, 6/6 — the income tiles 2 and 5 never taken; HANDOFF E35): a guide names
+# the tiles for one way of taking them. Itars' list is "의회로 가져갈 기술" (B7-01) — the institute's Gaia-phase
+# tile (ItarsGaiaTechTile), so 'only': 'ability'; Bescods' big-building tile comes with the institute or
+# academy after two labs (B13-04 "연구소 2개 → 행성 의회와 지식 아카데미(4티어 기술)"), so 'only': 'big' (an
+# upgrade to the institute or an academy). The lab and academy tiles of those two factions stay the search's.
 TILE_PREFS = {
     'HadschHallas': {'prefer': (2,), 'avoid': (3,)},
-    'Bescods': {'prefer': (6,), 'avoid': (3,)},
+    'Bescods': {'prefer': (6,), 'avoid': (3,), 'only': 'big'},
     'Ambas': {'prefer': (), 'avoid': (2,)},
     'BalTaks': {'prefer': (3, 5, 10), 'avoid': (2,)},
-    'Itars': {'prefer': (6, 8, 4, 10, 7), 'avoid': ()},
+    'Itars': {'prefer': (6, 8, 4, 10, 7), 'avoid': (), 'only': 'ability'},
     'Ivits': {'prefer': (10, 4, 9), 'avoid': ()},
     'Lantids': {'prefer': (3,), 'avoid': (10,)},
     'Geodens': {'prefer': (10,), 'avoid': (), 'late_prefer': (9,), 'late_from': 4},
 }
+
+
+def _tile_choice(action, scope=None):
+    """(variant group key, standard tile id) when `action` takes a standard tile inside `scope` — None:
+    any lab / academy / institute tile choice; 'big': an upgrade to the institute or an academy;
+    'ability': the Itars institute's Gaia-phase tile (ItarsGaiaTechTile) — else None."""
+    if scope == 'ability':
+        if action.get('type') != 'ItarsGaiaTechTile':
+            return None
+        return json.dumps({k: v for k, v in action.items() if k != 'tile'}, sort_keys=True), action.get('tile')
+    choice = action.get('tech_tile_choice')
+    if not isinstance(choice, dict) or choice.get('kind') != 'Standard':
+        return None
+    if scope == 'big':
+        to = action.get('to')
+        if action.get('type') != 'Upgrade' or not (to == 'PlanetaryInstitute' or isinstance(to, dict) and 'Academy' in to):
+            return None
+    return json.dumps({k: v for k, v in action.items() if k != 'tech_tile_choice'}, sort_keys=True), choice.get('tile')
 
 
 def tile_prefs_scores(env, snapshot, scores):
@@ -2632,15 +2655,15 @@ def tile_prefs_scores(env, snapshot, scores):
     if prefs.get('late_from') and state['round'] >= prefs['late_from']:
         prefer = prefs['late_prefer']
     candidates = snapshot['candidates']
-    groups = {}
+    groups, tiles = {}, {}
     for i, c in enumerate(candidates):
-        choice = c['action'].get('tech_tile_choice')
-        if blocked(scores[i]) or not isinstance(choice, dict) or choice.get('kind') != 'Standard':
+        found = None if blocked(scores[i]) else _tile_choice(c['action'], prefs.get('only'))
+        if found is None:
             continue
-        key = json.dumps({k: v for k, v in c['action'].items() if k != 'tech_tile_choice'}, sort_keys=True)
+        key, tiles[i] = found
         groups.setdefault(key, []).append(i)
     lifted = list(scores)
-    tile = lambda i: candidates[i]['action']['tech_tile_choice'].get('tile')
+    tile = tiles.get
     for members in groups.values():
         if len({tile(i) for i in members}) < 2:
             continue
@@ -2655,7 +2678,7 @@ def tile_prefs_scores(env, snapshot, scores):
             if allowed:
                 _swap(lifted, list(lifted), max(allowed, key=lambda i: lifted[i][0]), top,
                       f'{player["faction"]} avoids tile {tile(top)} (tile_prefs)')
-    return lifted
+    return lifted if lifted != scores else scores
 
 
 # niche_tracks: a track the others leave alone (user 2026-10-20 "하드쉬나 제노스 자료중에 남들이 안가는 테크 가라는

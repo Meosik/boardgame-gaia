@@ -920,6 +920,21 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [4.0, 9.0, 6.0, 1.0])
         player['faction'] = 'Terrans'                                           # no table entry: untouched
         self.assertIs(tp.tile_prefs_scores(None, snapshot, scores), scores)
+        # Scope (091): Itars' list is for the institute's Gaia-phase tile only — lab tiles stay the search's.
+        player['faction'] = 'Itars'
+        snapshot['candidates'] = [{'action': up(5)}, {'action': up(6)}, {'action': {'type': 'Pass'}}]
+        scores = [(9.0, 't5'), (4.0, 't6'), (1.0, 'pass')]
+        self.assertIs(tp.tile_prefs_scores(None, snapshot, scores), scores)
+        ability = lambda tile: {'type': 'ItarsGaiaTechTile', 'tile': tile, 'track': 'GaiaProject'}
+        snapshot['candidates'] = [{'action': ability(5)}, {'action': ability(6)}, {'action': {'type': 'Pass'}}]
+        self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [4.0, 9.0, 1.0])
+        # Bescods' big-building tile comes with the institute or academy, not the first lab.
+        player['faction'] = 'Bescods'
+        snapshot['candidates'] = [{'action': up(2)}, {'action': up(6)}, {'action': {'type': 'Pass'}}]
+        self.assertIs(tp.tile_prefs_scores(None, snapshot, scores), scores)
+        big = lambda tile: {**up(tile), 'to': {'Academy': 'Science'}}
+        snapshot['candidates'] = [{'action': big(2)}, {'action': big(6)}, {'action': {'type': 'Pass'}}]
+        self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [4.0, 9.0, 1.0])
 
     def test_niche_tracks_for_hadsch_hallas_and_xenos(self):
         tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
