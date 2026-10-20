@@ -126,3 +126,26 @@ opening lists not firing on either arm, 094 would measure the science condition 
 
 Bot recommendation: (ㄷ) now as a bot turn, (ㄱ) as the next lab slot after 096 / 098, (ㄴ) before any opening_only
 re-run (also covers 092's HadschHallas list).
+
+## Follow-up (user 2026-10-21 "그렇게 해")
+
+- (ㄷ) **Lantids −122 explained** (`explain_ab_decisions.py --arm B --steps 24 32 43`, `list_decisions.py --seat 1`
+  on both games of pair-000): setup (−1,−1 · 1,−6, booster 5) and the first two round-1 moves (trading station,
+  mine at −1,1) are identical in both arms. The split is step 32: **B upgrades to the institute** — the PI+3M
+  forecast had completed (value 214 with 2 mines; status `fallback-no-verified-route`) and value-max took it because
+  the cut list held nothing else — while A upgrades the same site to a research lab (tile 3), builds two more mines,
+  Navigation, Eclipse. B then plays Economy (track_steps_src; knowledge only) and passes; **in round 2 B builds
+  nothing** (Eclipse exploration and free actions — the institute's 4 ore 6 credits on a two-mine income), and only
+  in round 3 trading station, lab, two mines, a federation. So the loss is ③ implementation of the opening list,
+  not the track order: cutting the catalog to institute openings lets value-max pick an institute forecast whose
+  target (3 mines) was not reached, and removes the lab route the search rated higher — the same shape as 092's
+  Firaks (secondary plans deleted).
+- (ㄱ) implemented: flag `source_tracks`, `SOURCE_TRACK_PARTS`, factory `..._ships_byfaction_guide_srctracks`
+  (track_steps_src only; opening_only and building_due off), spec `...-byfaction-guide-srctracks-cap20.json`, test
+  extended (47 pass). **Queued 098b `098b-guide-vs-srctracks-4r`**: guide vs srctracks, quartet a, 093's six seeds
+  + six new (five unused + quartet-a-37936 moved from the held 094) = 12 pairs, 4R.
+- (ㄴ) **Queued 098a `098a-src-cap60-opening-smoke`**: guide vs src on new cap60-p2 specs (60 s cap, 2 comparison
+  processes, same rules), one seed per quartet a · b · c, stop at the start of round 2, no verdict — read
+  `plan_labels.py --prefix BGG-R1-` on the B arm against 093's counts (Ambas 3, Bescods 16, Nevlas 0, Lantids 14,
+  Gleens 60).
+- Lab order: 096 → 098 → 098a → 098b → 099 → 101. 094 stays on hold (five quartet-a seeds left; redesign after 098b).

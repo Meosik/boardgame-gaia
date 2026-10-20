@@ -1,0 +1,14 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide with the lab measurement budget: 4 comparisons, 60 s cap, comparisons in 2 processes (tools/parallel_search.py, same decisions, 024). Same rules and values as ...-byfaction-guide-cap20.json; made for the opening-forecast completion smoke (HANDOFF E59 (ㄴ)).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 60,
+  "parallel": 2
+}

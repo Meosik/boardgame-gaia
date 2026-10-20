@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide (hard, 4 comparisons, 20 s cap) plus the track_steps_src entries of SOURCE_FACTION_PARTS only — Nevlas Science 3, Lantids Economy 2, Ivits Science 2 in round 1 (the PG order, conflicts N1 · L1 · I1). 093's opening_only lists and building_due are off, so the track order is measured alone (cycles/093, HANDOFF E59 (ㄱ); guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_srctracks).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_srctracks",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

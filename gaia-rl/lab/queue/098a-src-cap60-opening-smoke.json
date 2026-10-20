@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-21 \"그렇게 해\", HANDOFF E59 (ㄴ)): 092·093에서 opening_only 목록(하드쉬 할라 AC/RL+4~5M, 앰바스 RL+4~6M·AC+2M, 매드 안드로이드 RL+4~5M·2RL+1M, 네블라 PI+RL·PI+TS+2M, 란티다 PI+3~6M)의 예보가 20초 탐색에서 완성되지 않아 B팔이 current-choice/local-baseline으로 1R을 뒀다(네블라 BGG 선택 0회, 앰바스 3회). 상한 60초(+비교 병렬 2)면 완성되는지 보는 스모크: A = guide cap60-p2, B = src cap60-p2(같은 규칙, 상한만 60초), 쿼텟 a·b·c 1시드씩 3쌍, 2라운드 시작에서 종료(≈ 30–40분). 판정 없음(충전은 안 읽음). 볼 것: plan_labels --prefix BGG-R1- 로 B팔 앰바스·매드 안드로이드·네블라·란티다·글린의 1R BGG 선택 수(093 cap20: 3·16·0·14·60)와 decisions의 completed_comparisons, 결정 시간(셋업·1R 최대). 완성되면 opening_only 종족을 cap60 양팔로 재측정(092 하드쉬 할라 포함), 안 되면 fixed_academy식 코치 경로(엔지니어링, 사용자 결정).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap60-p2.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-src-cap60-p2.json",
+  "seeds": ["quartet-a-28079", "quartet-b-56281", "quartet-c-52367"],
+  "comparisons": 4,
+  "stop_round": 1
+}

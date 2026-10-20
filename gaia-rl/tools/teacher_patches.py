@@ -186,6 +186,11 @@ WEAK_FACTION_PARTS = {
 # Science, Lantids Economy 2, Ivits Science first) and an institute due round (building_due: Firaks, Itars).
 # On only in ..._ships_byfaction_guide_src, on top of GUIDE_FACTION_PARTS (not weak_factions), so 092 and
 # 093 measure separate sets. Order and scope only.
+# 093 (cycles/093-guide-vs-src-4r.md): the opening lists fired fully only for Gleens (big-mine / two-building
+# forecasts rarely complete in 20 s), track_steps_src fired in all three factions, Nevlas +11.2 (5 of 6 pairs).
+# `source_tracks` (..._ships_byfaction_guide_srctracks) turns on track_steps_src alone, so the track order is
+# judged without the opening lists (user 2026-10-21 "그렇게 해", E59 (ㄱ)).
+SOURCE_TRACK_PARTS = frozenset({'track_steps_src'})
 SOURCE_FACTION_PARTS = {
     'Ambas': frozenset({'opening_only'}),
     'Bescods': frozenset({'opening_only'}),
@@ -236,6 +241,8 @@ def _faction_parts(faction):
         parts.update(WEAK_FACTION_PARTS.get(faction, ()))
     if _guide['source_parts']:
         parts.update(SOURCE_FACTION_PARTS.get(faction, ()))
+    elif _guide['source_tracks']:
+        parts.update(SOURCE_FACTION_PARTS.get(faction, frozenset()) & SOURCE_TRACK_PARTS)
     if _guide['resolved_parts']:
         parts.update(RESOLVED_FACTION_PARTS.get(faction, ()))
     if _guide['fed']:
@@ -375,6 +382,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'faction_guide': False,       # True: ..._ships_byfaction_guide (GUIDE_FACTION_PARTS on as well)
           'weak_factions': False,       # True: ..._ships_byfaction_guide_weak (WEAK_FACTION_PARTS on as well)
           'source_parts': False,        # True: ..._ships_byfaction_guide_src (SOURCE_FACTION_PARTS on as well)
+          'source_tracks': False,       # True: ..._ships_byfaction_guide_srctracks (track_steps_src of SOURCE_FACTION_PARTS only)
           'resolved_parts': False,      # True: ..._ships_byfaction_guide_res (RESOLVED_FACTION_PARTS on as well)
           'fed': False,                 # True: ..._ships_fed (fed_compare + fed_cluster for every faction)
           'tokens': False,              # True: ..._ships_tokens (token_compare + track_race + race_prune)
@@ -2765,6 +2773,15 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs)
     _guide['source_parts'] = True
     _wrap_rank('_building_due', building_due_scores)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_srctracks(seed, **kwargs):
+    """Teacher factory: ..._ships_byfaction_guide plus the track_steps_src entries of SOURCE_FACTION_PARTS only
+    (Nevlas Science 3, Lantids Economy 2, Ivits Science 2 in round 1) — 093's opening lists and building_due
+    left off, so the PG track order is measured alone (E59 (ㄱ))."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs)
+    _guide['source_tracks'] = True
     return teacher
 
 

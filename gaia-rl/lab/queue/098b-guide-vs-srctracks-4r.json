@@ -1,0 +1,12 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-21 \"그렇게 해\", HANDOFF E59 (ㄱ)): 093에서 track_steps_src만 완전 발동했고 네블라 +11.2(5/6 양수)가 유일한 쏠림이라, 트랙 순서 부품만 따로 잰다. A = ships_byfaction_guide(093 A), B = ships_byfaction_guide_srctracks — SOURCE_FACTION_PARTS 중 track_steps_src만(네블라 1R 과학 3, 란티다 경제 2 먼저, 하이브 과학 2 먼저 = PG 순서 N1·L1·I1), opening_only·building_due는 꺼짐. 쿼텟 a(란티다·하이브·파이락·네블라) 093과 같은 6시드(093 결과 재현 여부) + 새 6시드(seeds-quartet-a.txt 미사용 5개 + _094에서 옮긴 37936) = 12쌍, 4R 시작 종료(≈ 2시간 40분). 판정: 사전 규칙대로 1–3R 충전, 종족별 — 네블라(12쌍 합산 ≥ 25면 확인), 란티다(오프닝 간섭 없이 L1 단독), 하이브; 파이락 = 같은 코드 드리프트 잣대. 함께 볼 것: research_counts 1–3R(네블라 과학·란티다 경제·하이브 과학이 A보다 늘어야 발동), plan_labels(양팔 1R 계획 같아야 함), upgrade_counts, 결정 시간, 오류. 자료의 이득이 4–6R이면(⑤) 양수 종족만 6R 재측정.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-srctracks-cap20.json",
+  "seeds": [
+    "quartet-a-28079", "quartet-a-28757", "quartet-a-29744", "quartet-a-30904", "quartet-a-36030", "quartet-a-37776",
+    "quartet-a-37936", "quartet-a-51008", "quartet-a-55834", "quartet-a-56778", "quartet-a-57732", "quartet-a-58786"
+  ],
+  "comparisons": 4,
+  "stop_round": 3
+}

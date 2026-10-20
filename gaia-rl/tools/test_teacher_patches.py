@@ -427,6 +427,14 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [9.0, 4.0])   # Economy 2 first
         tp._guide['source_parts'] = False
         self.assertEqual(tp.track_steps_scores(None, snapshot, scores), scores)     # guide order: Navigation 2
+        tp._guide['source_tracks'] = True                                            # E59 (ㄱ): the track order alone
+        self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [9.0, 4.0])
+        for faction in tp.SOURCE_FACTION_PARTS:
+            self.assertEqual(tp._faction_parts(faction) & (tp.SOURCE_FACTION_PARTS[faction] - tp.SOURCE_TRACK_PARTS),
+                             set(), faction)                                         # no opening_only, no building_due
+        self.assertIn('track_steps_src', tp._faction_parts('Ivits'))
+        self.assertNotIn('opening_only', tp._faction_parts('Ambas'))
+        tp._guide['source_tracks'] = False
 
     def test_resolved_parts_order_openings_and_pick_science_by_condition(self):
         tp._guide.update(byfaction=True, faction_guide=True, source_parts=True)   # restored by setUp's cleanup

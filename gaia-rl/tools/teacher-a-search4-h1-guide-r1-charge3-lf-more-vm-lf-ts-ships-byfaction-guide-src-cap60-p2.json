@@ -1,0 +1,14 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src (SOURCE_FACTION_PARTS: opening_only Ambas / Bescods / Gleens / Nevlas / Lantids, track_steps_src, building_due) with the lab measurement budget: 4 comparisons, 60 s cap, comparisons in 2 processes (same decisions, 024). Same rules and values as ...-byfaction-guide-src-cap20.json; made for the opening-forecast completion smoke (HANDOFF E59 (ㄴ): do PI+RL, PI+3M, AC+2M, RL+5M forecasts complete at 60 s?).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 60,
+  "parallel": 2
+}
