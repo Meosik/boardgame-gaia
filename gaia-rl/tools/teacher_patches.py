@@ -218,7 +218,9 @@ RESOLVED_FACTION_PARTS = {
     # PG16-T26, PG02-S05, PG01-S12), HadschHallas keeps the no-institute rule of rounds 1-2 with the LF
     # exception (weak-factions.md 2: SH04-S23, H06 — the Rebellion in our reach, no rival able to press its 3 QIC).
     'BalTaks': frozenset({'qic_academy'}),
-    'HadschHallas': frozenset({'building_limits', 'institute_rebellion'}),
+    # HadschHallas federation tokens (weak-factions.md 5; user "넘어가"): first token 6 credits, replay first after
+    # the institute (fed_token_scores, replay_first_goal).
+    'HadschHallas': frozenset({'building_limits', 'institute_rebellion', 'fed_token_credits', 'replay_first'}),
 }
 
 
@@ -2664,6 +2666,10 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_res(seed, **kwargs):
     or Science first by condition (science_when)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src(seed, **kwargs)
     _guide['resolved_parts'] = True
+    # Third batch: HadschHallas token parts. fed_remember_scores last so replay_first_goal sees the final ranking.
+    _wrap_rank('_fed_token', fed_token_scores)
+    install_replay_first()
+    _wrap_rank('_fed_remember', fed_remember_scores)
     return teacher
 
 
@@ -2995,6 +3001,85 @@ def install_token_goals():
         goal = token_compare_goal(snapshot)
         return [goal, *goals] if goal is not None else goals
     goals_for._token_goals = True
+    for name, value in vars(inner).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(goals_for, name, value)
+    goals_for.__wrapped__ = getattr(inner, '__wrapped__', inner)
+    p.goals_for = goals_for
+
+
+# HadschHallas federation tokens (weak-factions.md 5: PG19-S28·S29·S42, B17-S03, H04, PG01-S18; user 2026-10-20
+# "넘어가"): the first federation takes the 6-credit token (engine id 5, Vp7PlusCredits6 — the institute turns
+# credits into resources), and once the institute stands, replaying a token (Lost Fleet: Twilight's 3-QIC "score a
+# federation token again", the base game's QIC action the sources mean) is compared first whenever it is legal —
+# the rollout decides, as fed_compare does. The "ore token without an institute plan" branch (PG19-S42) is not
+# modelled: the guide plans the institute for rounds 3-4. Order and scope only.
+HH_FIRST_TOKEN = 5
+TWILIGHT_REPLAY = 'TwilightReplayFederationToken'
+
+
+def _has_federation(player):
+    return bool(player.get('federation_tokens') or player.get('gray_federation_tokens'))
+
+
+def fed_token_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'fed_token_credits') or _has_federation(player):
+        return scores
+    candidates = snapshot['candidates']
+    groups = {}
+    for i, c in enumerate(candidates):
+        action = c['action']
+        if action.get('type') == 'FormFederation' and not blocked(scores[i]):
+            groups.setdefault(json.dumps([action.get('hexes'), action.get('satellite_hexes')]), []).append(i)
+    lifted = list(scores)
+    for members in groups.values():
+        credits = [i for i in members if (candidates[i]['action'].get('token') or {}).get('kind') == HH_FIRST_TOKEN]
+        if not credits or len(members) < 2:
+            continue
+        top = max(members, key=lambda i: scores[i][0])
+        if top not in credits:
+            _swap(lifted, list(scores), max(credits, key=lambda i: scores[i][0]), top,
+                  f'{player["faction"]} first federation takes the 6-credit token (fed_token_credits)')
+    return lifted
+
+
+def replay_first_goal(snapshot):
+    """Goal comparing the best legal token replay once the institute stands, or None."""
+    from current_actions.conservation import blocked
+    from four_factions.preparation import Goal
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None:
+        return None
+    player = state['players'][actor]
+    if not _part(player, 'replay_first') or not any(s['kind'] == 'PlanetaryInstitute' for s in player['structures']):
+        return None
+    scores = _fed_scores.get(id(snapshot))
+    if scores is None or len(scores) != len(snapshot['candidates']):
+        return None
+    replays = [i for i, c in enumerate(snapshot['candidates'])
+               if c['action'].get('type') == TWILIGHT_REPLAY and not blocked(scores[i])]
+    if not replays:
+        return None
+    best = max(replays, key=lambda i: scores[i][0])
+    return Goal(f'replay-{best}', 'root', first=best)
+
+
+def install_replay_first():
+    import four_factions.preparation as p
+    if getattr(p.goals_for, '_replay_first', False):
+        return
+    inner = p.goals_for
+
+    def goals_for(snapshot, **kwargs):
+        goals = inner(snapshot, **kwargs)
+        goal = replay_first_goal(snapshot)
+        return [goal, *goals] if goal is not None else goals
+    goals_for._replay_first = True
     for name, value in vars(inner).items():
         if name.startswith('_') and isinstance(value, bool):
             setattr(goals_for, name, value)

@@ -568,6 +568,39 @@ class OpeningBudgetTests(unittest.TestCase):
         tp._guide['resolved_parts'] = False
         self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # no building_limits without a flag
 
+    def test_hadsch_hallas_first_token_is_six_credits_and_the_replay_is_compared_first(self):
+        tp._guide.update(byfaction=True, faction_guide=True, source_parts=True, resolved_parts=True)   # setUp restores
+        player = {'faction': 'HadschHallas', 'structures': [{'kind': 'Mine', 'hex': '0,0'}],
+                  'federation_tokens': [], 'gray_federation_tokens': []}
+        state = {'round': 3, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        fed = {'type': 'FormFederation', 'hexes': ['0,0', '1,0'], 'satellite_hexes': []}
+        actions = [{**fed, 'token': {'source': 'Supply', 'kind': 1}},
+                   {**fed, 'token': {'source': 'Supply', 'kind': 5}},
+                   {**fed, 'hexes': ['0,0', '2,0'], 'token': {'source': 'Supply', 'kind': 1}},
+                   {'type': 'Build', 'coord': '3,0'}]
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': a} for a in actions]}
+        scores = [(9.0, 'vp12'), (6.0, 'credits6'), (8.0, 'other hexes'), (7.0, 'mine')]
+        lifted = tp.fed_token_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [6.0, 9.0, 8.0, 7.0])              # same hexes: the 6-credit token
+        self.assertIn('fed_token_credits', lifted[1][1])
+        player['federation_tokens'] = [5]
+        self.assertIs(tp.fed_token_scores(None, snapshot, scores), scores)          # first federation only
+        player['federation_tokens'] = []
+        tp._guide['resolved_parts'] = False
+        self.assertIs(tp.fed_token_scores(None, snapshot, scores), scores)          # part off
+        tp._guide['resolved_parts'] = True
+        # replay_first: the institute built, a legal replay in the remembered ranking -> compared first.
+        actions = [{'type': 'TwilightReplayFederationToken', 'token_kind': 5}, {'type': 'Build', 'coord': '3,0'}]
+        snapshot['candidates'] = [{'action': a} for a in actions]
+        scores = [(2.0, 'replay'), (9.0, 'mine')]
+        tp.fed_remember_scores(None, snapshot, scores)
+        self.assertIsNone(tp.replay_first_goal(snapshot))                           # no institute yet
+        player['structures'].append({'kind': 'PlanetaryInstitute', 'hex': '1,0'})
+        goal = tp.replay_first_goal(snapshot)
+        self.assertEqual((goal.family, goal.first), ('root', 0))
+        player['faction'] = 'Terrans'
+        self.assertIsNone(tp.replay_first_goal(snapshot))                           # HadschHallas only
+
     def test_fixed_academy_wraps_rank_for_the_faction_with_the_part_in_round_one(self):
         import bgg_openings.fixed as fixed
         import four_factions.preparation as p
