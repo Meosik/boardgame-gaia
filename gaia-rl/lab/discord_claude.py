@@ -99,6 +99,10 @@ def model_unavailable(stdout, stderr):
             and bool(UNAVAILABLE.search(result.get('result') or '')))
 
 
+FRESH_PREFIX = ('(이전 디스코드 대화를 이어 붙이지 못해 새 대화로 시작한다. 맥락은 gaia-rl/lab/HANDOFF.md "진행 중"에서 '
+                '읽어라.)\n\n')
+
+
 def failure_text(stdout, stderr, size=300):
     """The error message of a failed run, one line, for the fallback note."""
     try:
@@ -264,7 +268,16 @@ def main():
             note = ''
             async with channel.typing():
                 model = primary_model()
-                out, err, code = await claude_run(command(claude, state.get(key) if resume else None, model), prompt)
+                session_id = state.get(key) if resume else None
+                out, err, code = await claude_run(command(claude, session_id, model), prompt)
+                if model != FALLBACK_MODEL and session_id and model_unavailable(out, err):
+                    # User 2026-10-20 "너가 바꿀수 없어?": Fable worked from the terminal while the resumed channel
+                    # session failed, so try Fable once in a new session before falling back to Opus.
+                    print(f'{model} failed on resume: {failure_text(out, err)}', flush=True)
+                    fresh = await claude_run(command(claude, None, model), FRESH_PREFIX + prompt)
+                    if not model_unavailable(*fresh[:2]):
+                        note = f'🔄 이전 대화를 {model_label(model)}로 이을 수 없어 새 대화로 실행 (맥락은 HANDOFF에서)\n'
+                        out, err, code = fresh
                 if model != FALLBACK_MODEL and model_unavailable(out, err):
                     # The original error text too (user 2026-10-20: "한도 초과라는데 웹에서는 0% 썻다는데 버근가?").
                     note = (f'⚠️ {model_label(model)} 사용 불가 → {model_label(FALLBACK_MODEL)}로 다시 실행\n'
