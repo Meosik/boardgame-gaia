@@ -63,6 +63,17 @@ Geodens 4, Taklons 4, Terrans 9. With both arms pooled, a B-only gain shows at h
 0.83 → 1.00, Taklons 0.83 → 1.00, Terrans 0.83 → 1.00, Xenos 2.33 → 2.33 — **one extra federation per six seat-games**
 on three factions, none on Xenos. Advanced tiles Terrans 0 → 0.33, Xenos 0.17 → 0.33, Geodens 0.17 → 0; level 5
 unchanged (0.50–1.00); green tokens left Geodens 0.17 → 0.50, Taklons 0 → 0.33, Terrans 0.33 → 0.17, Xenos 1.17 → 1.00.
+
+
+**Federation chances by arm (`federation_chances.py --by-arm`, owner run; legal decisions / formed per seat-game,
+summed over rounds, A → B):** Geodens 4.0 / 0.9 → 2.1 / 1.1, Taklons 4.0 / 0.9 → 3.5 / 0.9, **Terrans 15.8 / 0.9 →
+4.0 / 1.0** (A round 6 7.2 / 0.2 → B 0 / 0; A's cheapest legal federation was 7 satellites at 69 decisions), Xenos
+3.1 / 2.0 → 3.2 / 2.2. Satellites per formed federation: Geodens 3.2 → 3.2, Taklons 3.8 → 2.8, Terrans 3.4 → 5.0,
+Xenos 4.8 → 5.8. Reading: **fed_compare does its job — B forms when a federation is legal instead of sitting on it**
+(Terrans' wasted round-6 chances vanish, at the price of more satellites), but the number of federation chances per game
+is small on both arms (≈ 1–2 distinct groups reach power 7). The ceiling is the number of buildable groups, i.e.
+placement.
+
 The rules work in the intended direction but at a size far from the user's PPO gate (≥ 3 per seat): placement, not the
 compare order, holds federations down (cheapest legal federation 7+ satellites most of the time).
 
