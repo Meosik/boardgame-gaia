@@ -1,0 +1,7 @@
+{
+  "kind": "command",
+  "note": "E60(2026-10-21, 사용자 \"지금 시간 남는데 미리 작업해\"; E58 (ㄴ) 사거리 메모): 엔진 후보 생성이 보드 전 헥스를 도는 사거리 검사(Build·GaiaFormation·부스터·Twilight·테라포밍 파워 액션)마다 BFS를 새로 돌리던 것을, 한 후보 생성 호출 안에서 (출발 헥스 집합, 사거리 상한)당 거리표 1개로 메모(ReachMemoScope). 후보 집합·순서 불변 조건 — 봇 venv에서 기록 판 20개 3022결정 골든(runs/golden-candidates, 이전 엔진 bfb65c38)과 바이트 비교 0 불일치, fork 4R 14.4ms → 3.1ms. 이 항목은 lab 엔진(자동 재빌드)으로 같은 비교를 한 번 더 한다. 결과 json의 identical이 true여야 하며, false면 engine_build_id와 mismatch 결정을 HANDOFF에 적고 엔진 커밋을 되돌린다(사용자).",
+  "run": ["{python}", "tools/golden_candidates.py", "compare", "--golden", "runs/golden-candidates", "--metrics", "runs/golden-candidates/metrics-lab.json"],
+  "metrics": "runs/golden-candidates/metrics-lab.json",
+  "timeout_hours": 1
+}
