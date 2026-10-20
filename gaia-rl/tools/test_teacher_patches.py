@@ -468,6 +468,30 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertFalse(tp.science_first(state, player))
         state['research_board']['advanced_tech_tiles'] = [11, 7, 19, 3, 4, 21]       # three S/A tiles
         self.assertTrue(tp.science_first(state, player))
+        # Round-1 tech federation (LF token 12 on a ship in reach): Terrans PI+TS first, Xenos the institute.
+        player.update(faction='Xenos')
+        state['spaceship_boards'] = [{'id': 'Rebellion', 'federation_token': 12}]
+        state['board']['spaceship_tiles'] = {'Rebellion': '6,0'}
+        self.assertFalse(tp.tech_federation_reachable(snapshot))
+        self.assertEqual(tp.guide_opening_labels('Xenos', snapshot)[0], '1RL+5M')
+        state['board']['spaceship_tiles'] = {'Rebellion': '1,1'}
+        self.assertTrue(tp.tech_federation_reachable(snapshot))
+        self.assertEqual(tp.guide_opening_labels('Xenos', snapshot)[0], '1PI+1TS+1M')
+        player['faction'] = 'Terrans'
+        self.assertEqual(tp.guide_opening_labels('Terrans', snapshot)[0], '1PI+1TS+2M')
+        state['spaceship_boards'] = [{'id': 'Rebellion', 'federation_token': 9}]
+        self.assertEqual(tp.guide_opening_labels('Terrans', snapshot)[0], '1PI+2M')
+        # Itars: the first track follows the opening (institute -> Gaia 1, academy -> Economy 2).
+        player.update(faction='Itars', research_tracks={'economy': 1, 'gaia': 0},
+                      structures=[{'kind': {'Academy': 'Science'}, 'hex': '0,0'}])
+        actions = [{'type': 'ResearchAdvance', 'track': 'Economy'}, {'type': 'ResearchAdvance', 'track': 'GaiaProject'}]
+        snapshot['candidates'] = [{'action': a} for a in actions]
+        scores = [(4.0, 'eco'), (9.0, 'gaia')]
+        self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [9.0, 4.0])
+        player['structures'] = [{'kind': 'PlanetaryInstitute', 'hex': '0,0'}]
+        self.assertEqual(tp.track_steps_scores(None, snapshot, scores), scores)
+        self.assertIn('building_due', tp._faction_parts('Bescods'))
+        self.assertEqual(tp.BUILDING_DUE['Bescods'], ('PlanetaryInstitute', 3))
 
     def test_building_due_puts_the_institute_first_among_big_buildings(self):
         tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup

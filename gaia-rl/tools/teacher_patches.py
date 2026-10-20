@@ -209,6 +209,11 @@ RESOLVED_FACTION_PARTS = {
     'Darkanians': frozenset({'opening_res'}),
     'Nevlas': frozenset({'science_when'}),
     'Ivits': frozenset({'science_when'}),
+    # Second batch (user 2026-10-20 "미구현부터 구현해"): Xenos round-1 institute only with a reachable tech
+    # federation (X1), Bescods institute by round 3 (M3), Itars' first track by its opening (weak-factions.md 2).
+    'Xenos': frozenset({'opening_res'}),
+    'Bescods': frozenset({'building_due'}),
+    'Itars': frozenset({'track_by_opening'}),
 }
 
 
@@ -694,7 +699,32 @@ UIQOO_OPENINGS = {
 RESOLVED_OPENINGS = {
     'Terrans': ('1PI+2M', '1PI+1TS+2M', '1RL+4M', '1AC+1M'),
     'Taklons': ('1AC+2M', '1RL+5M', '1RL+4M', '2RL+2M'),
+    'Xenos': ('1RL+5M', '1RL+6M', '1AC+2M', '1RL+2M'),
 }
+# With a round-1 tech federation in reach (LF token 12 "tech tile of choice" on a ship board within
+# SHIP_SETUP_RANGE of our buildings: C004, LF3-10, SH02-S07 "the only reason to design a round-1 opening"):
+# Terrans the institute + trading station first (SH04-S18), Xenos the institute opening (SH04-S33 rank 2,
+# X10 Rebellion) — otherwise Xenos keeps no institute at the front (X1: B19-04, BGGO1-S17 −30 VP); X5 lab with
+# 5-6 mines or academy is left to the search's reachability.
+TECH_FEDERATION_TOKEN = 12
+TECH_FEDERATION_OPENINGS = {
+    'Terrans': ('1PI+1TS+2M', '1PI+2M', '1RL+4M', '1AC+1M'),
+    'Xenos': ('1PI+1TS+1M', '1RL+5M', '1RL+6M', '1AC+2M'),
+}
+
+
+def tech_federation_reachable(snapshot):
+    """The LF tech-tile federation token sits on a ship whose tile is within SHIP_SETUP_RANGE of our buildings."""
+    from strategy_teacher import distance
+    state = snapshot['state']
+    player = state['players'][snapshot['player']]
+    tiles = state['board'].get('spaceship_tiles') or {}
+    for board in state.get('spaceship_boards') or ():
+        at = tiles.get(board.get('id'))
+        if board.get('federation_token') == TECH_FEDERATION_TOKEN and at is not None and any(
+                distance(s['hex'], at) <= SHIP_SETUP_RANGE for s in player['structures']):
+            return True
+    return False
 # Darkanians (general-and-lf.md, user "테라포밍을 많이 구할수 있냐 없냐"): with terraforming at hand in round 1 the
 # expansion builds (institute for new-sector mines: PG25-S25, SH-DK; lab + 4 mines: SH04-S53), without it the
 # academy first (SH-DK "1테라 부스터와 TF마스가 생명줄", academy when the institute cannot reach two mines).
@@ -723,6 +753,8 @@ def guide_opening_labels(faction, snapshot=None):
     if snapshot is not None and _part({'faction': faction}, 'opening_res'):
         if faction == 'Darkanians':
             return DARKANIAN_OPENINGS[darkanian_terraforming(snapshot) >= DARKANIAN_TERRA_RICH]
+        if faction in TECH_FEDERATION_OPENINGS and tech_federation_reachable(snapshot):
+            return TECH_FEDERATION_OPENINGS[faction]
         if faction in RESOLVED_OPENINGS:
             return RESOLVED_OPENINGS[faction]
     return UIQOO_OPENINGS.get(faction) or ()
@@ -2186,6 +2218,9 @@ TRACK_STEPS_SRC = {'Nevlas': ((1, 'science', 3),),
 # of the six tracks or more (bot's reading, not the user's number).
 SCIENCE_WHEN = {'Nevlas': (((1, 'science', 3),), ((1, 'economy', 2),)),
                 'Ivits': (((1, 'science', 2),), ((1, 'economy', 2),))}
+# track_by_opening (RESOLVED_FACTION_PARTS, weak-factions.md Itars 2 "첫 트랙을 오프닝에 맞춤": SH04-S44,
+# PG23-S16·S19, B07-S16·S18): with the institute Gaia 1 in round 1, with an academy Economy 2.
+TRACK_BY_OPENING = {'Itars': (('PlanetaryInstitute', ((1, 'gaia', 1),)), ('Academy', ((1, 'economy', 2),)))}
 GOOD_ADVANCED = frozenset({11, 7, 4, 8, 22, 17, 14})
 GOOD_ADVANCED_MANY = 3
 
@@ -2211,10 +2246,15 @@ def track_steps_scores(env, snapshot, scores):
     player = state['players'][actor]
     when = _part(player, 'science_when') and player['faction'] in SCIENCE_WHEN
     src = _part(player, 'track_steps_src') and player['faction'] in TRACK_STEPS_SRC
-    if not (when or src or _part(player, 'track_steps')):
+    built = {_structure_kind(s) for s in player.get('structures', ())}
+    opening = next((steps for kind, steps in TRACK_BY_OPENING.get(player['faction'], ()) if kind in built), None) \
+        if _part(player, 'track_by_opening') else None
+    if not (when or src or opening or _part(player, 'track_steps')):
         return scores
     levels = player.get('research_tracks') or {}
-    if when:
+    if opening:
+        steps = opening
+    elif when:
         steps = SCIENCE_WHEN[player['faction']][0 if science_first(state, player) else 1]
     else:
         steps = (TRACK_STEPS_SRC if src else TRACK_STEPS).get(player['faction'], ())
@@ -2305,7 +2345,9 @@ def building_limits_scores(env, snapshot, scores):
 # LF4-06), Itars by round 3 (B19-S62, B07-S21, PG23-S08, MISC1-S34). Mines, research and actions keep their
 # place (order among upgrades only).
 BUILDING_DUE = {'Firaks': ('PlanetaryInstitute', 2),
-                'Itars': ('PlanetaryInstitute', 3)}
+                'Itars': ('PlanetaryInstitute', 3),
+                # resolved_parts: Bescods institute in round 3 (M3: PG13-S11, LF timings one round earlier).
+                'Bescods': ('PlanetaryInstitute', 3)}
 BIG_BUILDINGS = frozenset({'PlanetaryInstitute', 'ResearchLab', 'Academy'})
 
 
