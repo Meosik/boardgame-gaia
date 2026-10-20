@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus round_tile_lead: the first two goals whose next step is what this round's scoring tile pays (mine / Gaia mine / new planet type / new sector / terraforming step / trading station / research lab / large building / research step / federation) lead the goal list, so their family is compared first; facts and order only, the rollout judges. Every faction (user 2026-10-20 '미리 만드는거 어때'; guide_r1_charge3_lf_more_vm_lf_ts_ships_roundtile).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_roundtile",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

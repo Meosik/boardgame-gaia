@@ -1,0 +1,7 @@
+{
+  "kind": "command",
+  "note": "사용자(2026-10-20 \"시드 미리 많이 만들어둬\"): 쿼텟 a·b·c·d·e·live 시드 스캔 60000–260000(각 파일의 첫 시드에서 라인업을 읽음, 5ms/시드·약 2000에 1개 → 파일당 ≈ +100개), lab/seeds-*.txt 끝에 붙임. 결과 json은 파일별 추가 수. 쿼텟 b는 미사용 시드가 1개뿐이라 098이 다른 비교의 시드를 재사용했음.",
+  "run": ["{python}", "tools/scan_seeds.py", "--start", "60000", "--count", "200000", "--jobs", "{jobs}", "--out", "runs/scan-seeds/metrics.json"],
+  "metrics": "runs/scan-seeds/metrics.json",
+  "timeout_hours": 4
+}

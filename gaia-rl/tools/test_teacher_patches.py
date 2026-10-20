@@ -1238,6 +1238,46 @@ class OpeningBudgetTests(unittest.TestCase):
         state['round'] = 6
         self.assertEqual(tp.track_plan_goals(snapshot), [])                           # round 6 is free
 
+    def test_round_tile_lead_moves_the_goals_the_tile_scores_to_the_front(self):
+        from four_factions.preparation import Goal
+        state = self.track_plan_state()
+        player = state['players'][0]
+        player['structures'] = [{'kind': 'Mine', 'hex': '0,0'}, {'kind': 'TradingStation', 'hex': '1,0'}]
+        state['board']['hexes']['1,0'] = {**state['board']['hexes']['1,0'],
+                                          'planet': {'planet_type': 'Terra', 'owner': 0, 'is_gaia_formed': False}}
+        state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
+                                          'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
+        goals = [Goal('Economy-2', 'research', target='Economy', level=2),
+                 Goal('Science@0,0', 'upgrade', '0,0', 'Science'), Goal('Science@1,0', 'upgrade', '1,0', 'Science'),
+                 Goal('PlanetaryInstitute@1,0', 'upgrade', '1,0', 'PlanetaryInstitute'),
+                 Goal('colony@2,0', 'colony', '2,0'), Goal('colony@3,0', 'colony', '3,0'),
+                 Goal('three-federations-separate-cores', 'federations')]
+        snapshot = {'player': 0, 'state': state, 'candidates': []}
+        tile = lambda condition: [{'condition': condition, 'vp_per_unit': 2}]*6
+        state['round_tiles'] = tile('UpgradeTradingStation')
+        self.assertIs(tp.round_tile_lead_goals(snapshot, goals), goals)             # part off
+        tp._guide['round_tile_lead'] = True                                          # restored by setUp's cleanup
+        first = lambda: [g.name for g in tp.round_tile_lead_goals(snapshot, goals)[:2]]
+        self.assertEqual(first(), ['Science@0,0', 'Economy-2'])                      # the mine's upgrade leads
+        state['round_tiles'] = tile('UpgradeResearchLab')
+        self.assertEqual(first(), ['Science@1,0', 'Economy-2'])
+        state['round_tiles'] = tile('UpgradeLargeBuilding')
+        self.assertEqual(first(), ['PlanetaryInstitute@1,0', 'Economy-2'])
+        state['round_tiles'] = tile('ResearchAdvance')
+        self.assertEqual(first(), ['Economy-2', 'Science@0,0'])
+        state['round_tiles'] = tile('BuildMineOnGaia')
+        self.assertEqual(first(), ['colony@3,0', 'Economy-2'])
+        state['round_tiles'] = tile('BuildMineOnNewPlanetType')
+        self.assertEqual(first(), ['colony@2,0', 'colony@3,0'])                      # Desert and Gaia are new, Terra is not
+        state['round_tiles'] = tile('TerraformingStep')
+        self.assertEqual(first(), ['colony@2,0', 'Economy-2'])                       # Terra → Desert takes steps, Gaia none
+        state['round_tiles'] = tile('FormFederation')
+        self.assertEqual(first(), ['three-federations-separate-cores', 'Economy-2'])
+        state['round_tiles'] = tile('BuildMine')
+        self.assertEqual(first(), ['colony@2,0', 'colony@3,0'])
+        state['round'] = 7                                                           # no tile: untouched
+        self.assertIs(tp.round_tile_lead_goals(snapshot, goals), goals)
+
     def test_install_track_plans_puts_plans_first_and_drops_the_bare_research_goal(self):
         import four_factions.preparation as p
         from four_factions.preparation import Goal

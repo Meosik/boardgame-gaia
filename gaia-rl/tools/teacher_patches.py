@@ -244,6 +244,8 @@ def _faction_parts(faction):
         parts.update(TOKEN_PARTS)
     if _guide['track_plans']:
         parts.add('track_plans')
+    if _guide['round_tile_lead']:
+        parts.add('round_tile_lead')
     return parts
 
 
@@ -377,6 +379,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'ship_adjacent_mine': False,  # True: ..._ships_shipmine (see ship_adjacent_mine_scores)
           'endgame_prices': False,      # True: ..._ships_endgame (round 6 stock at the final-scoring rates)
           'track_plans': False,         # True: ..._ships_plans (a research step compared as the plan it opens)
+          'round_tile_lead': False,     # True: ..._ships_roundtile (the goals this round's tile scores lead)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -3513,6 +3516,123 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_plans(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     _guide['track_plans'] = True
     install_track_plans()
+    return teacher
+
+
+# ── round_tile_lead (user 2026-10-20 "테스트 오래 걸리는데 미리 만드는거 어때"; HANDOFF E38 round_tile_plans) ──────
+# The round scoring tile pays its VP inside the rollout already (engine VP), but with four comparisons the goal
+# that scores it is often never compared (091 step 140: four plans, none a colony while the tile paid mines).
+# round_tile_lead moves the first ROUND_TILE_LEAD goals whose next step is what this round's tile scores
+# (RoundCondition: BuildMine, BuildMineOnGaia, BuildMineOnNewPlanetType, BuildMineInNewSector,
+# TerraformingStep, UpgradeTradingStation, UpgradeResearchLab, UpgradeLargeBuilding, ResearchAdvance,
+# FormFederation) to the front of the goal list, so their family leads the round-robin. Facts only
+# (the tile's condition against the goal's planet / building / track), order only; the rollout judges.
+ROUND_TILE_LEAD = 2
+
+
+def _round_condition(state):
+    tiles = state.get('round_tiles') or []
+    rnd = state.get('round') or 0
+    if not 1 <= rnd <= len(tiles) or not isinstance(tiles[rnd-1], dict):
+        return None
+    return tiles[rnd-1].get('condition')
+
+
+def _planet_kind(planet):
+    return 'Gaia' if planet.get('is_gaia_formed') else planet.get('planet_type')
+
+
+def _scores_round_tile(state, actor, goal, condition):
+    """Whether `goal`'s next step is what this round's tile scores."""
+    from economy.teacher import RING
+    from four_factions.preparation import owned
+    player = state['players'][actor]
+    if getattr(goal, 'family', None) == 'ordered' and goal.steps:
+        goal = goal.steps[0]
+    family = getattr(goal, 'family', None)
+    if condition == 'ResearchAdvance':
+        return family == 'research'
+    if condition == 'FormFederation':
+        return family in ('federations', 'federation-race') or (
+            family == 'root' and str(getattr(goal, 'name', '')).startswith('federation'))
+    if condition in ('UpgradeTradingStation', 'UpgradeResearchLab', 'UpgradeLargeBuilding'):
+        if family != 'upgrade':
+            return False
+        old = owned(player, goal.coord)
+        bescods = player['faction'] == 'Bescods'
+        if condition == 'UpgradeTradingStation':
+            return old == 'Mine'
+        if condition == 'UpgradeResearchLab':
+            return old == 'TradingStation' and goal.target != 'PlanetaryInstitute' and not bescods
+        return ((old == 'TradingStation' and (goal.target == 'PlanetaryInstitute' or bescods))
+                or (old == 'ResearchLab' and goal.target != 'PlanetaryInstitute'))
+    if family == 'expansion':
+        return condition == 'BuildMine'
+    if family != 'colony':
+        return False
+    cell = state['board']['hexes'].get(goal.coord)
+    planet = cell.get('planet') if cell else None
+    if not planet:
+        return False
+    kind = _planet_kind(planet)
+    if condition == 'BuildMine':
+        return True
+    if condition == 'BuildMineOnGaia':
+        return kind == 'Gaia'
+    if condition == 'BuildMineOnNewPlanetType':
+        hexes = state['board']['hexes']
+        own = {_planet_kind(hexes[s['hex']]['planet']) for s in player['structures']
+               if hexes.get(s['hex']) and hexes[s['hex']].get('planet')}
+        return kind not in own
+    if condition == 'BuildMineInNewSector':
+        from integrated.features import sector_at
+        return sector_at(state, goal.coord) not in {sector_at(state, s['hex']) for s in player['structures']}
+    if condition == 'TerraformingStep':
+        home = _home_type(player)
+        if kind not in RING or home not in RING:
+            return False
+        gap = abs(RING.index(home)-RING.index(kind))
+        return min(gap, 7-gap) > 0
+    return False
+
+
+def round_tile_lead_goals(snapshot, goals):
+    """`goals` with the first ROUND_TILE_LEAD goals this round's tile scores moved to the front."""
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or not isinstance(state.get('phase'), dict) or 'ActionPhase' not in state['phase']:
+        return goals
+    if not _part(state['players'][actor], 'round_tile_lead'):
+        return goals
+    condition = _round_condition(state)
+    if condition is None:
+        return goals
+    lead = [g for g in goals if _scores_round_tile(state, actor, g, condition)][:ROUND_TILE_LEAD]
+    if not lead:
+        return goals
+    return lead + [g for g in goals if g not in lead]
+
+
+def install_round_tile_lead():
+    import four_factions.preparation as p
+    inner = p.goals_for
+    if getattr(inner, '_round_tile_lead', False):
+        return
+
+    def goals_for(snapshot, **kwargs):
+        return round_tile_lead_goals(snapshot, inner(snapshot, **kwargs))
+    for name, value in vars(inner).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(goals_for, name, value)
+    goals_for._round_tile_lead = True
+    goals_for.__wrapped__ = getattr(inner, '__wrapped__', inner)
+    p.goals_for = goals_for
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_roundtile(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus round_tile_lead for every faction (above)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['round_tile_lead'] = True
+    install_round_tile_lead()
     return teacher
 
 

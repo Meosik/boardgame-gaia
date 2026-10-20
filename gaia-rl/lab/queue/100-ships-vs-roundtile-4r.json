@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"테스트 오래 걸리는데 미리 만드는거 어때\" → \"계속하고\"): A = ships(배포 교사), B = ships_roundtile — round_tile_lead(이번 라운드 점수 타일이 주는 행동 — 광산·가이아 광산·새 행성 종류·새 섹터·테라포밍 단계·교역소·연구소·큰 건물·연구·연방 — 을 다음 단계로 갖는 계획 2개를 목표 목록 맨 앞에 두어 그 가족이 먼저 비교되게 함; 사실(타일 조건 vs 계획의 행성·건물·트랙)과 순서만, 롤아웃이 판정). 근거: 라운드 타일 VP는 롤아웃 안에서 엔진이 주지만 비교 4개 안에 그 계획이 못 드는 결정이 많음(091 결정 140: 비교 4개가 전부 연구·QIC 행동). 전 종족. geo-quartet 새 시드 6쌍(seeds.txt 자동), 4R 시작 종료. 판정: 사전 규칙대로 1–3라운드 충전량, 종족별. 함께 볼 것(판정 아님): 라운드 타일 VP(1–3R 각 좌석 VP 변화, action_counts의 라운드별 Build/Upgrade), B 결정 라벨에서 선두 계획 채택 수, 4R 시작 VP, 결정 시간, 오류.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-roundtile-cap20.json",
+  "pairs": 6,
+  "comparisons": 4,
+  "stop_round": 3
+}
