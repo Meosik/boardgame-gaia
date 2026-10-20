@@ -99,6 +99,7 @@ def model_unavailable(stdout, stderr):
             and bool(UNAVAILABLE.search(result.get('result') or '')))
 
 
+FRESH_MARK = Path(__file__).resolve().parent/'fresh-sessions'
 FRESH_PREFIX = ('(이전 디스코드 대화를 이어 붙이지 못해 새 대화로 시작한다. 맥락은 gaia-rl/lab/HANDOFF.md "진행 중"에서 '
                 '읽어라.)\n\n')
 
@@ -226,6 +227,12 @@ def main():
     lock = asyncio.Lock()
     running = {}
     waiting = [0]  # turns requested and not yet finished
+    pending_fresh = set()  # channels whose next turn starts a new session (the prompt says where the context is)
+    if FRESH_MARK.exists():  # one-shot: every channel starts a new session (left by a turn that changed the bot)
+        pending_fresh.update(state)
+        state.clear()
+        state_path.write_text(json.dumps(state))
+        FRESH_MARK.unlink()
     digest = [source_digest()]
 
     intents = discord.Intents.default()
@@ -281,6 +288,9 @@ def main():
                     # 2026-10-20 "fable 강제 교체 실패했네?": an override silently skips the Fable path.
                     note = f'ℹ️ 환경 변수 CLAUDE_MODEL={model} 로 지정됨 (Fable 시도 안 함)\n'
                 session_id = state.get(key) if resume else None
+                if key in pending_fresh:
+                    pending_fresh.discard(key)
+                    prompt = FRESH_PREFIX + prompt
                 # A resumed Fable run goes without --fallback-model (2026-10-20 "왜 아직 opus지?": the replies kept
                 # coming from Opus with no warning, i.e. the CLI fell back by itself), so its failure reaches the
                 # new-session retry below instead of turning into a silent Opus turn.
@@ -304,6 +314,13 @@ def main():
             tag = f"🧠 {' + '.join(model_label(m) for m in used)}" if used else ''
             if session:
                 state[key] = session
+                # 2026-10-20 "fable 강제 교체 실패했네?": a resumed session kept answering on Opus with no error
+                # (the CLI keeps the session's model), so when the primary model did not answer a resumed turn the
+                # channel session is dropped and the next turn starts a new one on the primary model.
+                if session_id and model != FALLBACK_MODEL and used and not any(model in m for m in used):
+                    state.pop(key, None)
+                    tag += f'\n🔄 다음 메시지부터 새 대화로 {model_label(model)} 시작 (맥락은 HANDOFF에서)'
+                    pending_fresh.add(key)
                 save()
             await send(channel, '\n'.join(p for p in (note + reply, tag) if p))
 
