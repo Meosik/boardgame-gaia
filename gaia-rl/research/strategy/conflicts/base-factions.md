@@ -176,7 +176,7 @@
 | M3 매드 PI | 3R(PG13-S11; LF는 기본판 타이밍을 한 라운드 당김) | PG + LF 방향 | building_due 3R 후보 |
 | E3 기오덴 타일 | B vs PG 동률, 작음 → 보류 | — | 없음 |
 
-구현 상태(2026-10-20, `RESOLVED_FACTION_PARTS`, 팩토리 `..._ships_byfaction_guide_res`): T1(1R 기술 연방 = LF 토큰 12가 거리 3 안 함선에 있으면 PI+TS+2M 먼저)·K1·X1(같은 조건일 때만 PI 오프닝 앞, 아니면 RL+5/6M·AC+2M)·I1/N1(science_when)·M3(building_due 3R)·아이타 첫 트랙(오프닝별) 구현. **B2 미구현**: 동결 코치(`bgg_openings/fixed.py`)가 과학 아카데미만 목표로 받음 → 크레딧 아카데미는 동결 파일 밖 래퍼가 필요.
+구현 상태(2026-10-20, `RESOLVED_FACTION_PARTS`, 팩토리 `..._ships_byfaction_guide_res`): T1(1R 기술 연방 = LF 토큰 12가 거리 3 안 함선에 있으면 PI+TS+2M 먼저)·K1·X1(같은 조건일 때만 PI 오프닝 앞, 아니면 RL+5/6M·AC+2M)·I1/N1(science_when)·M3(building_due 3R)·아이타 첫 트랙(오프닝별) 구현. **B2 구현(2026-10-20 3차)**: `qic_academy` 부품 — `academy_target`이 동결 코치의 TARGETS 항목을 결정 때마다 'Qic'으로 두고 `fixed.target_kind`를 감싸 {'Academy': 'Qic'}로 매핑(동결 파일 수정 없음).
 
 `general-and-lf.md` J4(1R 선아카데미)도 같은 원칙으로 **LF 우선**: LF는 1R 연구소 빌드(SH03-S06 상), 선아카데미는 아이타·발타크·타클론(IR01-02) 및 조건부 다카니안.
 

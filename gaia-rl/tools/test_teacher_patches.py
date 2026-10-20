@@ -525,6 +525,42 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertIn('opening_only', tp._faction_parts('Firaks'))
         self.assertNotIn('opening_only', tp._faction_parts('Terrans'))
 
+    def test_resolved_parts_qic_academy_and_rebellion_institute_exception(self):
+        import bgg_openings.fixed as fixed
+        saved_targets, saved_kind = dict(fixed.TARGETS), fixed.target_kind
+        self.addCleanup(lambda: (fixed.TARGETS.clear(), fixed.TARGETS.update(saved_targets)))
+        self.addCleanup(setattr, fixed, 'target_kind', saved_kind)
+        tp._guide.update(byfaction=True, faction_guide=True, source_parts=True)   # restored by setUp's cleanup
+        tp.install_fixed_academy()
+        self.assertEqual(tp.academy_target('BalTaks'), 'Science')
+        self.assertEqual(fixed.target_kind('BalTaks'), {'Academy': 'Science'})
+        tp._guide['resolved_parts'] = True
+        self.assertEqual(tp.academy_target('BalTaks'), 'Qic')
+        self.assertEqual(fixed.target_kind('BalTaks'), {'Academy': 'Qic'})
+        self.assertEqual(fixed.target_kind('Xenos'), {'Academy': 'Science'})
+        self.assertEqual(fixed.target_kind('Terrans'), 'PlanetaryInstitute')
+        # HadschHallas: no institute in rounds 1-2 unless the Rebellion ship is in reach and no rival is closer.
+        player = {'faction': 'HadschHallas', 'research_tracks': {}, 'structures': [{'kind': 'Mine', 'hex': '0,0'}]}
+        rival = {'faction': 'Terrans', 'structures': [{'kind': 'Mine', 'hex': '8,0'}]}
+        state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player, rival],
+                 'board': {'spaceship_tiles': {}}}
+        actions = [{'type': 'Upgrade', 'coord': '0,0', 'to': {'Academy': 'Science'}},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': 'PlanetaryInstitute'}]
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': a} for a in actions]}
+        scores = [(4.0, 'ac'), (9.0, 'pi')]
+        self.assertFalse(tp.rebellion_reachable(snapshot))
+        self.assertEqual([s[0] for s in tp.building_limits_scores(None, snapshot, scores)], [9.0, 4.0])
+        state['board']['spaceship_tiles'] = {'Rebellion': '2,0'}
+        self.assertTrue(tp.rebellion_reachable(snapshot))
+        self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # exception: institute allowed
+        rival['structures'] = [{'kind': 'Mine', 'hex': '3,0'}]                     # the rival is closer to the ship
+        self.assertFalse(tp.rebellion_reachable(snapshot))
+        rival['structures'] = []
+        state['board']['spaceship_tiles'] = {'Rebellion': '6,0'}                   # out of range
+        self.assertFalse(tp.rebellion_reachable(snapshot))
+        tp._guide['resolved_parts'] = False
+        self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # no building_limits without a flag
+
     def test_fixed_academy_wraps_rank_for_the_faction_with_the_part_in_round_one(self):
         import bgg_openings.fixed as fixed
         import four_factions.preparation as p

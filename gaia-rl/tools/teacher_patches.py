@@ -214,6 +214,11 @@ RESOLVED_FACTION_PARTS = {
     'Xenos': frozenset({'opening_res'}),
     'Bescods': frozenset({'building_due'}),
     'Itars': frozenset({'track_by_opening'}),
+    # Third batch (user 2026-10-20 "미구현 항목들 개선해"): BalTaks' fixed academy is the credit (QIC) one (B2:
+    # PG16-T26, PG02-S05, PG01-S12), HadschHallas keeps the no-institute rule of rounds 1-2 with the LF
+    # exception (weak-factions.md 2: SH04-S23, H06 — the Rebellion ship within reach and no rival closer).
+    'BalTaks': frozenset({'qic_academy'}),
+    'HadschHallas': frozenset({'building_limits', 'institute_rebellion'}),
 }
 
 
@@ -2301,8 +2306,25 @@ BUILDING_LIMITS = {'Firaks': (('Academy', 6),),
                    'BalTaks': (('PlanetaryInstitute', 5),),
                    'Ambas': (('PlanetaryInstitute', 2),),
                    # weak_factions: no institute in rounds 1-2 (BGG PI openings 110-127 vs 141 without, BGGO1-S10,
-                   # BGGO2-S22; PG19-S27 "2R 의회는 실수", PG19-S33 3-4R). The LF Rebellion 3-QIC exception is not modelled.
+                   # BGGO2-S22; PG19-S27 "2R 의회는 실수", PG19-S33 3-4R). The LF Rebellion 3-QIC exception is the
+                   # institute_rebellion part (resolved_parts): the rule is dropped while rebellion_reachable.
                    'HadschHallas': (('PlanetaryInstitute', 2),)}
+
+
+def rebellion_reachable(snapshot):
+    """The Rebellion ship tile is within SHIP_SETUP_RANGE of our buildings and no rival building is closer to it
+    (the LF exception's "3 QIC 확정" read from facts: SH04-S23, H06; the contest itself is not simulated)."""
+    from strategy_teacher import distance
+    state, actor = snapshot['state'], snapshot['player']
+    at = (state['board'].get('spaceship_tiles') or {}).get('Rebellion')
+    if at is None:
+        return False
+    ours = min((distance(s['hex'], at) for s in state['players'][actor]['structures']), default=None)
+    if ours is None or ours > SHIP_SETUP_RANGE:
+        return False
+    theirs = min((distance(s['hex'], at) for i, p in enumerate(state['players']) if i != actor
+                  for s in p['structures']), default=SHIP_SETUP_RANGE+1)
+    return ours <= theirs
 
 
 def _upgrade_target(action):
@@ -2321,6 +2343,8 @@ def building_limits_scores(env, snapshot, scores):
     if not _part(player, 'building_limits'):
         return scores
     limited = {building for building, last in BUILDING_LIMITS.get(player['faction'], ()) if state['round'] <= last}
+    if 'PlanetaryInstitute' in limited and _part(player, 'institute_rebellion') and rebellion_reachable(snapshot):
+        limited.discard('PlanetaryInstitute')
     if not limited:
         return scores
     candidates = snapshot['candidates']
@@ -2436,6 +2460,21 @@ def install_opening_only():
 # Science academy as for the other fixed factions (B11-03 "연구소→4지식"). The module dict is extended at
 # run time; the frozen file is not edited, and its own fixed_openings switch stays off.
 FIXED_ACADEMY = {'BalTaks': 'Science'}
+# B2 (conflicts/base-factions.md; PG16-T26, PG02-S05, PG01-S12 "지식 AC 2개는 크레딧 고갈"; user: blog and podcast
+# first): with the qic_academy part the fixed academy is the credit (QIC) one. The frozen coach reads the kind from
+# its TARGETS at decision time and maps only 'Science' to the structure kind, so the entry is set before each
+# enforce call and target_kind is wrapped; the frozen file is not edited.
+QIC_ACADEMY = {'BalTaks': 'qic_academy'}
+ACADEMY_KINDS = ('Science', 'Qic')
+
+
+def academy_target(faction):
+    """The fixed coach's target for `faction` now: the QIC academy with the part, else its TARGETS entry."""
+    import bgg_openings.fixed as fixed
+    part = QIC_ACADEMY.get(faction)
+    if part and part in _faction_parts(faction):
+        return 'Qic'
+    return FIXED_ACADEMY.get(faction, fixed.TARGETS.get(faction))
 
 
 def install_fixed_academy():
@@ -2443,6 +2482,12 @@ def install_fixed_academy():
     import four_factions.preparation as p
     for faction, kind in FIXED_ACADEMY.items():
         fixed.TARGETS.setdefault(faction, kind)
+    if not getattr(fixed.target_kind, '_qic_academy', False):
+        def target_kind(faction):
+            target = academy_target(faction)
+            return {'Academy': target} if target in ACADEMY_KINDS else target
+        target_kind._qic_academy = True
+        fixed.target_kind = target_kind
     inner_rank = p.Policies.rank
     if getattr(inner_rank, '_fixed_academy', False):
         return
@@ -2453,8 +2498,10 @@ def install_fixed_academy():
         state = snapshot['state']
         if actor is None or state['round'] != 1 or 'ActionPhase' not in state['phase']:
             return scores
+        faction = state['players'][actor]['faction']
         if not _part(state['players'][actor], 'fixed_academy'):
             return scores
+        fixed.TARGETS[faction] = academy_target(faction)
         scores, _ = fixed.enforce(env, snapshot, scores, self.memory)
         return scores
     for name, value in vars(inner_rank).items():
