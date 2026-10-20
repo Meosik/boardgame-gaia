@@ -51,6 +51,14 @@ level 5 / advanced tech / unflipped green tokens (`endgame_tech_counts.py`) were
 refused the replay command. These are the numbers the change was built for (user's PPO gate: ≥ 3 federations per seat,
 most tokens flipped), so the cycle is open on its main question.
 
+**Added later the same day (owner ran `federation_chances.py`, both arms pooled, 12 seat-games per faction):**
+federations formed per seat-game Geodens 0.92, Taklons 0.83, Terrans 0.92, Xenos 2.08 — the 084 range (0.7–1.0,
+0.8–1.2, 0.8–1.0, 1.8–2.0). Satellites per formed federation 3.2 / 3.3 / 4.3 / 5.4 (084: 3.6 / 4.1 / 3.4 / 5.9). Legal
+but not formed: **Terrans 3.6 decisions per seat-game in round 6, 0.1 formed**; the cheapest legal Terrans federation
+was 7 satellites at 70 of 119 decisions; the move played instead was mostly a FreeAction (40). Federation-legal passes:
+Geodens 4, Taklons 4, Terrans 9. With both arms pooled, a B-only gain shows at half size. No sign of a large rise.
+`federation_chances.py --by-arm` was added to split A and B.
+
 ## Reading
 
 - **Verdict (pre-registered, rounds 1–3 charges): not shown.** +4.4 with CI [−8.8, +17.7]; no faction's CI excludes 0.

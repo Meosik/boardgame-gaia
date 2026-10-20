@@ -24,6 +24,8 @@ def main():
     parser.add_argument('run_dir', type=Path)
     parser.add_argument('--list', metavar='TYPE', help='also print each decision that played TYPE while a '
                         'federation was legal (game, 0-based step, round, seat, faction)')
+    parser.add_argument('--by-arm', action='store_true', help='count each faction per A/B arm (089: the mixed '
+                        'table could not show whether the B arm formed more)')
     args = parser.parse_args()
     from gaia_rl import Environment
     chances = Counter()        # (faction, round) -> decisions with a legal federation
@@ -39,8 +41,14 @@ def main():
             continue
         env = Environment(result['seed'], 2000)
         seen = {}
-        for faction in result['factions']:
-            seats[faction] += 1
+
+        def label(seat):
+            faction = result['factions'][seat]
+            if not args.by_arm:
+                return faction
+            return f"{faction} {'A' if seat in result['a_seats'] else 'B'}"
+        for seat in range(len(result['factions'])):
+            seats[label(seat)] += 1
         with gzip.open(game_dir/'decisions.jsonl.gz', 'rt') as f:
             rows = [json.loads(line) for line in f]
         for step, row in enumerate(rows):
@@ -48,7 +56,7 @@ def main():
             state = snapshot['state']
             if 'ActionPhase' in str(state['phase']) and snapshot.get('player') is not None:
                 seat = snapshot['player']
-                faction = state['players'][seat]['faction']
+                faction = label(seat)
                 feds = [c['action'] for c in snapshot['candidates'] if c['action'].get('type') == 'FormFederation']
                 legal = bool(feds)
                 chosen = snapshot['candidates'][row['index']]['action']
@@ -72,9 +80,9 @@ def main():
                 if played == 'FormFederation':
                     formed[(faction, state['round'])] += 1
             env.step(row['decision_id'], row['index'])
-        for seat, faction in enumerate(result['factions']):
+        for seat in range(len(result['factions'])):
             if seat not in seen:
-                first_chance[faction].append(None)
+                first_chance[label(seat)].append(None)
     print('per seat-game: decisions with a legal federation / federations formed, by round')
     print(f"{'':14s}" + ''.join(f'{"R"+str(r):>11}' for r in range(1, 7)) + f"{'never legal':>13}")
     for faction in sorted(seats):
