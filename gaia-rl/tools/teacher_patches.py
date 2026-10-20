@@ -373,6 +373,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'fed': False,                 # True: ..._ships_fed (fed_compare + fed_cluster for every faction)
           'tokens': False,              # True: ..._ships_tokens (token_compare + track_race + race_prune)
           'ship_adjacent_mine': False,  # True: ..._ships_shipmine (see ship_adjacent_mine_scores)
+          'endgame_prices': False,      # True: ..._ships_endgame (round 6 stock at the final-scoring rates)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -529,6 +530,18 @@ def _track_income_excess(state, player):
     return excess
 
 
+FINAL_RESOURCES_PER_VP = 3     # rulebook p.18 / scoring.rs: 1 VP per 3 ore, credits and knowledge
+FINAL_RESEARCH_VP = 4          # 4 VP per research level reached among 3, 4 and 5
+
+
+def endgame_stock_vp(player):
+    """What the final scoring pays for the stock held now (fractions kept so the ranking keeps a slope)."""
+    res = player['resources']
+    stock = (res.get('ore', 0) + res.get('credits', 0) + res.get('knowledge', 0)) / FINAL_RESOURCES_PER_VP
+    levels = sum(min(3, max(0, level - 2)) for level in player['research_tracks'].values())
+    return stock + FINAL_RESEARCH_VP*levels
+
+
 def guide_potential(state, actor, *, home=None, guide_tracks=False):
     import guide_value as gv
     v = _value
@@ -538,12 +551,20 @@ def guide_potential(state, actor, *, home=None, guide_tracks=False):
     player = state['players'][actor]
     horizon = max(0, 6-state['round'])
     result = player['vp'] + v.standings(state, actor)
-    result += gv.research_value(state, player)
     power = player['resources']['power']
-    if _guide['lf_frozen']:
-        result += gv.materials(state, player['resources']) + lf_power_value(state, player)
+    if not horizon and (_guide['endgame_prices'] or _part(player, 'endgame_prices')):
+        # endgame_prices (user 2026-10-20, 090 p003 Terrans: 9 QIC held in round 6 while the Twilight
+        # token replay — 3 QIC for 8 VP — ranked −1.33 because a QIC was still 7 charges): in the last
+        # round the stock is worth what the final scoring pays (scoring.rs): 1 VP per 3 ore + credits +
+        # knowledge, QIC and power nothing, 4 VP per research level reached among 3-5. Moves that turn
+        # the stock into VP within the round show their VP themselves.
+        result += endgame_stock_vp(player)
     else:
-        result += gv.materials(state, player['resources']) + gv.power_value(state, player)
+        result += gv.research_value(state, player)
+        if _guide['lf_frozen']:
+            result += gv.materials(state, player['resources']) + lf_power_value(state, player)
+        else:
+            result += gv.materials(state, player['resources']) + gv.power_value(state, player)
     if horizon:
         # The frozen teacher's own Brainstone term (kept); its Gaia-area term unless lf_frozen.
         result += {'Area1': .5, 'Area2': 1.5, 'Area3': 4.2, 'Gaia': 0, None: 0}[power['brainstone']]
@@ -3276,6 +3297,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_shipmine(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     _guide['ship_adjacent_mine'] = True
     _wrap_rank('_ship_adjacent_mine', ship_adjacent_mine_scores)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_endgame(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus endgame_prices for every faction: in round 6 the
+    state value prices the stock at the final-scoring rates (see guide_potential)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['endgame_prices'] = True
     return teacher
 
 

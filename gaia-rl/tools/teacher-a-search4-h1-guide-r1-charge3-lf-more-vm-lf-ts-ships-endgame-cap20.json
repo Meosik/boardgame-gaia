@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus endgame_prices: in round 6 the state value prices the stock at the final-scoring rates (1 VP per 3 ore + credits + knowledge, QIC and power 0, 4 VP per research level reached among 3-5) instead of the guide's charge prices, so a move that turns stock into VP within the last round (the Twilight token replay, 3 QIC for 8 VP) ranks by its VP. Every faction (user 2026-10-20; guide_r1_charge3_lf_more_vm_lf_ts_ships_endgame).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_endgame",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

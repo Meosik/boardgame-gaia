@@ -309,7 +309,8 @@ class OpeningBudgetTests(unittest.TestCase):
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide': ['False']*6 + ['False', 'True'],
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_fed': ['False']*6 + ['False', 'False'],
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_tokens': ['False']*6 + ['False', 'False'],
-                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_shipmine': ['False']*6 + ['False', 'False']}
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_shipmine': ['False']*6 + ['False', 'False'],
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_endgame': ['False']*6 + ['False', 'False']}
         flags += ", tp._guide['byfaction']"
         for factory, want in expected.items():
             code = f"import teacher_patches as tp\ntp.{factory}({SEED!r})\nprint({flags})"
@@ -735,6 +736,31 @@ class OpeningBudgetTests(unittest.TestCase):
         lifted = tp.fed_cluster_scores(None, snapshot, [(9.0, 'far'), (6.0, 'bridge'), (5.0, 'next')])
         self.assertEqual([s[0] for s in lifted], [6.0, 9.0, 5.0])
         self.assertIn('satellites -1', lifted[1][1])
+
+    def test_endgame_prices_value_the_round_six_stock_at_the_final_scoring_rates(self):
+        import copy
+        import guide_value as gv
+        from faction_teachers.profiles import profiles
+        snapshot = next(s for _, s in play(rounds=1) if s['state']['round'] == 1)
+        state = copy.deepcopy(snapshot['state'])
+        state['round'] = 6                                             # horizon 0: the last round
+        player = state['players'][0]
+        player['resources'].update(ore=4, credits=5, knowledge=3, qic=9)
+        player['research_tracks'].update(economy=3, ai=5)
+        home = profiles()[player['faction']].home
+        before = tp.guide_potential(state, 0, home=home)
+        self.assertEqual(tp.endgame_stock_vp(player), 4 + 4*(1+3))   # 12/3 and levels 3 + 3,4,5
+        tp._guide['endgame_prices'] = True                             # restored by setUp
+        after = tp.guide_potential(state, 0, home=home)
+        guide = gv.research_value(state, player) + gv.materials(state, player['resources']) + gv.power_value(state, player)
+        self.assertAlmostEqual(before - after, guide - 20)
+        self.assertGreater(before - after, 30)                         # 9 QIC alone were 42 VP
+        # Earlier rounds keep the guide prices.
+        state['round'] = 5
+        tp._guide['endgame_prices'] = False
+        before = tp.guide_potential(state, 0, home=home)
+        tp._guide['endgame_prices'] = True
+        self.assertEqual(tp.guide_potential(state, 0, home=home), before)
 
     def test_ship_adjacent_mine_leads_the_entry_that_pays_range_qic(self):
         empty = {'planet': None, 'structures': [], 'satellites': []}

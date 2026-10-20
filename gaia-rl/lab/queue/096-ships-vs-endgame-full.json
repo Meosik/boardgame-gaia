@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"쓸 데가 없다는 것도 말이 안되고, 트와일라잇 들어갔으면 연방 능력 복사라도 하지\" → \"ㄱ은 먼저 해\"): A = ships(배포 교사), B = ships_endgame — endgame_prices(6라운드 상태값에서 보유 자원을 가이드 충전 가격 대신 최종 점수 규칙으로: 광석+돈+지식 3개당 1VP, QIC·파워 0, 연구 3·4·5단계당 4VP; 그 라운드 안에 점수로 바뀌는 수는 자기 VP로 드러남). 근거: 090 p003 game-0 테란이 6R에 QIC 9개를 들고 트와일라잇 재점수(3QIC → 8VP)를 −1.33으로 밀어 비교조차 안 함(QIC 7충전 = 4.67VP 고정); endgame spec으로 같은 결정 296을 다시 물으면 재점수가 +8.00으로 1위·선택됨. 전 종족. geo-quartet 새 시드 6쌍(seeds.txt 자동), 6R 끝까지. 판정: 사전 규칙대로 1–3라운드 충전량(이 부품은 5R 롤아웃 끝·6R에만 작동하므로 1–3R은 동일해야 함 = 동일성 확인). 함께 볼 것(판정 아님): 최종 VP(이 부품의 실제 효과), 6R 재점수·2QIC 보너스·QIC→광석 사용 수(action_counts), 끝 QIC 보유량, 결정 시간, 오류.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-endgame-cap20.json",
+  "pairs": 6,
+  "comparisons": 4,
+  "stop_round": 0
+}
