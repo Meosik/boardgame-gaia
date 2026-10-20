@@ -1278,6 +1278,38 @@ class OpeningBudgetTests(unittest.TestCase):
         state['round'] = 7                                                           # no tile: untouched
         self.assertIs(tp.round_tile_lead_goals(snapshot, goals), goals)
 
+    def test_plan_menu_orders_the_front_by_the_faction_row(self):
+        from four_factions.preparation import Goal
+        state = self.track_plan_state()
+        state['round_tiles'] = [{'condition': 'BuildMineOnGaia', 'vp_per_unit': 3}]*6
+        state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
+                                          'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
+        snapshot = {'player': 0, 'state': state, 'candidates': []}
+        bare = Goal('Navigation-2', 'research', target='Navigation', level=2)
+        plan = Goal('track-plan-Navigation-2>colony@2,0', 'ordered', steps=(bare, Goal('colony@2,0', 'colony', '2,0')))
+        ability = Goal('Terrans-x', 'ordered', steps=(Goal('a', 'faction-action', target='X'),))
+        goals = [bare, Goal('Science@0,0', 'upgrade', '0,0', 'Science'), Goal('colony@3,0', 'colony', '3,0'), ability]
+        fed = Goal('federation-7', 'root', first=7)
+        self.assertIs(tp.plan_menu_goals(snapshot, goals), goals)                   # part off
+        tp._guide['plan_menu'] = True                                                # restored by setUp's cleanup
+        with mock.patch.object(tp, 'track_plan_goals', return_value=[plan]), \
+                mock.patch.object(tp, 'fed_compare_goal', return_value=fed), \
+                mock.patch.object(tp, 'token_compare_goal', return_value=None):
+            menu = tp.plan_menu_goals(snapshot, goals)
+            # Default row: tile (the Gaia colony) → federation → (no token) → track; the bare Navigation-2 dropped.
+            self.assertEqual([g.name for g in menu[:3]], ['colony@3,0', 'federation-7', plan.name])
+            self.assertEqual({g.name for g in menu[3:]}, {'Science@0,0', 'Terrans-x'})
+            self.assertEqual({id(g) for g in menu[:3]}, tp._menu_front)
+            state['players'][0]['faction'] = 'Itars'
+            ability2 = Goal('Itars-PI@0,0-Gaia-tech@0,1', 'ordered', steps=(Goal('a', 'faction-action', target='X'),))
+            goals[3] = ability2
+            menu = tp.plan_menu_goals(snapshot, goals)                              # Itars row: tile → ability → federation
+            self.assertEqual([g.name for g in menu[:3]], ['colony@3,0', ability2.name, 'federation-7'])
+            state['round'] = 6
+            del state['round_tiles']
+            menu = tp.plan_menu_goals(snapshot, goals)                              # no tile: ability → federation → track
+            self.assertEqual([g.name for g in menu[:3]], [ability2.name, 'federation-7', plan.name])
+
     def test_install_track_plans_puts_plans_first_and_drops_the_bare_research_goal(self):
         import four_factions.preparation as p
         from four_factions.preparation import Goal

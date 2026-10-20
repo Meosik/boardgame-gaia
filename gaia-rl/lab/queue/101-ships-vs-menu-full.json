@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"plan_menu 만들어 보고\"; E41·E45–E49): A = ships(배포 교사), B = ships_menu — plan_menu(롤아웃에 올릴 계획을 한 기제로: 이번 라운드 점수 타일이 주는 계획 · 지금 합법인 최선 연방 · 녹색 토큰을 뒤집는 최선 수 · 자료 트랙 계획(track_plans) · 종족 고유 계획(동결 paths.py: 아이타 의회 타일, 하이브 정거장, 매드 안드로이드 최저 트랙, 앰바스 의회 교환 …)을 모아 앞 3개를 종족 행(FACTION_MENU, 기본 타일 > 연방 > 토큰 > 트랙 > 능력) 순서로 가족 교대 앞에; 기본 순위·지평 불변, 롤아웃이 판정 = \"규칙이 제안, 롤아웃이 결정\"). 확인: 090 p002 결정 166(4R 타클론) 비교에 federation-22가 올라 317.28로 선택(기존 312.35 AI 연구), 091 결정 140(3R 테란) 타일 식민·항해 계획이 비교에 듦. E49 \"적게·크게\": geo-quartet 새 시드 12쌍(seeds.txt 자동), 6R 끝까지(≈ 6시간). 판정: 사전 규칙 1–3라운드 충전(해 없음 확인) + 이 부품의 효과는 **최종 VP 12쌍**과 PPO 지표(federation_chances --by-arm 좌석당 결성, endgame_tech_counts 남은 녹색·missed·5단계·고급). 함께 볼 것: B 결정 라벨 채택 수(federation-*, flip-*, track-plan-*, 종족 계획 이름), research_counts 1–3R, known-bad-decisions.md 재질문(결정 296은 endgame 부품이라 제외), 결정 시간, 오류.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu-cap20.json",
+  "pairs": 12,
+  "comparisons": 4,
+  "stop_round": 0
+}

@@ -246,6 +246,8 @@ def _faction_parts(faction):
         parts.add('track_plans')
     if _guide['round_tile_lead']:
         parts.add('round_tile_lead')
+    if _guide['plan_menu']:
+        parts.update({'plan_menu', 'track_plans'})
     return parts
 
 
@@ -380,6 +382,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'endgame_prices': False,      # True: ..._ships_endgame (round 6 stock at the final-scoring rates)
           'track_plans': False,         # True: ..._ships_plans (a research step compared as the plan it opens)
           'round_tile_lead': False,     # True: ..._ships_roundtile (the goals this round's tile scores lead)
+          'plan_menu': False,           # True: ..._ships_menu (one plan menu: tile, federation, token, track, ability)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -2816,12 +2819,13 @@ def fed_remember_scores(env, snapshot, scores):
     return scores
 
 
-def fed_compare_goal(snapshot):
-    """Goal comparing the best legal federation, or None (no federation, part off, no ranking)."""
+def fed_compare_goal(snapshot, part=True):
+    """Goal comparing the best legal federation, or None (no federation, part off, no ranking).
+    part=False (plan_menu): no part check."""
     from current_actions.conservation import blocked
     from four_factions.preparation import Goal
     actor = snapshot.get('player')
-    if actor is None or not _part(snapshot['state']['players'][actor], 'fed_compare'):
+    if actor is None or (part and not _part(snapshot['state']['players'][actor], 'fed_compare')):
         return None
     scores = _fed_scores.get(id(snapshot))
     if scores is None or len(scores) != len(snapshot['candidates']):
@@ -3065,11 +3069,12 @@ def _flips_token(state, actor, action):
     return choice.get('kind') in ('Advanced', 'LostFleetAdvanced')
 
 
-def token_compare_goal(snapshot):
+def token_compare_goal(snapshot, part=True):
+    """Goal comparing the best legal token flip, or None. part=False (plan_menu): no part check."""
     from current_actions.conservation import blocked
     from four_factions.preparation import Goal
     state, actor = snapshot['state'], snapshot.get('player')
-    if actor is None or not _part(state['players'][actor], 'token_compare') or not _green(state['players'][actor]):
+    if actor is None or (part and not _part(state['players'][actor], 'token_compare')) or not _green(state['players'][actor]):
         return None
     scores = _fed_scores.get(id(snapshot))
     if scores is None or len(scores) != len(snapshot['candidates']):
@@ -3633,6 +3638,109 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_roundtile(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     _guide['round_tile_lead'] = True
     install_round_tile_lead()
+    return teacher
+
+
+# ── plan_menu (user 2026-10-20 "plan_menu 만들어 보고"; HANDOFF E41, E45–E48) ────────────────────────────────
+# One mechanism for "what the rollout compares": the plans the situation offers are gathered, the first
+# MENU_FIRST of them go ahead of the family round-robin in the order the faction's row names, and the rollout
+# judges (rule proposes, rollout decides — E45). Menu families:
+#   'tile'       a goal whose next step is what this round's scoring tile pays (round_tile_lead's test)
+#   'federation' the best legal federation now (fed_compare's root goal, no part check)
+#   'token'      the best legal move flipping a green token now (token_compare's root goal)
+#   'track'      the guide-track plans (track_plans: FACTION_TRACKS, TRACK_CAPS, TRACK_STEPS, T2 / X3)
+#   'ability'    the faction's own multi-step plans (frozen faction_teachers/paths.py: Itars Gaia tile, Ivits
+#                station, Bescods lowest-track advance, Ambas institute swap, Firaks lab cycle, Nevlas
+#                knowledge, BalTaks former QIC, Gleens natural Gaia, Geodens new type, Lantids cohabit)
+#   'colony' / 'upgrade' / … the frozen goals of that family (not named in a row: they keep the round-robin)
+# FACTION_MENU: the order a faction's sources give the families; MENU_DEFAULT for the rest. Data rows only —
+# a new source adds or edits a row (E47). The base ranking is untouched; no horizon change (E37).
+MENU_FIRST = 3
+MENU_DEFAULT = ('tile', 'federation', 'token', 'track', 'ability')
+FACTION_MENU = {
+    'Itars': ('tile', 'ability', 'federation', 'token', 'track'),     # B7-01: the institute ability "게임 최고의 능력"
+    'Bescods': ('tile', 'ability', 'federation', 'token', 'track'),   # BGGO2-S14, B13-S02: the ability before the lab
+    'Ivits': ('ability', 'tile', 'federation', 'token', 'track'),     # B12: station, then federation or expansion
+    'Xenos': ('federation', 'tile', 'token', 'track', 'ability'),     # B15-01: federations early (2.2 a game, 084)
+    'Ambas': ('tile', 'federation', 'ability', 'token', 'track'),     # B06: institute swap feeds the federation
+}
+_menu_front = set()      # id() of the goals plan_menu put in front, read by the interleave wrapper
+
+
+def _menu_family(snapshot, goal):
+    name = str(getattr(goal, 'name', ''))
+    faction = snapshot['state']['players'][snapshot['player']]['faction']
+    if name.startswith('federation-'):
+        return 'federation'
+    if name.startswith('flip-'):
+        return 'token'
+    if _is_track_plan(goal):
+        return 'track'
+    if name.startswith(f'{faction}-'):
+        return 'ability'
+    return getattr(goal, 'family', None)
+
+
+def plan_menu_goals(snapshot, goals):
+    """The goal list with the menu's first MENU_FIRST plans in front (faction row order)."""
+    state, actor = snapshot['state'], snapshot.get('player')
+    _menu_front.clear()
+    if actor is None or not isinstance(state.get('phase'), dict) or 'ActionPhase' not in state['phase']:
+        return goals
+    player = state['players'][actor]
+    if not _part(player, 'plan_menu'):
+        return goals
+    plans = track_plan_goals(snapshot)
+    covered = {step.name for plan in plans for step in plan.steps if step.family == 'research'}
+    pool = [g for g in (fed_compare_goal(snapshot, part=False), token_compare_goal(snapshot, part=False)) if g]
+    pool += plans + [g for g in goals if not (getattr(g, 'family', None) == 'research' and g.name in covered)]
+    condition = _round_condition(state)
+    front = []
+    for family in FACTION_MENU.get(player['faction'], MENU_DEFAULT):
+        if len(front) >= MENU_FIRST:
+            break
+        if family == 'tile':
+            pick = next((g for g in pool if g not in front and condition
+                         and _scores_round_tile(state, actor, g, condition)), None)
+        else:
+            pick = next((g for g in pool if g not in front and _menu_family(snapshot, g) == family), None)
+        if pick is not None:
+            front.append(pick)
+    _menu_front.update(id(g) for g in front)
+    return front + [g for g in pool if g not in front]
+
+
+def install_plan_menu():
+    """goals_for: plan_menu_goals over the frozen goals; interleave_families: the menu's front stays ahead of
+    the family round-robin; fed_remember_scores keeps the root ranking for the federation / token goals."""
+    import four_factions.preparation as p
+    inner = p.goals_for
+    if not getattr(inner, '_plan_menu', False):
+        def goals_for(snapshot, **kwargs):
+            return plan_menu_goals(snapshot, inner(snapshot, **kwargs))
+        for name, value in vars(inner).items():
+            if name.startswith('_') and isinstance(value, bool):
+                setattr(goals_for, name, value)
+        goals_for._plan_menu = True
+        goals_for.__wrapped__ = getattr(inner, '__wrapped__', inner)
+        p.goals_for = goals_for
+    inner_interleave = p.interleave_families
+    if not getattr(inner_interleave, '_plan_menu', False):
+        def interleave_families(items, family):
+            first = [g for g in items if id(g) in _menu_front]
+            return first + inner_interleave([g for g in items if id(g) not in _menu_front], family)
+        interleave_families._plan_menu = True
+        interleave_families.__wrapped__ = inner_interleave
+        p.interleave_families = interleave_families
+    _wrap_rank('_fed_remember', fed_remember_scores)
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus plan_menu for every faction (above); track_plans'
+    generator is on as the menu's 'track' family (its own installer is not used)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['plan_menu'] = True
+    install_plan_menu()
     return teacher
 
 

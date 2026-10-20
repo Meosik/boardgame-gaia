@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus plan_menu: one mechanism for what the rollout compares — the plans the situation offers (this round's scoring tile, the best legal federation, the best green-token flip, the guide-track plans of track_plans, the faction's own ability plans) are gathered and the first three go ahead of the family round-robin in the order the faction's row names (FACTION_MENU, default tile > federation > token > track > ability); the base ranking and the horizon are untouched, the rollout judges. Every faction (user 2026-10-20 'plan_menu 만들어 보고'; guide_r1_charge3_lf_more_vm_lf_ts_ships_menu).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_menu",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}
