@@ -10,5 +10,5 @@
   ],
   "comparisons": 4,
   "stop_round": 0,
-  "hold_note": "2026-10-21 E59: quartet-a-37936은 098b로 옮김(쿼텟 a 5시드). 093에서 opening_only가 양팔 다 안 발동하므로 이 비교는 science_when 조건만 재게 됨 — 098a·098b 결과 뒤 시드(099 스캔)와 설계를 다시 정함."
+  "hold_note": "2026-10-21 01:10 확인: 보류 이름 변경(7fb67af) 전에 lab이 큐를 읽어 094는 00:54에 원래 15시드로 이미 실행 중(runs/lab-094-src-vs-res-full, 6R ≈ 8시간). 이 파일은 기록용. quartet-a-37936은 098b에도 씀(다른 비교라 무방). 093에서 opening_only가 양팔 다 안 발동하므로 094는 res 부품(opening_res·science_when 등)만 재는 셈 — 테란·타클론 opening_res 목록도 같은 예보 미완성 위험."
 }
