@@ -197,6 +197,20 @@ SOURCE_FACTION_PARTS = {
     'Itars': frozenset({'building_due'}),
 }
 
+# Resolved parts (user 2026-10-20 "블로그, 팟캐스트 위주로 진행하고, LF 자료는 최신 자료라 더 잘 반영해야해", "다카니안은
+# 상황을 많이 타지. 테라포밍을 많이 구할수 있냐 없냐", "경제랑 과학도 비슷해 …", "자료 충돌과 부품구현부터"): the conflicts
+# re-judged in conflicts/base-factions.md "사용자 원칙으로 재판정" — round-1 opening order for Terrans (T1), Taklons
+# (K1) and Darkanians (terraforming supply), and the Economy-or-Science first step for Nevlas and Ivits (I1, N1)
+# by condition instead of a fixed order. On only in ..._ships_byfaction_guide_res, on top of SOURCE_FACTION_PARTS
+# (science_when replaces track_steps_src there). Order only.
+RESOLVED_FACTION_PARTS = {
+    'Terrans': frozenset({'opening_res'}),
+    'Taklons': frozenset({'opening_res'}),
+    'Darkanians': frozenset({'opening_res'}),
+    'Nevlas': frozenset({'science_when'}),
+    'Ivits': frozenset({'science_when'}),
+}
+
 
 def _faction_parts(faction):
     parts = set(BASE_FACTION_PARTS.get(faction, ()))
@@ -208,6 +222,8 @@ def _faction_parts(faction):
         parts.update(WEAK_FACTION_PARTS.get(faction, ()))
     if _guide['source_parts']:
         parts.update(SOURCE_FACTION_PARTS.get(faction, ()))
+    if _guide['resolved_parts']:
+        parts.update(RESOLVED_FACTION_PARTS.get(faction, ()))
     if _guide['fed']:
         parts.update(FED_PARTS)
     if _guide['tokens']:
@@ -339,6 +355,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'faction_guide': False,       # True: ..._ships_byfaction_guide (GUIDE_FACTION_PARTS on as well)
           'weak_factions': False,       # True: ..._ships_byfaction_guide_weak (WEAK_FACTION_PARTS on as well)
           'source_parts': False,        # True: ..._ships_byfaction_guide_src (SOURCE_FACTION_PARTS on as well)
+          'resolved_parts': False,      # True: ..._ships_byfaction_guide_res (RESOLVED_FACTION_PARTS on as well)
           'fed': False,                 # True: ..._ships_fed (fed_compare + fed_cluster for every faction)
           'tokens': False,              # True: ..._ships_tokens (token_compare + track_race + race_prune)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
@@ -669,14 +686,51 @@ UIQOO_OPENINGS = {
 
 
 
-def guide_opening_labels(faction):
+# opening_res (RESOLVED_FACTION_PARTS, conflicts/base-factions.md "사용자 원칙으로 재판정"): blog and podcast first, LF
+# sources weighted up. Terrans T1: institute openings (B4-03, PG18-T01; with a trading station when a round-1
+# federation is on, SH04-S18 — the federation condition is not modelled, so the search compares both), then
+# lab + 4 mines (PG18-T02, SH04 rank 1), academy last (PG18-T04 "AC 금지"). Taklons K1: academy + 2 mines
+# (B10-03, PG21-T10), then lab + 5 / 4 mines (B19-05, SH04-S37), two labs last (PG21-T11).
+RESOLVED_OPENINGS = {
+    'Terrans': ('1PI+2M', '1PI+1TS+2M', '1RL+4M', '1AC+1M'),
+    'Taklons': ('1AC+2M', '1RL+5M', '1RL+4M', '2RL+2M'),
+}
+# Darkanians (general-and-lf.md, user "테라포밍을 많이 구할수 있냐 없냐"): with terraforming at hand in round 1 the
+# expansion builds (institute for new-sector mines: PG25-S25, SH-DK; lab + 4 mines: SH04-S53), without it the
+# academy first (SH-DK "1테라 부스터와 TF마스가 생명줄", academy when the institute cannot reach two mines).
+# Supply counted from facts: the 1-terraform round booster (engine ROUND_BOOSTER_TERRAFORM 12) and the TF Mars
+# ship within SHIP_SETUP_RANGE of our buildings. Rich at one or more (bot's reading; the user's threshold is open).
+DARKANIAN_OPENINGS = {True: ('1PI+1TS+2M', '1RL+4M', '1RL+1TS+2M', '1AC+1M'),
+                      False: ('1AC+1M', '1RL+1TS+2M', '1RL+4M', '1PI+1TS+2M')}
+TERRAFORM_BOOSTER = 12
+DARKANIAN_TERRA_RICH = 1
+
+
+def darkanian_terraforming(snapshot):
+    """Round-1 terraforming sources at hand: the terraform booster held, the TF Mars ship within reach."""
+    from strategy_teacher import distance
+    state = snapshot['state']
+    player = state['players'][snapshot['player']]
+    supply = int(player.get('booster') == TERRAFORM_BOOSTER)
+    mars = (state['board'].get('spaceship_tiles') or {}).get('TFMars')
+    if mars is not None and any(distance(s['hex'], mars) <= SHIP_SETUP_RANGE for s in player['structures']):
+        supply += 1
+    return supply
+
+
+def guide_opening_labels(faction, snapshot=None):
     """The guide's round-1 opening order for a faction, () when no guide order applies."""
+    if snapshot is not None and _part({'faction': faction}, 'opening_res'):
+        if faction == 'Darkanians':
+            return DARKANIAN_OPENINGS[darkanian_terraforming(snapshot) >= DARKANIAN_TERRA_RICH]
+        if faction in RESOLVED_OPENINGS:
+            return RESOLVED_OPENINGS[faction]
     return UIQOO_OPENINGS.get(faction) or ()
 
 
 def uiqoo_opening_order(snapshot, goals, remembered=None):
     faction = snapshot['state']['players'][snapshot['player']]['faction']
-    order = guide_opening_labels(faction)
+    order = guide_opening_labels(faction, snapshot)
     if not order:
         return goals
     rank = {label: i for i, label in enumerate(order)}
@@ -2122,6 +2176,27 @@ TRACK_STEPS = {'Gleens': ((1, 'navigation', 2),),
 TRACK_STEPS_SRC = {'Nevlas': ((1, 'science', 3),),
                    'Lantids': ((1, 'economy', 2),),
                    'Ivits': ((1, 'science', 2),)}
+# science_when (RESOLVED_FACTION_PARTS; user 2026-10-20 "과학쪽 고급 기술이 맛있거나, 5 6라운드에 트랙 상승 점수가 잇거나,
+# 좋은 고급기술이 많을때. 과학을 올릴 수 있는 종족은 애초에 경제가 조금은 받혀주니까" — science first still keeps the
+# upgrades going): the science entry when the round 5 or 6 tile scores research steps or the Advanced tile above
+# Science is worth more than the one above Economy (lf_advanced_option), else the economy entry (Ivits B12-02,
+# Nevlas B8-02). "Many good Advanced tiles" needs a threshold from the user and is not modelled.
+SCIENCE_WHEN = {'Nevlas': (((1, 'science', 3),), ((1, 'economy', 2),)),
+                'Ivits': (((1, 'science', 2),), ((1, 'economy', 2),))}
+
+
+def science_first(state, player):
+    if any(tile.get('condition') == 'ResearchAdvance' for tile in (state.get('round_tiles') or [])[4:6]):
+        return True
+    board = state['research_board']['advanced_tech_tiles']
+    economy, science = board[4], board[5]
+    if science is None:
+        return False
+    if economy is None:
+        return True
+    return lf_advanced_option(state, player, science) > lf_advanced_option(state, player, economy)
+
+
 TRACK_STEPS_LAST_ROUND = 5
 TRACK_NAMES = {key: name for name, key in TRACK_KEYS.items()}
 
@@ -2132,12 +2207,16 @@ def track_steps_scores(env, snapshot, scores):
     if actor is None or 'ActionPhase' not in state['phase'] or state['round'] > TRACK_STEPS_LAST_ROUND:
         return scores
     player = state['players'][actor]
+    when = _part(player, 'science_when') and player['faction'] in SCIENCE_WHEN
     src = _part(player, 'track_steps_src') and player['faction'] in TRACK_STEPS_SRC
-    if not (src or _part(player, 'track_steps')):
+    if not (when or src or _part(player, 'track_steps')):
         return scores
     levels = player.get('research_tracks') or {}
-    table = TRACK_STEPS_SRC if src else TRACK_STEPS
-    wanted = [TRACK_NAMES[t] for start, t, level in table.get(player['faction'], ())
+    if when:
+        steps = SCIENCE_WHEN[player['faction']][0 if science_first(state, player) else 1]
+    else:
+        steps = (TRACK_STEPS_SRC if src else TRACK_STEPS).get(player['faction'], ())
+    wanted = [TRACK_NAMES[t] for start, t, level in steps
               if start <= state['round'] and levels.get(t, 0) < level]
     if not wanted:
         return scores
@@ -2481,6 +2560,15 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs)
     _guide['source_parts'] = True
     _wrap_rank('_building_due', building_due_scores)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_res(seed, **kwargs):
+    """Teacher factory: ..._ships_byfaction_guide_src plus RESOLVED_FACTION_PARTS — the conflicts re-judged by the
+    user's source priority: Terrans, Taklons and Darkanians opening order (opening_res), Nevlas and Ivits Economy
+    or Science first by condition (science_when)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src(seed, **kwargs)
+    _guide['resolved_parts'] = True
     return teacher
 
 

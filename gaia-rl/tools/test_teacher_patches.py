@@ -426,6 +426,50 @@ class OpeningBudgetTests(unittest.TestCase):
         tp._guide['source_parts'] = False
         self.assertEqual(tp.track_steps_scores(None, snapshot, scores), scores)     # guide order: Navigation 2
 
+    def test_resolved_parts_order_openings_and_pick_science_by_condition(self):
+        tp._guide.update(byfaction=True, faction_guide=True, source_parts=True)   # restored by setUp's cleanup
+        self.assertNotIn('opening_res', tp._faction_parts('Terrans'))
+        player = {'faction': 'Terrans', 'booster': None, 'structures': [{'kind': 'Mine', 'hex': '0,0'}],
+                  'research_tracks': {'economy': 1, 'science': 1}}
+        state = {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player], 'board': {'spaceship_tiles': {}},
+                 'round_tiles': [{'condition': 'BuildMine'}]*6,
+                 'research_board': {'advanced_tech_tiles': [None]*6}}
+        snapshot = {'player': 0, 'state': state, 'candidates': []}
+        self.assertEqual(tp.guide_opening_labels('Terrans', snapshot), tp.UIQOO_OPENINGS['Terrans'])   # flag off
+        tp._guide['resolved_parts'] = True
+        self.assertEqual(tp.guide_opening_labels('Terrans', snapshot)[0], '1PI+2M')
+        self.assertEqual(tp.guide_opening_labels('Terrans', snapshot)[-1], '1AC+1M')
+        self.assertEqual(tp.guide_opening_labels('Taklons', snapshot)[0], '1AC+2M')
+        self.assertEqual(tp.guide_opening_labels('Terrans'), tp.UIQOO_OPENINGS['Terrans'])   # no snapshot: guide
+        # Darkanians: no terraforming at hand -> academy first; the booster or TF Mars in reach -> institute first.
+        player['faction'] = 'Darkanians'
+        self.assertEqual(tp.darkanian_terraforming(snapshot), 0)
+        self.assertEqual(tp.guide_opening_labels('Darkanians', snapshot)[0], '1AC+1M')
+        player['booster'] = tp.TERRAFORM_BOOSTER
+        self.assertEqual(tp.guide_opening_labels('Darkanians', snapshot)[0], '1PI+1TS+2M')
+        player['booster'] = None
+        state['board']['spaceship_tiles'] = {'TFMars': '5,0'}
+        self.assertEqual(tp.darkanian_terraforming(snapshot), 0)                                  # 5 away
+        state['board']['spaceship_tiles'] = {'TFMars': '2,0'}
+        self.assertEqual(tp.darkanian_terraforming(snapshot), 1)
+        # science_when: Economy 2 by default, Science when round 5 or 6 scores research steps.
+        player['faction'] = 'Ivits'
+        actions = [{'type': 'ResearchAdvance', 'track': 'Economy'}, {'type': 'ResearchAdvance', 'track': 'Science'}]
+        snapshot['candidates'] = [{'action': a} for a in actions]
+        scores = [(4.0, 'eco'), (9.0, 'sci')]
+        self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [9.0, 4.0])   # Economy 2 first
+        state['round_tiles'] = [{'condition': 'BuildMine'}]*5 + [{'condition': 'ResearchAdvance'}]
+        self.assertEqual(tp.track_steps_scores(None, snapshot, scores), scores)                       # Science first
+        # The Advanced tile above Science against the one above Economy.
+        state['round_tiles'] = [{'condition': 'BuildMine'}]*6
+        state['research_board']['advanced_tech_tiles'] = [None]*4 + [1, 2]
+        saved = tp.lf_advanced_option
+        self.addCleanup(lambda: setattr(tp, 'lf_advanced_option', saved))
+        tp.lf_advanced_option = lambda state, player, tile: {1: 3.0, 2: 8.0}[tile]
+        self.assertTrue(tp.science_first(state, player))
+        tp.lf_advanced_option = lambda state, player, tile: {1: 8.0, 2: 3.0}[tile]
+        self.assertFalse(tp.science_first(state, player))
+
     def test_building_due_puts_the_institute_first_among_big_buildings(self):
         tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
         player = {'faction': 'Firaks', 'research_tracks': {}, 'structures': [{'kind': 'ResearchLab', 'hex': '0,0'}]}
