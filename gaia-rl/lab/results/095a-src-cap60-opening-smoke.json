@@ -1,0 +1,389 @@
+{
+ "name": "095a-src-cap60-opening-smoke",
+ "kind": "ab",
+ "status": "done",
+ "note": "사용자(2026-10-21 \"그렇게 해\", HANDOFF E59 (ㄴ)): 092·093에서 opening_only 목록(하드쉬 할라 AC/RL+4~5M, 앰바스 RL+4~6M·AC+2M, 매드 안드로이드 RL+4~5M·2RL+1M, 네블라 PI+RL·PI+TS+2M, 란티다 PI+3~6M)의 예보가 20초 탐색에서 완성되지 않아 B팔이 current-choice/local-baseline으로 1R을 뒀다(네블라 BGG 선택 0회, 앰바스 3회). 상한 60초(+비교 병렬 2)면 완성되는지 보는 스모크: A = guide cap60-p2, B = src cap60-p2(같은 규칙, 상한만 60초), 쿼텟 a·b·c 1시드씩 3쌍, 2라운드 시작에서 종료(≈ 30–40분). 판정 없음(충전은 안 읽음). 볼 것: plan_labels --prefix BGG-R1- 로 B팔 앰바스·매드 안드로이드·네블라·란티다·글린의 1R BGG 선택 수(093 cap20: 3·16·0·14·60)와 decisions의 completed_comparisons, 결정 시간(셋업·1R 최대). 완성되면 opening_only 종족을 cap60 양팔로 재측정(092 하드쉬 할라 포함), 안 되면 fixed_academy식 코치 경로(엔지니어링, 사용자 결정).",
+ "host": "agentmaco",
+ "commit": "a498287",
+ "started_at": "2026-10-21T02:58:46+09:00",
+ "finished_at": "2026-10-21T03:38:22+09:00",
+ "seeds": [
+  "quartet-a-28079",
+  "quartet-b-56281",
+  "quartet-c-52367"
+ ],
+ "command": [
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap60-p2.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-src-cap60-p2.json",
+  "--games",
+  "6",
+  "--seeds",
+  "quartet-a-28079",
+  "quartet-b-56281",
+  "quartet-c-52367",
+  "--comparisons",
+  "4",
+  "--jobs",
+  "4",
+  "--fast-copy",
+  "--stop-round",
+  "1",
+  "--output",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-095a-src-cap60-opening-smoke"
+ ],
+ "exit_code": 0,
+ "summary": {
+  "factions": {
+   "Ambas": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 17,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 11,
+    "A_unsearched_comparisons": 1524,
+    "B_decisions": 17,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 11,
+    "B_unsearched_comparisons": 1376
+   },
+   "BalTaks": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 10,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 7,
+    "A_unsearched_comparisons": 1025,
+    "B_decisions": 10,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 7,
+    "B_unsearched_comparisons": 1009
+   },
+   "Bescods": {
+    "pairs": 1,
+    "mean_B_minus_A": 5,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 14,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 8,
+    "A_unsearched_comparisons": 2100,
+    "B_decisions": 11,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 8,
+    "B_unsearched_comparisons": 2056
+   },
+   "Firaks": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 11,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 8,
+    "A_unsearched_comparisons": 1133,
+    "B_decisions": 13,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 9,
+    "B_unsearched_comparisons": 1407
+   },
+   "Gleens": {
+    "pairs": 1,
+    "mean_B_minus_A": 9,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 19,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 15,
+    "A_unsearched_comparisons": 2314,
+    "B_decisions": 22,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 14,
+    "B_unsearched_comparisons": 2182
+   },
+   "HadschHallas": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 20,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 10,
+    "A_unsearched_comparisons": 1695,
+    "B_decisions": 20,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 10,
+    "B_unsearched_comparisons": 1695
+   },
+   "Itars": {
+    "pairs": 1,
+    "mean_B_minus_A": -1,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 16,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 12,
+    "A_unsearched_comparisons": 2231,
+    "B_decisions": 16,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 12,
+    "B_unsearched_comparisons": 2207
+   },
+   "Ivits": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 13,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 7,
+    "A_unsearched_comparisons": 1057,
+    "B_decisions": 12,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 8,
+    "B_unsearched_comparisons": 1230
+   },
+   "Lantids": {
+    "pairs": 1,
+    "mean_B_minus_A": -5,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 9,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 9,
+    "A_unsearched_comparisons": 1304,
+    "B_decisions": 10,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 10,
+    "B_unsearched_comparisons": 1341
+   },
+   "Nevlas": {
+    "pairs": 1,
+    "mean_B_minus_A": 5,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 18,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 11,
+    "A_unsearched_comparisons": 1545,
+    "B_decisions": 18,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 11,
+    "B_unsearched_comparisons": 1612
+   },
+   "Terrans": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 16,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 12,
+    "A_unsearched_comparisons": 2441,
+    "B_decisions": 16,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 12,
+    "B_unsearched_comparisons": 2441
+   },
+   "Xenos": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 21,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 13,
+    "A_unsearched_comparisons": 2502,
+    "B_decisions": 21,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 13,
+    "B_unsearched_comparisons": 2502
+   },
+   "ALL": {
+    "pairs": 3,
+    "mean_B_minus_A": 1.0833333333333333,
+    "ci95": [
+     -3.5778737905619176,
+     5.744540457228584
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 184,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 123,
+    "A_unsearched_comparisons": 20871,
+    "B_decisions": 186,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 125,
+    "B_unsearched_comparisons": 21058
+   }
+  },
+  "failures": {},
+  "games_planned": 6,
+  "games_complete": 6,
+  "pairs_complete": 3
+ },
+ "timing": {
+  "A": {
+   "n": 184,
+   "mean": 19.83020652173913,
+   "median": 19.735,
+   "p90": 43.427,
+   "max": 73.698
+  },
+  "B": {
+   "n": 186,
+   "mean": 19.03990860215054,
+   "median": 18.645,
+   "p90": 43.932,
+   "max": 81.305
+  }
+ },
+ "final_scores": {
+  "Ambas": {
+   "A": [
+    10
+   ],
+   "B": [
+    10
+   ]
+  },
+  "Terrans": {
+   "A": [
+    4
+   ],
+   "B": [
+    4
+   ]
+  },
+  "HadschHallas": {
+   "A": [
+    14
+   ],
+   "B": [
+    14
+   ]
+  },
+  "Xenos": {
+   "A": [
+    6
+   ],
+   "B": [
+    6
+   ]
+  },
+  "Gleens": {
+   "A": [
+    7
+   ],
+   "B": [
+    16
+   ]
+  },
+  "Bescods": {
+   "A": [
+    4
+   ],
+   "B": [
+    9
+   ]
+  },
+  "Itars": {
+   "A": [
+    9
+   ],
+   "B": [
+    8
+   ]
+  },
+  "BalTaks": {
+   "A": [
+    3
+   ],
+   "B": [
+    3
+   ]
+  },
+  "Nevlas": {
+   "A": [
+    4
+   ],
+   "B": [
+    9
+   ]
+  },
+  "Lantids": {
+   "A": [
+    10
+   ],
+   "B": [
+    5
+   ]
+  },
+  "Firaks": {
+   "A": [
+    4
+   ],
+   "B": [
+    4
+   ]
+  },
+  "Ivits": {
+   "A": [
+    3
+   ],
+   "B": [
+    3
+   ]
+  }
+ },
+ "charges": {
+  "error": "Traceback (most recent call last):\n  File \"/home/sohegi/projects/gaia-lab/gaia-rl/tools/charge_rounds.py\", line 131, in <module>\n    main()\n  File \"/home/sohegi/projects/gaia-lab/gaia-rl/tools/charge_rounds.py\", line 123, in main\n    mean, (low, high) = ci95(seat_means)\n                        ^^^^^^^^^^^^^^^^\n  File \"/home/sohegi/projects/gaia-lab/gaia-rl/tools/charge_rounds.py\", line 63, in ci95\n    mean = sum(values)/n\n           ~~~~~~~~~~~^~\nZeroDivisionError: division by zero"
+ },
+ "watch_replay": "다시보기: 고를 판 없음"
+}
