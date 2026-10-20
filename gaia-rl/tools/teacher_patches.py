@@ -213,14 +213,16 @@ RESOLVED_FACTION_PARTS = {
     # federation (X1), Bescods institute by round 3 (M3), Itars' first track by its opening (weak-factions.md 2).
     'Xenos': frozenset({'opening_res'}),
     'Bescods': frozenset({'building_due'}),
-    'Itars': frozenset({'track_by_opening'}),
+    # Itars academy Science only (weak-factions.md 3: PG23-S01, B07-S07, SH04-S45; academy_kind_scores).
+    'Itars': frozenset({'track_by_opening', 'academy_kind'}),
     # Third batch (user 2026-10-20 "미구현 항목들 개선해"): BalTaks' fixed academy is the credit (QIC) one (B2:
     # PG16-T26, PG02-S05, PG01-S12), HadschHallas keeps the no-institute rule of rounds 1-2 with the LF
     # exception (weak-factions.md 2: SH04-S23, H06 — the Rebellion in our reach, no rival able to press its 3 QIC).
     'BalTaks': frozenset({'qic_academy'}),
     # HadschHallas federation tokens (weak-factions.md 5; user "넘어가"): first token 6 credits, replay first after
     # the institute (fed_token_scores, replay_first_goal).
-    'HadschHallas': frozenset({'building_limits', 'institute_rebellion', 'fed_token_credits', 'replay_first'}),
+    'HadschHallas': frozenset({'building_limits', 'institute_rebellion', 'fed_token_credits', 'replay_first',
+                               'track_by_neighbour'}),
 }
 
 
@@ -2228,6 +2230,13 @@ SCIENCE_WHEN = {'Nevlas': (((1, 'science', 3),), ((1, 'economy', 2),)),
 # track_by_opening (RESOLVED_FACTION_PARTS, weak-factions.md Itars 2 "첫 트랙을 오프닝에 맞춤": SH04-S44,
 # PG23-S16·S19, B07-S16·S18): with the institute Gaia 1 in round 1, with an academy Economy 2.
 TRACK_BY_OPENING = {'Itars': (('PlanetaryInstitute', ((1, 'gaia', 1),)), ('Academy', ((1, 'economy', 2),)))}
+# track_by_neighbour (RESOLVED_FACTION_PARTS, weak-factions.md HadschHallas: B17, PG19 "인접 종족이 있으면 2R까지 항해 2로
+# 모행성 수비, 아니면 경제 2"; user 2026-10-20 "하드쉬 다음으로 이어서 진행해"): (steps with a neighbour, steps without).
+# A neighbour = a rival building within NEIGHBOUR_RANGE of one of ours, read in rounds 1-2 (the bot's reading of
+# "인접"; the user's distance is open). From round 3 the faction's TRACK_STEPS entry applies.
+TRACK_BY_NEIGHBOUR = {'HadschHallas': (((1, 'navigation', 2),), ((1, 'economy', 2),))}
+NEIGHBOUR_RANGE = 2
+NEIGHBOUR_ROUNDS = 2
 GOOD_ADVANCED = frozenset({11, 7, 4, 8, 22, 17, 14})
 GOOD_ADVANCED_MANY = 3
 
@@ -2245,6 +2254,14 @@ TRACK_STEPS_LAST_ROUND = 5
 TRACK_NAMES = {key: name for name, key in TRACK_KEYS.items()}
 
 
+def rival_adjacent(state, actor):
+    """A rival building within NEIGHBOUR_RANGE of one of ours."""
+    from strategy_teacher import distance
+    ours = [s['hex'] for s in state['players'][actor].get('structures', ())]
+    return any(distance(s['hex'], h) <= NEIGHBOUR_RANGE for i, p in enumerate(state['players']) if i != actor
+               for s in p.get('structures', ()) for h in ours)
+
+
 def track_steps_scores(env, snapshot, scores):
     from current_actions.conservation import blocked
     state, actor = snapshot['state'], snapshot.get('player')
@@ -2256,11 +2273,15 @@ def track_steps_scores(env, snapshot, scores):
     built = {_structure_kind(s) for s in player.get('structures', ())}
     opening = next((steps for kind, steps in TRACK_BY_OPENING.get(player['faction'], ()) if kind in built), None) \
         if _part(player, 'track_by_opening') else None
-    if not (when or src or opening or _part(player, 'track_steps')):
+    neighbour = (_part(player, 'track_by_neighbour') and player['faction'] in TRACK_BY_NEIGHBOUR
+                 and state['round'] <= NEIGHBOUR_ROUNDS)
+    if not (when or src or opening or neighbour or _part(player, 'track_steps')):
         return scores
     levels = player.get('research_tracks') or {}
     if opening:
         steps = opening
+    elif neighbour:
+        steps = TRACK_BY_NEIGHBOUR[player['faction']][0 if rival_adjacent(state, actor) else 1]
     elif when:
         steps = SCIENCE_WHEN[player['faction']][0 if science_first(state, player) else 1]
     else:
@@ -2366,6 +2387,39 @@ def building_limits_scores(env, snapshot, scores):
     lifted = list(scores)
     _swap(lifted, list(scores), max(others, key=lambda i: scores[i][0]), best,
           f'{player["faction"]} does not build this (building_limits)')
+    return lifted
+
+
+# academy_kind (RESOLVED_FACTION_PARTS): the only academy kind the guide allows a faction — Itars Science
+# ("아카데미는 지식만": PG23-S01, B07-S07, SH04-S45; the QIC academy only to press Rebellion's 3 QIC, which Itars
+# values low: LF4-06, C027). When the best move builds the other kind, it swaps with the best move that does not.
+ACADEMY_ONLY = {'Itars': 'Science'}
+
+
+def academy_kind_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    allowed = ACADEMY_ONLY.get(player['faction'])
+    if allowed is None or not _part(player, 'academy_kind'):
+        return scores
+    candidates = snapshot['candidates']
+
+    def wrong(i):
+        target = candidates[i]['action'].get('to') if candidates[i]['action'].get('type') == 'Upgrade' else None
+        return isinstance(target, dict) and 'Academy' in target and target['Academy'] != allowed
+    open_ = [i for i in range(len(candidates)) if not blocked(scores[i])]
+    if not open_:
+        return scores
+    best = max(open_, key=lambda i: scores[i][0])
+    others = [i for i in open_ if not wrong(i)]
+    if not wrong(best) or not others:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(scores), max(others, key=lambda i: scores[i][0]), best,
+          f'{player["faction"]} academy is {allowed} only (academy_kind)')
     return lifted
 
 
@@ -2666,7 +2720,9 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_res(seed, **kwargs):
     or Science first by condition (science_when)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_src(seed, **kwargs)
     _guide['resolved_parts'] = True
-    # Third batch: HadschHallas token parts. fed_remember_scores last so replay_first_goal sees the final ranking.
+    # Third batch: Itars academy kind, HadschHallas token parts. fed_remember_scores last so replay_first_goal sees
+    # the final ranking.
+    _wrap_rank('_academy_kind', academy_kind_scores)
     _wrap_rank('_fed_token', fed_token_scores)
     install_replay_first()
     _wrap_rank('_fed_remember', fed_remember_scores)

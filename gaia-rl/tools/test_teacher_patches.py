@@ -601,6 +601,41 @@ class OpeningBudgetTests(unittest.TestCase):
         player['faction'] = 'Terrans'
         self.assertIsNone(tp.replay_first_goal(snapshot))                           # HadschHallas only
 
+    def test_itars_academy_kind_and_hadsch_hallas_track_by_neighbour(self):
+        tp._guide.update(byfaction=True, faction_guide=True, source_parts=True, resolved_parts=True)   # setUp restores
+        player = {'faction': 'Itars', 'research_tracks': {}, 'structures': [{'kind': 'TradingStation', 'hex': '0,0'}]}
+        state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        actions = [{'type': 'Upgrade', 'coord': '0,0', 'to': {'Academy': 'Qic'}},
+                   {'type': 'Upgrade', 'coord': '0,0', 'to': {'Academy': 'Science'}},
+                   {'type': 'Build', 'coord': '2,0'}]
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': a} for a in actions]}
+        scores = [(9.0, 'qic ac'), (5.0, 'science ac'), (7.0, 'mine')]
+        lifted = tp.academy_kind_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [7.0, 5.0, 9.0])                   # the mine leads, not the QIC academy
+        self.assertIn('academy_kind', lifted[2][1])
+        scores = [(5.0, 'qic ac'), (9.0, 'science ac'), (7.0, 'mine')]
+        self.assertIs(tp.academy_kind_scores(None, snapshot, scores), scores)       # Science academy already best
+        player['faction'] = 'BalTaks'
+        scores = [(9.0, 'qic ac'), (5.0, 'science ac'), (7.0, 'mine')]
+        self.assertIs(tp.academy_kind_scores(None, snapshot, scores), scores)       # no such rule for BalTaks
+        # HadschHallas rounds 1-2: Navigation 2 with a rival within two hexes, Economy 2 otherwise.
+        player.update(faction='HadschHallas', research_tracks={'economy': 0, 'navigation': 0},
+                      structures=[{'kind': 'Mine', 'hex': '0,0'}])
+        rival = {'faction': 'Terrans', 'structures': [{'kind': 'Mine', 'hex': '5,0'}]}
+        state['players'].append(rival)
+        actions = [{'type': 'ResearchAdvance', 'track': 'Economy'}, {'type': 'ResearchAdvance', 'track': 'Navigation'}]
+        snapshot['candidates'] = [{'action': a} for a in actions]
+        scores = [(4.0, 'eco'), (9.0, 'nav')]
+        self.assertFalse(tp.rival_adjacent(state, 0))
+        self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [9.0, 4.0])   # Economy 2
+        rival['structures'] = [{'kind': 'Mine', 'hex': '2,0'}]
+        self.assertTrue(tp.rival_adjacent(state, 0))
+        self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [4.0, 9.0])   # Navigation 2 already best
+        scores = [(9.0, 'eco'), (4.0, 'nav')]
+        self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [4.0, 9.0])   # Navigation 2
+        state['round'] = 3
+        self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [9.0, 4.0])   # from round 3 the guide's Economy 2
+
     def test_fixed_academy_wraps_rank_for_the_faction_with_the_part_in_round_one(self):
         import bgg_openings.fixed as fixed
         import four_factions.preparation as p
