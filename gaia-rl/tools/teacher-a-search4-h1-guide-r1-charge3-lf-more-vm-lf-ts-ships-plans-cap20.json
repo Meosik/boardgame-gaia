@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus track_plans: a research step is compared as the plan it opens (Navigation: the cheapest planet the new range reaches; Terraforming: a planet whose ore cost drops; Gaia: a reachable transdim planet for the former; AI: a planet the new QIC reach; Economy / Science: the level itself) in the order the faction's guide names the tracks (FACTION_TRACKS, TRACK_CAPS, TRACK_STEPS, the T2 / X3 conditions); the first two plans (one per track) are compared right after the current choice; the horizon is unchanged. Every faction (user 2026-10-20 '현재 상황/종족/계획에 따라 고르는 모습', '종족별 추천 부품이랑 연계'; guide_r1_charge3_lf_more_vm_lf_ts_ships_plans).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_plans",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

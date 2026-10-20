@@ -1175,3 +1175,74 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertTrue(planning.select_action._opening_budget)
         self.assertIs(planning.select_action.__wrapped__, getattr(original, '__wrapped__', original))
         self.assertTrue(tp._guide['opening_budget'])
+
+    @staticmethod
+    def track_plan_state(rival='Taklons'):
+        empty = {'planet': None, 'structures': [], 'satellites': []}
+        hexes = {f'{q},{r}': dict(empty) for q in range(-4, 5) for r in range(-4, 5)}
+        hexes['0,0'] = {**empty, 'planet': {'planet_type': 'Terra', 'owner': 0, 'is_gaia_formed': False},
+                        'structures': [{'kind': 'Mine', 'owner': 0}]}
+        hexes['2,0'] = {**empty, 'planet': {'planet_type': 'Desert', 'owner': None, 'is_gaia_formed': False}}
+        hexes['0,1'] = {**empty, 'planet': {'planet_type': 'Transdim', 'owner': None, 'is_gaia_formed': False}}
+        terrans = {'faction': 'Terrans', 'player_id': 0, 'passed': False,
+                   'research_tracks': {'terraforming': 0, 'navigation': 0, 'ai': 0, 'gaia': 1, 'economy': 0, 'science': 0},
+                   'resources': {'ore': 4, 'credits': 10, 'knowledge': 4, 'qic': 0, 'spent_gaia_formers': 0,
+                                 'power': {'bowl1': 4, 'bowl2': 4, 'bowl3': 0, 'gaia_forming': 0}},
+                   'structures': [{'kind': 'Mine', 'hex': '0,0'}], 'tech_tiles': [], 'covered_tech_tiles': [],
+                   'gaiaformers_total': 1, 'gaiaformers_deployed': 0, 'gaiaformers_in_gaia_area': 0}
+        other = {'faction': rival, 'player_id': 1, 'structures': [], 'research_tracks': {}}
+        return {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [terrans, other], 'board': {'hexes': hexes}}
+
+    def test_track_plans_follow_the_faction_tracks_and_open_colonies(self):
+        state = self.track_plan_state()
+        snapshot = {'player': 0, 'state': state, 'candidates': []}
+        self.assertEqual(tp.track_plan_goals(snapshot), [])                           # part off
+        tp._guide['track_plans'] = True                                               # restored by setUp's cleanup
+        # Terrans without a Gaia rival (T2): Navigation 2 → Science 4 → Economy; Navigation 2 reaches 2,0.
+        self.assertEqual(tp._plan_tracks(state, 0), [('navigation', 2), ('science', 2), ('economy', 2)])
+        plans = tp.track_plan_goals(snapshot)
+        names = [p.name for p in plans]
+        self.assertEqual(names[:3], ['track-plan-Navigation-2>colony@2,0', 'track-plan-Science-2', 'track-plan-Economy-2'])
+        self.assertEqual([s.family for s in plans[0].steps], ['research', 'colony'])
+        self.assertEqual((plans[0].steps[0].target, plans[0].steps[0].level, plans[0].steps[1].coord), ('Navigation', 2, '2,0'))
+        # Off the guide list only with a colony: AI 1's QIC reaches 2,0, the free former takes the transdim 0,1;
+        # Terraforming 1 opens nothing (same ore per step) and gets no plan.
+        self.assertIn('track-plan-ArtificialIntelligence-1>colony@2,0', names)
+        self.assertIn('track-plan-GaiaProject-2>colony@0,1', names)
+        self.assertFalse(any('Terraforming' in n for n in names))
+        self.assertTrue(all(p.family == 'ordered' and 'track_plans' in p.sources for p in plans))
+        # With a Gaia rival the Gaia plan follows Navigation (T2); a cap closes a track (BalTaks AI 4).
+        rival = self.track_plan_state(rival='BalTaks')
+        self.assertEqual(tp._plan_tracks(rival, 0)[1], ('gaia', 2))
+        self.assertEqual(tp.track_plan_goals({'player': 0, 'state': rival, 'candidates': []})[1].name,
+                         'track-plan-GaiaProject-2>colony@0,1')
+        state['players'][0]['faction'] = 'BalTaks'
+        state['players'][0]['research_tracks']['ai'] = 4
+        self.assertNotIn('ai', [t for t, _ in tp._plan_tracks(state, 0)])
+        self.assertEqual(tp._plan_tracks(state, 0)[0], ('gaia', 4))                  # TRACK_STEPS round target leads
+        state['round'] = 6
+        self.assertEqual(tp.track_plan_goals(snapshot), [])                           # round 6 is free
+
+    def test_install_track_plans_puts_plans_first_and_drops_the_bare_research_goal(self):
+        import four_factions.preparation as p
+        from four_factions.preparation import Goal
+        for name in ('goals_for', 'interleave_families'):
+            self.addCleanup(setattr, p, name, getattr(p, name))
+        bare = Goal('Navigation-2', 'research', target='Navigation', level=2)
+        p.goals_for = lambda snapshot, **kwargs: [bare, 'other-goal']
+        plan = Goal('track-plan-Navigation-2>colony@2,0', 'ordered', steps=(bare, Goal('colony@2,0', 'colony', '2,0')))
+        plans = [plan, Goal('track-plan-Science-2', 'ordered', steps=(Goal('Science-2', 'research', target='Science', level=2),)),
+                 Goal('track-plan-Economy-2', 'ordered', steps=(Goal('Economy-2', 'research', target='Economy', level=2),))]
+        with mock.patch.object(tp, 'track_plan_goals', return_value=[]):
+            tp.install_track_plans()
+            tp.install_track_plans()                                                  # installs once
+            self.assertEqual(p.goals_for({}), [bare, 'other-goal'])                   # no plans: unchanged
+        with mock.patch.object(tp, 'track_plan_goals', return_value=plans):
+            self.assertEqual(p.goals_for({}), [*plans, 'other-goal'])                 # the covered bare goal dropped
+        second = Goal('track-plan-Navigation-2>colony@3,0', 'ordered', steps=(bare, Goal('colony@3,0', 'colony', '3,0')))
+        order = p.interleave_families([Goal('a', 'colony'), plans[0], second, *plans[1:], Goal('b', 'colony')],
+                                      lambda g: g.family)
+        # TRACK_PLANS_FIRST ahead, one plan per track: the second Navigation colony waits with the rest.
+        self.assertEqual([g.name for g in order[:2]], [plans[0].name, plans[1].name])
+        self.assertEqual({g.name for g in order[2:]}, {'a', 'b', second.name, plans[2].name})
+        self.assertFalse(getattr(p.rollout, '_track_plans', False))                  # the horizon is untouched

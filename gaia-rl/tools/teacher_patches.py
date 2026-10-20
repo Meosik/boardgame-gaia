@@ -242,6 +242,8 @@ def _faction_parts(faction):
         parts.update(FED_PARTS)
     if _guide['tokens']:
         parts.update(TOKEN_PARTS)
+    if _guide['track_plans']:
+        parts.add('track_plans')
     return parts
 
 
@@ -374,6 +376,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'tokens': False,              # True: ..._ships_tokens (token_compare + track_race + race_prune)
           'ship_adjacent_mine': False,  # True: ..._ships_shipmine (see ship_adjacent_mine_scores)
           'endgame_prices': False,      # True: ..._ships_endgame (round 6 stock at the final-scoring rates)
+          'track_plans': False,         # True: ..._ships_plans (a research step compared as the plan it opens)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -3305,6 +3308,188 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_endgame(seed, **kwargs):
     state value prices the stock at the final-scoring rates (see guide_potential)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     _guide['endgame_prices'] = True
+    return teacher
+
+
+# ── track_plans (user 2026-10-20 "트랙을 가치로 보는게 맞는데 그것 보단 현재 상황/종족/계획에 따라 고르는 모습을 보여줬으면",
+# "종족별 추천 부품이랑 연계 되게끔 할래?", "구현해"; HANDOFF E36–E37) ──────────────────────────────────────────
+# Why: a research level is 16 charges whatever the track (guide_value.RESEARCH_STEP), so the one-step ranking
+# keeps only the step's immediate reward — AI's QIC (7 charges) beats Navigation's range, Gaia's former and
+# Science's knowledge, which pay only when a later move uses them (091 p006 step 140: AI 9.33, Navigation 4.67,
+# three compared plans tied at 311.88). The deployment factions have no track order at all (E36).
+# What: a research step is compared as the plan it opens — Navigation: the cheapest planet the new range
+# reaches; Terraforming: a planet whose ore cost drops; Gaia: a reachable transdim planet for the former;
+# AI: a planet the new QIC reach; Economy / Science: the level itself (income). The faction tables are the
+# input: FACTION_TRACKS orders the plans (a track off the faction's list gets a plan only when it opens a
+# colony), TRACK_CAPS stops a track, an unmet TRACK_STEPS round target leads, and the conflicts' conditions
+# pick the track (T2: Terrans Gaia after Navigation only with a Gaia rival at the table, else Science;
+# X3 / B15-02: Xenos Gaia only without one). The first TRACK_PLANS_FIRST plans are compared right after the
+# current choice (ahead of the family interleave), the rest keep their place; a plan that wins is remembered
+# like any multi-step goal. The horizon stays the configured one for every plan (rounds 1–3 run to round 4
+# under charge_r3): a longer horizon for the track plans alone made their values incomparable with the
+# one-income plans (090 p002 step 166: 276.88 against 314.06), so a two-income horizon is a later, whole-seat
+# experiment. Order and scope only — the rollout judges, no new number; the plan's moves are legal moves.
+TRACK_PLANS_FIRST = 2
+TRACK_PLANS_LAST_ROUND = 5
+TRACK_PLAN_COLONIES = 2                  # colonies tried per track, cheapest first
+QIC_BY_AI_LEVEL = (0, 1, 1, 2, 2, 4)     # QIC gained entering each AI level (rulebook p.22)
+FORMER_LEVELS = (1, 3, 4)                # Gaia levels that add a Gaiaformer (rulebook p.22)
+
+
+def _plan_level(track, level):
+    """The level a track plan aims at: the frozen goals_for milestones (range at Navigation 2 / 4,
+    income steps at Economy / Science 2 / 4 / 5, Terraforming 3 from 1-2)."""
+    if track in ('navigation', 'economy', 'science'):
+        return 2 if level < 2 else 4 if level < 4 else 5
+    if track == 'terraforming' and level in (1, 2):
+        return 3
+    return level+1
+
+
+def _plan_tracks(state, actor):
+    """[(track key, target level)] in the order the faction's guide names them, after the conditions
+    (T2, X3), the caps (TRACK_CAPS) and the round targets (TRACK_STEPS: an unmet one leads)."""
+    player = state['players'][actor]
+    faction = player['faction']
+    levels = player['research_tracks']
+    others = [p for i, p in enumerate(state['players']) if i != actor]
+    gaia_rival = any(p.get('faction') in GAIA_FACTIONS for p in others)
+    tracks = list(FACTION_TRACKS.get(faction, ()))
+    if faction == 'Terrans':                                   # T2 (conflicts/base-factions.md)
+        tracks = ['navigation', 'gaia' if gaia_rival else 'science', 'economy']
+    elif faction == 'Xenos' and gaia_rival:                    # X3 / B15-02 (niche_tracks' reading)
+        tracks = [t for t in tracks if t != 'gaia']
+    caps = TRACK_CAPS.get(faction, {})
+    steps = [(t, level) for start, t, level in TRACK_STEPS.get(faction, ())
+             if start <= state['round'] and levels.get(t, 0) < level]
+    plan = list(steps)
+    for t in tracks:
+        if levels.get(t, 0) < min(caps.get(t, 5), 5) and all(t != s for s, _ in plan):
+            plan.append((t, _plan_level(t, levels.get(t, 0))))
+    return plan
+
+
+def _at_level(player, track, level):
+    after = dict(player, research_tracks={**player['research_tracks'], track: level})
+    if track == 'ai':
+        gained = sum(QIC_BY_AI_LEVEL[player['research_tracks'].get('ai', 0)+1:level+1])
+        after['resources'] = {**player['resources'], 'qic': player['resources'].get('qic', 0)+gained}
+    return after
+
+
+def _formers_free(player):
+    res = player.get('resources') or {}
+    return (player.get('gaiaformers_total', 0) - player.get('gaiaformers_deployed', 0)
+            - player.get('gaiaformers_in_gaia_area', 0) - res.get('spent_gaia_formers', 0)) > 0
+
+
+def _opened_colonies(state, player, track, level):
+    """Planets the step to `level` on `track` opens, cheapest first: newly in reach (Navigation; AI's QIC),
+    cheaper to terraform (Terraforming), a reachable transdim planet for a former (Gaia). Facts only."""
+    from economy.teacher import RING, ORE_PER_STEP
+    after = _at_level(player, track, level)
+    reach = lambda p, types: {coord for coord, _, _ in _value.targets(state, p, types)}
+    if track in ('navigation', 'ai'):
+        opened = reach(after, RING+('Gaia',)) - reach(player, RING+('Gaia',))
+    elif track == 'terraforming':
+        home = _home_type(player)
+        now = player['research_tracks'].get('terraforming', 0)
+        opened = set()
+        if home in RING and ORE_PER_STEP[level] < ORE_PER_STEP[now]:
+            for coord, planet, _ in _value.targets(state, player, RING):
+                gap = abs(RING.index(home)-RING.index(planet['planet_type']))
+                if min(gap, 7-gap):
+                    opened.add(coord)
+    elif track == 'gaia':
+        opened = reach(after, ('Transdim',)) if level in FORMER_LEVELS or _formers_free(player) else set()
+    else:
+        return []
+    return sorted(opened, key=lambda c: (_colony_cost(state, after, c)[1], c))[:TRACK_PLAN_COLONIES]
+
+
+def track_plan_goals(snapshot):
+    """The track plans for this decision (empty: part off, not the action phase, round 6)."""
+    from four_factions.preparation import Goal, viable, achieved
+    state, actor = snapshot['state'], snapshot.get('player')
+    phase = state.get('phase')
+    if (actor is None or not isinstance(phase, dict) or 'ActionPhase' not in phase
+            or state['round'] > TRACK_PLANS_LAST_ROUND):
+        return []
+    player = state['players'][actor]
+    if not _part(player, 'track_plans'):
+        return []
+    levels = player['research_tracks']
+    plans = []
+
+    def add(track, level, colonies, bare):
+        name = TRACK_NAMES[track]
+        research = Goal(f'{name}-{level}', 'research', target=name, level=level)
+        for coord in colonies:
+            plans.append(Goal(f'track-plan-{name}-{level}>colony@{coord}', 'ordered',
+                              steps=(research, Goal(f'colony@{coord}', 'colony', coord)), sources=('track_plans',)))
+        if bare and not colonies:
+            plans.append(Goal(f'track-plan-{name}-{level}', 'ordered', steps=(research,), sources=('track_plans',)))
+    guide = _plan_tracks(state, actor)
+    for track, level in guide:
+        add(track, level, _opened_colonies(state, player, track, level), bare=True)
+    for track in TRACK_KEYS.values():
+        if levels.get(track, 0) < 5 and all(track != t for t, _ in guide):
+            level = _plan_level(track, levels.get(track, 0))
+            add(track, level, _opened_colonies(state, player, track, level), bare=False)
+    return [p for p in plans if viable(snapshot, actor, p) and not achieved(snapshot, actor, p)]
+
+
+def _is_track_plan(goal):
+    return str(getattr(goal, 'name', '')).startswith('track-plan')
+
+
+def _plan_track(goal):
+    """The track a track plan researches, or None."""
+    if not _is_track_plan(goal):
+        return None
+    return next((step.target for step in goal.steps if step.family == 'research'), None)
+
+
+def install_track_plans():
+    """goals_for: the track plans first, the bare research goals they cover dropped; interleave_families:
+    the first TRACK_PLANS_FIRST plans (one per track) stay ahead of the family round-robin."""
+    import four_factions.preparation as p
+    inner = p.goals_for
+    if not getattr(inner, '_track_plans', False):
+        def goals_for(snapshot, **kwargs):
+            goals = inner(snapshot, **kwargs)
+            plans = track_plan_goals(snapshot)
+            if not plans:
+                return goals
+            covered = {step.name for plan in plans for step in plan.steps if step.family == 'research'}
+            return [*plans, *[g for g in goals
+                              if not (getattr(g, 'family', None) == 'research' and g.name in covered)]]
+        for name, value in vars(inner).items():
+            if name.startswith('_') and isinstance(value, bool):
+                setattr(goals_for, name, value)
+        goals_for._track_plans = True
+        goals_for.__wrapped__ = getattr(inner, '__wrapped__', inner)
+        p.goals_for = goals_for
+    inner_interleave = p.interleave_families
+    if not getattr(inner_interleave, '_track_plans', False):
+        def interleave_families(items, family):
+            first, tracks = [], set()
+            for g in items:                      # one plan per track ahead, the guide's order
+                track = _plan_track(g)
+                if track is not None and track not in tracks and len(first) < TRACK_PLANS_FIRST:
+                    first.append(g)
+                    tracks.add(track)
+            return first + inner_interleave([g for g in items if g not in first], family)
+        interleave_families._track_plans = True
+        interleave_families.__wrapped__ = inner_interleave
+        p.interleave_families = interleave_families
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_plans(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus track_plans for every faction (above)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['track_plans'] = True
+    install_track_plans()
     return teacher
 
 

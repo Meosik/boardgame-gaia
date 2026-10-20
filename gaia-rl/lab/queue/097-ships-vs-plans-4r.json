@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"트랙을 가치로 보는게 맞는데 그것 보단 현재 상황/종족/계획에 따라 고르는 모습을 보여줬으면\" → \"종족별 추천 부품이랑 연계 되게끔 할래?\" → \"구현해\"): A = ships(배포 교사), B = ships_plans — track_plans(연구 한 단을 맨 수가 아니라 그 단이 여는 계획으로 비교: 항해 → 새 사거리로 닿는 가장 싼 행성 광산, TF → 광석 비용이 내려가는 행성, 가이아 → 포머로 닿는 트랜스딤, AI → 새 QIC로 닿는 행성, 경제·과학 → 단 자체; 종족 표가 입력 — FACTION_TRACKS 순서, TRACK_CAPS 중단, TRACK_STEPS 미달 목표 선두, T2(테란 가이아 경쟁 종족 유무)·X3(제노스 가이아) 조건; 자료 밖 트랙은 식민을 열 때만; 앞 2개 계획(트랙당 1개)은 현재 수 바로 뒤 비교; 지평은 그대로(계획만 두 수입으로 돌리면 값 비교가 안 맞음); 순서·범위만, 롤아웃이 판정). 근거: E36 — 연구 한 단 16충전 고정이라 AI(QIC 7)가 항해·가이아·과학을 이김, 091 p006 결정 140 AI 9.33 vs 항해 4.67·비교 3개 동률 311.88; 배포 4종족 모두 1–3R AI 쏠림·항해 0–2. 전 종족. geo-quartet 새 시드 6쌍(seeds.txt 자동), 4R 시작 종료. 판정: 사전 규칙대로 1–3라운드 충전량, 종족별. 함께 볼 것(판정 아님): research_counts(자료 트랙 비율 — 테란 항해·과학, 타클론 항해·경제, 제노스 가이아·항해, 기오덴 TF·항해; AI·가이아 7단이 줄었는가), B 결정 라벨 track-plan 채택 수, 4R 시작 VP, 결정 시간, 오류.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-plans-cap20.json",
+  "pairs": 6,
+  "comparisons": 4,
+  "stop_round": 3
+}
