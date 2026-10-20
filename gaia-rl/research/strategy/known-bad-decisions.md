@@ -16,6 +16,7 @@ GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-2026091
 | 4 | lab-091-byfaction-vs-guide-bc-4r · pair-000/game-1-A13 · 결정 번호 미기록(1–3R 연구소·아카데미 타일 선택) | 아이타 B | 타일 6·8 | 수입 타일 2·5를 한 번도 안 집어 충전 103 vs 194 | tile_prefs가 B7-01의 "의회로 가져갈 기술" 목록을 모든 타일 선택에 적용 | 타일 5 또는 2 | tile_prefs 범위 수정(E39), 098 대기 |
 | 5 | lab-052 · pair-006/game-1 · 1R(결정 번호 미기록) | 타클론 | 광산 먼저 | 1R 아카데미 예산을 광산에 써 버림(사용자 "뺏길 걱정 없으면 건물을 빨리") | 오프닝 계획이 광산을 먼저 두고 예산을 안 남김 | 아카데미 먼저 | opening_budget·guard·release(077 +23.6 얇음, 084 미확인) |
 | 6 | lab-027-search4-cap10 · pair-004/game-0-A01 · 1R | 기오덴·테란 | 오프닝 선택 | 비교값이 더 높은 계획을 버리고 오프닝 라벨을 따름 | select_forecast가 비교값 무시 | 비교값 1위 | distinct_search(030–033 기각, 삭제) → value_max로 대체 |
+| 7 | lab-095-ships-vs-shipmine-4r · pair-004/game-0-A01 · 48 (1R) | 타클론 A | ExploreSpaceship Eclipse(QIC 2 = 보유 전부; 광석 1·돈 5·지식 4) | "이클립스 입장에 QIC를 2개나? 그냥 광산 두고 가이아 행성 먹는 데 QIC 쓰겠다" | 가이아 광산 −6,−2·6,−2(사거리 1 + 가이아 1 = QIC 2)가 합법인데 한 수 점수가 낮아 비교 4개 밖; 입장 계획 263.19가 1위. 인접 모행성 −1,−2도 사거리 QIC 2라 ship_adjacent_mine의 "QIC 절약" 전제 불성립 | 광산 + 가이아 행성에 QIC | 제안 qic_entry_compare(QIC 입장 결정에 그 QIC 이하 행성 광산을 비교에 추가), E61 사용자 확인 대기 |
 
 추가 규칙: 새 항목은 실험 폴더·pair/game·결정 번호(다시보기 프레임)·좌석·실제 수·기대 수를 반드시 적는다. 결정 번호가
 없는 옛 항목은 다시 보기에서 찾으면 채운다.
