@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide (hard, 4 comparisons, 20 s cap) plus WEAK_FACTION_PARTS for the three lowest-charge factions of 088 (user 2026-10-20 \"제안 순서대로 진행해\", research/strategy/conflicts/weak-factions.md): opening_only — HadschHallas 1AC+2M / 1RL+4M / 1AC+1M / 1RL+5M (no institute, no lab with 2-3 mines), Itars 1AC+1M / 1AC+2M / 1PI+2M / 1PI+1M (no lab-only openings), Firaks 1PI+1TS / 1RL+1TS+2M / 1RL+1TS+1M; building_limits — HadschHallas no institute in rounds 1-2 (guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_weak).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_weak",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

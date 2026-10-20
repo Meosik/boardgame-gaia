@@ -1,0 +1,13 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"제안 순서대로 진행해\" → 정독·충돌 정리 뒤 ④ 측정): 088 충전 최하위 세 종족 부품의 단독 효과. A = ships_byfaction_guide(091 B팔), B = ships_byfaction_guide_weak — opening_only(하드쉬 할라 1AC+2M·1RL+4M·1AC+1M·1RL+5M = 의회·연구소+광산 2–3 제외, 아이타 연구소만 오프닝 제외, 파이락 1PI+1TS·1RL+1TS+2M·1RL+1TS+1M) + building_limits(하드쉬 할라 1–2R 의회 금지). 근거 research/strategy/conflicts/weak-factions.md. 쿼텟 a(파이락) · b(아이타) · c(하드쉬 할라) 새 시드 6개씩 18쌍, 4R 시작 종료(≈ 4시간). 판정: 1–3R 충전, 세 종족별. 같은 코드 종족(나머지 9종족)이 드리프트 잣대. 함께 볼 것: 발동(upgrade_counts 1R 건물 — 하드쉬 할라 의회 0·연구소+광산 4 이상 또는 아카데미, 아이타 아카데미/의회, 파이락 의회), 결정 시간, 오류. 나쁘면 HANDOFF 1장 판단 순서.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-weak-cap20.json",
+  "seeds": [
+    "quartet-a-22021", "quartet-a-22326", "quartet-a-23429", "quartet-a-23964", "quartet-a-25446", "quartet-a-27440",
+    "quartet-b-48781", "quartet-b-50927", "quartet-b-53894", "quartet-b-55767", "quartet-b-55979", "quartet-b-56187",
+    "quartet-c-41293", "quartet-c-45848", "quartet-c-47296", "quartet-c-48597", "quartet-c-49045", "quartet-c-49482"
+  ],
+  "comparisons": 4,
+  "stop_round": 3
+}

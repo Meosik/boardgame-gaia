@@ -170,6 +170,16 @@ GUIDE_FACTION_PARTS = {
     'Darkanians': frozenset({'track_set', 'track_steps'}),
 }
 
+# The three factions with the fewest round 1-3 charges in 088 (HadschHallas 123.7, Firaks 133.1, Itars −30
+# against its quartet; user 2026-10-20 "제안 순서대로 진행해"): the round-1 openings the sources agree on
+# (research/strategy/conflicts/weak-factions.md) and HadschHallas' no-early-institute rule. On only in
+# ..._ships_byfaction_guide_weak, on top of GUIDE_FACTION_PARTS, so 091 stays as queued. Scope only.
+WEAK_FACTION_PARTS = {
+    'HadschHallas': frozenset({'opening_only', 'building_limits'}),
+    'Itars': frozenset({'opening_only'}),
+    'Firaks': frozenset({'opening_only'}),
+}
+
 
 def _faction_parts(faction):
     parts = set(BASE_FACTION_PARTS.get(faction, ()))
@@ -177,6 +187,8 @@ def _faction_parts(faction):
         parts.update(CANDIDATE_FACTION_PARTS.get(faction, ()))
     if _guide['faction_guide']:
         parts.update(GUIDE_FACTION_PARTS.get(faction, ()))
+    if _guide['weak_factions']:
+        parts.update(WEAK_FACTION_PARTS.get(faction, ()))
     if _guide['fed']:
         parts.update(FED_PARTS)
     if _guide['tokens']:
@@ -306,6 +318,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'value_max': False,           # True: guide_r1_charge3_lf_more_vm (see install_value_max)
           'byfaction': False,           # True: ..._ships_byfaction (CANDIDATE_FACTION_PARTS on)
           'faction_guide': False,       # True: ..._ships_byfaction_guide (GUIDE_FACTION_PARTS on as well)
+          'weak_factions': False,       # True: ..._ships_byfaction_guide_weak (WEAK_FACTION_PARTS on as well)
           'fed': False,                 # True: ..._ships_fed (fed_compare + fed_cluster for every faction)
           'tokens': False,              # True: ..._ships_tokens (token_compare + track_race + race_prune)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
@@ -2136,7 +2149,10 @@ def track_steps_scores(env, snapshot, scores):
 # builds one, it swaps scores with the best move that does not (order only).
 BUILDING_LIMITS = {'Firaks': (('Academy', 6),),
                    'BalTaks': (('PlanetaryInstitute', 5),),
-                   'Ambas': (('PlanetaryInstitute', 2),)}
+                   'Ambas': (('PlanetaryInstitute', 2),),
+                   # weak_factions: no institute in rounds 1-2 (BGG PI openings 110-127 vs 141 without, BGGO1-S10,
+                   # BGGO2-S22; PG19-S27 "2R 의회는 실수", PG19-S33 3-4R). The LF Rebellion 3-QIC exception is not modelled.
+                   'HadschHallas': (('PlanetaryInstitute', 2),)}
 
 
 def _upgrade_target(action):
@@ -2178,7 +2194,15 @@ def building_limits_scores(env, snapshot, scores):
 # completed forecast among them, so the guide order alone did not hold: 086 BalTaks 1RL, 0 academies).
 # With the part on, the faction's catalog is cut to these labels (B11 "아카데미+광산 가장 좋음", BGG
 # BalTaks rows 1 and 3). When no academy forecast completes, the teacher falls back to the search as before.
-OPENING_ONLY = {'BalTaks': ('1AC+1M', '1AC+2M')}
+# weak_factions (conflicts/weak-factions.md, BGG part 2 games/average): HadschHallas drops every institute
+# opening (110-127) and the lab with 2-3 mines (135) — lab with 4-5 mines (144, 157) or academy (145, 149);
+# Itars drop the lab-only openings (116-153, all sources) — academy or institute (153-157, condition left to
+# the search); Firaks keep the lab → institute → downgrade opening (1PI+1TS 160) and the lab + trading
+# station fallback (147, 146; B09-S10, SH04-S39).
+OPENING_ONLY = {'BalTaks': ('1AC+1M', '1AC+2M'),
+                'HadschHallas': ('1AC+2M', '1RL+4M', '1AC+1M', '1RL+5M'),
+                'Itars': ('1AC+1M', '1AC+2M', '1PI+2M', '1PI+1M'),
+                'Firaks': ('1PI+1TS', '1RL+1TS+2M', '1RL+1TS+1M')}
 
 
 def install_opening_only():
@@ -2358,6 +2382,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs):
     install_fixed_academy()
     _wrap_rank('_tile_prefs', tile_prefs_scores)
     _wrap_rank('_niche_tracks', niche_tracks_scores)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_weak(seed, **kwargs):
+    """Teacher factory: ..._ships_byfaction_guide plus WEAK_FACTION_PARTS — the round-1 openings of
+    HadschHallas, Itars and Firaks and HadschHallas' no institute before round 3 (088's lowest charges)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide(seed, **kwargs)
+    _guide['weak_factions'] = True
     return teacher
 
 

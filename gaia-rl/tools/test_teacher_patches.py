@@ -392,6 +392,23 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual([r.label for r in rows['BalTaks']], ['1AC+1M', '1AC+2M'])
         self.assertEqual(rows['Taklons'], full['Taklons'])
         self.assertIs(planning.load_catalog, catalog.load_catalog)
+        self.assertEqual(rows['HadschHallas'], full['HadschHallas'])               # weak_factions off
+        tp._guide['weak_factions'] = True
+        rows = catalog.load_catalog()
+        for faction, labels in tp.OPENING_ONLY.items():
+            self.assertEqual({r.label for r in rows[faction]}, set(labels), faction)   # every label in the table
+        self.assertFalse(any('PI' in r.label for r in rows['HadschHallas']))
+        self.assertFalse(any(r.label.startswith('1RL') and 'TS' not in r.label for r in rows['Itars']))
+
+    def test_weak_faction_parts_are_on_only_with_their_flag(self):
+        tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
+        self.assertNotIn('opening_only', tp._faction_parts('HadschHallas'))
+        self.assertNotIn('building_limits', tp._faction_parts('HadschHallas'))
+        tp._guide['weak_factions'] = True
+        self.assertTrue({'opening_only', 'building_limits'} <= tp._faction_parts('HadschHallas'))
+        self.assertIn('opening_only', tp._faction_parts('Itars'))
+        self.assertIn('opening_only', tp._faction_parts('Firaks'))
+        self.assertNotIn('opening_only', tp._faction_parts('Terrans'))
 
     def test_fixed_academy_wraps_rank_for_the_faction_with_the_part_in_round_one(self):
         import bgg_openings.fixed as fixed
@@ -723,6 +740,13 @@ class OpeningBudgetTests(unittest.TestCase):
         player['faction'] = 'BalTaks'
         state['round'] = 6
         self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # BalTaks round 6 tier
+        player['faction'] = 'HadschHallas'
+        state['round'] = 2
+        self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # weak_factions off
+        tp._guide['weak_factions'] = True
+        self.assertEqual([s[0] for s in tp.building_limits_scores(None, snapshot, scores)], [4.0, 7.0, 9.0])
+        state['round'] = 3
+        self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)   # institute from round 3
 
     def test_academy_economy_leads_research_and_the_tile_track_until_economy_two(self):
         state = {'round': 2, 'phase': {'ActionPhase': {}},
