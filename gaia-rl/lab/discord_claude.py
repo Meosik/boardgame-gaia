@@ -288,6 +288,12 @@ def main():
                     # 2026-10-20 "fable 강제 교체 실패했네?": an override silently skips the Fable path.
                     note = f'ℹ️ 환경 변수 CLAUDE_MODEL={model} 로 지정됨 (Fable 시도 안 함)\n'
                 session_id = state.get(key) if resume else None
+                if session_id and state.get(key + ':model', model) != model:
+                    # 2026-10-20 "왜 둘다 섞어서 답장하지?": a session begun on Opus and resumed on Fable reports
+                    # both models (the CLI sums the session's usage), so a session stays on the model it started on.
+                    session_id = None
+                    pending_fresh.add(key)
+                    note += f'🔄 이전 대화는 {model_label(state[key + ":model"])} 것이라 새 대화로 {model_label(model)} 시작\n'
                 if key in pending_fresh:
                     pending_fresh.discard(key)
                     prompt = FRESH_PREFIX + prompt
@@ -296,6 +302,7 @@ def main():
                 # new-session retry below instead of turning into a silent Opus turn.
                 # A new session goes without it too (2026-10-20 "왜 아직 opus인건데": a fresh turn still came from
                 # Opus, the CLI's own fallback), so only the visible fallback below can switch to Opus.
+                ran = model
                 out, err, code = await claude_run(command(claude, session_id, model, fallback=False), prompt)
                 if model != FALLBACK_MODEL and session_id and (model_unavailable(out, err) or failed_early(out, code)):
                     # User 2026-10-20 "너가 바꿀수 없어?": Fable worked from the terminal while the resumed channel
@@ -309,6 +316,7 @@ def main():
                     # The original error text too (user 2026-10-20: "한도 초과라는데 웹에서는 0% 썻다는데 버근가?").
                     note = (f'⚠️ {model_label(model)} 사용 불가 → {model_label(FALLBACK_MODEL)}로 다시 실행\n'
                             f'원래 오류: `{failure_text(out, err)}`\n')
+                    ran = FALLBACK_MODEL
                     out, err, code = await claude_run(
                         command(claude, state.get(key) if resume else None, FALLBACK_MODEL), prompt)
             reply, session = summarize(out, err, code)
@@ -316,11 +324,13 @@ def main():
             tag = f"🧠 {' + '.join(model_label(m) for m in used)}" if used else ''
             if session:
                 state[key] = session
+                state[key + ':model'] = ran
                 # 2026-10-20 "fable 강제 교체 실패했네?": a resumed session kept answering on Opus with no error
                 # (the CLI keeps the session's model), so when the primary model did not answer a resumed turn the
                 # channel session is dropped and the next turn starts a new one on the primary model.
                 if session_id and model != FALLBACK_MODEL and used and not any(model in m for m in used):
                     state.pop(key, None)
+                    state.pop(key + ':model', None)
                     tag += f'\n🔄 다음 메시지부터 새 대화로 {model_label(model)} 시작 (맥락은 HANDOFF에서)'
                     pending_fresh.add(key)
                 save()
@@ -367,6 +377,7 @@ def main():
         text = message.content.strip()
         if text == '!new':
             state.pop(key, None)
+            state.pop(key + ':model', None)
             save()
             await message.channel.send('새 대화로 시작합니다.')
             return
