@@ -2178,23 +2178,25 @@ TRACK_STEPS_SRC = {'Nevlas': ((1, 'science', 3),),
                    'Ivits': ((1, 'science', 2),)}
 # science_when (RESOLVED_FACTION_PARTS; user 2026-10-20 "과학쪽 고급 기술이 맛있거나, 5 6라운드에 트랙 상승 점수가 잇거나,
 # 좋은 고급기술이 많을때. 과학을 올릴 수 있는 종족은 애초에 경제가 조금은 받혀주니까" — science first still keeps the
-# upgrades going): the science entry when the round 5 or 6 tile scores research steps or the Advanced tile above
-# Science is worth more than the one above Economy (lf_advanced_option), else the economy entry (Ivits B12-02,
-# Nevlas B8-02). "Many good Advanced tiles" needs a threshold from the user and is not modelled.
+# upgrades going): the science entry when the round 5 or 6 tile scores research steps, the Advanced tile above
+# Science is S or A tier, or S/A tiles are many on the board (knowledge reaches them); else the economy entry
+# (Ivits B12-02, Nevlas B8-02). "Good" = S/A in the LF tier list (user "자료에 나와있는 S급 A급 중에 과학을 올렸을때
+# 먹을수 있을만한거"; LF2-11: S federation pass 3 (11), lab pass 3 (7), mine 3 (4); A research step 2 (8),
+# 1 QIC 5 credits (22), terraform step 2 (17), asteroid pass 2 (14); ids as integrated.features). "Many" = half
+# of the six tracks or more (bot's reading, not the user's number).
 SCIENCE_WHEN = {'Nevlas': (((1, 'science', 3),), ((1, 'economy', 2),)),
                 'Ivits': (((1, 'science', 2),), ((1, 'economy', 2),))}
+GOOD_ADVANCED = frozenset({11, 7, 4, 8, 22, 17, 14})
+GOOD_ADVANCED_MANY = 3
 
 
 def science_first(state, player):
     if any(tile.get('condition') == 'ResearchAdvance' for tile in (state.get('round_tiles') or [])[4:6]):
         return True
     board = state['research_board']['advanced_tech_tiles']
-    economy, science = board[4], board[5]
-    if science is None:
-        return False
-    if economy is None:
+    if board[5] in GOOD_ADVANCED:
         return True
-    return lf_advanced_option(state, player, science) > lf_advanced_option(state, player, economy)
+    return sum(tile in GOOD_ADVANCED for tile in board) >= GOOD_ADVANCED_MANY
 
 
 TRACK_STEPS_LAST_ROUND = 5

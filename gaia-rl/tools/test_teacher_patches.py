@@ -460,15 +460,14 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual([s[0] for s in tp.track_steps_scores(None, snapshot, scores)], [9.0, 4.0])   # Economy 2 first
         state['round_tiles'] = [{'condition': 'BuildMine'}]*5 + [{'condition': 'ResearchAdvance'}]
         self.assertEqual(tp.track_steps_scores(None, snapshot, scores), scores)                       # Science first
-        # The Advanced tile above Science against the one above Economy.
+        # An S/A Advanced tile above Science (LF2-11), or S/A tiles on half the tracks.
         state['round_tiles'] = [{'condition': 'BuildMine'}]*6
-        state['research_board']['advanced_tech_tiles'] = [None]*4 + [1, 2]
-        saved = tp.lf_advanced_option
-        self.addCleanup(lambda: setattr(tp, 'lf_advanced_option', saved))
-        tp.lf_advanced_option = lambda state, player, tile: {1: 3.0, 2: 8.0}[tile]
+        state['research_board']['advanced_tech_tiles'] = [15, 16, 19, 3, 4, 8]       # research step 2 above Science
         self.assertTrue(tp.science_first(state, player))
-        tp.lf_advanced_option = lambda state, player, tile: {1: 8.0, 2: 3.0}[tile]
+        state['research_board']['advanced_tech_tiles'] = [15, 16, 19, 3, 4, 21]      # 3 ore: B tier, one S/A on board
         self.assertFalse(tp.science_first(state, player))
+        state['research_board']['advanced_tech_tiles'] = [11, 7, 19, 3, 4, 21]       # three S/A tiles
+        self.assertTrue(tp.science_first(state, player))
 
     def test_building_due_puts_the_institute_first_among_big_buildings(self):
         tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
