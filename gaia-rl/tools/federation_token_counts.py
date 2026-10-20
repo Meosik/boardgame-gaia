@@ -50,6 +50,7 @@ def main():
     offered = defaultdict(Counter)      # faction -> token label -> decisions where it was legal and not taken
     by_round = defaultdict(Counter)     # faction -> (round, token label)
     seats = Counter()
+    skipped = []
     for game_dir in sorted(args.run_dir.expanduser().glob('pair-*/game-*')):
         result = json.loads((game_dir/'result.json').read_text())
         if not result.get('complete'):
@@ -61,14 +62,17 @@ def main():
             if not args.by_arm:
                 return faction
             return f"{faction} {'A' if seat in result['a_seats'] else 'B'}"
-        for seat in range(len(result['factions'])):
-            seats[label(seat)] += 1
         with gzip.open(game_dir/'decisions.jsonl.gz', 'rt') as f:
             rows = [json.loads(line) for line in f]
+        game_taken, game_offered, game_rounds = defaultdict(Counter), defaultdict(Counter), defaultdict(Counter)
+        replayed = True
         for step, row in enumerate(rows):
             snapshot = json.loads(env.snapshot_json())
             state = snapshot['state']
             if 'ActionPhase' in str(state['phase']) and snapshot.get('player') is not None:
+                if row['index'] >= len(snapshot['candidates']):
+                    replayed = False          # an older engine wrote this game; its moves no longer line up
+                    break
                 chosen = snapshot['candidates'][row['index']]['action']
                 if chosen.get('type') == 'FormFederation':
                     seat = snapshot['player']
@@ -77,16 +81,31 @@ def main():
                     others = {token_label(state, c['action'].get('token'))
                               for c in snapshot['candidates'] if c['action'].get('type') == 'FormFederation'}
                     others.discard(mine)
-                    taken[faction][mine] += 1
-                    by_round[faction][(state['round'], mine)] += 1
+                    game_taken[faction][mine] += 1
+                    game_rounds[faction][(state['round'], mine)] += 1
                     for other in others:
-                        offered[faction][other] += 1
+                        game_offered[faction][other] += 1
                     if args.list:
                         res = state['players'][seat]['resources']
                         held = ' '.join(f'{k}{res.get(k, 0)}' for k in ('ore', 'credits', 'knowledge', 'qic'))
                         print(f"{game_dir.relative_to(args.run_dir.expanduser())} step {step} R{state['round']} "
                               f"seat {seat} {faction}: took {mine}; passed over {sorted(others)}; held {held}")
-            env.step(row['decision_id'], row['index'])
+            try:
+                env.step(row['decision_id'], row['index'])
+            except RuntimeError:
+                replayed = False              # same: the recorded index no longer exists on this engine
+                break
+        if not replayed:
+            skipped.append(game_dir.name)
+            continue
+        for seat in range(len(result['factions'])):
+            seats[label(seat)] += 1
+        for faction in game_taken:
+            taken[faction].update(game_taken[faction])
+            offered[faction].update(game_offered[faction])
+            by_round[faction].update(game_rounds[faction])
+    if skipped:
+        print(f'skipped {len(skipped)} games that no longer replay on this engine')
     print('federation tokens taken per faction (count, and in brackets how often that token was legal but '
           'another was taken)')
     for faction in sorted(seats):
