@@ -277,6 +277,9 @@ def main():
             note = ''
             async with channel.typing():
                 model = primary_model()
+                if os.environ.get('CLAUDE_MODEL'):
+                    # 2026-10-20 "fable 강제 교체 실패했네?": an override silently skips the Fable path.
+                    note = f'ℹ️ 환경 변수 CLAUDE_MODEL={model} 로 지정됨 (Fable 시도 안 함)\n'
                 session_id = state.get(key) if resume else None
                 # A resumed Fable run goes without --fallback-model (2026-10-20 "왜 아직 opus지?": the replies kept
                 # coming from Opus with no warning, i.e. the CLI fell back by itself), so its failure reaches the
