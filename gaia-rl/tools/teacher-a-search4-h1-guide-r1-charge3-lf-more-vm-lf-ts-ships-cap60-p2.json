@@ -1,0 +1,14 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships — the deployment stack with the lab measurement budget: 4 comparisons, 60 s cap (the four comparisons almost always complete, so the decision no longer depends on host load — HANDOFF E52 (c)), and the decision's comparisons in 2 processes (tools/parallel_search.py, same decisions, 024). Same rules and values as ...-ships-cap20.json.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 60,
+  "parallel": 2
+}

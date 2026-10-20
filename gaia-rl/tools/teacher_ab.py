@@ -94,9 +94,12 @@ def resolve_teacher(name):
     cap = spec.get('max_seconds')
     if cap is not None and not (isinstance(cap, (int, float)) and not isinstance(cap, bool) and cap > 0):
         raise ValueError(f'Teacher {label}: max_seconds must be positive')
+    parallel = spec.get('parallel', 0)
+    if type(parallel) is not int or parallel < 0:
+        raise ValueError(f'Teacher {label}: parallel must be a nonnegative integer (comparison processes)')
     return {'name': label, 'source': str(source), 'factory': spec['factory'],
             'kwargs': spec.get('kwargs', {}), 'env': env, 'comparisons': comparisons,
-            'horizon_incomes': horizon, 'max_seconds': cap,
+            'horizon_incomes': horizon, 'max_seconds': cap, 'parallel': parallel,
             'frozen': bool(spec.get('frozen', False))}
 
 
@@ -254,6 +257,13 @@ def worker(args):
     teacher = getattr(import_module(module), attribute)(
         args.seed, target_seconds=clock.target_seconds, maximum_seconds=clock.long_seconds,
         adaptive_clock=clock, **spec['kwargs'])
+    # "parallel": N in the teacher spec (or GAIA_AB_PARALLEL) runs a decision's comparisons in N forked
+    # processes — same decisions, less wall time (tools/parallel_search.py, cycle 024). Installed after the
+    # factory so the workers carry the installed patches (HANDOFF E52 (a)).
+    parallel = int(spec.get('parallel') or os.environ.get('GAIA_AB_PARALLEL') or 0)
+    if parallel >= 2:
+        import parallel_search
+        parallel_search.install(parallel)
     env = Environment(args.seed, MAX_DECISIONS)
     teacher.bind(env)
     snapshot = json.loads(env.snapshot_json())

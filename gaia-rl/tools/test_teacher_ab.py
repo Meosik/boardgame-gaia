@@ -147,6 +147,21 @@ class TeacherSpecTests(unittest.TestCase):
                 with self.subTest(cap=cap), self.assertRaises(ValueError):
                     ab.resolve_teacher(str(bad))
 
+    def test_parallel_comparison_processes_spec_is_validated(self):
+        spec = ab.resolve_teacher(str(Path(ab.__file__).with_name(
+            'teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap60-p2.json')))
+        self.assertEqual((spec['parallel'], spec['max_seconds'], spec['comparisons']), (2, 60, 4))
+        plain = ab.resolve_teacher(str(Path(ab.__file__).with_name('teacher-a-search2-h1-cap5.json')))
+        self.assertEqual(plain['parallel'], 0)
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)/'teacher'
+            source.mkdir()
+            for parallel in (-1, True, '2', 1.5):
+                bad = Path(temporary)/'bad.json'
+                bad.write_text(json.dumps({'source': str(source), 'factory': 'm:f', 'parallel': parallel}))
+                with self.subTest(parallel=parallel), self.assertRaises(ValueError):
+                    ab.resolve_teacher(str(bad))
+
     def test_comparison_budget_clock_is_a_count_not_a_deadline(self):
         clock = ab.budget_clock(0)
         self.assertEqual(clock['comparisons'], 0)
