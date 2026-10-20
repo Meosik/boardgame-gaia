@@ -76,10 +76,10 @@ def primary_model():
     return os.environ.get('CLAUDE_MODEL') or 'claude-fable-5-1'
 
 
-def command(claude, session_id, model):
+def command(claude, session_id, model, fallback=True):
     argv = [claude, '-p', '--output-format', 'json', '--permission-mode', 'dontAsk',
             '--settings', str(SETTINGS), '--append-system-prompt', SYSTEM, '--model', model]
-    if model != FALLBACK_MODEL:
+    if fallback and model != FALLBACK_MODEL:
         argv += ['--fallback-model', FALLBACK_MODEL]  # mid-turn overload
     if session_id:
         argv += ['--resume', session_id]
@@ -111,6 +111,15 @@ def failure_text(stdout, stderr, size=300):
         text = ''
     text = ' '.join((text or stderr or stdout or '').split())
     return text[:size].replace('`', "'")
+
+
+def failed_early(stdout, code):
+    """True when a run ended in an error before its second turn (e.g. a resumed context the model rejects)."""
+    try:
+        result = json.loads(stdout)
+    except ValueError:
+        return code != 0
+    return bool(result.get('is_error')) and (result.get('num_turns') or 0) <= 1
 
 
 def model_label(model_id):
@@ -269,8 +278,11 @@ def main():
             async with channel.typing():
                 model = primary_model()
                 session_id = state.get(key) if resume else None
-                out, err, code = await claude_run(command(claude, session_id, model), prompt)
-                if model != FALLBACK_MODEL and session_id and model_unavailable(out, err):
+                # A resumed Fable run goes without --fallback-model (2026-10-20 "왜 아직 opus지?": the replies kept
+                # coming from Opus with no warning, i.e. the CLI fell back by itself), so its failure reaches the
+                # new-session retry below instead of turning into a silent Opus turn.
+                out, err, code = await claude_run(command(claude, session_id, model, fallback=not session_id), prompt)
+                if model != FALLBACK_MODEL and session_id and (model_unavailable(out, err) or failed_early(out, code)):
                     # User 2026-10-20 "너가 바꿀수 없어?": Fable worked from the terminal while the resumed channel
                     # session failed, so try Fable once in a new session before falling back to Opus.
                     print(f'{model} failed on resume: {failure_text(out, err)}', flush=True)
@@ -278,7 +290,7 @@ def main():
                     if not model_unavailable(*fresh[:2]):
                         note = f'🔄 이전 대화를 {model_label(model)}로 이을 수 없어 새 대화로 실행 (맥락은 HANDOFF에서)\n'
                         out, err, code = fresh
-                if model != FALLBACK_MODEL and model_unavailable(out, err):
+                if model != FALLBACK_MODEL and (model_unavailable(out, err) or (session_id and failed_early(out, code))):
                     # The original error text too (user 2026-10-20: "한도 초과라는데 웹에서는 0% 썻다는데 버근가?").
                     note = (f'⚠️ {model_label(model)} 사용 불가 → {model_label(FALLBACK_MODEL)}로 다시 실행\n'
                             f'원래 오류: `{failure_text(out, err)}`\n')

@@ -25,9 +25,13 @@ class DiscordClaudeTests(unittest.TestCase):
         self.assertIn('boom', text)
 
     def test_command_resumes_only_with_a_session_and_never_bypasses_permissions(self):
-        fresh, resumed = bot.command('claude', None), bot.command('claude', 's1')
+        model = bot.primary_model()
+        fresh, resumed = bot.command('claude', None, model), bot.command('claude', 's1', model, fallback=False)
         self.assertNotIn('--resume', fresh)
         self.assertEqual(resumed[-2:], ['--resume', 's1'])
+        self.assertNotIn('--fallback-model', resumed)          # a resumed failure must reach the new-session retry
+        self.assertTrue(bot.failed_early('{"is_error": true, "num_turns": 1, "result": "Prompt is too long"}', 1))
+        self.assertFalse(bot.failed_early('{"is_error": false, "num_turns": 5, "result": "ok"}', 0))
         self.assertEqual(fresh[fresh.index('--permission-mode')+1], 'dontAsk')
         settings = json.loads(bot.SETTINGS.read_text())['permissions']
         self.assertIn('Bash(docker compose -p gaia up:*)', settings['deny'])
