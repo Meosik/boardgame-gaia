@@ -149,3 +149,16 @@ re-run (also covers 092's HadschHallas list).
   `plan_labels.py --prefix BGG-R1-` on the B arm against 093's counts (Ambas 3, Bescods 16, Nevlas 0, Lantids 14,
   Gleens 60).
 - Lab order: 096 → 098 → 098a → 098b → 099 → 101. 094 stays on hold (five quartet-a seeds left; redesign after 098b).
+
+## Follow-up results (2026-10-21)
+
+- **098a = `095a-src-cap60-opening-smoke` (3 pairs, stop at the start of round 2, 02:58 → 03:38)**: the lists do
+  **not fire at 60 s either** — B-arm round-1 BGG picks (`plan_labels.py --prefix BGG-R1-`) Ambas 0, Bescods 0,
+  Nevlas 0, Lantids 0, Gleens 1 against A-arm 6 · 5 · 6 · 3 · 13; decisions max 73.7 / 81.3 s, no charge verdict
+  (round-1 stop). So the big-mine / two-building forecasts are not a time-cap problem; (ㄴ)'s second branch
+  applies: the fixed-opening coach path (engineering) or dropping the lists — user decision.
+- **098b = `095b-guide-vs-srctracks-4r`** → `cycles/095b-guide-vs-srctracks-4r.md`. Nevlas +14.0 [+0.2, +27.9]
+  (9 of 12; 18 pairs with 093 ≈ +13) — below the 25 line; Ivits −21.6 (the entry drops Economy instead of
+  delaying it); Lantids flat with the institute opening pushed out by the Economy-first step — **this revises the
+  Lantids reading above: the round-1 institute drop (4 → 2 here, 6 → 1 in 095b) comes from the track order, not
+  only from the opening list.**
