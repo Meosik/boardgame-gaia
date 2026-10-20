@@ -426,6 +426,9 @@ def run_ab(name, spec, jobs):
             f"**1–3라운드 충전량 (판정 기준)** — 1R 시작부터 4R 시작까지 얻은 충전, 1점 = {rate:g}충전\n\n"
             f"{charges_table(data['charges'])}\n\n{reference}결정 시간\n\n{timing_table(data['timing'])}\n\n"
             f"참고: 오류·미탐색 수와 {scores_note} (판정에 쓰지 않음)\n\n{(out/'report.md').read_text().strip()}")
+    # User 2026-10-20 "결과에서 + -는 보이는데 최종 점수가 몇점인지 안보이던데": the absolute level per arm.
+    level = f"{stop_round}라운드 종료 시점 VP" if stop_round else "최종 점수"
+    body += f"\n\n참고: {level} 평균 (판정에 쓰지 않음)\n\n{scores_table(data['final_scores'])}"
     return 'done', data, body
 
 

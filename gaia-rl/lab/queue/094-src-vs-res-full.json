@@ -1,0 +1,13 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"블로그, 팟캐스트 위주로 진행하고, LF 자료는 최신 자료라 더 잘 반영해야해\", \"과학이나 경제 올린 종족은 5 6라운드에 더 쌘데\" → \"그렇게 해\"): 재판정한 자료 충돌 부품의 단독 효과. A = ships_byfaction_guide_src(093 B), B = ships_byfaction_guide_res — opening_res(테란 1PI+2M·1PI+1TS+2M·1RL+4M·1AC+1M, 타클론 1AC+2M·1RL+5M·1RL+4M·2RL+2M, 다카니안 1R 테라포밍 공급(1테라 부스터·TF마스 거리 3) 있으면 1PI+1TS+2M 먼저 없으면 1AC+1M 먼저) + science_when(네블라·하이브: 5·6R 연구 라운드 타일 / 과학 위 S·A급 고급 기술 / 판에 S·A급 3개 이상이면 과학 먼저, 아니면 경제 2). 쿼텟 geo(테란·타클론) 6 + a(네블라·하이브) 6 + e(다카니안·테란) 3(남은 시드 전부) = 15쌍, 6R 끝까지(과학·경제 이득은 5·6R). 판정: 사전 규칙대로 1–3R 충전, 종족별(기오덴·제노스·란티다·파이락·스페이스자이언트 = 같은 코드 드리프트 잣대). 함께 볼 것(판정 아님): 최종 VP, 5·6R 연구·업그레이드(research_counts·upgrade_counts), 1R 건물(오프닝 발동), 결정 시간, 오류.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-src-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-res-cap20.json",
+  "seeds": [
+    "geo-quartet-909649", "geo-quartet-910940", "geo-quartet-911865", "geo-quartet-911966", "geo-quartet-912565", "geo-quartet-913186",
+    "quartet-a-37936", "quartet-a-39254", "quartet-a-40288", "quartet-a-40945", "quartet-a-41944", "quartet-a-49651",
+    "quartet-e-14323", "quartet-e-14966", "quartet-e-15789"
+  ],
+  "comparisons": 4,
+  "stop_round": 0
+}
