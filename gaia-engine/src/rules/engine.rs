@@ -1315,7 +1315,7 @@ fn range_and_qic_cost(
 ) -> Result<u8, RuleError> {
     let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
     let max_range = nav_range.saturating_add(player.resources.qic.saturating_mul(2));
-    let distance = MapEngine::shortest_distance(&state.board, starts, target, max_range).ok_or(
+    let distance = shortest_distance_memo(&state.board, starts, target, max_range).ok_or(
         RuleError::OutOfRange {
             hex: target,
             range: nav_range,
@@ -1323,6 +1323,69 @@ fn range_and_qic_cost(
         },
     )?;
     Ok(distance.saturating_sub(nav_range).div_ceil(2))
+}
+
+/// One BFS distance map per (start set, bounded range) while candidates for one fixed state
+/// are generated. Candidate generation validates Build, Gaia formation, the round-booster and
+/// Twilight range actions and the terraforming power actions for every hex of the board, and
+/// each validation ran its own bounded BFS from the same start hexes (E58: 99% of a fork's
+/// cost was this candidate generation). The map depends only on which hexes exist, the start
+/// hexes and the range bound — all fixed within one [`ReachMemoScope`] — so the memo cannot
+/// change any answer; outside a scope every call is computed directly.
+type ReachMemo = HashMap<(Vec<HexCoord>, u8), HashMap<HexCoord, u8>>;
+
+thread_local! {
+    static REACH_MEMO: std::cell::RefCell<Option<ReachMemo>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Memoizes bounded BFS distance maps while one candidate list is generated for one fixed
+/// state; see [`SatelliteMemoScope`] for the same pattern. The previous scope is restored on
+/// drop, so a nested scope for another state never sees these entries.
+pub(crate) struct ReachMemoScope(Option<ReachMemo>);
+
+impl ReachMemoScope {
+    pub(crate) fn enter() -> Self {
+        Self(REACH_MEMO.with(|memo| memo.borrow_mut().replace(HashMap::default())))
+    }
+}
+
+impl Drop for ReachMemoScope {
+    fn drop(&mut self) {
+        let previous = self.0.take();
+        REACH_MEMO.with(|memo| *memo.borrow_mut() = previous);
+    }
+}
+
+/// [`MapEngine::shortest_distance`] with the per-scope memo of [`ReachMemoScope`]; identical
+/// answers with or without an active scope.
+fn shortest_distance_memo(
+    board: &crate::game_state::BoardState,
+    starts: &[HexCoord],
+    target: HexCoord,
+    max_range: u8,
+) -> Option<u8> {
+    let active = REACH_MEMO.with(|memo| memo.borrow().is_some());
+    if !active {
+        return MapEngine::shortest_distance(board, starts, target, max_range);
+    }
+    let key = (starts.to_vec(), max_range);
+    let cached = REACH_MEMO.with(|memo| {
+        memo.borrow()
+            .as_ref()
+            .and_then(|m| m.get(&key).map(|distances| distances.get(&target).copied()))
+    });
+    if let Some(found) = cached {
+        return found;
+    }
+    let distances = MapEngine::distance_map(board, starts, max_range);
+    let found = distances.get(&target).copied();
+    REACH_MEMO.with(|memo| {
+        if let Some(m) = memo.borrow_mut().as_mut() {
+            m.insert(key, distances);
+        }
+    });
+    found
 }
 
 fn lost_planet_navigation_range(player: &PlayerState) -> u8 {

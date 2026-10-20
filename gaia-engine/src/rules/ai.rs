@@ -80,8 +80,10 @@ impl RuleEngine {
         state: &GameState,
     ) -> Result<(Vec<AiDecision>, AiCandidateDiagnostics), AiActionError> {
         let mut diagnostics = AiCandidateDiagnostics::default();
-        // `state` is fixed for this whole call; repeated federation checks may share results.
+        // `state` is fixed for this whole call; repeated federation checks may share results,
+        // and the whole-board range checks share one BFS per start set and range bound.
         let _memo = super::SatelliteMemoScope::enter();
+        let _reach = super::ReachMemoScope::enter();
         let Some(player_id) = Self::decision_player(state)? else {
             return Ok((Vec::new(), diagnostics));
         };

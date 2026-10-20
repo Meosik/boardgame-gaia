@@ -24,6 +24,19 @@ impl MapEngine {
         start_hexes: &[HexCoord],
         range: u8,
     ) -> HashSet<HexCoord> {
+        Self::distance_map(board, start_hexes, range).into_keys().collect()
+    }
+
+    /// BFS distance (in hex steps) from any of `start_hexes` to every hex within `max_range`,
+    /// traversing only hexes present on the board. Start hexes map to 0. For every hex on the
+    /// board this agrees with [`Self::shortest_distance`] (`Some(d)` iff the hex is in the map
+    /// with value `d`); it is the one-BFS form that candidate generation memoizes per
+    /// (start set, range) instead of running `shortest_distance` once per target hex.
+    pub fn distance_map(
+        board: &BoardState,
+        start_hexes: &[HexCoord],
+        max_range: u8,
+    ) -> HashMap<HexCoord, u8> {
         let mut visited: HashMap<HexCoord, u8> = HashMap::default();
         let mut queue: VecDeque<(HexCoord, u8)> = VecDeque::new();
 
@@ -35,7 +48,7 @@ impl MapEngine {
         }
 
         while let Some((hex, dist)) = queue.pop_front() {
-            if dist >= range {
+            if dist >= max_range {
                 continue;
             }
             for neighbor in hex.neighbors() {
@@ -49,7 +62,7 @@ impl MapEngine {
             }
         }
 
-        visited.into_keys().collect()
+        visited
     }
 
     /// BFS shortest distance (in hex steps) from any of `start_hexes` to `target`, bounded by
