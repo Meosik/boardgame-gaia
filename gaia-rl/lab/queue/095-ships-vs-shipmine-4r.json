@@ -1,0 +1,16 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-20 \"함선에 들어가기 위해 qic를 썼는데 함선 바로 인접한 곳에 모행성/1테라포밍 행성이 있는 경우 그냥 함선 들어가나?\" → \"진행해\"): A = ships(배포 교사), B = ships_shipmine — ship_adjacent_mine(일반 함선 입장이 사거리 QIC를 내야 하고 함선 타일 거리 1에 모행성·1단계 행성 광산이 그 QIC 이하로 합법이면 그 광산을 입장 위로; 순서만, 롤아웃이 판정; 가이아·소행성·트랜스딤 제외). 근거: 함선은 탐사이지 식민이 아니라 이후 사거리는 가장 가까운 내 행성에서 잼(확장 룰북 p.9) = 입장에 쓴 QIC는 발자국이 없고, 인접 광산을 먼저 두면 다음 턴 QIC 없이 입장. 전 종족. geo-quartet 새 시드 6쌍, 4R 시작 종료. 판정: 사전 규칙대로 1–3라운드 충전량. 함께 볼 것(판정 아님): 발동 횟수(B 결정 이유의 ship_adjacent_mine), ExploreSpaceship 수·라운드(action_counts), 1–3R QIC 사용, 결정 시간, 오류.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap20.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-shipmine-cap20.json",
+  "seeds": [
+    "geo-quartet-913365",
+    "geo-quartet-915431",
+    "geo-quartet-919038",
+    "geo-quartet-921366",
+    "geo-quartet-923869",
+    "geo-quartet-924006"
+  ],
+  "comparisons": 4,
+  "stop_round": 3
+}

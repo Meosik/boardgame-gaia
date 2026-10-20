@@ -308,7 +308,8 @@ class OpeningBudgetTests(unittest.TestCase):
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction': ['False']*6 + ['False', 'True'],
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide': ['False']*6 + ['False', 'True'],
                     'guide_r1_charge3_lf_more_vm_lf_ts_ships_fed': ['False']*6 + ['False', 'False'],
-                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_tokens': ['False']*6 + ['False', 'False']}
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_tokens': ['False']*6 + ['False', 'False'],
+                    'guide_r1_charge3_lf_more_vm_lf_ts_ships_shipmine': ['False']*6 + ['False', 'False']}
         flags += ", tp._guide['byfaction']"
         for factory, want in expected.items():
             code = f"import teacher_patches as tp\ntp.{factory}({SEED!r})\nprint({flags})"
@@ -734,6 +735,50 @@ class OpeningBudgetTests(unittest.TestCase):
         lifted = tp.fed_cluster_scores(None, snapshot, [(9.0, 'far'), (6.0, 'bridge'), (5.0, 'next')])
         self.assertEqual([s[0] for s in lifted], [6.0, 9.0, 5.0])
         self.assertIn('satellites -1', lifted[1][1])
+
+    def test_ship_adjacent_mine_leads_the_entry_that_pays_range_qic(self):
+        empty = {'planet': None, 'structures': [], 'satellites': []}
+        board = {'hexes': {f'{q},{r}': dict(empty) for q in range(-6, 9) for r in range(-6, 9)},
+                 'spaceship_tiles': {'Twilight': '4,0'}}
+        board['hexes']['0,0'] = {**empty, 'structures': [{'kind': 'Mine', 'owner': 0}]}
+        desert = {'planet_type': 'Desert', 'owner': None, 'is_gaia_formed': False}          # Xenos home
+        board['hexes']['3,0'] = {**empty, 'planet': dict(desert)}                            # next to the ship
+        board['hexes']['3,1'] = {**empty, 'planet': {**desert, 'planet_type': 'Terra'}}      # 2 steps from Desert
+        board['hexes']['4,-1'] = {**empty, 'planet': {**desert, 'planet_type': 'Gaia'}}      # 1 QIC to colonize
+        player = {'player_id': 0, 'faction': 'Xenos', 'research_tracks': {'navigation': 0}, 'tech_tiles': [],
+                  'covered_tech_tiles': [], 'structures': [{'kind': 'Mine', 'hex': '0,0'}]}
+        state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player], 'board': board}
+        snapshot = {'player': 0, 'state': state,
+                    'candidates': [{'action': {'type': 'ExploreSpaceship', 'ship': 'Twilight'}},   # 2 QIC
+                                   {'action': {'type': 'Build', 'coord': '3,0'}},                 # 1 QIC, home
+                                   {'action': {'type': 'Build', 'coord': '3,1'}},                 # 2 steps
+                                   {'action': {'type': 'Build', 'coord': '4,-1'}},                # Gaia
+                                   {'action': {'type': 'Pass'}}]}
+        scores = [(9.0, 'ship'), (5.0, 'home'), (7.0, 'terra'), (8.0, 'gaia'), (2.0, 'pass')]
+        self.assertIs(tp.ship_adjacent_mine_scores(None, snapshot, scores), scores)   # part off
+        tp._guide['ship_adjacent_mine'] = True                                          # restored by setUp
+        lifted = tp.ship_adjacent_mine_scores(None, snapshot, scores)
+        self.assertEqual([s[0] for s in lifted], [5.0, 9.0, 7.0, 8.0, 2.0])
+        self.assertIn('ship_adjacent_mine', lifted[1][1])
+        # The mine already leads: untouched.
+        leads = [(4.0, 'ship'), (5.0, 'home'), (7.0, 'terra'), (8.0, 'gaia'), (2.0, 'pass')]
+        self.assertIs(tp.ship_adjacent_mine_scores(None, snapshot, leads), leads)
+        # The entry pays no QIC (ship next to our mine): nothing to save.
+        board['spaceship_tiles']['Twilight'] = '1,0'
+        self.assertIs(tp.ship_adjacent_mine_scores(None, snapshot, scores), scores)
+        # Only the one-step ring planet next to the ship counts; it must not cost more QIC than the entry
+        # (ship at distance 5: 2 QIC; the planet beyond it at distance 6: 3 QIC).
+        board['spaceship_tiles']['Twilight'] = '5,0'
+        snapshot['candidates'][1] = {'action': {'type': 'Build', 'coord': '6,0'}}
+        board['hexes']['6,0'] = {**empty, 'planet': dict(desert)}
+        self.assertIs(tp.ship_adjacent_mine_scores(None, snapshot, scores), scores)
+        snapshot['candidates'][1] = {'action': {'type': 'Build', 'coord': '4,0'}}           # distance 4: 2 QIC
+        board['hexes']['4,0'] = {**empty, 'planet': dict(desert)}
+        self.assertEqual([s[0] for s in tp.ship_adjacent_mine_scores(None, snapshot, scores)],
+                         [5.0, 9.0, 7.0, 8.0, 2.0])
+        self.assertEqual(tp._ring_steps('Desert', desert), 0)
+        self.assertEqual(tp._ring_steps('Desert', {'planet_type': 'Swamp'}), 1)
+        self.assertIsNone(tp._ring_steps('Desert', {'planet_type': 'Gaia'}))
 
     def _race_state(self, me, rival, rival_green=True):
         levels = lambda sci: {'terraforming': 0, 'navigation': 0, 'ai': 0, 'gaia': 0, 'economy': 0, 'science': sci}

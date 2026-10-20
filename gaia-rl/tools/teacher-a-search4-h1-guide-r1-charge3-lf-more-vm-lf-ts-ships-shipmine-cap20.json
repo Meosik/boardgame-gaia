@@ -1,0 +1,13 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships (hard, 4 comparisons, 20 s cap) plus ship_adjacent_mine: when a plain spaceship entry would pay range QIC and a mine on a home or one-step planet next to the ship tile is legal for no more QIC, that mine is ranked above the entry (the ship is in base range from the mine next turn; the QIC spent on an entry leaves no footprint, expansion rulebook p.9). Order only, every faction (user 2026-10-20; guide_r1_charge3_lf_more_vm_lf_ts_ships_shipmine).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_shipmine",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 20
+}

@@ -372,6 +372,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'resolved_parts': False,      # True: ..._ships_byfaction_guide_res (RESOLVED_FACTION_PARTS on as well)
           'fed': False,                 # True: ..._ships_fed (fed_compare + fed_cluster for every faction)
           'tokens': False,              # True: ..._ships_tokens (token_compare + track_race + race_prune)
+          'ship_adjacent_mine': False,  # True: ..._ships_shipmine (see ship_adjacent_mine_scores)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -3202,6 +3203,79 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_fed(seed, **kwargs):
     _wrap_rank('_fed_cluster', fed_cluster_scores)
     install_fed_compare()
     _wrap_rank('_fed_remember', fed_remember_scores)
+    return teacher
+
+
+# ── ship_adjacent_mine ─────────────────────────────────────────────────────────────────
+# User (2026-10-20 "함선에 들어가기 위해 qic를 썼는데 함선 바로 인접한 곳에 모행성/1테라포밍 행성이 있는 경우
+# 그냥 함선 들어가나?" → "진행해"): a spaceship is explored, not colonized — later range is measured
+# from the nearest colonized planet, never from the ship (expansion rulebook p.9) — so the QIC spent to
+# reach a ship leaves no footprint. When a plain entry would pay range QIC and a mine on a home or
+# one-step planet next to the ship tile is legal for no more QIC, the best such mine is ranked above the
+# entry: from that mine the ship is in base range next turn and the QIC (or the footprint) stays.
+# Order only; the comparison decides. Gaia (1 QIC), Asteroid (a former) and Transdim planets do not count.
+def _ring_steps(home, planet):
+    """Terraforming steps from `home` to `planet` for ring planets, None otherwise."""
+    from economy.teacher import RING
+    if home not in RING or planet.get('planet_type') not in RING:
+        return None
+    gap = abs(RING.index(home) - RING.index(planet['planet_type']))
+    return min(gap, 7 - gap)
+
+
+def ship_adjacent_mine_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    from economy.teacher import range_qic
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if not (_guide['ship_adjacent_mine'] or _part(player, 'ship_adjacent_mine')):
+        return scores
+    candidates = snapshot['candidates']
+    tiles = state['board']['spaceship_tiles']
+    entries = [(range_qic(state, player, tiles[c['action']['ship']]), i) for i, c in enumerate(candidates)
+               if c['action'].get('type') == 'ExploreSpaceship' and c['action'].get('ship') in tiles
+               and not blocked(scores[i])]
+    entries = [(qic, i) for qic, i in entries if qic > 0]
+    if not entries:
+        return scores
+    entry_qic, entry = max(entries, key=lambda pair: scores[pair[1]][0])
+    ship = candidates[entry]['action']['ship']
+    ship_coord = tiles[ship]
+    home = _home_type(player)
+    mines = []
+    for i, c in enumerate(candidates):
+        action = c['action']
+        coord = action.get('coord')
+        if action.get('type') != 'Build' or coord is None or blocked(scores[i]):
+            continue
+        if _value.distance(coord, ship_coord) != 1:
+            continue
+        planet = (state['board']['hexes'].get(coord) or {}).get('planet')
+        if not planet or planet.get('is_gaia_formed'):
+            continue
+        steps = _ring_steps(home, planet)
+        if steps is None or steps > 1 or range_qic(state, player, coord) > entry_qic:
+            continue
+        mines.append(i)
+    if not mines:
+        return scores
+    best = max(mines, key=lambda i: scores[i][0])
+    if scores[best][0] >= scores[entry][0]:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(scores), best, entry,
+          f'mine next to the {ship} tile before the entry that pays {entry_qic} QIC for range; '
+          f'the ship is in base range from the mine (ship_adjacent_mine)')
+    return lifted
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_shipmine(seed, **kwargs):
+    """Teacher factory: ..._ships (the base stack) plus ship_adjacent_mine for every faction (above)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
+    _guide['ship_adjacent_mine'] = True
+    _wrap_rank('_ship_adjacent_mine', ship_adjacent_mine_scores)
     return teacher
 
 
