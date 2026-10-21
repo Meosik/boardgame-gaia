@@ -70,10 +70,14 @@ SYSTEM = (
     'For code questions (gaia-engine, gaia-rl, gaia-server, gaia-frontend) start with `codegraph explore "<question>"` '
     '— it returns the relevant source, callers and blast radius in one output; then `codegraph node <symbol|file>`, '
     '`codegraph callers/callees/impact <symbol>`, `codegraph query <text>` — instead of grep/Read chains. '
-    'Research documents (research/, lab/) are not in the graph: search them with QMD first — `qmd query "<question>" -n 5` '
-    '(hybrid search over the markdown of gaia-rl/research and gaia-rl/lab, collections research and lab; `qmd search` for '
-    'exact words, `qmd get <path>` for one document) and only then Read the section it points to; run `qmd update` once per '
-    'turn before searching when a pull brought new documents. '
+    # Measured 2026-10-21: `qmd query` (LLM expansion + reranking on CPU) takes over 2 minutes and the harness moves it to
+    # the background, which the bot forbids; `qmd search` (BM25) answers in a second with better hits for our terms.
+    'Research documents (research/, lab/) are not in the graph: search them with QMD first — `qmd search "<words>" -n 5` '
+    '(BM25 over the markdown of gaia-rl/research and gaia-rl/lab, collections research and lab; instant; use the exact '
+    'identifiers, faction names or cycle numbers you expect in the text, `-c research` or `-c lab` to narrow, '
+    '`qmd get <qmd://path>:<from>:<count>` for one section) and only then Read the section it points to. Never run '
+    '`qmd query` or `qmd vsearch` in a bot turn: they take 1–3 minutes on this CPU and fall into the background. '
+    'Run `qmd update` once per turn before searching when a pull brought new documents. '
     # User 2026-10-21 "최소한 다른 agent의 검수가 필요하지 않을까?": a second model (Codex, gpt-6-astra) reviews code
     # commits (lab kind "review", queued automatically) and every A/B verdict (section "검수" of the result page).
     'A second model reviews every code commit and every A/B verdict; its text reaches the owner verbatim. Answer '

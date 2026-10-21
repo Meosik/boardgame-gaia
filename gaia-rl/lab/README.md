@@ -141,6 +141,9 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   봇은 MCP 없이 CLI로 쓴다(`qmd query|search|vsearch|get|multi-get|ls|status|update|embed|collection list` 허용; 컬렉션 추가·삭제와
   `qmd mcp`는 사용자). 색인은 작업 트리 경로(`~/projects/gaia-work/gaia-rl/{research,lab}`) 기준이라 pull 뒤 `qmd update`로 갱신한다.
   만들기(사용자 한 번): `qmd collection add ~/projects/gaia-work/gaia-rl/research --name research`, 같은 식으로 `lab`, 그 뒤 `qmd update`, `qmd embed`.
+  **봇 턴은 `qmd search`(BM25, 1초)만 쓴다**(2026-10-21 측정): `qmd query`(질의 확장 1.7B + 재순위 0.6B, CPU)는 2분을 넘겨 백그라운드로
+  떨어지고 결과도 더 나빴다(네블라 6R 질문: query → STATUS.md 75%, search → 종족 트랙표·충돌표·HANDOFF 해당 줄). `qmd vsearch`도 확장 때문에
+  1분 안팎. 터미널에서 사람이 쓸 때는 query도 무방.
 - 봇 턴은 MCP 서버를 싣지 않는다(`--strict-mcp-config --mcp-config lab/claude-bot-mcp.json`, 빈 설정; 계정의 Notion·Docs·Drive 커넥터는
   허용 목록 때문에 어차피 못 쓰면서 매 턴 도구 목록만 실렸음). 다시 켜려면 env `CLAUDE_BOT_MCP=1`.
 - 프로젝트 스킬(2026-10-21, 사용자 "효과 있는 거 skill 만들어"): 절차를 `lab/skills/<이름>/SKILL.md`에 두고 `.claude/skills`로 연결해 쓴다
