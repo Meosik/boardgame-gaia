@@ -418,6 +418,7 @@ def main():
     lock = asyncio.Lock()
     running = {}
     waiting = [0]  # turns requested and not yet finished
+    watching = set()  # conversation-watch tasks still running (a restart would kill them: 2026-10-22 02:24 log)
     pending_fresh = set()  # channels whose next turn starts a new session (the prompt says where the context is)
     if FRESH_MARK.exists():  # one-shot: every channel starts a new session (left by a turn that changed the bot)
         pending_fresh.update(state)
@@ -445,8 +446,9 @@ def main():
     def restart_if_changed():
         """Continue as the new version when a turn edited this file; only when no turn is pending.
 
-        A version that does not compile is not started: the running one keeps serving."""
-        if waiting[0]:
+        A version that does not compile is not started: the running one keeps serving. A running
+        conversation watch delays it too (its done-callback calls back here)."""
+        if waiting[0] or watching:
             return
         current = source_digest()
         if current == digest[0]:
@@ -599,7 +601,15 @@ def main():
             await send(channel, '\n'.join(p for p in (note + reply, tag) if p))
             if watch_enabled() and reply:
                 after = await git_output('rev-parse', 'HEAD')
-                asyncio.create_task(watch_turn(channel, key, user_text, reply, before, after))
+                task = asyncio.create_task(watch_turn(channel, key, user_text, reply, before, after))
+                watching.add(task)
+
+                def finished(done, _task=task):
+                    watching.discard(_task)
+                    if done.exception() is not None:
+                        print(f'conversation watch failed: {done.exception()!r}', flush=True)
+                    restart_if_changed()
+                task.add_done_callback(finished)
 
     async def claude_run(argv, prompt):
         """(stdout, stderr, exit code) of one `claude -p` process, killed after the turn limit."""
