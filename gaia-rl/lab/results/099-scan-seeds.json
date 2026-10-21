@@ -1,0 +1,35 @@
+{
+ "name": "099-scan-seeds",
+ "kind": "command",
+ "status": "done",
+ "note": "사용자(2026-10-20 \"시드 미리 많이 만들어둬\"): 쿼텟 a·b·c·d·e·live 시드 스캔 60000–260000(각 파일의 첫 시드에서 라인업을 읽음, 5ms/시드·약 2000에 1개 → 파일당 ≈ +100개), lab/seeds-*.txt 끝에 붙임. 결과 json은 파일별 추가 수. 쿼텟 b는 미사용 시드가 1개뿐이라 098이 다른 비교의 시드를 재사용했음.",
+ "host": "agentmaco",
+ "commit": "f861ff7",
+ "started_at": "2026-10-21T12:05:50+09:00",
+ "finished_at": "2026-10-21T12:30:10+09:00",
+ "command": [
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "tools/scan_seeds.py",
+  "--start",
+  "60000",
+  "--count",
+  "200000",
+  "--jobs",
+  "4",
+  "--out",
+  "runs/scan-seeds/metrics.json"
+ ],
+ "exit_code": 0,
+ "metrics": {
+  "added": {
+   "lab/seeds-quartet-a.txt": 120,
+   "lab/seeds-quartet-b.txt": 108,
+   "lab/seeds-quartet-c.txt": 108,
+   "lab/seeds-quartet-d.txt": 110,
+   "lab/seeds-quartet-e.txt": 101,
+   "lab/seeds-live-quartet.txt": 101
+  },
+  "start": 60000,
+  "count": 200000
+ }
+}
