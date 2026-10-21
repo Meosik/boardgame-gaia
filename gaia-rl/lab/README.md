@@ -195,4 +195,8 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   보내기·기록 보기) → 토큰을 `discord_claude.env`의 `CODEX_BOT_TOKEN`에 → `cp gaia-rl/lab/discord-codex.service ~/.config/systemd/user/`
   → `systemctl --user daemon-reload && systemctl --user enable --now discord-codex && systemctl --user restart discord-claude`
   (Claude 봇도 토큰을 읽어야 역할을 넘긴다) → `journalctl --user -u discord-codex -n 5`에 "connected as …; watch on".
+  **토큰 한 파일(사용자 "토큰을 분리하지 않아도 괜찮나?")**: 두 봇은 같은 사용자·같은 기계라 파일을 나눠도 얻는 것이 없다. 중요한
+  것은 모델 하위 프로세스가 토큰을 상속하지 않는 것 — `claude -p`·`codex exec`는 `clean_env()`(TOKEN·SECRET·WEBHOOK·API_KEY 이름 제거)
+  로 뜬다. **지시·스킬 공유**: Codex는 저장소 루트 `AGENTS.md`(CLAUDE.md와 같은 내용을 Codex용으로)와 `.agents/skills`(→ `gaia-rl/lab/skills`,
+  `.claude/skills`와 같은 폴더)를 읽는다. 스킬을 고치면 두 봇에 같이 반영된다.
 - 같은 봇 토큰으로 채널 플러그인 세션(`claude --channels ...`)을 동시에 띄우지 않는다. 둘 다 답하게 된다.

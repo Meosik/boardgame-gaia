@@ -140,6 +140,16 @@ class CodexTests(unittest.TestCase):
             os.environ.pop('CODEX_BOT_TOKEN')
 
 
+class SecretEnvTests(unittest.TestCase):
+    def test_model_subprocesses_do_not_inherit_tokens(self):
+        """User 2026-10-22 "토큰을 분리하지 않아도 괜찮나?": one env file for both bots is fine only if `claude -p`
+        and `codex exec` never see the tokens."""
+        env = {'DISCORD_BOT_TOKEN': 'a', 'CODEX_BOT_TOKEN': 'b', 'DISCORD_LAB_WEBHOOK_ID': 'c', 'OPENAI_API_KEY': 'd',
+               'PATH': '/bin', 'GAIA_WORKDIR': '/w', 'CODEX_MODEL': 'm', 'DISCORD_OWNER_ID': '1'}
+        self.assertEqual(bot.clean_env(env), {'PATH': '/bin', 'GAIA_WORKDIR': '/w', 'CODEX_MODEL': 'm', 'DISCORD_OWNER_ID': '1'})
+        self.assertNotIn('DISCORD_BOT_TOKEN', bot.clean_env({**os.environ, 'DISCORD_BOT_TOKEN': 'x'}))
+
+
 class TurnLimitTests(unittest.TestCase):
     def test_turns_count_per_conversation_and_reset_on_a_new_one(self):
         state = {}

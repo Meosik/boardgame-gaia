@@ -431,6 +431,17 @@ def source_digest():
     return hashlib.sha256(SELF.read_bytes()).hexdigest()
 
 
+# User 2026-10-22 "토큰을 분리하지 않아도 괜찮나?": both bots read the same env file, so each process holds both
+# Discord tokens. The model subprocesses (`claude -p`, `codex exec`) must not inherit them: scrub every secret-looking
+# variable from their environment. The bots themselves never print env values.
+SECRET_ENV = re.compile(r'TOKEN|SECRET|WEBHOOK|PASSWORD|API_KEY', re.I)
+
+
+def clean_env(env=None):
+    """The environment for a model subprocess: everything except secret-looking variables."""
+    return {k: v for k, v in (os.environ if env is None else env).items() if not SECRET_ENV.search(k)}
+
+
 def load_state(path):
     try:
         return json.loads(path.read_text())
@@ -520,7 +531,7 @@ def main():
         out_path = Path(out_path)
         try:
             proc = await asyncio.create_subprocess_exec(
-                *codex_command(binary, workdir, out_path), cwd=workdir, stdin=asyncio.subprocess.PIPE,
+                *codex_command(binary, workdir, out_path), cwd=workdir, env=clean_env(), stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
             try:
                 out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), seconds)
@@ -653,7 +664,7 @@ def main():
     async def claude_run(argv, prompt):
         """(stdout, stderr, exit code) of one `claude -p` process, killed after the turn limit."""
         proc = await asyncio.create_subprocess_exec(
-            *argv, cwd=workdir, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+            *argv, cwd=workdir, env=clean_env(), stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
         running['proc'] = proc
         try:

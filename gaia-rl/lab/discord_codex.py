@@ -157,8 +157,8 @@ def main():
         out_path = Path(out_path)
         try:
             proc = await asyncio.create_subprocess_exec(
-                *shared.codex_command(binary, workdir, out_path), cwd=workdir, stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                *shared.codex_command(binary, workdir, out_path), cwd=workdir, env=shared.clean_env(),
+                stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
             try:
                 out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), seconds)
             except asyncio.TimeoutError:
