@@ -7,7 +7,10 @@ list are refused instead of prompting, and the reply lists what was refused so t
 run it by hand. A channel keeps one conversation (`--resume`) until `!new`.
 
 Commands (owner only): `!new` start a fresh conversation, `!status` show state, `!stop` cancel
-the running turn. Turns run one at a time; later messages wait in order.
+the running turn, `!q <question>` a one-off answer on the cheaper quick model outside the channel
+conversation. Turns run one at a time; later messages wait in order. A channel conversation is
+dropped after CLAUDE_SESSION_TURNS turns (default 10): every resumed call re-sends the whole
+context, so long conversations cost far more tokens than a fresh one that reads HANDOFF.
 
 Environment (lab/discord_claude.env, git-ignored; see lab/discord_claude.env.example):
   DISCORD_BOT_TOKEN, DISCORD_OWNER_ID, DISCORD_CHANNEL_IDS (comma-separated),
@@ -15,7 +18,8 @@ Environment (lab/discord_claude.env, git-ignored; see lab/discord_claude.env.exa
   review in the first channel; only the experiment name is read from the notice),
   DISCORD_LAB_WEBHOOK_ID (optional: accept only this webhook),
   GAIA_WORKDIR (default ~/projects/gaia-work), CLAUDE_BIN (default: claude on PATH),
-  CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json).
+  CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json),
+  CLAUDE_SESSION_TURNS (default 10), CLAUDE_QUICK_MODEL (default claude-sonnet-5-5, for `!q`).
 """
 import asyncio
 import hashlib
@@ -74,6 +78,44 @@ FALLBACK_MODEL = 'claude-opus-5-5'
 
 def primary_model():
     return os.environ.get('CLAUDE_MODEL') or 'claude-fable-5-1'
+
+
+# User 2026-10-21 "가벼운 턴은 sonnet" (token saving): `!q <text>` runs one turn on a cheaper model outside
+# the channel conversation. A session stays on the model it started on, so quick turns never join it.
+QUICK_PREFIXES = ('!q ', '!quick ')
+QUICK_NOTE = ('(일회성 빠른 질문: 이 채널의 본 대화와 별개이며 대화에 남지 않는다. 답만 하고 파일 수정·커밋·큐 추가는 하지 '
+              '않는다(필요하면 "본 대화에서 하라"고 답한다). 맥락이 필요하면 gaia-rl/lab/HANDOFF.md의 5장만 읽는다.)\n\n')
+
+
+def quick_model():
+    return os.environ.get('CLAUDE_QUICK_MODEL') or 'claude-sonnet-5-5'
+
+
+def quick_request(text):
+    """The question of a `!q` / `!quick` message, else None."""
+    for prefix in QUICK_PREFIXES:
+        if text.startswith(prefix) and text[len(prefix):].strip():
+            return text[len(prefix):].strip()
+    return None
+
+
+# User 2026-10-21 "내부에서 해야할건 하고" (token saving): a resumed conversation re-sends its whole context on
+# every model call, so a channel conversation is dropped after this many turns and the next message starts a
+# new one that reads its context from HANDOFF.
+def session_turn_limit():
+    return int(os.environ.get('CLAUDE_SESSION_TURNS') or 10)
+
+
+def count_turn(state, key, resumed):
+    """Record one finished turn of the channel conversation; returns the turn count."""
+    turns = (state.get(key + ':turns') or 0) + 1 if resumed else 1
+    state[key + ':turns'] = turns
+    return turns
+
+
+def forget(state, key):
+    for suffix in ('', ':model', ':turns'):
+        state.pop(key + suffix, None)
 
 
 def command(claude, session_id, model, fallback=True):
@@ -270,19 +312,27 @@ def main():
         print('discord_claude.py changed: restarting', flush=True)
         os.execv(sys.executable, [sys.executable, *sys.argv])
 
-    async def run_turn(channel, key, prompt, resume=True):
+    async def run_turn(channel, key, prompt, resume=True, quick=False):
         """One `claude -p` turn whose reply goes to `channel`; turns run one at a time."""
         waiting[0] += 1
         try:
-            await locked_turn(channel, key, prompt, resume)
+            await locked_turn(channel, key, prompt, resume, quick)
         finally:
             waiting[0] -= 1
         restart_if_changed()
 
-    async def locked_turn(channel, key, prompt, resume):
+    async def locked_turn(channel, key, prompt, resume, quick=False):
         async with lock:
             note = ''
             async with channel.typing():
+                if quick:  # one-off on the quick model, no session kept, the channel conversation untouched
+                    out, err, code = await claude_run(command(claude, None, quick_model(), fallback=False),
+                                                      QUICK_NOTE + prompt)
+                    reply, _ = summarize(out, err, code)
+                    used = models_used(out)
+                    tag = f"🧠 {' + '.join(model_label(m) for m in used)} · " if used else ''
+                    await send(channel, '\n'.join(p for p in (reply, tag + '일회성 답(본 대화에 안 남음)') if p))
+                    return
                 model = primary_model()
                 if os.environ.get('CLAUDE_MODEL'):
                     # 2026-10-20 "fable 강제 교체 실패했네?": an override silently skips the Fable path.
@@ -328,10 +378,14 @@ def main():
                 # 2026-10-20 "fable 강제 교체 실패했네?": a resumed session kept answering on Opus with no error
                 # (the CLI keeps the session's model), so when the primary model did not answer a resumed turn the
                 # channel session is dropped and the next turn starts a new one on the primary model.
+                turns = count_turn(state, key, bool(session_id))
                 if session_id and model != FALLBACK_MODEL and used and not any(model in m for m in used):
-                    state.pop(key, None)
-                    state.pop(key + ':model', None)
+                    forget(state, key)
                     tag += f'\n🔄 다음 메시지부터 새 대화로 {model_label(model)} 시작 (맥락은 HANDOFF에서)'
+                    pending_fresh.add(key)
+                elif turns >= session_turn_limit():
+                    forget(state, key)
+                    tag += f'\n🔄 대화가 {turns}턴이라 다음 메시지부터 새 대화 (맥락은 HANDOFF에서; 토큰 절약)'
                     pending_fresh.add(key)
                 save()
             await send(channel, '\n'.join(p for p in (note + reply, tag) if p))
@@ -376,14 +430,19 @@ def main():
         key = str(message.channel.id)
         text = message.content.strip()
         if text == '!new':
-            state.pop(key, None)
-            state.pop(key + ':model', None)
+            forget(state, key)
             save()
             await message.channel.send('새 대화로 시작합니다.')
             return
         if text == '!status':
             busy = '실행 중' if running else '대기'
-            await message.channel.send(f'상태: {busy} · 대화 {state.get(key, "(새 대화)")} · 작업 폴더 {workdir}')
+            turns = f' ({state.get(key + ":turns", 0)}/{session_turn_limit()}턴)' if state.get(key) else ''
+            await message.channel.send(f'상태: {busy} · 대화 {state.get(key, "(새 대화)")}{turns} · 작업 폴더 {workdir}')
+            return
+        quick = quick_request(text)
+        if quick and not message.attachments:
+            await message.add_reaction('⏳' if lock.locked() else '👀')
+            await run_turn(message.channel, key, quick, quick=True)
             return
         if text == '!stop':
             proc = running.get('proc')
