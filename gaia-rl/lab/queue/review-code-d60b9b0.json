@@ -1,0 +1,12 @@
+{
+ "kind": "review",
+ "note": "코드 검수 b4eb8d9..d60b9b0: 5개 파일 (자동)",
+ "commits": "b4eb8d993cae48b63627ea836287e95e9157fe84..d60b9b0d8fea92fc5c4929bd29ae5c52d86cb511",
+ "paths": [
+  "gaia-rl/tools/plan_labels.py",
+  "gaia-rl/tools/teacher_ab.py",
+  "gaia-rl/tools/teacher_patches.py",
+  "gaia-rl/tools/test_plan_labels.py",
+  "gaia-rl/tools/test_teacher_patches.py"
+ ]
+}
