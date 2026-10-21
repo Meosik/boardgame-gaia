@@ -87,7 +87,7 @@ const LEVEL_Y_PCT: Record<number, number> = {
   0: 53.74,
 };
 
-/** Each of the 9 standard-tech sockets re-measured directly off the scan via the `?calibrate=1`
+/** Each of the 9 standard-tech sockets re-measured directly off the scan via the `?calibrate=1` (CalibrationView, removed 2026-10-21; in git history)
  * debug tool (socket's cut-corner pentagon: two true right-angle corners plus a point on its
  * uncut edge, same method as `ADVANCED_TECH_SLOTS`) — replaces the old shared-width six-then-three
  * row layout, which didn't account for each socket's own size varying slightly column to column.
@@ -104,7 +104,7 @@ const STANDARD_TECH_SLOTS: { left: number; top: number; width: number; aspectRat
   { left: 79.92, top: 82.15, width: 14.35, aspectRatio: '173.5 / 138' },
 ];
 
-/** Each of the 6 advanced-tech sockets re-measured directly off the scan via the `?calibrate=1`
+/** Each of the 6 advanced-tech sockets re-measured directly off the scan via the `?calibrate=1` (CalibrationView, removed 2026-10-21; in git history)
  * debug tool (socket's cut-corner pentagon: two true right-angle corners plus a point on its
  * uncut edge, same method as the spaceship tech-tile sockets) — replaces the old shared-width/
  * per-column-offset approximation, which didn't account for each socket's own size varying

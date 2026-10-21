@@ -5241,39 +5241,6 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .game-over-vp { font-weight: 700; color: var(--color-warning); font-size: 0.9rem; }
 .game-over-return-btn { width: 100%; }
 
-/* ── Calibration debug tool (?calibrate=1) ──────────────────────────────── */
-.calibration-view { min-height: 100vh; padding: 1.5rem; box-sizing: border-box; }
-.calibration-header { max-width: 60rem; margin: 0 auto 1.25rem; }
-.calibration-header h2 { color: var(--color-accent); margin-bottom: 0.35rem; }
-.calibration-header p { color: var(--color-muted); font-size: 0.85rem; }
-.calibration-header code { background: var(--color-surface2); padding: 0.1rem 0.35rem; border-radius: 4px; }
-.calibration-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
-.calibration-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; }
-.calibration-panel h3 { margin: 0 0 0.6rem; font-size: 0.95rem; }
-.calibration-controls { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
-.calibration-id-input { width: 4.5rem; }
-.calibration-image-wrap { position: relative; display: inline-block; max-width: 100%; }
-.calibration-image { display: block; max-width: 100%; height: auto; cursor: crosshair; border: 1px solid var(--color-border); }
-.calibration-point {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: 1.1rem;
-  height: 1.1rem;
-  border-radius: 50%;
-  background: var(--color-accent2);
-  color: #04121a;
-  font-size: 0.65rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6);
-}
-.calibration-missing { color: var(--color-muted); font-size: 0.85rem; }
-.calibration-point-list { margin: 0.75rem 0 0; padding-left: 1.25rem; font-size: 0.75rem; font-family: monospace; color: var(--color-muted); }
-.calibration-point-list li + li { margin-top: 0.2rem; }
-
 .action-crop {
   position: relative;
   height: 76px;
@@ -5338,9 +5305,6 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .terraforming-selection-board-marker { border: 3px solid transparent; border-radius: 5px; box-sizing: content-box; }
 .terraforming-selection-board-marker > img { display: block; width: 100%; }
 .terraforming-allocation-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; background: #020617ed; border-radius: 3px; padding: 1px 2px; font-size: clamp(7px, 0.65vw, 11px); font-weight: 800; line-height: 1.1; white-space: nowrap; }
-
-.calibration-panel { min-width: 0; }
-.calibration-image-scroll { max-width: 100%; max-height: 75vh; overflow: auto; margin-top: 0.5rem; }
 
 /* ── Live activity: turn banner, action toast, recent actions ─────────────── */
 .turn-banner {

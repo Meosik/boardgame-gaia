@@ -10,7 +10,6 @@ import { shipActionPrerequisiteNotice } from './components/shipActionPreflight';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { shallow } from 'zustand/shallow';
-import { CalibrationView } from './components/CalibrationView';
 import { ShuttlePreview } from './components/ShuttlePreview';
 import { GameLobby } from './components/GameLobby';
 import { TerraformingSelectionBoard } from './components/GameLobby/TerraformingSelectionBoard';
@@ -481,14 +480,11 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     setView('game');
   }, []);
 
-  // Debug-only coordinate picker for measuring image-relative slot
-  // positions (see `CalibrationView`) — never linked to from in-game UI,
-  // reached only by appending this query param by hand.
+  // Debug-only preview — never linked to from in-game UI, reached only by appending this query
+  // param by hand. (The `?calibrate=1` coordinate picker, CalibrationView, was removed on
+  // 2026-10-21; restore it from git history when a board scan has to be re-measured.)
   if (!replay && searchParams.get('shuttlePreview') === '1') {
     return <ShuttlePreview />;
-  }
-  if (!replay && searchParams.get('calibrate') === '1') {
-    return <CalibrationView />;
   }
 
   function handleReturnToLobby() {

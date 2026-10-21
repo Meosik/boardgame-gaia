@@ -101,7 +101,7 @@ const ARTIFACT_VISUAL_SCALE: Partial<Record<number, number>> = {
 };
 
 // Each ship's federation-token badge position AND size, re-measured directly off its own scan via
-// the `?calibrate=1` debug tool (badge's hexagon bounding box) — no longer relying on
+// the `?calibrate=1` (CalibrationView, removed 2026-10-21; in git history) debug tool (badge's hexagon bounding box) — no longer relying on
 // `.spaceship-board-federation`'s shared 7.7% width, which assumed every scan was both the same
 // 2172x724 size (false for Rebellion's 2135x736 scan) and the same badge size relative to that
 // scan (false in general — the earlier eyeballed positions were off by several points in every
@@ -118,7 +118,7 @@ const FEDERATION_SLOTS: Record<SpaceshipId, { left: string; top: string; width?:
  * Each board prints one large cockpit-screen panel with a cut bottom-left corner — the tech tile
  * sits somewhere on that whole screen, not in a tile-shaped cutout — so `width`/`aspectRatio`
  * describe that screen panel's own bounding box (measured directly off each scan via the
- * `?calibrate=1` debug tool: click the panel's two true right-angle corners — top-right and
+ * `?calibrate=1` (CalibrationView, removed 2026-10-21; in git history) debug tool: click the panel's two true right-angle corners — top-right and
  * bottom-right — plus a point on its uncut left edge), not the printed tile card's generic
  * 178x134 physical ratio. `left`/`top` are the panel's center — `.spaceship-board-tech-tile`
  * applies `translate(-50%, -50%)` — expressed relative to that scan's own pixel size.

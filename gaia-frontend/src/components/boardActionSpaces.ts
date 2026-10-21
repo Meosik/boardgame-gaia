@@ -18,7 +18,7 @@ export interface SpaceshipActionSpace {
 
 /**
  * Physical centers of the seven shared power-action tokens on the research board image
- * (`researchBoardImageSrc()`, normalized to 1209x1300px). Re-measured via the `?calibrate=1`
+ * (`researchBoardImageSrc()`, normalized to 1209x1300px). Re-measured via the `?calibrate=1` (CalibrationView, removed 2026-10-21; in git history)
  * debug tool — each token's 8 octagon-corner points were clicked and averaged to its centroid.
  */
 export const POWER_ACTION_SPACES: PowerActionSpace[] = [
@@ -32,7 +32,7 @@ export const POWER_ACTION_SPACES: PowerActionSpace[] = [
 ];
 
 /**
- * Appendix II action-token centers, re-measured via the `?calibrate=1` debug tool against the
+ * Appendix II action-token centers, re-measured via the `?calibrate=1` (CalibrationView, removed 2026-10-21; in git history) debug tool against the
  * current normalized ship scans (`spaceshipBoardImageSrc`: 2172x724 for Eclipse/T F Mars/Twilight,
  * 2135x736 for Rebellion) — each token's 8 octagon-corner points were clicked and averaged to its
  * centroid, same methodology as `POWER_ACTION_SPACES` above. Shared ids match
