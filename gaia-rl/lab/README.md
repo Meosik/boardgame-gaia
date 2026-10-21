@@ -118,6 +118,10 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   - 거부된 도구는 답 끝에 🔒로 표시되니, 필요하면 직접 실행한다.
 - 명령: `!new` 새 대화, `!status` 상태(대화 턴 수 포함), `!stop` 실행 중단, `!q 질문` 싼 모델(Sonnet, `CLAUDE_QUICK_MODEL`)로 일회성 답(본 대화에 안 남음, 파일 수정 없음).
   한 번에 하나씩 처리하고, 나머지는 ⏳ 표시 후 순서대로 처리한다.
+- RTK(2026-10-21, 사용자 설치 `cargo install --git https://github.com/rtk-ai/rtk` + `rtk init --global`): `~/.claude/settings.json`의
+  PreToolUse 훅이 Bash 명령을 `rtk <명령>`으로 바꿔 출력을 압축한다. 봇 턴에도 적용되므로 허용 목록에 `Bash(rtk git log:*)`처럼
+  **rtk 접두 항목을 기존 항목과 1:1로** 두었다(`Bash(rtk:*)` 전체 허용은 하지 않는다 — rm·sudo 우회가 되므로). `rtk bypass`는 읽기 명령만.
+  새 명령을 허용할 때는 원형과 `rtk` 접두형을 함께 넣는다. 절약 통계: `rtk gain`.
 - 봇 턴은 MCP 서버를 싣지 않는다(`--strict-mcp-config --mcp-config lab/claude-bot-mcp.json`, 빈 설정; 계정의 Notion·Docs·Drive 커넥터는
   허용 목록 때문에 어차피 못 쓰면서 매 턴 도구 목록만 실렸음). 다시 켜려면 env `CLAUDE_BOT_MCP=1`.
 - 토큰 절약(2026-10-21): 채널 대화는 `CLAUDE_SESSION_TURNS`(기본 10)턴이 되면 자동으로 끊고 다음 메시지부터 새 대화로 시작한다
