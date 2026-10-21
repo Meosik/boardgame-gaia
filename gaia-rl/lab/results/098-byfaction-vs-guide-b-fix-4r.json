@@ -1,0 +1,912 @@
+{
+ "name": "098-byfaction-vs-guide-b-fix-4r",
+ "kind": "ab",
+ "status": "done",
+ "note": "사용자(2026-10-20 \"테스트 오래 걸리는데 미리 만드는거 어때\"; 091 아이타 −63.4 6/6 = tile_prefs 범위 오류, HANDOFF E35 (ㄱ)+(ㄴ)): 091과 같은 설계 — A = ships_byfaction, B = ships_byfaction_guide — 에서 tile_prefs 범위를 고친 뒤 재측정. 수정: 아이타 타일 목록(6·8·4·10·7, B7-01 \"의회로 가져갈 기술\")은 의회 가이아 단계 타일(ItarsGaiaTechTile)에만, 매드 안드로이드 타일 6(B13-04 연구소 2개 뒤 의회·아카데미 단계)은 의회·아카데미 업그레이드 타일에만; 두 종족의 연구소 타일은 탐색에 맡김. 쿼텟 b 091과 같은 6시드(아이타 −63 재현 여부 = 수정 확인) + 091에 쓰지 않은 6시드(seeds-quartet-b.txt 앞 6개, 083·086·088에서 다른 비교에 쓰임; 발타크 아카데미 스타트 +15.5 5/6의 두 번째 표본, 091과 합산 12쌍 판정), 12쌍 4R 시작 종료(≈ 1.5시간). 판정: 사전 규칙대로 1–3라운드 충전량, 종족별 — 아이타는 0 근처로 돌아와야 하고(아니면 ③ 다른 원인), 발타크는 12쌍 합산. 함께 볼 것: tile_counts(아이타·매드 안드로이드 타일 2·5 복귀, 타일 6 횟수), research_counts·upgrade_counts(발타크 1R 아카데미), 결정 시간, 오류.",
+ "host": "agentmaco",
+ "commit": "c81db25",
+ "started_at": "2026-10-21T09:13:31+09:00",
+ "finished_at": "2026-10-21T12:05:47+09:00",
+ "seeds": [
+  "quartet-b-22815",
+  "quartet-b-23084",
+  "quartet-b-26518",
+  "quartet-b-32942",
+  "quartet-b-34244",
+  "quartet-b-42996",
+  "quartet-b-5187",
+  "quartet-b-5744",
+  "quartet-b-6886",
+  "quartet-b-7905",
+  "quartet-b-10311",
+  "quartet-b-10743"
+ ],
+ "command": [
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-cap20.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-byfaction-guide-cap20.json",
+  "--games",
+  "24",
+  "--seeds",
+  "quartet-b-22815",
+  "quartet-b-23084",
+  "quartet-b-26518",
+  "quartet-b-32942",
+  "quartet-b-34244",
+  "quartet-b-42996",
+  "quartet-b-5187",
+  "quartet-b-5744",
+  "quartet-b-6886",
+  "quartet-b-7905",
+  "quartet-b-10311",
+  "quartet-b-10743",
+  "--comparisons",
+  "4",
+  "--jobs",
+  "4",
+  "--fast-copy",
+  "--stop-round",
+  "3",
+  "--output",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-098-byfaction-vs-guide-b-fix-4r"
+ ],
+ "exit_code": 0,
+ "summary": {
+  "factions": {
+   "BalTaks": {
+    "pairs": 12,
+    "mean_B_minus_A": 1.5833333333333333,
+    "ci95": [
+     -4.398218854771235,
+     7.564885521437901
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 404,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 292,
+    "A_unsearched_comparisons": 42183,
+    "B_decisions": 429,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 289,
+    "B_unsearched_comparisons": 35384
+   },
+   "Bescods": {
+    "pairs": 12,
+    "mean_B_minus_A": -3.4166666666666665,
+    "ci95": [
+     -7.652584915663061,
+     0.8192515823297284
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 476,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 356,
+    "A_unsearched_comparisons": 53351,
+    "B_decisions": 428,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 311,
+    "B_unsearched_comparisons": 49951
+   },
+   "Gleens": {
+    "pairs": 12,
+    "mean_B_minus_A": -1.6666666666666667,
+    "ci95": [
+     -5.0541014336769905,
+     1.7207681003436572
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 414,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 321,
+    "A_unsearched_comparisons": 52800,
+    "B_decisions": 420,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 323,
+    "B_unsearched_comparisons": 51207
+   },
+   "Itars": {
+    "pairs": 12,
+    "mean_B_minus_A": -5.166666666666667,
+    "ci95": [
+     -10.341452758095901,
+     0.008119424762566219
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 430,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 299,
+    "A_unsearched_comparisons": 60552,
+    "B_decisions": 457,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 310,
+    "B_unsearched_comparisons": 60062
+   },
+   "ALL": {
+    "pairs": 12,
+    "mean_B_minus_A": -2.1666666666666665,
+    "ci95": [
+     -4.383573612751114,
+     0.05024027941778053
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 1724,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 1268,
+    "A_unsearched_comparisons": 208886,
+    "B_decisions": 1734,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 1233,
+    "B_unsearched_comparisons": 196604
+   }
+  },
+  "failures": {},
+  "games_planned": 24,
+  "games_complete": 24,
+  "pairs_complete": 12
+ },
+ "timing": {
+  "A": {
+   "n": 1724,
+   "mean": 11.468275522041763,
+   "median": 15.099,
+   "p90": 20.225,
+   "max": 34.016
+  },
+  "B": {
+   "n": 1734,
+   "mean": 11.10062860438293,
+   "median": 13.262,
+   "p90": 20.276,
+   "max": 35.144
+  }
+ },
+ "final_scores": {
+  "Gleens": {
+   "A": [
+    18,
+    6,
+    13,
+    19,
+    12,
+    15,
+    11,
+    9,
+    9,
+    19,
+    11,
+    32
+   ],
+   "B": [
+    12,
+    9,
+    7,
+    13,
+    20,
+    14,
+    15,
+    10,
+    8,
+    8,
+    11,
+    27
+   ]
+  },
+  "Itars": {
+   "A": [
+    13,
+    24,
+    16,
+    23,
+    23,
+    10,
+    12,
+    7,
+    5,
+    29,
+    30,
+    26
+   ],
+   "B": [
+    10,
+    17,
+    15,
+    26,
+    9,
+    11,
+    8,
+    10,
+    7,
+    25,
+    14,
+    4
+   ]
+  },
+  "Bescods": {
+   "A": [
+    10,
+    22,
+    27,
+    15,
+    8,
+    1,
+    22,
+    9,
+    12,
+    9,
+    8,
+    19
+   ],
+   "B": [
+    4,
+    8,
+    16,
+    7,
+    5,
+    1,
+    20,
+    11,
+    7,
+    14,
+    17,
+    11
+   ]
+  },
+  "BalTaks": {
+   "A": [
+    8,
+    21,
+    10,
+    19,
+    6,
+    13,
+    3,
+    10,
+    4,
+    5,
+    13,
+    5
+   ],
+   "B": [
+    0,
+    8,
+    19,
+    20,
+    25,
+    5,
+    10,
+    19,
+    5,
+    0,
+    10,
+    15
+   ]
+  }
+ },
+ "charges": {
+  "factions": {
+   "BalTaks": {
+    "pairs": 12,
+    "A": 169.23075757575756,
+    "B": 187.39617424242422,
+    "mean_B_minus_A": 18.165416666666662,
+    "ci95": [
+     -5.9685694795967805,
+     42.299402812930104
+    ]
+   },
+   "Bescods": {
+    "pairs": 12,
+    "A": 227.35988636363632,
+    "B": 202.3642424242424,
+    "mean_B_minus_A": -24.995643939393926,
+    "ci95": [
+     -52.9798619272905,
+     2.9885740485026453
+    ]
+   },
+   "Gleens": {
+    "pairs": 12,
+    "A": 194.53589015151513,
+    "B": 183.11793560606063,
+    "mean_B_minus_A": -11.41795454545453,
+    "ci95": [
+     -27.580061970299347,
+     4.74415287939029
+    ]
+   },
+   "Itars": {
+    "pairs": 12,
+    "A": 183.2700757575758,
+    "B": 174.97299242424245,
+    "mean_B_minus_A": -8.297083333333353,
+    "ci95": [
+     -34.95442831120428,
+     18.360261644537573
+    ]
+   },
+   "ALL": {
+    "pairs": 12,
+    "mean_B_minus_A": -6.636316287878786,
+    "ci95": [
+     -16.65108343857153,
+     3.378450862813957
+    ]
+   }
+  },
+  "games": [
+   "pair-000/game-0-A02  Itars(A) 196, Bescods(B) 292, BalTaks(A) 182, Gleens(B) 150",
+   "pair-000/game-1-A13  Itars(B) 207, Bescods(A) 208, BalTaks(B) 185, Gleens(A) 183",
+   "pair-001/game-0-A23  BalTaks(B) 179, Gleens(B) 210, Bescods(A) 208, Itars(A) 161",
+   "pair-001/game-1-A01  BalTaks(A) 185, Gleens(A) 226, Bescods(B) 205, Itars(B) 161",
+   "pair-002/game-0-A03  Itars(A) 224, BalTaks(B) 158, Bescods(B) 180, Gleens(A) 192",
+   "pair-002/game-1-A12  Itars(B) 150, BalTaks(A) 126, Bescods(A) 164, Gleens(B) 163",
+   "pair-003/game-0-A13  BalTaks(B) 198, Bescods(A) 266, Itars(B) 206, Gleens(A) 185",
+   "pair-003/game-1-A02  BalTaks(A) 221, Bescods(B) 210, Itars(A) 217, Gleens(B) 174",
+   "pair-004/game-0-A01  Itars(A) 143, BalTaks(A) 133, Gleens(B) 207, Bescods(B) 225",
+   "pair-004/game-1-A23  Itars(B) 130, BalTaks(B) 183, Gleens(A) 149, Bescods(A) 242",
+   "pair-005/game-0-A12  Gleens(B) 213, Itars(A) 193, BalTaks(A) 189, Bescods(B) 167",
+   "pair-005/game-1-A03  Gleens(A) 232, Itars(B) 246, BalTaks(B) 138, Bescods(A) 190",
+   "pair-006/game-0-A02  Bescods(A) 270, BalTaks(B) 232, Itars(A) 187, Gleens(B) 185",
+   "pair-006/game-1-A13  Bescods(B) 222, BalTaks(A) 145, Itars(B) 195, Gleens(A) 216",
+   "pair-007/game-0-A23  Itars(B) 96, BalTaks(B) 198, Bescods(A) 269, Gleens(A) 231",
+   "pair-007/game-1-A01  Itars(A) 111, BalTaks(A) 170, Bescods(B) 177, Gleens(B) 234",
+   "pair-008/game-0-A03  Gleens(A) 182, Itars(B) 126, Bescods(B) 178, BalTaks(A) 176",
+   "pair-008/game-1-A12  Gleens(B) 158, Itars(A) 220, Bescods(A) 236, BalTaks(B) 237",
+   "pair-009/game-0-A13  BalTaks(B) 203, Gleens(A) 172, Bescods(B) 199, Itars(A) 145",
+   "pair-009/game-1-A02  BalTaks(A) 177, Gleens(B) 165, Bescods(A) 234, Itars(B) 191",
+   "pair-010/game-0-A01  Bescods(A) 208, Itars(A) 169, Gleens(B) 136, BalTaks(B) 127",
+   "pair-010/game-1-A23  Bescods(B) 183, Itars(B) 153, Gleens(A) 168, BalTaks(A) 135",
+   "pair-011/game-0-A12  Itars(B) 237, Bescods(A) 232, BalTaks(A) 192, Gleens(B) 203",
+   "pair-011/game-1-A03  Itars(A) 233, Bescods(B) 191, BalTaks(B) 209, Gleens(A) 200"
+  ],
+  "seats": {
+   "pair-000/game-0-A02": [
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 195.8
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 291.9
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 181.80000000000013
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 149.76363636363635
+    }
+   ],
+   "pair-000/game-1-A13": [
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 207.27500000000003
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 208.5
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 185.00454545454556
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 182.61363636363637
+    }
+   ],
+   "pair-001/game-0-A23": [
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 179.39999999999998
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 210.39204545454544
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 208.39999999999998
+    },
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 161.10000000000014
+    }
+   ],
+   "pair-001/game-1-A01": [
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 184.74999999999994
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 225.69204545454545
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 204.50000000000006
+    },
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 161.09999999999997
+    }
+   ],
+   "pair-002/game-0-A03": [
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 224.1
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 158.29545454545456
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 179.64545454545458
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 191.875
+    }
+   ],
+   "pair-002/game-1-A12": [
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 150.25000000000009
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 126.05000000000001
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 163.65000000000003
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 162.8750000000001
+    }
+   ],
+   "pair-003/game-0-A13": [
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 198.15454545454548
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 265.6545454545454
+    },
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 206.4954545454546
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 184.85454545454542
+    }
+   ],
+   "pair-003/game-1-A02": [
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 220.5045454545454
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 209.8454545454546
+    },
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 216.7454545454546
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 173.59999999999997
+    }
+   ],
+   "pair-004/game-0-A01": [
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 143.23000000000002
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 133.10000000000008
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 207.289090909091
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 224.94999999999993
+    }
+   ],
+   "pair-004/game-1-A23": [
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 129.90000000000003
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 182.76
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 148.83909090909088
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 242.27999999999992
+    }
+   ],
+   "pair-005/game-0-A12": [
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 213.30454545454546
+    },
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 193.25000000000006
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 189.29999999999998
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 166.70000000000002
+    }
+   ],
+   "pair-005/game-1-A03": [
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 232.20000000000005
+    },
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 245.7000000000001
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 138.4
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 190.12499999999991
+    }
+   ],
+   "pair-006/game-0-A02": [
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 270.0
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 232.00000000000006
+    },
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 186.8500000000001
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 184.6590909090909
+    }
+   ],
+   "pair-006/game-1-A13": [
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 222.20000000000002
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 144.95000000000005
+    },
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 195.45000000000002
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 216.059090909091
+    }
+   ],
+   "pair-007/game-0-A23": [
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 96.19999999999999
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 198.34499999999986
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 269.2999999999999
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 230.8045454545454
+    }
+   ],
+   "pair-007/game-1-A01": [
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 110.80000000000001
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 169.96999999999997
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 176.92999999999995
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 233.6945454545454
+    }
+   ],
+   "pair-008/game-0-A03": [
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 182.00909090909093
+    },
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 125.84545454545457
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 178.40454545454537
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 175.75454545454545
+    }
+   ],
+   "pair-008/game-1-A12": [
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 158.059090909091
+    },
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 220.14545454545464
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 235.59454545454548
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 237.3045454545454
+    }
+   ],
+   "pair-009/game-0-A13": [
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 203.31
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 171.67454545454547
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 198.89999999999998
+    },
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 145.49
+    }
+   ],
+   "pair-009/game-1-A02": [
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 176.95
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 164.54909090909098
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 234.29999999999995
+    },
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 191.39999999999998
+    }
+   ],
+   "pair-010/game-0-A01": [
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 208.34999999999997
+    },
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 169.00000000000006
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 136.45454545454544
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 127.20000000000002
+    }
+   ],
+   "pair-010/game-1-A23": [
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 183.0
+    },
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 152.81000000000006
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 168.07454545454556
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 135.29999999999998
+    }
+   ],
+   "pair-011/game-0-A12": [
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 237.25
+    },
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 232.1645454545455
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 192.34
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 202.7745454545455
+    }
+   ],
+   "pair-011/game-1-A03": [
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 232.73000000000002
+    },
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 191.3954545454545
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 208.58
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 199.73454545454535
+    }
+   ]
+  }
+ },
+ "watch_replay": "다시보기 게시: pair-008/game-0-A03 좌석 1 — Itars B팔 충전 126 (상대 팔 220)"
+}
