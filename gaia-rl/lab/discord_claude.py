@@ -233,11 +233,11 @@ def finished_experiment(text):
 
 
 def review_prompt(name):
-    return (f'lab 실험 {name} 결과가 나왔다. git pull로 받은 뒤 gaia-rl/lab/results/{name}.md를 읽고(.json은 '
-            '수백 KB라 읽지 말고, 빠진 수치만 python 한 줄로 뽑는다), HANDOFF.md 규칙대로 1) research/strategy/cycles/에 '
-            '사이클 문서를 쓰고(형식은 cycles/TEMPLATE.md) 2) HANDOFF.md의 결과표와 "진행 중"을 갱신해 3) 커밋·푸시하라. '
-            '4) 결과의 의미를 짧게 정리하고 다음 실험을 제안하라. 다음 실험은 큐에 넣지 말고 사용자의 확인을 기다린다. '
-            '설정 변경이나 배포가 필요하면 제안만 한다.')
+    # The procedure lives in the project skill lab/skills/lab-review (linked from .claude/skills, 2026-10-21);
+    # the fallback sentence covers a checkout where the link is missing.
+    return (f'/lab-review {name}\n\n(lab 실험 {name} 결과가 나왔다. 위 스킬이 없으면: gaia-rl/lab/results/{name}.md만 읽고 '
+            'HANDOFF.md 규칙대로 사이클 문서(형식 cycles/TEMPLATE.md)·HANDOFF 결과표·"진행 중"을 갱신해 커밋·푸시한 뒤, '
+            '의미를 짧게 정리하고 다음 실험을 제안만 한다 — 큐에 넣지 않고 사용자 확인을 기다린다. 설정 변경·배포는 제안만.)')
 
 
 ATTACHMENT_LIMIT = 50*1024*1024

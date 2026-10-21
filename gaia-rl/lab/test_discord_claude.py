@@ -47,9 +47,10 @@ class McpTests(unittest.TestCase):
 
     def test_review_prompt_reads_the_markdown_and_the_template_only(self):
         prompt = bot.review_prompt('101-ships-vs-menu-full')
+        self.assertTrue(prompt.startswith('/lab-review 101-ships-vs-menu-full\n'))
         self.assertIn('lab/results/101-ships-vs-menu-full.md', prompt)
         self.assertIn('TEMPLATE.md', prompt)
-        self.assertNotIn('.md와 .json을 읽고', prompt)
+        self.assertNotIn('.json을 읽고', prompt)
 
 
 class TurnLimitTests(unittest.TestCase):
