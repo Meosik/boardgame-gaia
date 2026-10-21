@@ -8,13 +8,14 @@ run it by hand. A channel keeps one conversation (`--resume`) until `!new`.
 
 Commands (owner only): `!new` start a fresh conversation, `!status` show state, `!stop` cancel
 the running turn, `!q <question>` a one-off answer on the cheaper quick model outside the channel
-conversation, `!codex <question>` a one-off answer from the second model (OpenAI Codex CLI,
-read-only in the work tree, nothing of Claude's conversation). Turns run one at a time; later
-messages wait in order. A channel conversation is dropped after CLAUDE_SESSION_TURNS turns
+conversation. A message that mentions another bot or starts with `!codex ` is for the Codex bot
+(lab/discord_codex.py) and is skipped here; Codex's 🔍 objections posted since this bot's last reply
+are put in front of the owner's next message. Turns run one at a time; later messages wait in order. A channel conversation is dropped after CLAUDE_SESSION_TURNS turns
 (default 10): every resumed call re-sends the whole context, so long conversations cost far more
 tokens than a fresh one that reads HANDOFF.
 
-Environment (lab/discord_claude.env, git-ignored; see lab/discord_claude.env.example):
+Environment (~/.config/gaia/discord-bots.env — outside the work tree so no model process browses into it;
+see lab/discord_claude.env.example):
   DISCORD_BOT_TOKEN, DISCORD_OWNER_ID, DISCORD_CHANNEL_IDS (comma-separated),
   DISCORD_LAB_CHANNEL_ID (lab's webhook channel: each '✅' result notice there starts an automatic
   review in the first channel, each '🔍' code-review notice with findings starts a response turn;
@@ -23,12 +24,7 @@ Environment (lab/discord_claude.env, git-ignored; see lab/discord_claude.env.exa
   GAIA_WORKDIR (default ~/projects/gaia-work), CLAUDE_BIN (default: claude on PATH),
   CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json),
   CLAUDE_SESSION_TURNS (default 10), CLAUDE_QUICK_MODEL (default claude-sonnet-5-5, for `!q`),
-  CODEX_BIN (default: codex on PATH), CODEX_MODEL (default gpt-6-astra, for `!codex`),
-  CODEX_WATCH (default 1: after every ordinary turn the second model reviews the owner's message, Claude's
-  reply and the turn's commits; its objections are posted verbatim and handed to Claude with the owner's
-  next message; 0 turns it off), CODEX_WATCH_MINUTES (default 5),
-  CODEX_BOT_TOKEN (set: Codex runs as its own bot, lab/discord_codex.py — this bot then skips `@Codex`/`!codex`
-  messages, keeps its own watch off and reads Codex's 🔍 objections from the channel).
+  the Codex bot's variables (CODEX_*) live in the same file; see lab/discord_codex.py.
 """
 import asyncio
 import hashlib
@@ -39,7 +35,6 @@ from pathlib import Path
 import py_compile
 import shutil
 import sys
-import tempfile
 
 SELF = Path(__file__).resolve()
 HERE = SELF.parent
@@ -145,33 +140,17 @@ def quick_request(text):
     return None
 
 
-# User 2026-10-21 "codex한테 답을 듣고 싶은 경우가 생기나?": `!codex <text>` asks the second model directly, so a
-# disagreement between the two models reaches the owner without Claude in between. Read-only in the work tree.
-CODEX_PREFIXES = ('!codex ', '!gpt ')
-CODEX_NOTE = ('(디스코드에서 온 일회성 질문이다. 한국어로, 휴대폰에서 읽을 수 있게 짧게 답한다. 저장소는 읽기 전용이다: '
-              '파일을 고치지 말고 실험을 돌리지 마라. 맥락이 필요하면 gaia-rl/lab/HANDOFF.md의 5장만 읽는다.)\n\n')
-
-
-def codex_model():
-    return os.environ.get('CODEX_MODEL') or 'gpt-6-astra'
-
-
-def codex_bin():
-    return os.environ.get('CODEX_BIN') or shutil.which('codex')
+# User 2026-10-21 "codex한테 답을 듣고 싶은 경우가 생기나?" → 2026-10-22 "claude는 내부에서 codex 호출하는건 없애되":
+# `!codex <text>` (like a mention of another bot) addresses the Codex bot, lab/discord_codex.py; this bot skips it.
+CODEX_PREFIXES = ('!codex ',)
 
 
 def codex_request(text):
-    """The question of a `!codex` / `!gpt` message, else None."""
+    """The text of a `!codex` message, else None (the routing rule both bots share)."""
     for prefix in CODEX_PREFIXES:
         if text.startswith(prefix) and text[len(prefix):].strip():
             return text[len(prefix):].strip()
     return None
-
-
-def codex_command(codex, workdir, out_path):
-    """`codex exec` reading the prompt from stdin, read-only, last message written to out_path."""
-    return [codex, 'exec', '--model', codex_model(), '--sandbox', 'read-only', '-c', 'approval_policy="never"',
-            '--cd', str(workdir), '--color', 'never', '--output-last-message', str(out_path), '-']
 
 
 # User 2026-10-21 "내부에서 해야할건 하고" (token saving): a resumed conversation re-sends its whole context on
@@ -189,7 +168,7 @@ def count_turn(state, key, resumed):
 
 
 def forget(state, key):
-    for suffix in ('', ':model', ':turns', ':codex'):
+    for suffix in ('', ':model', ':turns'):
         state.pop(key + suffix, None)
 
 
@@ -318,39 +297,12 @@ def finished_review(text):
     return (match.group(1), CLEAN not in text) if match else None
 
 
-# User 2026-10-22 "내가 말한건 이런 대화 중간중간에 codex가 개입하는거였는데, 오히려 실험은 냅두고": the second model
-# watches the conversation itself, not only lab's commits and verdicts. After every ordinary turn the bot hands the
-# owner's message, Claude's reply and the turn's commit range to Codex (read-only, outside the turn lock); objections
-# are posted verbatim and given to Claude at the start of the owner's next message, so the owner sees both sides
-# before deciding. "결론: 이상 없음" posts one short line so the owner knows it ran.
-WATCH_NOTE = ('(대화 검수. 아래는 사용자의 질문, Claude의 답, 이 턴에 Claude가 만든 커밋 범위다. 저장소는 읽기 전용이다: '
-              '파일을 고치지 말고 실험을 돌리지 마라. 너는 두 번째 의견이다: 답의 사실 주장·추론·결정(코드 변경, 실험 설계, '
-              '판정, 반박)에 반박할 것이 있거나, 사용자의 질문에 더 나은 다른 제안이 있으면 번호를 붙여 짧게 말하고 근거'
-              '(파일:줄, 숫자, 명령)를 적는다. 동의하는 부분은 반복하지 않고, 문체·형식·사소한 표현은 보지 않는다. 커밋이 있으면 '
-              '`git diff <범위>`로 변경을 읽는다. 맥락이 필요하면 gaia-rl/lab/HANDOFF.md 5장·6장만 읽는다. 반박도 다른 제안도 '
-              '없으면 정확히 "결론: 이상 없음" 한 줄만 쓴다. 한국어, 휴대폰에서 읽을 길이.)\n\n')
-
-
-# User 2026-10-22 "봇을 하나 새로 더 만드는 방식으로 가자": with CODEX_BOT_TOKEN set, Codex runs as its own bot
-# (lab/discord_codex.py): it answers `@Codex`/`!codex` messages and does the conversation watch from the channel,
-# so this bot skips those messages, keeps its in-process watch off and reads Codex's objections from the channel.
-def separate_codex():
-    return bool(os.environ.get('CODEX_BOT_TOKEN', '').strip())
-
-
-def watch_setting():
-    """CODEX_WATCH as the owner set it (the Codex bot's own switch; shared env, so it must not look at the token)."""
-    return os.environ.get('CODEX_WATCH', '1').strip().lower() not in ('0', '', 'false', 'no', 'off')
-
-
-def watch_enabled():
-    """This bot's in-process watch: off when the Codex bot does it."""
-    return watch_setting() and not separate_codex()
-
-
+# User 2026-10-22 "내가 말한건 이런 대화 중간중간에 codex가 개입하는거였는데" → "봇을 하나 새로 더 만드는 방식으로 가자":
+# the conversation watch is the Codex bot's (lab/discord_codex.py). It reviews each finished turn from the channel and
+# posts its objections there; this bot only routes messages and hands the objections to Claude with the next message.
 def addressed_to_other_bot(text, mentions_other_bot):
-    """True when the owner's message is for the Codex bot (a mention of another bot, or the `!codex` prefix)."""
-    return separate_codex() and (mentions_other_bot or codex_request(text) is not None)
+    """True when the owner's message is for the Codex bot: a mention of another bot, or the `!codex` prefix."""
+    return mentions_other_bot or codex_request(text) is not None
 
 
 def objections_from(rows):
@@ -369,25 +321,6 @@ def objections_from(rows):
             if body.strip():
                 found.append(body.strip())
     return '\n'.join(reversed(found))
-
-
-def watch_minutes():
-    return float(os.environ.get('CODEX_WATCH_MINUTES') or 5)
-
-
-def watch_prompt(user_text, reply, before, after, log):
-    """The review request for one finished turn; the commit range lets Codex read the diff itself."""
-    if before and after and before != after:
-        commits = f'## 커밋 {before[:7]}..{after[:7]} (`git diff {before[:7]}..{after[:7]}`)\n{log.strip()}'
-    else:
-        commits = '## 커밋 없음'
-    return f'{WATCH_NOTE}## 사용자\n{user_text.strip()}\n\n## Claude\n{reply.strip()}\n\n{commits}\n'
-
-
-def watch_findings(text):
-    """Codex's objections, or '' when it answered "결론: 이상 없음" (or nothing)."""
-    text = (text or '').strip()
-    return '' if not text or CLEAN in text else text
 
 
 def watch_prefix(findings):
@@ -467,7 +400,6 @@ def main():
     lock = asyncio.Lock()
     running = {}
     waiting = [0]  # turns requested and not yet finished
-    watching = set()  # conversation-watch tasks still running (a restart would kill them: 2026-10-22 02:24 log)
     pending_fresh = set()  # channels whose next turn starts a new session (the prompt says where the context is)
     if FRESH_MARK.exists():  # one-shot: every channel starts a new session (left by a turn that changed the bot)
         pending_fresh.update(state)
@@ -495,9 +427,8 @@ def main():
     def restart_if_changed():
         """Continue as the new version when a turn edited this file; only when no turn is pending.
 
-        A version that does not compile is not started: the running one keeps serving. A running
-        conversation watch delays it too (its done-callback calls back here)."""
-        if waiting[0] or watching:
+        A version that does not compile is not started: the running one keeps serving."""
+        if waiting[0]:
             return
         current = source_digest()
         if current == digest[0]:
@@ -512,73 +443,19 @@ def main():
         print('discord_claude.py changed: restarting', flush=True)
         os.execv(sys.executable, [sys.executable, *sys.argv])
 
-    async def run_turn(channel, key, prompt, resume=True, quick=False, codex=False, objections=None):
+    async def run_turn(channel, key, prompt, resume=True, quick=False, objections=None):
         """One `claude -p` turn whose reply goes to `channel`; turns run one at a time."""
         waiting[0] += 1
         try:
-            await locked_turn(channel, key, prompt, resume, quick, codex, objections)
+            await locked_turn(channel, key, prompt, resume, quick, objections)
         finally:
             waiting[0] -= 1
         restart_if_changed()
 
-    async def codex_exec(prompt, seconds):
-        """(last message, error text, exit code) of one read-only `codex exec`; not the `!stop` target."""
-        binary = codex_bin()
-        if not binary:
-            return '', 'codex 미설치: `npm install -g @openai/codex` 뒤 `codex login` (봇 기계에서)', None
-        fd, out_path = tempfile.mkstemp(prefix='codex-discord-', suffix='.md')
-        os.close(fd)
-        out_path = Path(out_path)
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *codex_command(binary, workdir, out_path), cwd=workdir, env=clean_env(), stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            try:
-                out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), seconds)
-            except asyncio.TimeoutError:
-                proc.kill()
-                await proc.wait()
-                out, err = b'', f'{seconds/60:.0f}분 제한 초과로 중단'.encode()
-            text = out_path.read_text(errors='replace').strip() if out_path.exists() else ''
-        finally:
-            out_path.unlink(missing_ok=True)
-        error = (err.decode(errors='replace') or out.decode(errors='replace')).strip()[-1200:]
-        return text, error, proc.returncode
-
-    async def codex_turn(channel, prompt):
-        """One `codex exec` answer, read-only, outside every Claude conversation."""
-        text, error, code = await codex_exec(CODEX_NOTE + prompt, turn_seconds)
-        reply = text or f'⚠️ codex 실행 실패 (종료 코드 {code})\n```\n{error}\n```'
-        await send(channel, f'{reply}\n🧠 {codex_model()} · 일회성 답(Claude 대화에 안 남음)')
-
-    async def git_output(*args):
-        proc = await asyncio.create_subprocess_exec('git', *args, cwd=workdir, stdout=asyncio.subprocess.PIPE,
-                                                    stderr=asyncio.subprocess.DEVNULL)
-        out, _ = await proc.communicate()
-        return out.decode(errors='replace').strip()
-
-    async def watch_turn(channel, key, user_text, reply, before, after):
-        """The conversation watch: Codex reviews one finished turn; objections are posted and kept for the next turn."""
-        log = await git_output('log', '--oneline', f'{before}..{after}') if before and after and before != after else ''
-        text, error, code = await codex_exec(watch_prompt(user_text, reply, before, after, log), watch_minutes()*60)
-        if not text:
-            await send(channel, f'⚠️ 코덱스 대화 검수 실패 (종료 코드 {code})\n```\n{error}\n```')
-            return
-        findings = watch_findings(text)
-        if not findings:
-            await send(channel, f'🔍 코덱스({codex_model()}): 이상 없음')
-            return
-        state[key + ':codex'] = findings   # handed to Claude with the owner's next message
-        save()
-        await send(channel, f'🔍 코덱스({codex_model()}) 검수 지적 — 다음 메시지에서 Claude가 받는다\n{findings}')
-
-    async def locked_turn(channel, key, prompt, resume, quick=False, codex=False, objections=None):
+    async def locked_turn(channel, key, prompt, resume, quick=False, objections=None):
         async with lock:
             note = ''
             async with channel.typing():
-                if codex:
-                    await codex_turn(channel, prompt)
-                    return
                 if quick:  # one-off on the quick model, no session kept, the channel conversation untouched
                     out, err, code = await claude_run(command(claude, None, quick_model(), fallback=False),
                                                       QUICK_NOTE + prompt)
@@ -601,12 +478,8 @@ def main():
                 if key in pending_fresh:
                     pending_fresh.discard(key)
                     prompt = FRESH_PREFIX + prompt
-                user_text = prompt
-                # The watch's findings on the previous turn: from the channel (separate Codex bot) or from state.
-                objections = objections or state.pop(key + ':codex', None)
-                if objections:
+                if objections:   # the Codex bot's objections to the previous reply, read from the channel
                     prompt = watch_prefix(objections) + prompt
-                before = await git_output('rev-parse', 'HEAD')
                 # A resumed Fable run goes without --fallback-model (2026-10-20 "왜 아직 opus지?": the replies kept
                 # coming from Opus with no warning, i.e. the CLI fell back by itself), so its failure reaches the
                 # new-session retry below instead of turning into a silent Opus turn.
@@ -649,17 +522,6 @@ def main():
                     pending_fresh.add(key)
                 save()
             await send(channel, '\n'.join(p for p in (note + reply, tag) if p))
-            if watch_enabled() and reply:
-                after = await git_output('rev-parse', 'HEAD')
-                task = asyncio.create_task(watch_turn(channel, key, user_text, reply, before, after))
-                watching.add(task)
-
-                def finished(done, _task=task):
-                    watching.discard(_task)
-                    if done.exception() is not None:
-                        print(f'conversation watch failed: {done.exception()!r}', flush=True)
-                    restart_if_changed()
-                task.add_done_callback(finished)
 
     async def claude_run(argv, prompt):
         """(stdout, stderr, exit code) of one `claude -p` process, killed after the turn limit."""
@@ -718,17 +580,13 @@ def main():
         if text == '!status':
             busy = '실행 중' if running else '대기'
             turns = f' ({state.get(key + ":turns", 0)}/{session_turn_limit()}턴)' if state.get(key) else ''
-            await message.channel.send(f'상태: {busy} · 대화 {state.get(key, "(새 대화)")}{turns} · 작업 폴더 {workdir}')
+            await message.channel.send(f'상태: {busy} · 대화 {state.get(key, "(새 대화)")}{turns} · 모델 {primary_model()} '
+                                       f'· 작업 폴더 {workdir}')
             return
         quick = quick_request(text)
         if quick and not message.attachments:
             await message.add_reaction('⏳' if lock.locked() else '👀')
             await run_turn(message.channel, key, quick, quick=True)
-            return
-        codex = codex_request(text)
-        if codex and not message.attachments:
-            await message.add_reaction('⏳' if lock.locked() else '👀')
-            await run_turn(message.channel, key, codex, codex=True)
             return
         if text == '!stop':
             proc = running.get('proc')
@@ -756,9 +614,7 @@ def main():
         await run_turn(message.channel, key, prompt, objections=await channel_objections(message))
 
     async def channel_objections(message):
-        """The Codex bot's objections since this bot's last reply in the channel (separate Codex bot only)."""
-        if not separate_codex():
-            return None
+        """The Codex bot's objections since this bot's last reply in the channel."""
         rows = []
         try:
             async for m in message.channel.history(limit=20, before=message):

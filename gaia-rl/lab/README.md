@@ -134,8 +134,7 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   - 읽기, 작업 폴더 수정, git, 읽기 전용 진단, 저장소 Python 실행만 허용한다.
   - 배포·재시작·삭제·비밀 파일 읽기는 거부한다.
   - 거부된 도구는 답 끝에 🔒로 표시되니, 필요하면 직접 실행한다.
-- 명령: `!new` 새 대화, `!status` 상태(대화 턴 수 포함), `!stop` 실행 중단, `!q 질문` 싼 모델(Sonnet, `CLAUDE_QUICK_MODEL`)로 일회성 답(본 대화에 안 남음, 파일 수정 없음).
-  한 번에 하나씩 처리하고, 나머지는 ⏳ 표시 후 순서대로 처리한다.
+- 명령과 아이콘은 아래 "두 봇의 명령·아이콘" 표(Claude 봇·Codex 봇 공통). 한 번에 하나씩 처리하고, 나머지는 ⏳ 표시 후 순서대로 처리한다.
 - RTK(2026-10-21, 사용자 설치 `cargo install --git https://github.com/rtk-ai/rtk` + `rtk init --global`): `~/.claude/settings.json`의
   PreToolUse 훅이 Bash 명령을 `rtk <명령>`으로 바꿔 출력을 압축한다. 봇 턴에도 적용되므로 허용 목록에 `Bash(rtk git log:*)`처럼
   **rtk 접두 항목을 기존 항목과 1:1로** 두었다(`Bash(rtk:*)` 전체 허용은 하지 않는다 — rm·sudo 우회가 되므로). `rtk bypass`는 읽기 명령만.
@@ -166,37 +165,54 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   ~/.local/bin/uv venv --seed -p 3.12 ~/.venvs/gaia-claude-bot
   ~/.venvs/gaia-claude-bot/bin/pip install -q discord.py
   cd ~/projects/gaia-work && git pull --rebase origin claude/epic-goodall-0ot55w
-  cp gaia-rl/lab/discord_claude.env.example gaia-rl/lab/discord_claude.env && chmod 600 gaia-rl/lab/discord_claude.env
-  nano gaia-rl/lab/discord_claude.env          # 토큰, 내 사용자 ID, #claude 채널 ID
-  cp gaia-rl/lab/discord-claude.service ~/.config/systemd/user/
-  systemctl --user daemon-reload && systemctl --user enable --now discord-claude
-  journalctl --user -u discord-claude -f       # "connected as ..." 이면 정상
+  mkdir -p ~/.config/gaia && cp gaia-rl/lab/discord_claude.env.example ~/.config/gaia/discord-bots.env && chmod 600 ~/.config/gaia/discord-bots.env
+  nano ~/.config/gaia/discord-bots.env         # 두 봇 토큰, 내 사용자 ID, #claude 채널 ID (작업 트리 밖: 모델 프로세스가 뒤지지 못하게)
+  cp gaia-rl/lab/discord-claude.service gaia-rl/lab/discord-codex.service ~/.config/systemd/user/
+  systemctl --user daemon-reload && systemctl --user enable --now discord-claude discord-codex
+  journalctl --user -u discord-claude -f       # "connected as ..." 이면 정상 (discord-codex도 같이)
   ```
+  **비밀 파일(2026-10-22, 사용자 "보안상 토큰 읽을 일이 적어야하지")**: env 파일은 작업 트리 밖 `~/.config/gaia/discord-bots.env` 하나다(두 봇
+  같은 사용자·같은 기계라 나눠도 얻는 것이 없음). 모델 프로세스(`claude -p`, `codex exec`)는 `clean_env()`로 TOKEN·SECRET·WEBHOOK·API_KEY
+  변수 없이 뜨고, Claude 봇 허용 목록은 `Read(**/discord-bots.env)`·`Read(~/.config/gaia/**)`를 거부한다. **한계**: Codex의 `--sandbox read-only`는
+  쓰기만 막고 디스크 읽기는 막지 않는다 — 파일을 작업 트리 밖에 두어 "뒤지다 보게 되는" 경로를 없앤 것이고, 읽기 차단은 아니다.
 - 자동 정리: `DISCORD_LAB_CHANNEL_ID`(모니터링 채널)를 설정하면, lab의 ✅ 결과 알림마다 봇이 `#claude`에서
   새 대화로 결과를 기록(사이클 문서, HANDOFF 갱신, 커밋·푸시)하고 다음 실험을 **제안만** 한다.
   큐에 넣을지는 그 대화에 답해서 정한다. 알림에서는 실험 이름만 읽는다.
 - 두 번째 모델 검수(2026-10-21): lab의 🔍 검수 알림(코드 검수, `review` 종류)에 지적이 있으면 봇이 새 대화로 지적을 하나씩
   수정(커밋)하거나 반박한다. 반박이 있으면 답 첫 줄이 `불일치 — `로 시작하고 사용자가 정한다. `결론: 이상 없음`이면 턴을 열지 않는다.
-  `!codex 질문`(`!gpt`)은 Codex(`CODEX_MODEL` 기본 gpt-6-astra)에게 직접 묻는 일회성 답(작업 트리 읽기 전용, Claude 대화와 무관).
   봇 기계에도 `codex`가 있어야 한다(`npm install -g @openai/codex`, `codex login`은 사용자). 설정은 호출마다 플래그로 주므로
   `~/.codex/config.toml`을 고칠 일은 없다.
-- 대화 검수(2026-10-22, 사용자 "대화 중간중간에 codex가 개입"): 보통 턴이 끝날 때마다 봇이 사용자 메시지·Claude 답·그 턴의 커밋
-  범위를 Codex에 보내고(읽기 전용, 턴 잠금 밖에서 `CODEX_WATCH_MINUTES` 기본 5분), 지적은 `🔍 코덱스 검수 지적`으로 그대로
-  올라가며 다음 사용자 메시지 앞에 붙어 Claude에게 전달된다(사용자가 언급하면 수정·반박). `결론: 이상 없음`이면 한 줄만.
-  `CODEX_WATCH=0`으로 끈다. `!q`·`!codex` 일회성 답은 검수하지 않는다.
-- **Codex 별도 봇(2026-10-22, 사용자 "봇을 하나 새로 더 만드는 방식으로 가자")**: `lab/discord_codex.py`는 두 번째 디스코드 앱
-  토큰(`CODEX_BOT_TOKEN`, 같은 env 파일)으로 뜨는 **읽기 전용** 봇이다. 같은 채널에서 `@Codex 질문`(또는 `!codex`/`!gpt`)에 최근
-  대화 `CODEX_CONTEXT`(기본 12)개를 맥락으로 붙여 답하고, Claude 봇의 답이 `CODEX_WATCH_DELAY`(기본 20초) 멈추면 그 턴(사용자
-  메시지·Claude 답·그 사이 커밋)을 검수해 `🔍 코덱스(…) 검수 지적`으로 올린다. 토큰이 설정되면 Claude 봇은 다른 봇을 멘션한
-  메시지와 `!codex`를 건너뛰고(Codex 봇이 답함), 자기 안의 검수를 끄고, 채널에서 자기 마지막 답 뒤에 올라온 🔍 메시지를 다음
-  사용자 메시지 앞에 붙인다. Claude가 긴 턴을 도는 동안에도 Codex는 답하고, Claude 봇 재시작(E77)에 검수가 죽지 않는다.
-  두 봇이 서로의 글에 답하는 핑퐁은 없다: Codex 봇은 사용자 글에만 답하고 Claude 글은 검수만, Claude 봇은 사용자 글에만 답한다.
-  설치(사용자 한 번): 디스코드 개발자 포털에서 두 번째 앱·봇 생성 → **Message Content Intent 켜기** → 서버에 초대(메시지 읽기·
-  보내기·기록 보기) → 토큰을 `discord_claude.env`의 `CODEX_BOT_TOKEN`에 → `cp gaia-rl/lab/discord-codex.service ~/.config/systemd/user/`
-  → `systemctl --user daemon-reload && systemctl --user enable --now discord-codex && systemctl --user restart discord-claude`
-  (Claude 봇도 토큰을 읽어야 역할을 넘긴다) → `journalctl --user -u discord-codex -n 5`에 "connected as …; watch on".
-  **토큰 한 파일(사용자 "토큰을 분리하지 않아도 괜찮나?")**: 두 봇은 같은 사용자·같은 기계라 파일을 나눠도 얻는 것이 없다. 중요한
-  것은 모델 하위 프로세스가 토큰을 상속하지 않는 것 — `claude -p`·`codex exec`는 `clean_env()`(TOKEN·SECRET·WEBHOOK·API_KEY 이름 제거)
-  로 뜬다. **지시·스킬 공유**: Codex는 저장소 루트 `AGENTS.md`(CLAUDE.md와 같은 내용을 Codex용으로)와 `.agents/skills`(→ `gaia-rl/lab/skills`,
+- **Codex 봇(2026-10-22, 사용자 "봇을 하나 새로 더 만드는 방식으로 가자" → "claude는 내부에서 codex 호출하는건 없애되, codex봇이 claude의 말에
+  반박하는 체계는 유지")**: `lab/discord_codex.py`는 두 번째 디스코드 앱 토큰(`CODEX_BOT_TOKEN`)으로 뜨는 **읽기 전용** 봇이고, Claude 봇은
+  Codex를 전혀 호출하지 않는다. 같은 채널에서 ① 자기를 멘션했거나 `!codex `로 시작한 사용자 메시지에 최근 대화 `CODEX_CONTEXT`(기본 12)개를
+  맥락으로 붙여 답하고 ② **대화 검수**: Claude 봇의 답이 `CODEX_WATCH_DELAY`(기본 20초) 멈추면 그 턴(사용자 메시지·Claude 답·그 사이 커밋)을
+  검수해 `🔍 코덱스(모델) 검수 지적`(또는 `: 이상 없음` 한 줄)으로 올린다(`CODEX_WATCH=0`으로 끔, 제한 `CODEX_WATCH_MINUTES` 기본 5분).
+  Claude 봇은 다른 봇을 멘션한 메시지와 `!codex`를 건너뛰고, 채널에서 자기 마지막 답 뒤의 🔍 메시지를 다음 사용자 메시지 앞에
+  `(직전 답에 대한 코덱스 검수 지적 …)`으로 붙인다(사용자가 언급하면 수정·반박). `!q` 일회성 답과 `!`명령 답은 검수하지 않는다.
+  핑퐁 없음: 두 봇 모두 사용자 글에만 답하고, Codex는 Claude 글을 검수만 한다. Claude가 긴 턴을 도는 동안에도 Codex는 답한다.
+  설치(사용자 한 번): 개발자 포털에서 두 번째 앱·봇 생성 → **Message Content Intent 켜기** → 서버에 초대(메시지 읽기·보내기·기록 보기·반응)
+  → 토큰을 env 파일 `CODEX_BOT_TOKEN`에 → 위 설치 블록의 service 복사·enable. 로그 `journalctl --user -u discord-codex -n 3`에
+  "connected as …; watch on". **지시·스킬 공유**: Codex는 루트 `AGENTS.md`(CLAUDE.md와 같은 내용)와 `.agents/skills`(→ `gaia-rl/lab/skills`,
   `.claude/skills`와 같은 폴더)를 읽는다. 스킬을 고치면 두 봇에 같이 반영된다.
+- **두 봇의 명령·아이콘(2026-10-22, 사용자 "명령어 양식 아이콘 통일해. 구분해야할건 구분하고")** — 받는 봇은 **멘션 또는 접두로 정하고, 없으면 Claude**:
+
+  | 쓰는 법 | 받는 봇 | 뜻 |
+  |---|---|---|
+  | `질문` (멘션 없음) | Claude | 본 대화 턴(파일 수정·커밋 가능). 끝나면 Codex가 검수 |
+  | `!q 질문` | Claude | 싼 모델 일회성 답(본 대화에 안 남음, 수정 없음, 검수 없음) |
+  | `@Codex 질문` 또는 `!codex 질문` | Codex | 최근 대화를 맥락으로 한 읽기 전용 답 |
+  | `!new` · `!status` · `!stop` | Claude | 새 대화 · 상태 · 실행 중단 |
+  | `@Codex !status` · `@Codex !stop` · `@Codex !new` | Codex | 같은 명령을 Codex에(`!codex !status`도 됨) |
+
+  | 아이콘 | 누가 | 뜻 |
+  |---|---|---|
+  | 👀 / ⏳ | 둘 다(반응) | 접수 / 앞 작업 뒤에 처리 |
+  | `🧠 모델 · 메모` | 둘 다, 모델 답의 마지막 줄 | Claude `🧠 Fable 5.1`, `!q` `🧠 Sonnet 5.5 · 일회성 답…`, Codex `🧠 gpt-6-astra · 읽기 전용` |
+  | `상태: …` | 둘 다 | `!status` 답(실행 중/대기 · 대화 또는 검수 · 모델 · 작업 폴더) |
+  | ⚠️ | 둘 다 | 실패·주의(`⚠️ Claude 실행 실패 (종료 코드 N)`, `⚠️ Codex 실행 실패 …`, 모델 대체) |
+  | 🔍 | Codex 봇·lab 웹훅 | 검수(`🔍 코덱스(모델) 검수 지적`, `🔍 코덱스(모델): 이상 없음`, lab `🔍 # 이름 — 검수`) |
+  | 🔒 | Claude만 | 허용 목록 밖이라 거부된 도구(직접 실행할 명령) |
+  | 🔄 | Claude만 | 대화 전환(새 대화·모델 전환) |
+  | 🤖 | Claude만 | lab 알림이 연 자동 턴 시작 |
+  | ✅ | lab 웹훅 | 실험 완료 |
 - 같은 봇 토큰으로 채널 플러그인 세션(`claude --channels ...`)을 동시에 띄우지 않는다. 둘 다 답하게 된다.

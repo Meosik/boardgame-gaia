@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 WorkingDirectory=%h/projects/gaia-work/gaia-rl/lab
-EnvironmentFile=%h/projects/gaia-work/gaia-rl/lab/discord_claude.env
+EnvironmentFile=%h/.config/gaia/discord-bots.env
 Environment=PATH=%h/.local/bin:%h/.bun/bin:%h/.cargo/bin:%h/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=%h/.venvs/gaia-claude-bot/bin/python discord_codex.py
 Restart=on-failure
