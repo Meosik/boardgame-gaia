@@ -53,7 +53,14 @@ SYSTEM = (
     'time limit and the reply is lost. Anything that may take more than about 5 minutes (games, A/B, '
     'smokes, repeated analysis runs) goes to the lab queue instead: add gaia-rl/lab/queue/<name>.json '
     '(kind "ab" or "command", see gaia-rl/lab/README.md), commit, push and end the turn; lab runs it and '
-    'its result notice starts a review turn automatically.')
+    'its result notice starts a review turn automatically. '
+    # User 2026-10-21 "그 외에 줄일만한건?": tool output is the largest avoidable token cost of a turn.
+    'Keep tool output small: count or locate before you read (`grep -c`, `grep -n -o` with a short pattern, '
+    'Read with offset/limit), `git log --oneline -5`, `journalctl -n 10`, never print a whole large file '
+    '(gaia-rl/lab/HANDOFF-archive.md, results *.json, decisions logs) — read the section you need. '
+    'For a lab result read only lab/results/<name>.md; the .json is hundreds of KB, query it with a short '
+    'python snippet when a number is missing from the .md. For a cycle document copy the shape of '
+    'research/strategy/cycles/TEMPLATE.md, not a previous cycle.')
 
 
 def chunks(text, size=1900):
@@ -118,9 +125,21 @@ def forget(state, key):
         state.pop(key + suffix, None)
 
 
+# User 2026-10-21 "그 외에 줄일만한건?": every turn loaded the account's MCP connectors (Notion, Docs, Drive) and
+# their tool lists although the allow list lets the bot use none of them. An empty strict MCP config drops
+# them; CLAUDE_BOT_MCP=1 keeps the normal MCP setup.
+MCP_CONFIG = HERE/'claude-bot-mcp.json'
+
+
+def mcp_args():
+    if os.environ.get('CLAUDE_BOT_MCP'):
+        return []
+    return ['--strict-mcp-config', '--mcp-config', str(MCP_CONFIG)]
+
+
 def command(claude, session_id, model, fallback=True):
     argv = [claude, '-p', '--output-format', 'json', '--permission-mode', 'dontAsk',
-            '--settings', str(SETTINGS), '--append-system-prompt', SYSTEM, '--model', model]
+            '--settings', str(SETTINGS), *mcp_args(), '--append-system-prompt', SYSTEM, '--model', model]
     if fallback and model != FALLBACK_MODEL:
         argv += ['--fallback-model', FALLBACK_MODEL]  # mid-turn overload
     if session_id:
@@ -214,10 +233,11 @@ def finished_experiment(text):
 
 
 def review_prompt(name):
-    return (f'lab 실험 {name} 결과가 나왔다. git pull로 받은 뒤 gaia-rl/lab/results/{name}.md와 .json을 읽고, '
-            'HANDOFF.md 규칙대로 1) research/strategy/cycles/에 사이클 문서를 쓰고 2) HANDOFF.md의 결과표와 '
-            '"진행 중"을 갱신해 3) 커밋·푸시하라. 4) 결과의 의미를 짧게 정리하고 다음 실험을 제안하라. 다음 실험은 '
-            '큐에 넣지 말고 사용자의 확인을 기다린다. 설정 변경이나 배포가 필요하면 제안만 한다.')
+    return (f'lab 실험 {name} 결과가 나왔다. git pull로 받은 뒤 gaia-rl/lab/results/{name}.md를 읽고(.json은 '
+            '수백 KB라 읽지 말고, 빠진 수치만 python 한 줄로 뽑는다), HANDOFF.md 규칙대로 1) research/strategy/cycles/에 '
+            '사이클 문서를 쓰고(형식은 cycles/TEMPLATE.md) 2) HANDOFF.md의 결과표와 "진행 중"을 갱신해 3) 커밋·푸시하라. '
+            '4) 결과의 의미를 짧게 정리하고 다음 실험을 제안하라. 다음 실험은 큐에 넣지 말고 사용자의 확인을 기다린다. '
+            '설정 변경이나 배포가 필요하면 제안만 한다.')
 
 
 ATTACHMENT_LIMIT = 50*1024*1024

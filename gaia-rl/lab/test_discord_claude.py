@@ -30,6 +30,28 @@ class QuickTurnTests(unittest.TestCase):
         self.assertEqual(argv[argv.index('--model') + 1], 'claude-sonnet-5-5')
 
 
+class McpTests(unittest.TestCase):
+    def test_mcp_servers_are_off_unless_asked_for(self):
+        os.environ.pop('CLAUDE_BOT_MCP', None)
+        argv = bot.command('claude', 'sid', 'claude-fable-5-1')
+        self.assertIn('--strict-mcp-config', argv)
+        self.assertEqual(argv[argv.index('--mcp-config') + 1], str(bot.MCP_CONFIG))
+        self.assertTrue(bot.MCP_CONFIG.exists())
+        import json
+        self.assertEqual(json.loads(bot.MCP_CONFIG.read_text()), {'mcpServers': {}})
+        os.environ['CLAUDE_BOT_MCP'] = '1'
+        try:
+            self.assertNotIn('--strict-mcp-config', bot.command('claude', None, 'claude-fable-5-1'))
+        finally:
+            os.environ.pop('CLAUDE_BOT_MCP')
+
+    def test_review_prompt_reads_the_markdown_and_the_template_only(self):
+        prompt = bot.review_prompt('101-ships-vs-menu-full')
+        self.assertIn('lab/results/101-ships-vs-menu-full.md', prompt)
+        self.assertIn('TEMPLATE.md', prompt)
+        self.assertNotIn('.md와 .json을 읽고', prompt)
+
+
 class TurnLimitTests(unittest.TestCase):
     def test_turns_count_per_conversation_and_reset_on_a_new_one(self):
         state = {}
