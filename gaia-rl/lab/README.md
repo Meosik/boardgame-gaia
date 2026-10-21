@@ -184,4 +184,15 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   범위를 Codex에 보내고(읽기 전용, 턴 잠금 밖에서 `CODEX_WATCH_MINUTES` 기본 5분), 지적은 `🔍 코덱스 검수 지적`으로 그대로
   올라가며 다음 사용자 메시지 앞에 붙어 Claude에게 전달된다(사용자가 언급하면 수정·반박). `결론: 이상 없음`이면 한 줄만.
   `CODEX_WATCH=0`으로 끈다. `!q`·`!codex` 일회성 답은 검수하지 않는다.
+- **Codex 별도 봇(2026-10-22, 사용자 "봇을 하나 새로 더 만드는 방식으로 가자")**: `lab/discord_codex.py`는 두 번째 디스코드 앱
+  토큰(`CODEX_BOT_TOKEN`, 같은 env 파일)으로 뜨는 **읽기 전용** 봇이다. 같은 채널에서 `@Codex 질문`(또는 `!codex`/`!gpt`)에 최근
+  대화 `CODEX_CONTEXT`(기본 12)개를 맥락으로 붙여 답하고, Claude 봇의 답이 `CODEX_WATCH_DELAY`(기본 20초) 멈추면 그 턴(사용자
+  메시지·Claude 답·그 사이 커밋)을 검수해 `🔍 코덱스(…) 검수 지적`으로 올린다. 토큰이 설정되면 Claude 봇은 다른 봇을 멘션한
+  메시지와 `!codex`를 건너뛰고(Codex 봇이 답함), 자기 안의 검수를 끄고, 채널에서 자기 마지막 답 뒤에 올라온 🔍 메시지를 다음
+  사용자 메시지 앞에 붙인다. Claude가 긴 턴을 도는 동안에도 Codex는 답하고, Claude 봇 재시작(E77)에 검수가 죽지 않는다.
+  두 봇이 서로의 글에 답하는 핑퐁은 없다: Codex 봇은 사용자 글에만 답하고 Claude 글은 검수만, Claude 봇은 사용자 글에만 답한다.
+  설치(사용자 한 번): 디스코드 개발자 포털에서 두 번째 앱·봇 생성 → **Message Content Intent 켜기** → 서버에 초대(메시지 읽기·
+  보내기·기록 보기) → 토큰을 `discord_claude.env`의 `CODEX_BOT_TOKEN`에 → `cp gaia-rl/lab/discord-codex.service ~/.config/systemd/user/`
+  → `systemctl --user daemon-reload && systemctl --user enable --now discord-codex && systemctl --user restart discord-claude`
+  (Claude 봇도 토큰을 읽어야 역할을 넘긴다) → `journalctl --user -u discord-codex -n 5`에 "connected as …; watch on".
 - 같은 봇 토큰으로 채널 플러그인 세션(`claude --channels ...`)을 동시에 띄우지 않는다. 둘 다 답하게 된다.

@@ -26,7 +26,9 @@ Environment (lab/discord_claude.env, git-ignored; see lab/discord_claude.env.exa
   CODEX_BIN (default: codex on PATH), CODEX_MODEL (default gpt-6-astra, for `!codex`),
   CODEX_WATCH (default 1: after every ordinary turn the second model reviews the owner's message, Claude's
   reply and the turn's commits; its objections are posted verbatim and handed to Claude with the owner's
-  next message; 0 turns it off), CODEX_WATCH_MINUTES (default 5).
+  next message; 0 turns it off), CODEX_WATCH_MINUTES (default 5),
+  CODEX_BOT_TOKEN (set: Codex runs as its own bot, lab/discord_codex.py — this bot then skips `@Codex`/`!codex`
+  messages, keeps its own watch off and reads Codex's 🔍 objections from the channel).
 """
 import asyncio
 import hashlib
@@ -329,8 +331,40 @@ WATCH_NOTE = ('(대화 검수. 아래는 사용자의 질문, Claude의 답, 이
               '없으면 정확히 "결론: 이상 없음" 한 줄만 쓴다. 한국어, 휴대폰에서 읽을 길이.)\n\n')
 
 
+# User 2026-10-22 "봇을 하나 새로 더 만드는 방식으로 가자": with CODEX_BOT_TOKEN set, Codex runs as its own bot
+# (lab/discord_codex.py): it answers `@Codex`/`!codex` messages and does the conversation watch from the channel,
+# so this bot skips those messages, keeps its in-process watch off and reads Codex's objections from the channel.
+def separate_codex():
+    return bool(os.environ.get('CODEX_BOT_TOKEN', '').strip())
+
+
 def watch_enabled():
+    if separate_codex():
+        return False
     return os.environ.get('CODEX_WATCH', '1').strip().lower() not in ('0', '', 'false', 'no', 'off')
+
+
+def addressed_to_other_bot(text, mentions_other_bot):
+    """True when the owner's message is for the Codex bot (a mention of another bot, or the `!codex` prefix)."""
+    return separate_codex() and (mentions_other_bot or codex_request(text) is not None)
+
+
+def objections_from(rows):
+    """Codex's objections to this bot's last reply, read from the channel.
+
+    rows: (is_self, is_other_bot, content) newest first; the walk stops at this bot's own last message.
+    Collected: the other bot's messages starting with 🔍 (the watch's header or a continuation), header line
+    dropped; its 🧠 answers to the owner and '이상 없음' lines are not objections."""
+    found = []
+    for is_self, is_other_bot, content in rows:
+        if is_self:
+            break
+        content = (content or '').strip()
+        if is_other_bot and content.startswith('🔍') and CLEAN not in content:
+            body = content.split('\n', 1)[1] if '\n' in content else ''
+            if body.strip():
+                found.append(body.strip())
+    return '\n'.join(reversed(found))
 
 
 def watch_minutes():
@@ -463,11 +497,11 @@ def main():
         print('discord_claude.py changed: restarting', flush=True)
         os.execv(sys.executable, [sys.executable, *sys.argv])
 
-    async def run_turn(channel, key, prompt, resume=True, quick=False, codex=False):
+    async def run_turn(channel, key, prompt, resume=True, quick=False, codex=False, objections=None):
         """One `claude -p` turn whose reply goes to `channel`; turns run one at a time."""
         waiting[0] += 1
         try:
-            await locked_turn(channel, key, prompt, resume, quick, codex)
+            await locked_turn(channel, key, prompt, resume, quick, codex, objections)
         finally:
             waiting[0] -= 1
         restart_if_changed()
@@ -523,7 +557,7 @@ def main():
         save()
         await send(channel, f'🔍 코덱스({codex_model()}) 검수 지적 — 다음 메시지에서 Claude가 받는다\n{findings}')
 
-    async def locked_turn(channel, key, prompt, resume, quick=False, codex=False):
+    async def locked_turn(channel, key, prompt, resume, quick=False, codex=False, objections=None):
         async with lock:
             note = ''
             async with channel.typing():
@@ -553,7 +587,8 @@ def main():
                     pending_fresh.discard(key)
                     prompt = FRESH_PREFIX + prompt
                 user_text = prompt
-                objections = state.pop(key + ':codex', None)   # the watch's findings on the previous turn
+                # The watch's findings on the previous turn: from the channel (separate Codex bot) or from state.
+                objections = objections or state.pop(key + ':codex', None)
                 if objections:
                     prompt = watch_prefix(objections) + prompt
                 before = await git_output('rev-parse', 'HEAD')
@@ -658,6 +693,8 @@ def main():
             return
         key = str(message.channel.id)
         text = message.content.strip()
+        if addressed_to_other_bot(text, any(u.bot and u != client.user for u in message.mentions)):
+            return   # the Codex bot answers this one
         if text == '!new':
             forget(state, key)
             save()
@@ -701,7 +738,21 @@ def main():
             await attachment.save(path)
             saved.append(path)
         prompt = attachment_prompt(text, saved, skipped) if message.attachments else text
-        await run_turn(message.channel, key, prompt)
+        await run_turn(message.channel, key, prompt, objections=await channel_objections(message))
+
+    async def channel_objections(message):
+        """The Codex bot's objections since this bot's last reply in the channel (separate Codex bot only)."""
+        if not separate_codex():
+            return None
+        rows = []
+        try:
+            async for m in message.channel.history(limit=20, before=message):
+                is_self = bool(client.user) and m.author.id == client.user.id
+                rows.append((is_self, m.author.bot and not is_self and m.webhook_id is None, m.content))
+        except discord.DiscordException as error:
+            print(f'history failed: {error!r}', flush=True)
+            return None
+        return objections_from(rows) or None
 
     client.run(token)
 

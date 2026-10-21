@@ -101,6 +101,7 @@ class CodexTests(unittest.TestCase):
         state = {'1:codex': '1. 지적', '1': 'sess', '1:turns': 2}
         bot.forget(state, '1')
         self.assertEqual(state, {})
+        os.environ.pop('CODEX_BOT_TOKEN', None)
         os.environ['CODEX_WATCH'] = '0'
         self.assertFalse(bot.watch_enabled())
         os.environ['CODEX_WATCH'] = '1'
@@ -109,6 +110,33 @@ class CodexTests(unittest.TestCase):
         self.assertTrue(bot.watch_enabled())
         os.environ.pop('CODEX_WATCH_MINUTES', None)
         self.assertEqual(bot.watch_minutes(), 5.0)
+
+    def test_separate_codex_bot_takes_its_messages_and_the_watch_and_leaves_objections_in_the_channel(self):
+        """User 2026-10-22 "봇을 하나 새로 더 만드는 방식으로 가자": with CODEX_BOT_TOKEN set the Claude bot skips
+        messages for the Codex bot, keeps its own watch off and collects Codex's 🔍 messages since its last reply."""
+        os.environ.pop('CODEX_BOT_TOKEN', None)
+        os.environ.pop('CODEX_WATCH', None)
+        self.assertFalse(bot.separate_codex())
+        self.assertFalse(bot.addressed_to_other_bot('!codex 왜?', False))   # in-process `!codex` stays with this bot
+        os.environ['CODEX_BOT_TOKEN'] = 'x'
+        try:
+            self.assertTrue(bot.separate_codex())
+            self.assertFalse(bot.watch_enabled())
+            self.assertTrue(bot.addressed_to_other_bot('!codex 왜?', False))
+            self.assertTrue(bot.addressed_to_other_bot('<@42> 네 생각은?', True))
+            self.assertFalse(bot.addressed_to_other_bot('진행해', False))
+            rows = [  # newest first, as the channel history comes
+                (False, True, '답입니다\n🧠 gpt-6-astra · 읽기 전용'),           # Codex's answer to the owner: not an objection
+                (False, False, '<@42> 네 생각은?'),                               # the owner
+                (False, True, '🔍 (계속)\n2. 둘째 지적'),
+                (False, True, '🔍 코덱스(gpt-6-astra) 검수 지적 — 다음 메시지에서 Claude가 받는다\n1. 첫 지적'),
+                (True, False, '제 답'),                                            # this bot's last reply: stop here
+                (False, True, '🔍 코덱스(gpt-6-astra) 검수 지적\n0. 옛 지적'),
+            ]
+            self.assertEqual(bot.objections_from(rows), '1. 첫 지적\n2. 둘째 지적')
+            self.assertEqual(bot.objections_from([(False, True, '🔍 코덱스(gpt-6-astra): 이상 없음'), (True, False, 'x')]), '')
+        finally:
+            os.environ.pop('CODEX_BOT_TOKEN')
 
 
 class TurnLimitTests(unittest.TestCase):
