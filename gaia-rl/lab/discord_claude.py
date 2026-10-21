@@ -60,7 +60,12 @@ SYSTEM = (
     '(gaia-rl/lab/HANDOFF-archive.md, results *.json, decisions logs) — read the section you need. '
     'For a lab result read only lab/results/<name>.md; the .json is hundreds of KB, query it with a short '
     'python snippet when a number is missing from the .md. For a cycle document copy the shape of '
-    'research/strategy/cycles/TEMPLATE.md, not a previous cycle.')
+    'research/strategy/cycles/TEMPLATE.md, not a previous cycle. '
+    # User 2026-10-21 "codegraph 설치했음": a pre-indexed code graph of this repo (.codegraph/, file watcher keeps it current).
+    'For code questions (gaia-engine, gaia-rl, gaia-server, gaia-frontend) start with `codegraph explore "<question>"` '
+    '— it returns the relevant source, callers and blast radius in one output; then `codegraph node <symbol|file>`, '
+    '`codegraph callers/callees/impact <symbol>`, `codegraph query <text>` — instead of grep/Read chains. '
+    'Research documents (research/, lab/) are not in the graph: use Grep/Read there.')
 
 
 def chunks(text, size=1900):

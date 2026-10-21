@@ -122,6 +122,8 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   PreToolUse 훅이 Bash 명령을 `rtk <명령>`으로 바꿔 출력을 압축한다. 봇 턴에도 적용되므로 허용 목록에 `Bash(rtk git log:*)`처럼
   **rtk 접두 항목을 기존 항목과 1:1로** 두었다(`Bash(rtk:*)` 전체 허용은 하지 않는다 — rm·sudo 우회가 되므로). `rtk bypass`는 읽기 명령만.
   새 명령을 허용할 때는 원형과 `rtk` 접두형을 함께 넣는다. 절약 통계: `rtk gain`.
+- codegraph(2026-10-21, 사용자 설치 + `codegraph init`): 저장소 코드 그래프 CLI. 봇은 MCP 없이 CLI로 쓴다(`codegraph explore|query|node|files|callers|callees|impact|affected|status|sync` 허용,
+  init·index·daemon·telemetry·upgrade는 사용자). 색인 `.codegraph/`(104MB)는 git 제외. 지시는 루트 `CLAUDE.md`와 봇 시스템 프롬프트에 있다.
 - 봇 턴은 MCP 서버를 싣지 않는다(`--strict-mcp-config --mcp-config lab/claude-bot-mcp.json`, 빈 설정; 계정의 Notion·Docs·Drive 커넥터는
   허용 목록 때문에 어차피 못 쓰면서 매 턴 도구 목록만 실렸음). 다시 켜려면 env `CLAUDE_BOT_MCP=1`.
 - 프로젝트 스킬(2026-10-21, 사용자 "효과 있는 거 skill 만들어"): 절차를 `lab/skills/<이름>/SKILL.md`에 두고 `.claude/skills`로 연결해 쓴다
