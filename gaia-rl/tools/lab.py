@@ -585,8 +585,12 @@ def verdict_prompt(name, spec, body):
 
 
 def verdict_review(name, spec, body, data):
-    """The reviewer's attack on an ab result, as a section of the result page (data['review'] keeps it)."""
-    if spec.get('review', True) is False:
+    """The reviewer's attack on an ab result, as a section of the result page (data['review'] keeps it).
+
+    Off unless the queue file says `"review": true` (user 2026-10-22 "실험 자체가 문제가 있다고 검수하지 말고.
+    실험에서 문제가 있다는건 실험을 시작하기 전에 이야기할 수 있어야지"): the design is reviewed before the
+    start (design_review); the result page keeps only the numbers."""
+    if not spec.get('review'):
         return ''
     text, note = codex_review(verdict_prompt(name, spec, body), float(spec.get('review_minutes', 20))*60)
     data['review'] = {'model': REVIEW_MODEL, 'text': text, 'note': note, 'findings': findings(text)}
@@ -627,6 +631,51 @@ def run_review(name, spec, jobs):
         return 'failed', data, note
     data['findings'] = findings(text)
     return 'done', data, f'검수자 {REVIEW_MODEL} (원문 그대로)\n\n{text}'
+
+
+def design_prompt(name, spec):
+    design = {k: v for k, v in spec.items() if k not in ('seeds', 'design_review')}
+    return (f'{REVIEW_RULES}\n\n과제: lab 실험 {name}이 시작되기 전에 그 설계를 검수하라. 아래 큐 파일이 실험이다: '
+            'note의 질문과 사전 등록 판정, A·B 교사 spec(tools/*.json; 어느 부품이 다른지는 spec의 factory와 '
+            'gaia-rl/tools/teacher_patches.py), 쌍 수·비교 수·stop_round·예산. 이 실험이 note의 질문에 답할 수 없는 이유'
+            '(두 팔이 한 가지 이상 다름, 표본이 너무 작음, 판정 기준이 질문과 안 맞음, 측정 예산이 결정을 바꿈, 같은 결론을 '
+            '이미 낸 실험이 있음 — lab/results/와 research/strategy/cycles/ 확인)가 있으면 지적하라. 설계에 문제가 없으면 '
+            '`결론: 이상 없음`. 결과가 나온 뒤에는 설계를 다시 묻지 않으므로 지금 말해야 한다.\n\n'
+            f'큐 파일:\n```json\n{json.dumps(design, ensure_ascii=False, indent=1)}\n```')
+
+
+def design_review(name, spec, push):
+    """Codex reviews an ab design before it starts; True when the experiment is held with findings.
+
+    User 2026-10-22 "실험에서 문제가 있다는건 실험을 시작하기 전에 이야기할 수 있어야지". The queue file's
+    `design_review` records the outcome: absent → reviewed now; `"accepted"` or `false` → runs without a review
+    (the owner decided, or Claude after the owner did); `{"findings": …}` → held until that changes. Findings are
+    announced under '🔍 # <name> — 검수' (the bot opens a response turn) and kept in lab/queue/<name>.design.md."""
+    review = spec.get('design_review')
+    if spec.get('kind', 'ab') != 'ab' or review is False or review == 'accepted':
+        return False
+    if isinstance(review, dict):
+        return bool(review.get('findings'))
+    text, note = codex_review(design_prompt(name, spec), float(spec.get('review_minutes', 20))*60)
+    if text is None:
+        notify(f'⚠️ 설계 검수 실패: **{name}** — {note}\n실험은 그대로 시작합니다.')
+        return False
+    count = findings(text)
+    if not count:
+        notify(f'🔍 설계 검수 **{name}** ({REVIEW_MODEL}): 이상 없음 — 시작합니다')
+        return False
+    path = LAB/'queue'/f'{name}.json'
+    page = LAB/'queue'/f'{name}.design.md'
+    page.write_text(f'# {name} — 설계 검수 (실험 보류)\n\n검수자 {REVIEW_MODEL} (원문 그대로)\n\n{text}\n\n'
+                    f'<sub>{platform.node()} · 커밋 {commit_id()} · {now()}</sub>\n')
+    current = read_json(path) or spec
+    path.write_text(json.dumps({**current, 'design_review': {'findings': count, 'model': REVIEW_MODEL, 'at': now()}},
+                               ensure_ascii=False, indent=1)+'\n')
+    if push:
+        publish([path, page], f'lab: {name} held by design review')
+    notify(f'🔍 # {name} — 검수 (설계, 실험 보류)\n\n{discord_text(text)}\n\n'
+           f'실험은 큐 파일 `design_review`가 `"accepted"`로 바뀌거나 설계가 고쳐질 때까지 시작하지 않습니다.')
+    return True
 
 
 def queue_code_review(before, after, push):
@@ -670,6 +719,9 @@ _held = set()  # experiments waiting for seeds, each announced once
 def run_one(name, spec, jobs, push):
     """Runs the experiment and writes its result; False when it is held (no seeds yet)."""
     kind = spec.get('kind', 'ab')
+    if kind == 'ab' and design_review(name, spec, push):  # before seeds: a held design keeps no seeds
+        print(f'[{now()}] {name}: held (design review)', flush=True)
+        return False
     if kind == 'ab' and not spec.get('seeds'):  # seeds before the start notice: a short file
         count = int(spec.get('pairs', 12))       # used to kill the service once a minute (E62, E66)
         seeds = ensure_seeds(name, count, jobs, push)

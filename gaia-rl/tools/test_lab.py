@@ -15,6 +15,10 @@ class LabTests(unittest.TestCase):
         (self.dir/'results').mkdir()
         (self.dir/'seeds.txt').write_text('# header\ns-1\ns-2\ns-3\ns-4\n')
         lab.LAB = self.dir
+        # No real codex in tests: the design review (E77) answers clean unless a test says otherwise.
+        self.real_codex_review = lab.codex_review
+        self.addCleanup(setattr, lab, 'codex_review', lab.codex_review)
+        lab.codex_review = lambda prompt, timeout: ('결론: 이상 없음', '')
 
     def queue(self, name, spec):
         (self.dir/'queue'/f'{name}.json').write_text(json.dumps(spec))
@@ -144,12 +148,57 @@ class LabTests(unittest.TestCase):
     def test_review_without_codex_is_a_failed_result_not_a_retry_loop(self):
         from unittest import mock
         self.queue('review-code-0000000', {'kind': 'review', 'paths': ['x.py']})
+        lab.codex_review = self.real_codex_review   # the real one: it must notice the missing binary
         with mock.patch.object(lab, 'notify', lambda *_: None), mock.patch.object(lab, 'codex_bin', lambda: None), \
                 mock.patch.object(lab, 'git', return_value=mock.Mock(stdout='', returncode=0)):
             lab.run_pending(jobs=1, push=False)
         self.assertEqual(lab.result('review-code-0000000')['status'], 'failed')
         self.assertIn('codex 미설치', (self.dir/'results'/'review-code-0000000.md').read_text())
         self.assertEqual(lab.pending(), [])
+
+    def test_design_review_holds_an_ab_with_findings_and_runs_a_clean_or_accepted_one(self):
+        """User 2026-10-22 "실험에서 문제가 있다는건 실험을 시작하기 전에 이야기할 수 있어야지": the design is reviewed
+        before the start; findings hold the experiment in its queue file, a clean review or "accepted" runs it."""
+        from unittest import mock
+        spec = {'kind': 'ab', 'teacher_a': 'a', 'teacher_b': 'b', 'seeds': ['s-1'], 'note': 'q'}
+        self.queue('held', spec)
+        sent, ran, asked = [], [], []
+
+        def codex(prompt, timeout):
+            asked.append(prompt)
+            return ('결론: 지적 1건\n- 두 팔이 두 가지 다르다', '')
+        with mock.patch.object(lab, 'notify', sent.append), mock.patch.object(lab, 'codex_review', codex), \
+                mock.patch.object(lab, 'git', return_value=mock.Mock(stdout='', returncode=0)), \
+                mock.patch.object(lab, 'run_ab', lambda name, spec, jobs: (ran.append(name), ('done', {}, 'ok'))[1]):
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 0)
+            self.assertEqual(ran, [])
+            self.assertTrue(sent[-1].startswith('🔍 # held — 검수'))
+            self.assertIn('두 팔이 두 가지', (self.dir/'queue'/'held.design.md').read_text())
+            held = json.loads((self.dir/'queue'/'held.json').read_text())
+            self.assertEqual(held['design_review']['findings'], 1)
+            self.assertIn('시작되기 전에 그 설계를 검수하라', asked[0])
+            self.assertNotIn('"seeds"', asked[0])
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 0)   # held: not asked again
+            self.assertEqual(len(asked), 1)
+            held['design_review'] = 'accepted'
+            (self.dir/'queue'/'held.json').write_text(json.dumps(held))
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 1)   # accepted: runs without a review
+            self.assertEqual((ran, len(asked)), (['held'], 1))
+            self.queue('clean', spec)
+            lab.codex_review = lambda prompt, timeout: ('결론: 이상 없음', '')
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 1)
+            self.assertEqual(ran, ['held', 'clean'])
+            self.assertTrue(any('이상 없음' in s for s in sent))
+            self.queue('nocodex', spec)
+            lab.codex_review = lambda prompt, timeout: (None, 'codex 미설치')
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 1)   # no reviewer: a warning, then it runs
+            self.assertEqual(ran[-1], 'nocodex')
+        # The verdict attack after a result is off unless asked for.
+        calls = []
+        with mock.patch.object(lab, 'codex_review', lambda prompt, timeout: (calls.append(1), ('결론: 이상 없음', ''))[1]):
+            self.assertEqual(lab.verdict_review('x', {'kind': 'ab'}, 'body', {}), '')
+            self.assertEqual(calls, [])
+            self.assertIn('## 검수', lab.verdict_review('x', {'kind': 'ab', 'review': True}, 'body', {}))
 
     def test_findings_and_code_paths(self):
         self.assertEqual(lab.findings('결론: 이상 없음\n'), 0)

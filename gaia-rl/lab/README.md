@@ -75,9 +75,14 @@ tmux new -s lab                                   # 창을 닫아도 계속 돌�
 ```
 `commits`(diff), `paths`(파일 전체), `result`(A/B 결과 이름: 그 판정을 반박) 가운데 있는 것을 쓴다. 검수자 답의 첫 줄은
 `결론: 이상 없음` 또는 `결론: 지적 N건`. 자동으로 생기는 것 두 가지: ① `watch`가 pull에서 코드 파일(py·rs·ts·json 설정 등;
-results·queue·seeds·docs 제외)이 바뀐 걸 보면 `review-code-<커밋>` 큐 파일을 만들어 커밋한다 ② 모든 `ab` 결과는 끝에
-"## 검수" 절(판정 반박)을 달고 나온다(큐 파일에 `"review": false`면 생략, `review_minutes` 기본 20). lab 기계에 codex가
-없으면 검수는 `failed` 결과로 남는다(`npm install -g @openai/codex` 뒤 `codex login`, 로그인은 사용자).
+results·queue·seeds·docs 제외)이 바뀐 걸 보면 `review-code-<커밋>` 큐 파일을 만들어 커밋한다 ② **설계 검수(2026-10-22,
+사용자 "실험에서 문제가 있다는건 실험을 시작하기 전에 이야기할 수 있어야지")**: `ab` 실험은 시작 전에 큐 파일(질문·사전 등록
+판정·두 spec·표본·예산)을 Codex가 검수한다. `결론: 이상 없음`이면 바로 시작, 지적이 있으면 **보류** — 지적 원문은
+`queue/<이름>.design.md`와 `🔍 # <이름> — 검수 (설계, 실험 보류)` 알림(봇이 대응 턴을 연다)에 실리고, 큐 파일에
+`"design_review": {"findings": N, …}`가 적힌다. 설계를 고치거나 사용자가 정한 뒤 `"design_review": "accepted"`로 바꾸면
+시작한다(`false`도 같음). 결과 뒤의 "## 검수" 절(판정 반박)은 **기본 꺼짐**(`"review": true`로만 켬). lab 기계에 codex가
+없으면 코드 검수는 `failed` 결과로 남고 설계 검수는 경고 뒤 그대로 시작한다(`npm install -g @openai/codex` 뒤 `codex login`,
+로그인은 사용자).
 
 ## Seraph PPO 결과 넣기 (실행은 직접)
 

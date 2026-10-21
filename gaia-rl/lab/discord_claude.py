@@ -321,11 +321,12 @@ def finished_review(text):
 # owner's message, Claude's reply and the turn's commit range to Codex (read-only, outside the turn lock); objections
 # are posted verbatim and given to Claude at the start of the owner's next message, so the owner sees both sides
 # before deciding. "결론: 이상 없음" posts one short line so the owner knows it ran.
-WATCH_NOTE = ('(대화 검수. 아래는 사용자의 메시지, Claude의 답, 이 턴에 Claude가 만든 커밋 범위다. 저장소는 읽기 전용이다: '
-              '파일을 고치지 말고 실험을 돌리지 마라. 답의 사실 주장·추론·결정(코드 변경, 실험 설계, 판정, 반박)에 틀린 곳이나 '
-              '빠진 위험이 있으면 번호를 붙여 짧게 지적하고 근거(파일:줄, 숫자, 명령)를 적는다. 문체·형식·사소한 표현은 보지 '
-              '않는다. 커밋이 있으면 `git diff <범위>`로 변경을 읽는다. 맥락이 필요하면 gaia-rl/lab/HANDOFF.md 5장·6장만 읽는다. '
-              '지적할 것이 없으면 정확히 "결론: 이상 없음" 한 줄만 쓴다. 한국어, 휴대폰에서 읽을 길이.)\n\n')
+WATCH_NOTE = ('(대화 검수. 아래는 사용자의 질문, Claude의 답, 이 턴에 Claude가 만든 커밋 범위다. 저장소는 읽기 전용이다: '
+              '파일을 고치지 말고 실험을 돌리지 마라. 너는 두 번째 의견이다: 답의 사실 주장·추론·결정(코드 변경, 실험 설계, '
+              '판정, 반박)에 반박할 것이 있거나, 사용자의 질문에 더 나은 다른 제안이 있으면 번호를 붙여 짧게 말하고 근거'
+              '(파일:줄, 숫자, 명령)를 적는다. 동의하는 부분은 반복하지 않고, 문체·형식·사소한 표현은 보지 않는다. 커밋이 있으면 '
+              '`git diff <범위>`로 변경을 읽는다. 맥락이 필요하면 gaia-rl/lab/HANDOFF.md 5장·6장만 읽는다. 반박도 다른 제안도 '
+              '없으면 정확히 "결론: 이상 없음" 한 줄만 쓴다. 한국어, 휴대폰에서 읽을 길이.)\n\n')
 
 
 def watch_enabled():
@@ -359,10 +360,13 @@ def watch_prefix(findings):
 
 
 def respond_prompt(name):
-    return (f'(lab 코드 검수 {name}: 두 번째 모델이 지적을 냈다. gaia-rl/lab/results/{name}.md의 지적을 하나씩 확인해, 맞으면 '
-            '고쳐서 커밋·푸시하고, 틀리면 근거를 적어 반박한다. 검수 원문은 이미 채널에 있으니 다시 옮기지 않는다. '
+    return (f'(lab 검수 {name}: 두 번째 모델이 지적을 냈다. 코드 검수면 gaia-rl/lab/results/{name}.md, 설계 검수(실험 보류)면 '
+            f'gaia-rl/lab/queue/{name}.design.md의 지적을 하나씩 확인해, 맞으면 고쳐서 커밋·푸시하고, 틀리면 근거를 적어 반박한다. '
+            '검수 원문은 이미 채널에 있으니 다시 옮기지 않는다. '
             f'답 첫 줄은 "검수 대응 {name}: 수정 N건, 반박 M건"이고, 반박이 하나라도 있으면 그 앞에 "불일치 — "를 붙이고 각 반박의 '
-            '근거를 사용자가 판단할 수 있게 짧게 적는다. 사용자가 정하기 전에는 반박한 지적과 얽힌 결론을 사이클 문서에 올리지 않는다.)')
+            '근거를 사용자가 판단할 수 있게 짧게 적는다. 사용자가 정하기 전에는 반박한 지적과 얽힌 결론을 사이클 문서에 올리지 않는다. '
+            f'설계 검수의 경우: 지적을 모두 받아들여 gaia-rl/lab/queue/{name}.json을 고쳤으면 그 파일의 "design_review"를 '
+            '"accepted"로 바꿔 커밋한다(실험이 시작된다); 반박이 하나라도 있으면 바꾸지 말고 사용자가 정할 때까지 보류한다.)')
 
 
 ATTACHMENT_LIMIT = 50*1024*1024
