@@ -1,0 +1,18 @@
+{
+ "name": "review-000-charges-lab",
+ "kind": "review",
+ "status": "done",
+ "note": "소급 검수(E68, 사용자 2026-10-21 '코드를 제대로 작성했는지는 검수하지 않아도 되나?'): A/B 판정 숫자를 만드는 집계 코드. 지금까지 검수 없이 판정 근거가 됐다.",
+ "host": "agentmaco",
+ "commit": "7038419",
+ "started_at": "2026-10-22T01:39:29+09:00",
+ "finished_at": "2026-10-22T01:40:42+09:00",
+ "model": "gpt-6-astra",
+ "prompt_chars": 899,
+ "paths": [
+  "gaia-rl/tools/charge_rounds.py",
+  "gaia-rl/tools/lab.py",
+  "gaia-rl/tools/teacher_ab.py"
+ ],
+ "findings": 5
+}
