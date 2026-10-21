@@ -70,6 +70,8 @@ class StatisticsTests(unittest.TestCase):
         table = ab.report_table(summary)
         self.assertEqual(table.count('\n|---'), 1)   # exactly one table
         self.assertIn('| Terrans | 1 | +10.0 | — | 1 | 1 | 0 / 1 | 2 / 0 | 4 / 0 |', table)
+        self.assertNotIn('시드 반복', table)
+        self.assertIn('시드 반복 3쌍', ab.report_table({**summary, 'seeds_repeated': 3}))  # review-000 finding 4
 
 
 class TeacherSpecTests(unittest.TestCase):

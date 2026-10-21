@@ -45,6 +45,7 @@ from pathlib import Path
 import platform
 import re
 import shutil
+import statistics
 import subprocess
 import sys
 import time
@@ -325,7 +326,7 @@ def timing(run_dir):
         if values:
             values.sort()
             n = len(values)
-            stats[arm] = {'n': n, 'mean': sum(values)/n, 'median': values[n//2],
+            stats[arm] = {'n': n, 'mean': sum(values)/n, 'median': statistics.median(values),
                           'p90': values[int(n*.9)], 'max': values[-1]}
     return stats
 

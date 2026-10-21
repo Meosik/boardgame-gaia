@@ -92,6 +92,28 @@ class LabTests(unittest.TestCase):
                 out.write(json.dumps({'arm': arm, 'seconds': s})+'\n')
         stats = lab.timing(self.dir/'run')
         self.assertEqual((stats['A']['n'], stats['A']['mean'], stats['B']['max']), (2, 2.0, 2.0))
+        self.assertEqual(stats['A']['median'], 2.0)  # review-000 finding 5: even n averages the middle pair
+
+    def test_charge_table_survives_a_faction_without_a_completed_pair(self):
+        """review-000 finding 3: one arm missing for every pair of a faction must not stop the table."""
+        import charge_rounds
+        gained = {('pair-000', 'Terrans'): {'A': 100.0, 'B': 110.0},
+                  ('pair-001', 'Terrans'): {'A': 120.0, 'B': 126.0},
+                  ('pair-001', 'Ivits'): {'A': 90.0}}
+        table = charge_rounds.summarize(gained)
+        self.assertEqual(table['Ivits']['pairs'], 0)
+        self.assertEqual((table['Terrans']['pairs'], table['Terrans']['mean_B_minus_A']), (2, 8.0))
+        self.assertEqual((table['ALL']['pairs'], table['ALL']['mean_B_minus_A']), (2, 8.0))
+        self.assertEqual(charge_rounds.summarize({})['ALL']['pairs'], 0)
+
+    def test_round_start_waits_for_income_and_gaia_pauses(self):
+        """review-000 finding 1: a round-1 IncomeOrderPending snapshot already shows round 1."""
+        import charge_rounds
+        pending = {'round': 1, 'phase': {'IncomeOrderPending': {'queue': [], 'round': 0}}}
+        acting = {'round': 1, 'phase': {'ActionPhase': {'active_player': 0}}}
+        self.assertFalse(charge_rounds.round_started(pending, 1))
+        self.assertTrue(charge_rounds.round_started(acting, 1))
+        self.assertFalse(charge_rounds.round_started({'round': 3, 'phase': 'RoundScoring'}, 4))
 
 
     def test_broken_files_are_skipped_and_a_broken_result_reruns(self):

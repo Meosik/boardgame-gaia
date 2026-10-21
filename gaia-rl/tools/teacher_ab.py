@@ -225,6 +225,8 @@ def report_table(summary):
                      f"{row['A_fallback_timeouts']} / {row['B_fallback_timeouts']} | "
                      f"{row['A_federation_limit_hits']} / {row['B_federation_limit_hits']} | "
                      f"{row['A_unsearched_decisions']} / {row['B_unsearched_decisions']} |")
+    if summary.get('seeds_repeated'):
+        lines.append(f"\n주의: 시드 반복 {summary['seeds_repeated']}쌍 — 같은 시드의 쌍은 독립 표본이 아니라 신뢰구간이 실제보다 좁다.")
     return '\n'.join(lines)+'\n'
 
 
@@ -480,6 +482,9 @@ def run(args):
         if all(r['complete'] for r in completed):
             pairs_rows.append(pair_differences(*completed))
     summary = summarize(pairs_rows, games)
+    # review-000 finding 4: repeats of a seed share map and factions, so the t interval (one
+    # sample per pair) is too narrow; lab.py always runs each seed once (games = 2 × seeds).
+    summary['seeds_repeated'] = max(0, args.games//2 - len(args.seeds))
     write_json(output/'results.json', {**summary, 'pairs': pairs_rows})
     (output/'report.md').write_text(report_table(summary))
     write_json(output/'progress.json', {'state': 'complete', 'updated_at': now(), 'games_done': len(games)})
