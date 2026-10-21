@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-22 \"계측 만들고, plan_menu 대부분 완성하고 실험 돌리면서 고쳐\"; E74·E75): A = ships(배포 교사), B = ships_menu + menu_tie_break — 101과 같은 plan_menu에 (1) 값이 정확히 같을 때 current-choice/root 대신 제안된 계획을 두고 기억(101 pair-002 결정 114: Geodens-new-type 265.89 = current-choice 265.89, 비교 순서로 current가 이겨 계획의 뒤 절반이 사라짐), (2) 계측: 워커가 결정마다 비교 계획(이름·가족·값·완료)을 decisions.jsonl `compared`에 기록 → `plan_labels.py --families`가 가족별 비교 진입/채택/패배 평균 차이를 셈. 양팔 cap60-**p2**(101의 p4 과부하 E55 회피, 결정 시간 100초 초과 0 기대), 비교 4, geo-quartet 새 시드 12쌍, 6R 끝까지(≈ 7–8시간). 판정(사전 등록): 1–3라운드 충전 해 없음(전체 CI 하한 > −15) + 최종 VP 12쌍 전체 B−A와 CI; 101(+4.6 [−6.1, +15.2])과 같은 방향이면 편입 후보. 함께 볼 것: plan_labels --families(B: 연방·토큰·능력 가족의 진입/채택/패배 차이 — 이 숫자가 '밀림 vs 패배'의 답), `menu-tie` 라벨 수, 결정 시간(p2 vs 101 p4), 기오덴 pair별 충전(101의 −97 쌍 재현 여부), known-bad-decisions 8·9 재질문.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap60-p2.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu-cap60-p2.json",
+  "pairs": 12,
+  "comparisons": 4,
+  "stop_round": 0
+}

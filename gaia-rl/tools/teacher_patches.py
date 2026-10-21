@@ -3735,10 +3735,62 @@ def plan_menu_goals(snapshot, goals):
     return front + [g for g in pool if g not in front]
 
 
+def _plain_plan(plan):
+    name = str(plan.get('goal', ''))
+    return name == 'current-choice' or name.startswith('root-') or plan.get('family') in ('current', 'root')
+
+
+def menu_tie_break(snapshot, result):
+    """An exact value tie between the current choice (or a root move) and a proposed plan goes to the plan.
+
+    User 2026-10-22 ("계측 만들고, plan_menu 대부분 완성하고 실험 돌리면서 고쳐", E74): 101 pair-002/game-0-A03 step
+    114 — the menu's Geodens new-type plan tied the current choice at 265.89 and lost the tie to comparison
+    order, so nothing was remembered and the ability plan's second half (the colony after the institute)
+    never guided the next decisions. "규칙이 제안, 롤아웃이 결정": when the rollout is indifferent the proposal
+    stands — its first move is played and the plan is remembered like a winner. Exact ties only, no value
+    changes; the decision log keeps the replaced choice under `menu_tie`."""
+    import math
+    plans = [p for p in result.get('plans') or [] if p.get('complete')
+             and isinstance(p.get('value'), (int, float)) and math.isfinite(p['value'])]
+    if not plans:
+        return
+    best = max(p['value'] for p in plans)
+    winner_plain = any(p['value'] == best and p.get('first') == result.get('index') and _plain_plan(p) for p in plans)
+    tied = [p for p in plans if p['value'] == best and not _plain_plan(p) and p.get('family') != 'bgg-opening'
+            and isinstance(p.get('first'), int)]
+    if not winner_plain or not tied or str(result.get('selected', '')).startswith('menu-tie '):
+        return
+    pick = tied[0]
+    # publish_current() rewrites index/selected after every comparison, so this runs again on each
+    # publish and at the end (like _value_max); the first replaced choice is the one kept.
+    result.setdefault('menu_tie', {'replaced': result.get('selected'), 'replaced_index': result.get('index')})
+    result.update(index=pick['first'], selected=f'menu-tie {pick["goal"]}')
+    memory, spec, actor = result.get('memory'), pick.get('goal_spec'), snapshot.get('player')
+    if isinstance(memory, dict) and isinstance(spec, dict) and actor is not None:
+        memory.setdefault('_plans', {})[str(actor)] = {**spec, 'first': None}
+
+
 def install_plan_menu():
     """goals_for: plan_menu_goals over the frozen goals; interleave_families: the menu's front stays ahead of
-    the family round-robin; fed_remember_scores keeps the root ranking for the federation / token goals."""
+    the family round-robin; fed_remember_scores keeps the root ranking for the federation / token goals;
+    search: menu_tie_break after value_max (E74)."""
     import four_factions.preparation as p
+    if not getattr(p.search, '_menu_tie', False):
+        inner_search = p.search
+
+        def search(env, snapshot, memory, publish, *args, **kwargs):
+            def publish_tie(result):
+                if _guide.get('plan_menu'):
+                    menu_tie_break(snapshot, result)
+                publish(result)
+            result = inner_search(env, snapshot, memory, publish_tie, *args, **kwargs)
+            if _guide.get('plan_menu'):
+                menu_tie_break(snapshot, result)
+            return result
+        search._menu_tie = True
+        search._value_max = getattr(inner_search, '_value_max', False)
+        search._parallel = getattr(inner_search, '_parallel', False)
+        p.search = search
     inner = p.goals_for
     if not getattr(inner, '_plan_menu', False):
         def goals_for(snapshot, **kwargs):

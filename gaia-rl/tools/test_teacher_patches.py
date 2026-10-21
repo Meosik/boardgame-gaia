@@ -1320,6 +1320,30 @@ class OpeningBudgetTests(unittest.TestCase):
             menu = tp.plan_menu_goals(snapshot, goals)                              # no tile: ability → federation → track
             self.assertEqual([g.name for g in menu[:3]], [ability2.name, 'federation-7', plan.name])
 
+    def test_menu_tie_goes_to_the_proposed_plan_and_remembers_it(self):
+        """E74: 101 pair-002 step 114 — Geodens-new-type tied current-choice at 265.89 and lost the tie."""
+        spec = {'name': 'Geodens-new-type@-3,-1', 'family': 'ordered', 'first': 3, 'steps': ()}
+        plans = [{'goal': 'current-choice', 'family': 'current', 'first': 3, 'complete': True, 'value': 265.89},
+                 {'goal': 'root-7', 'family': 'root', 'first': 7, 'complete': True, 'value': 265.89},
+                 {'goal': 'federation-2', 'family': 'root', 'first': 2, 'complete': True, 'value': 230.42},
+                 {'goal': 'Geodens-new-type@-3,-1', 'family': 'ordered', 'first': 3, 'complete': True,
+                  'value': 265.89, 'goal_spec': spec}]
+        memory = {}
+        result = {'index': 3, 'selected': 'current-choice', 'plans': plans, 'memory': memory}
+        tp.menu_tie_break({'player': 2}, result)
+        self.assertEqual((result['index'], result['selected']), (3, 'menu-tie Geodens-new-type@-3,-1'))
+        self.assertEqual(result['menu_tie'], {'replaced': 'current-choice', 'replaced_index': 3})
+        self.assertEqual(memory['_plans']['2'], {**spec, 'first': None})
+        tp.menu_tie_break({'player': 2}, result)                                     # idempotent
+        self.assertEqual(result['selected'], 'menu-tie Geodens-new-type@-3,-1')
+        # A plan that wins outright (value_max already played it) or loses is left alone.
+        for value, selected in ((270.0, 'value-max Geodens-new-type@-3,-1'), (260.0, 'current-choice')):
+            plans[3]['value'] = value
+            result = {'index': 3, 'selected': selected, 'plans': plans, 'memory': {}}
+            tp.menu_tie_break({'player': 2}, result)
+            self.assertEqual(result['selected'], selected)
+            self.assertNotIn('menu_tie', result)
+
     def test_install_track_plans_puts_plans_first_and_drops_the_bare_research_goal(self):
         import four_factions.preparation as p
         from four_factions.preparation import Goal

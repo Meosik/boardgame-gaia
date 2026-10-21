@@ -5,13 +5,69 @@ complete game; no replay. Answers "did the B arm ever pick a BGG opening plan" (
 without listing decisions. Labels are counted by their "via" plan (the plan that put the move forward); the
 opening plans carry a `BGG-R1-` prefix, so `--prefix BGG-R1-` isolates round-1 openings.
 
-  .venv/bin/python tools/plan_labels.py ~/projects/gaia-lab/gaia-rl/runs/lab-093-... [--prefix BGG-R1-] [--factions Ambas,Gleens]
+`--families` (E74, user 2026-10-22): per arm, faction and plan family (federation / token / track / ability /
+other), how many decisions had a complete plan of that family in the comparison, how often it was the plan
+played, and by how much it lost on average when it was not. Needs the `compared` rows the worker writes
+since E74 (older runs print only the picks).
+
+  .venv/bin/python tools/plan_labels.py ~/projects/gaia-lab/gaia-rl/runs/lab-093-... [--prefix BGG-R1-] [--factions Ambas,Gleens] [--families]
 """
 import argparse
 import gzip
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
+
+FAMILIES = ('federation', 'token', 'track', 'ability', 'other')
+
+
+def family_of(goal, faction):
+    """The menu family of a compared plan by its name (teacher_patches._menu_family uses the same prefixes)."""
+    name = str(goal or '')
+    if name == 'current-choice' or name.startswith('root-'):
+        return 'plain'
+    if name.startswith('federation-'):
+        return 'federation'
+    if name.startswith('flip-'):
+        return 'token'
+    if name.startswith('track-plan-'):
+        return 'track'
+    if name.startswith(f'{faction}-'):
+        return 'ability'
+    return 'other'
+
+
+def via_of(selected):
+    """The plan a `selected` label credits: "<label> via <plan>", "value-max <plan>", "menu-tie <plan>"."""
+    selected = selected or ''
+    if ' via ' in selected:
+        return selected.split(' via ', 1)[1]
+    for prefix in ('value-max ', 'menu-tie '):
+        if selected.startswith(prefix):
+            return selected[len(prefix):]
+    return selected
+
+
+def family_rows(rows, faction):
+    """{family: {'entered', 'picked', 'lost', 'margin_sum'}} over one seat's decision rows."""
+    table = {f: Counter() for f in FAMILIES}
+    for row in rows:
+        compared = [p for p in row.get('compared') or [] if p.get('complete') and p.get('value') is not None]
+        if not compared:
+            continue
+        winner = max(p['value'] for p in compared)
+        picked = family_of(via_of(row.get('selected')), faction)
+        for family in FAMILIES:
+            own = [p['value'] for p in compared if family_of(p.get('goal'), faction) == family]
+            if not own:
+                continue
+            table[family]['entered'] += 1
+            if picked == family:
+                table[family]['picked'] += 1
+            else:
+                table[family]['lost'] += 1
+                table[family]['margin_sum'] += winner-max(own)
+    return table
 
 
 def main():
@@ -20,10 +76,12 @@ def main():
     parser.add_argument('--prefix', default='', help='only labels whose via-plan starts with this (e.g. BGG-R1-)')
     parser.add_argument('--factions', default='', help='comma-separated faction filter')
     parser.add_argument('--top', type=int, default=8)
+    parser.add_argument('--families', action='store_true', help='comparison entry / pick / loss per plan family')
     args = parser.parse_args()
     wanted = {f for f in args.factions.split(',') if f}
     counts = defaultdict(Counter)
     seats = Counter()
+    by_seat = defaultdict(list)   # (arm, faction) -> decision rows
     for game_dir in sorted(args.run_dir.expanduser().glob('pair-*/game-*')):
         result_path = game_dir/'result.json'
         log_path = game_dir/'decisions.jsonl.gz'
@@ -42,8 +100,8 @@ def main():
                 faction = factions[row['seat']]
                 if wanted and faction not in wanted:
                     continue
-                selected = row.get('selected') or ''
-                via = selected.split(' via ', 1)[1] if ' via ' in selected else selected
+                by_seat[(row['arm'], faction)].append(row)
+                via = via_of(row.get('selected'))
                 if args.prefix and not via.startswith(args.prefix):
                     continue
                 counts[(row['arm'], faction)][via] += 1
@@ -51,6 +109,19 @@ def main():
         total = sum(counts[(arm, faction)].values())
         top = ' · '.join(f'{label} ×{n}' for label, n in counts[(arm, faction)].most_common(args.top))
         print(f'{arm} {faction:<13} ({seats[(arm, faction)]} seat-games, {total} picks): {top}')
+    if args.families:
+        print('\nfamilies: entered = decisions with a complete plan of the family in the comparison, '
+              'picked = that plan played, lost = mean value margin to the winner when not')
+        for arm, faction in sorted(by_seat):
+            table = family_rows(by_seat[(arm, faction)], faction)
+            cells = []
+            for family in FAMILIES:
+                c = table[family]
+                if not c['entered']:
+                    continue
+                margin = c['margin_sum']/c['lost'] if c['lost'] else 0.0
+                cells.append(f"{family} {c['entered']}/{c['picked']}/{c['lost']} (−{margin:.1f})")
+            print(f"{arm} {faction:<13} " + (' · '.join(cells) if cells else '(no compared rows: run before E74)'))
 
 
 if __name__ == '__main__':

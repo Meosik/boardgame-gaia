@@ -293,7 +293,8 @@ def worker(args):
                    'fallback_timeout': audit.get('ranking_mode') == 'shared-quick-fallback',
                    'unsearched_comparisons': audit.get('unsearched_comparisons') or 0,
                    'completed_comparisons': len(audit.get('plans') or ()),
-                   'selected': audit.get('selected')})
+                   'selected': audit.get('selected'),
+                   'compared': compared_plans(audit)})
         elif command['op'] == 'step':
             before = snapshot
             env.step(command['decision_id'], command['index'])
@@ -302,6 +303,18 @@ def worker(args):
             reply({'digest': digest(snapshot)})
         elif command['op'] == 'stop':
             return
+
+
+def compared_plans(audit):
+    """The plans the search compared, one short row each (E74 instrumentation: the decision log answers
+    "did the federation / token / track plan reach the comparison, and did it win or lose" without a replay)."""
+    rows = []
+    for plan in audit.get('plans') or ():
+        value = plan.get('value')
+        rows.append({'goal': plan.get('goal'), 'family': plan.get('family'), 'first': plan.get('first'),
+                     'complete': bool(plan.get('complete')),
+                     'value': round(value, 2) if isinstance(value, (int, float)) and math.isfinite(value) else None})
+    return rows
 
 
 def digest(snapshot):
@@ -403,7 +416,8 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None):
                                             'seconds': round(time.monotonic()-tick, 3),
                                             'federation_limit_hits': limits.get('federation_limit_hits', 0),
                                             **{k: reply[k] for k in ('fallback_timeout', 'unsearched_comparisons',
-                                                                     'completed_comparisons', 'selected')}})+'\n')
+                                                                     'completed_comparisons', 'selected')},
+                                            'compared': reply.get('compared', [])})+'\n')
                     env.step(snapshot['decision_id'], index)
                     snapshot = json.loads(env.snapshot_json())
                     expected = digest(snapshot)
