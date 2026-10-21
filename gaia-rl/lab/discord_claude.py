@@ -75,9 +75,14 @@ SYSTEM = (
     'Research documents (research/, lab/) are not in the graph: search them with QMD first — `qmd search "<words>" -n 5` '
     '(BM25 over the markdown of gaia-rl/research and gaia-rl/lab, collections research and lab; instant; use the exact '
     'identifiers, faction names or cycle numbers you expect in the text, `-c research` or `-c lab` to narrow, '
-    '`qmd get <qmd://path>:<from>:<count>` for one section) and only then Read the section it points to. Never run '
-    '`qmd query` or `qmd vsearch` in a bot turn: they take 1–3 minutes on this CPU and fall into the background. '
-    'Run `qmd update` once per turn before searching when a pull brought new documents. '
+    '`qmd get <qmd://path>:<from>:<count>` for one section). Snippets are leads, not answers: every hit carries a '
+    '`:line` anchor — read the window with `qmd get "qmd://lab/x.md:120:40"` (or `qmd multi-get "#id1,#id2" -l 60` '
+    'for several hits) before stating a fact, and cite the path. If two searches with different words find nothing, '
+    'the 7-second fallback is one semantic line without expansion or reranking: '
+    '`qmd query "vec: <paraphrase in the wording the document would use>" -n 5 --no-rerank`. Never run a bare '
+    '`qmd query "<sentence>"`, `qmd vsearch`, or a multi-line structured query in a bot turn: the query-expansion '
+    'and reranking models take 1–3 minutes on this CPU and the command falls into the background, and the allow list '
+    'refuses commands with newlines. Run `qmd update` once per turn before searching when a pull brought new documents. '
     # User 2026-10-21 "최소한 다른 agent의 검수가 필요하지 않을까?": a second model (Codex, gpt-6-astra) reviews code
     # commits (lab kind "review", queued automatically) and every A/B verdict (section "검수" of the result page).
     'A second model reviews every code commit and every A/B verdict; its text reaches the owner verbatim. Answer '

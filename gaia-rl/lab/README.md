@@ -143,7 +143,11 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   만들기(사용자 한 번): `qmd collection add ~/projects/gaia-work/gaia-rl/research --name research`, 같은 식으로 `lab`, 그 뒤 `qmd update`, `qmd embed`.
   **봇 턴은 `qmd search`(BM25, 1초)만 쓴다**(2026-10-21 측정): `qmd query`(질의 확장 1.7B + 재순위 0.6B, CPU)는 2분을 넘겨 백그라운드로
   떨어지고 결과도 더 나빴다(네블라 6R 질문: query → STATUS.md 75%, search → 종족 트랙표·충돌표·HANDOFF 해당 줄). `qmd vsearch`도 확장 때문에
-  1분 안팎. 터미널에서 사람이 쓸 때는 query도 무방.
+  1분 안팎. 번들 지침(`/usr/local/lib/node_modules/@tobilu/qmd/skills/qmd/SKILL.md`, `qmd skills get qmd --full`은 허용 목록 밖)에서 빌린 규칙:
+  ① 스니펫은 단서일 뿐 — 적중의 `:줄` 앵커로 `qmd get "qmd://lab/x.md:120:40"`(또는 `qmd multi-get "#id1,#id2" -l 60`)을 읽은 뒤 답한다
+  ② 확장 모델에 기대지 말고 `lex:`·`vec:`를 직접 쓴다 — 봇은 개행 명령이 거부되므로 한 줄만 가능: `qmd query "vec: <문서 말투의 풀어쓰기>" -n 5 --no-rerank`(7초, 임베딩 1회)가
+  search 두 번 실패 뒤의 대안. `lex:` 한 줄 + 재순위(`-C 10`)는 21초인데 search와 같은 결과라 안 쓴다. 터미널에서 사람이 쓸 때는
+  `qmd query $'intent: …\nlex: …\nvec: …'` 전체 형식이 가장 좋다(확장 모델 생략, 재순위만).
 - 봇 턴은 MCP 서버를 싣지 않는다(`--strict-mcp-config --mcp-config lab/claude-bot-mcp.json`, 빈 설정; 계정의 Notion·Docs·Drive 커넥터는
   허용 목록 때문에 어차피 못 쓰면서 매 턴 도구 목록만 실렸음). 다시 켜려면 env `CLAUDE_BOT_MCP=1`.
 - 프로젝트 스킬(2026-10-21, 사용자 "효과 있는 거 skill 만들어"): 절차를 `lab/skills/<이름>/SKILL.md`에 두고 `.claude/skills`로 연결해 쓴다
