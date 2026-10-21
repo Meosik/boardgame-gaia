@@ -82,6 +82,34 @@ class CodexTests(unittest.TestCase):
         self.assertIsNone(bot.finished_experiment('🔍 # review-code-abc1234 — 검수'))
         self.assertIn('불일치', bot.respond_prompt('review-code-abc1234'))
 
+    def test_watch_reviews_every_turn_and_hands_objections_to_the_next_one(self):
+        """User 2026-10-22 "대화 중간중간에 codex가 개입": the watch prompt carries the message, the reply and the
+        commit range; objections are kept per channel and prefixed to the next prompt, a clean answer is not."""
+        prompt = bot.watch_prompt('plan_menu는 어떻게 하기로 했어?', '편입 보류입니다.', 'abc1234def', 'bcd2345efa',
+                                  'bcd2345 tools: x\n')
+        self.assertTrue(prompt.startswith(bot.WATCH_NOTE))
+        for part in ('## 사용자\nplan_menu는', '## Claude\n편입 보류', '## 커밋 abc1234..bcd2345', 'git diff abc1234..bcd2345',
+                     'bcd2345 tools: x'):
+            self.assertIn(part, prompt)
+        self.assertIn('## 커밋 없음', bot.watch_prompt('q', 'a', 'same', 'same', ''))
+        self.assertEqual(bot.watch_findings('결론: 이상 없음'), '')
+        self.assertEqual(bot.watch_findings(''), '')
+        self.assertEqual(bot.watch_findings('1. charge_rounds.py:49 경계가 비대칭\n'), '1. charge_rounds.py:49 경계가 비대칭')
+        prefix = bot.watch_prefix('1. 지적')
+        self.assertTrue(prefix.startswith('(직전 답에 대한 코덱스 검수 지적'))
+        self.assertIn('불일치', prefix)
+        state = {'1:codex': '1. 지적', '1': 'sess', '1:turns': 2}
+        bot.forget(state, '1')
+        self.assertEqual(state, {})
+        os.environ['CODEX_WATCH'] = '0'
+        self.assertFalse(bot.watch_enabled())
+        os.environ['CODEX_WATCH'] = '1'
+        self.assertTrue(bot.watch_enabled())
+        os.environ.pop('CODEX_WATCH', None)
+        self.assertTrue(bot.watch_enabled())
+        os.environ.pop('CODEX_WATCH_MINUTES', None)
+        self.assertEqual(bot.watch_minutes(), 5.0)
+
 
 class TurnLimitTests(unittest.TestCase):
     def test_turns_count_per_conversation_and_reset_on_a_new_one(self):

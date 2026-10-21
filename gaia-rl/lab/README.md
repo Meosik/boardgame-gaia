@@ -175,4 +175,8 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   `!codex 질문`(`!gpt`)은 Codex(`CODEX_MODEL` 기본 gpt-6-astra)에게 직접 묻는 일회성 답(작업 트리 읽기 전용, Claude 대화와 무관).
   봇 기계에도 `codex`가 있어야 한다(`npm install -g @openai/codex`, `codex login`은 사용자). 설정은 호출마다 플래그로 주므로
   `~/.codex/config.toml`을 고칠 일은 없다.
+- 대화 검수(2026-10-22, 사용자 "대화 중간중간에 codex가 개입"): 보통 턴이 끝날 때마다 봇이 사용자 메시지·Claude 답·그 턴의 커밋
+  범위를 Codex에 보내고(읽기 전용, 턴 잠금 밖에서 `CODEX_WATCH_MINUTES` 기본 5분), 지적은 `🔍 코덱스 검수 지적`으로 그대로
+  올라가며 다음 사용자 메시지 앞에 붙어 Claude에게 전달된다(사용자가 언급하면 수정·반박). `결론: 이상 없음`이면 한 줄만.
+  `CODEX_WATCH=0`으로 끈다. `!q`·`!codex` 일회성 답은 검수하지 않는다.
 - 같은 봇 토큰으로 채널 플러그인 세션(`claude --channels ...`)을 동시에 띄우지 않는다. 둘 다 답하게 된다.

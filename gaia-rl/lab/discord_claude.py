@@ -23,7 +23,10 @@ Environment (lab/discord_claude.env, git-ignored; see lab/discord_claude.env.exa
   GAIA_WORKDIR (default ~/projects/gaia-work), CLAUDE_BIN (default: claude on PATH),
   CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json),
   CLAUDE_SESSION_TURNS (default 10), CLAUDE_QUICK_MODEL (default claude-sonnet-5-5, for `!q`),
-  CODEX_BIN (default: codex on PATH), CODEX_MODEL (default gpt-6-astra, for `!codex`).
+  CODEX_BIN (default: codex on PATH), CODEX_MODEL (default gpt-6-astra, for `!codex`),
+  CODEX_WATCH (default 1: after every ordinary turn the second model reviews the owner's message, Claude's
+  reply and the turn's commits; its objections are posted verbatim and handed to Claude with the owner's
+  next message; 0 turns it off), CODEX_WATCH_MINUTES (default 5).
 """
 import asyncio
 import hashlib
@@ -88,7 +91,13 @@ SYSTEM = (
     'A second model reviews every code commit and every A/B verdict; its text reaches the owner verbatim. Answer '
     'each of its findings: fix what is right (commit, push), rebut what is wrong with evidence, and start the reply '
     'with "불일치 — " when you rebut anything, so the owner decides; until they do, keep the disputed conclusion out '
-    'of cycle documents.')
+    'of cycle documents. '
+    # User 2026-10-22 "내가 말한건 이런 대화 중간중간에 codex가 개입하는거였는데": the watch below.
+    'The second model also watches this conversation: after each of your turns it reads the owner\'s message, your '
+    'reply and your commits, and its objections arrive at the start of the owner\'s next message as "(직전 답에 대한 '
+    '코덱스 검수 지적 …)". Treat them like a review: when the owner refers to them (or asks you to respond), fix what '
+    'is right and rebut what is wrong with evidence under "불일치 — "; otherwise mention in one line which ones you '
+    'accept before going on.')
 
 
 def chunks(text, size=1900):
@@ -178,7 +187,7 @@ def count_turn(state, key, resumed):
 
 
 def forget(state, key):
-    for suffix in ('', ':model', ':turns'):
+    for suffix in ('', ':model', ':turns', ':codex'):
         state.pop(key + suffix, None)
 
 
@@ -307,6 +316,48 @@ def finished_review(text):
     return (match.group(1), CLEAN not in text) if match else None
 
 
+# User 2026-10-22 "내가 말한건 이런 대화 중간중간에 codex가 개입하는거였는데, 오히려 실험은 냅두고": the second model
+# watches the conversation itself, not only lab's commits and verdicts. After every ordinary turn the bot hands the
+# owner's message, Claude's reply and the turn's commit range to Codex (read-only, outside the turn lock); objections
+# are posted verbatim and given to Claude at the start of the owner's next message, so the owner sees both sides
+# before deciding. "결론: 이상 없음" posts one short line so the owner knows it ran.
+WATCH_NOTE = ('(대화 검수. 아래는 사용자의 메시지, Claude의 답, 이 턴에 Claude가 만든 커밋 범위다. 저장소는 읽기 전용이다: '
+              '파일을 고치지 말고 실험을 돌리지 마라. 답의 사실 주장·추론·결정(코드 변경, 실험 설계, 판정, 반박)에 틀린 곳이나 '
+              '빠진 위험이 있으면 번호를 붙여 짧게 지적하고 근거(파일:줄, 숫자, 명령)를 적는다. 문체·형식·사소한 표현은 보지 '
+              '않는다. 커밋이 있으면 `git diff <범위>`로 변경을 읽는다. 맥락이 필요하면 gaia-rl/lab/HANDOFF.md 5장·6장만 읽는다. '
+              '지적할 것이 없으면 정확히 "결론: 이상 없음" 한 줄만 쓴다. 한국어, 휴대폰에서 읽을 길이.)\n\n')
+
+
+def watch_enabled():
+    return os.environ.get('CODEX_WATCH', '1').strip().lower() not in ('0', '', 'false', 'no', 'off')
+
+
+def watch_minutes():
+    return float(os.environ.get('CODEX_WATCH_MINUTES') or 5)
+
+
+def watch_prompt(user_text, reply, before, after, log):
+    """The review request for one finished turn; the commit range lets Codex read the diff itself."""
+    if before and after and before != after:
+        commits = f'## 커밋 {before[:7]}..{after[:7]} (`git diff {before[:7]}..{after[:7]}`)\n{log.strip()}'
+    else:
+        commits = '## 커밋 없음'
+    return f'{WATCH_NOTE}## 사용자\n{user_text.strip()}\n\n## Claude\n{reply.strip()}\n\n{commits}\n'
+
+
+def watch_findings(text):
+    """Codex's objections, or '' when it answered "결론: 이상 없음" (or nothing)."""
+    text = (text or '').strip()
+    return '' if not text or CLEAN in text else text
+
+
+def watch_prefix(findings):
+    """What Claude sees at the start of the owner's next message when the watch objected."""
+    return ('(직전 답에 대한 코덱스 검수 지적 — 사용자가 언급하거나 대응을 시키면 지적마다 수정(커밋) 또는 근거 있는 반박'
+            '("불일치 — ")을 한다; 아니면 받아들이는 지적을 한 줄로 밝히고 진행한다:\n'
+            f'{findings}\n)\n\n')
+
+
 def respond_prompt(name):
     return (f'(lab 코드 검수 {name}: 두 번째 모델이 지적을 냈다. gaia-rl/lab/results/{name}.md의 지적을 하나씩 확인해, 맞으면 '
             '고쳐서 커밋·푸시하고, 틀리면 근거를 적어 반박한다. 검수 원문은 이미 채널에 있으니 다시 옮기지 않는다. '
@@ -415,22 +466,56 @@ def main():
             waiting[0] -= 1
         restart_if_changed()
 
-    async def codex_turn(channel, prompt):
-        """One `codex exec` answer, read-only, outside every Claude conversation."""
+    async def codex_exec(prompt, seconds):
+        """(last message, error text, exit code) of one read-only `codex exec`; not the `!stop` target."""
         binary = codex_bin()
         if not binary:
-            await send(channel, '⚠️ codex 미설치: `npm install -g @openai/codex` 뒤 `codex login` (봇 기계에서)')
-            return
+            return '', 'codex 미설치: `npm install -g @openai/codex` 뒤 `codex login` (봇 기계에서)', None
         fd, out_path = tempfile.mkstemp(prefix='codex-discord-', suffix='.md')
         os.close(fd)
         out_path = Path(out_path)
         try:
-            out, err, code = await claude_run(codex_command(binary, workdir, out_path), CODEX_NOTE + prompt)
+            proc = await asyncio.create_subprocess_exec(
+                *codex_command(binary, workdir, out_path), cwd=workdir, stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+            try:
+                out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), seconds)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.wait()
+                out, err = b'', f'{seconds/60:.0f}분 제한 초과로 중단'.encode()
             text = out_path.read_text(errors='replace').strip() if out_path.exists() else ''
         finally:
             out_path.unlink(missing_ok=True)
-        reply = text or f'⚠️ codex 실행 실패 (종료 코드 {code})\n```\n{(err or out).strip()[-1200:]}\n```'
+        error = (err.decode(errors='replace') or out.decode(errors='replace')).strip()[-1200:]
+        return text, error, proc.returncode
+
+    async def codex_turn(channel, prompt):
+        """One `codex exec` answer, read-only, outside every Claude conversation."""
+        text, error, code = await codex_exec(CODEX_NOTE + prompt, turn_seconds)
+        reply = text or f'⚠️ codex 실행 실패 (종료 코드 {code})\n```\n{error}\n```'
         await send(channel, f'{reply}\n🧠 {codex_model()} · 일회성 답(Claude 대화에 안 남음)')
+
+    async def git_output(*args):
+        proc = await asyncio.create_subprocess_exec('git', *args, cwd=workdir, stdout=asyncio.subprocess.PIPE,
+                                                    stderr=asyncio.subprocess.DEVNULL)
+        out, _ = await proc.communicate()
+        return out.decode(errors='replace').strip()
+
+    async def watch_turn(channel, key, user_text, reply, before, after):
+        """The conversation watch: Codex reviews one finished turn; objections are posted and kept for the next turn."""
+        log = await git_output('log', '--oneline', f'{before}..{after}') if before and after and before != after else ''
+        text, error, code = await codex_exec(watch_prompt(user_text, reply, before, after, log), watch_minutes()*60)
+        if not text:
+            await send(channel, f'⚠️ 코덱스 대화 검수 실패 (종료 코드 {code})\n```\n{error}\n```')
+            return
+        findings = watch_findings(text)
+        if not findings:
+            await send(channel, f'🔍 코덱스({codex_model()}): 이상 없음')
+            return
+        state[key + ':codex'] = findings   # handed to Claude with the owner's next message
+        save()
+        await send(channel, f'🔍 코덱스({codex_model()}) 검수 지적 — 다음 메시지에서 Claude가 받는다\n{findings}')
 
     async def locked_turn(channel, key, prompt, resume, quick=False, codex=False):
         async with lock:
@@ -461,6 +546,11 @@ def main():
                 if key in pending_fresh:
                     pending_fresh.discard(key)
                     prompt = FRESH_PREFIX + prompt
+                user_text = prompt
+                objections = state.pop(key + ':codex', None)   # the watch's findings on the previous turn
+                if objections:
+                    prompt = watch_prefix(objections) + prompt
+                before = await git_output('rev-parse', 'HEAD')
                 # A resumed Fable run goes without --fallback-model (2026-10-20 "왜 아직 opus지?": the replies kept
                 # coming from Opus with no warning, i.e. the CLI fell back by itself), so its failure reaches the
                 # new-session retry below instead of turning into a silent Opus turn.
@@ -503,6 +593,9 @@ def main():
                     pending_fresh.add(key)
                 save()
             await send(channel, '\n'.join(p for p in (note + reply, tag) if p))
+            if watch_enabled() and reply:
+                after = await git_output('rev-parse', 'HEAD')
+                asyncio.create_task(watch_turn(channel, key, user_text, reply, before, after))
 
     async def claude_run(argv, prompt):
         """(stdout, stderr, exit code) of one `claude -p` process, killed after the turn limit."""
