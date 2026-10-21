@@ -8,7 +8,8 @@ nobody copies commands or pastes reports.
 
 Experiment kinds (`"kind"` in the queue file):
   ab        teacher_ab match. Keys: teacher_a, teacher_b, pairs (default 12; fresh seeds come
-            from lab/seeds.txt) or seeds (explicit list), comparisons (default 2), note,
+            from lab/seeds.txt, scanned for more when it runs short, the experiment waits if the
+            scan finds none) or seeds (explicit list), comparisons (default 2), note,
             stop_round (default 3: games end when round 4 starts; 0 or null plays to the end),
             vp_rate (charges per VP held in the verdict table; default 1.5, 0 leaves VP out).
   command   any command run from gaia-rl/ (e.g. a future PPO-checkpoint evaluation). Keys: run
@@ -100,14 +101,58 @@ def used_seeds():
     return used
 
 
-def allocate(count):
+def fresh_seeds():
+    """Seeds of lab/seeds.txt that no result or queued experiment has used, in file order."""
     used = used_seeds()
     lines = (LAB/'seeds.txt').read_text().splitlines()
-    fresh = [s.strip() for s in lines if s.strip() and not s.startswith('#') and s.strip() not in used]
+    return [s.strip() for s in lines if s.strip() and not s.startswith('#') and s.strip() not in used]
+
+
+def allocate(count):
+    fresh = fresh_seeds()
     if len(fresh) < count:
-        raise SystemExit(f'lab/seeds.txt has {len(fresh)} unused seeds, {count} needed; add more '
-                         '(examples/faction_lineups geo-quartet ...)')
+        raise RuntimeError(f'lab/seeds.txt has {len(fresh)} unused seeds, {count} needed; add more '
+                           '(tools/scan_seeds.py --files lab/seeds.txt ...)')
     return fresh[:count]
+
+
+SCAN_WINDOW, SCAN_WINDOWS = 40000, 5  # about 20 hits a window, 50 s at 4 jobs
+_scanned_to = {}  # experiment -> first seed number not yet scanned for it
+
+
+def scan_seeds(start, count, jobs):
+    """Append fresh seeds for the lab/seeds.txt lineup (tools/scan_seeds.py); returns the hits added."""
+    done = subprocess.run([sys.executable, 'tools/scan_seeds.py', '--files', str(LAB/'seeds.txt'),
+                           '--start', str(start), '--count', str(count), '--jobs', str(jobs)],
+                          cwd=GAIA_RL, capture_output=True, text=True)
+    if done.returncode:
+        raise RuntimeError(f'scan_seeds failed: {(done.stderr or done.stdout).strip()[-500:]}')
+    hits = done.stdout.rsplit('+', 1)[-1].split()[0] if '+' in done.stdout else '0'  # "...: prefix [...] +N (a-b)"
+    return int(hits) if hits.isdigit() else 0
+
+
+def ensure_seeds(name, count, jobs, push):
+    """Fresh seeds for an experiment, scanning more when the file runs short (user 2026-10-21
+    "실험을 왜 건너뛰게 하지?": refill, never drop the experiment). None when still short after the
+    scan windows: the caller holds the experiment and retries next loop."""
+    fresh = fresh_seeds()
+    if len(fresh) >= count:
+        return fresh[:count]
+    lines = [s.strip() for s in (LAB/'seeds.txt').read_text().splitlines() if s.strip() and not s.startswith('#')]
+    numbers = [int(s.rsplit('-', 1)[-1]) for s in lines if s.rsplit('-', 1)[-1].isdigit()]
+    start, added = max(max(numbers)+1 if numbers else 0, _scanned_to.get(name, 0)), 0
+    for _ in range(SCAN_WINDOWS):
+        print(f'[{now()}] {name}: {len(fresh)} unused seeds, {count} needed; scanning {start}-{start+SCAN_WINDOW}', flush=True)
+        added += scan_seeds(start, SCAN_WINDOW, jobs)
+        start = _scanned_to[name] = start+SCAN_WINDOW  # a held experiment scans new ground next loop
+        fresh = fresh_seeds()
+        if len(fresh) >= count:
+            break
+    if added:
+        notify(f'🌱 lab: seeds.txt +{added} (자동 스캔, {name}에 {count}개 필요)')
+        if push:
+            publish([LAB/'seeds.txt'], f'lab: seeds +{added} for {name}')
+    return fresh[:count] if len(fresh) >= count else None
 
 
 # ── git and notices ─────────────────────────────────────────────────────────
@@ -137,9 +182,9 @@ def pull():
 
     Results a crashed run left uncommitted (e.g. a failed commit) are committed first."""
     ensure_identity()
-    results = str(LAB.relative_to(GAIA_RL)/'results') if LAB.is_relative_to(GAIA_RL) else None
-    if results and git('status', '--porcelain', '--', results, check=False).stdout.strip():
-        git('add', '--', results)
+    specs = tracked_specs()
+    if specs and git('status', '--porcelain', '--', *specs, check=False).stdout.strip():
+        git('add', '--', *specs)
         commit('lab: results (recovered)')
     out = git('pull', '--rebase', 'origin', BRANCH, check=False)
     if out.returncode:
@@ -170,8 +215,17 @@ def ensure_built():
     stamp.write_text(' '.join(tree)+'\n')
 
 
+def tracked_specs():
+    """Git pathspecs of everything the lab writes: results and the seed files (a scan, queued as a
+    command or run by ensure_seeds, appends to tracked seed files; left unstaged they block pull)."""
+    if not LAB.is_relative_to(GAIA_RL):
+        return []
+    lab = LAB.relative_to(GAIA_RL)
+    return [str(lab/'results'), str(lab/'seeds*.txt')]
+
+
 def publish(paths, message):
-    git('add', '--', *map(str, paths))
+    git('add', '--', *map(str, paths), *tracked_specs())
     if not git('diff', '--cached', '--quiet', check=False).returncode:
         return
     commit(message)
@@ -469,8 +523,25 @@ def write_result(name, spec, status, data, body, started):
     return paths
 
 
+_held = set()  # experiments waiting for seeds, each announced once
+
+
 def run_one(name, spec, jobs, push):
+    """Runs the experiment and writes its result; False when it is held (no seeds yet)."""
     kind = spec.get('kind', 'ab')
+    if kind == 'ab' and not spec.get('seeds'):  # seeds before the start notice: a short file
+        count = int(spec.get('pairs', 12))       # used to kill the service once a minute (E62, E66)
+        seeds = ensure_seeds(name, count, jobs, push)
+        if seeds is None:
+            if name not in _held:
+                _held.add(name)
+                notify(f'⏸️ 실험 보류: **{name}** — lab/seeds.txt 미사용 {len(fresh_seeds())}개 < 필요 {count}개, '
+                       f'자동 스캔으로도 못 채움. 다른 실험을 먼저 돌리고 매 루프 다시 시도합니다 '
+                       f'(`tools/scan_seeds.py --files lab/seeds.txt --start N --count 200000`)')
+            print(f'[{now()}] {name}: held (seeds)', flush=True)
+            return False
+        _held.discard(name)
+        spec = {**spec, 'seeds': seeds}
     started = now()
     notify(f'🧪 실험 시작: **{name}** ({kind}) — {platform.node()}' + describe(spec))
     print(f'[{started}] {name}: start', flush=True)
@@ -486,6 +557,7 @@ def run_one(name, spec, jobs, push):
         notify(f'⚠️ 실험 실패: **{name}** — lab/results/{name}.md 참고')
     if push:
         publish(paths, f'lab: {name} {status}')
+    return True
 
 
 def run_pending(jobs, push):
@@ -493,8 +565,8 @@ def run_pending(jobs, push):
     for name, spec in pending():
         if spec.get('kind') == 'external':
             continue
-        run_one(name, spec, jobs, push)
-        ran += 1
+        if run_one(name, spec, jobs, push):
+            ran += 1
     return ran
 
 

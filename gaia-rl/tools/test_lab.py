@@ -23,8 +23,42 @@ class LabTests(unittest.TestCase):
         self.queue('a', {'kind': 'ab', 'seeds': ['s-1']})
         (self.dir/'results'/'old.json').write_text(json.dumps({'status': 'done', 'seeds': ['s-3']}))
         self.assertEqual(lab.allocate(2), ['s-2', 's-4'])
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(RuntimeError):
             lab.allocate(3)
+
+    def test_short_seed_file_is_refilled_by_a_scan_or_the_experiment_is_held(self):
+        """User 2026-10-21 "실험을 왜 건너뛰게 하지?": a short seeds.txt refills itself; if the scan finds
+        nothing the experiment waits (announced once) instead of ending the service."""
+        sent, scans = [], []
+        original = lab.notify, lab.scan_seeds, lab.publish, lab.run_ab
+        lab.notify = sent.append
+        lab.publish = lambda paths, message: scans.append(('publish', [Path(p).name for p in paths], message))
+
+        def scan(start, count, jobs):
+            scans.append((start, count))
+            with (self.dir/'seeds.txt').open('a') as f:
+                f.write(f's-{start}\n')
+            return 1
+        lab.scan_seeds = scan
+        try:
+            self.assertEqual(lab.ensure_seeds('x', 5, 1, push=True), ['s-1', 's-2', 's-3', 's-4', 's-5'])
+            self.assertEqual(scans, [(5, lab.SCAN_WINDOW), ('publish', ['seeds.txt'], 'lab: seeds +1 for x')])
+            self.assertIn('+1', sent[-1])
+            lab.scan_seeds = lambda start, count, jobs: 0  # nothing found: hold, announce once
+            self.queue('big', {'kind': 'ab', 'pairs': 9, 'teacher_a': 'a', 'teacher_b': 'b'})
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 0)
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 0)
+            self.assertEqual([s for s in sent if '보류' in s and 'big' in s], [s for s in sent if '보류' in s])
+            self.assertEqual(len([s for s in sent if '보류' in s]), 1)
+            self.assertIsNone(lab.result('big'))
+            ran = []
+            lab.run_ab = lambda name, spec, jobs: (ran.append(spec['seeds']), ('done', {'seeds': spec['seeds']}, 'ok'))[1]
+            self.queue('small', {'kind': 'ab', 'pairs': 2, 'teacher_a': 'a', 'teacher_b': 'b'})
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 1)  # the held one does not block others
+            self.assertEqual(ran, [['s-1', 's-2']])
+            self.assertEqual(lab.result('small')['seeds'], ['s-1', 's-2'])
+        finally:
+            lab.notify, lab.scan_seeds, lab.publish, lab.run_ab = original
 
     def test_command_experiment_writes_a_result_and_leaves_the_queue(self):
         metrics = self.dir/'m.json'
