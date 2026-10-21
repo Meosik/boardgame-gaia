@@ -116,7 +116,7 @@ def main():
     @client.event
     async def on_ready():
         print(f'connected as {client.user}; channels {channels}; workdir {workdir}; '
-              f'watch {"on" if shared.watch_enabled() else "off"}', flush=True)
+              f'watch {"on" if shared.watch_setting() else "off"}', flush=True)
 
     def restart_if_changed():
         """Continue as the new version when a turn edited this file or discord_claude.py; only when idle."""
@@ -273,7 +273,7 @@ def main():
             turns[key] = {'user': text, 'before': await git_head(), 'claude': [],
                           'skip': text.startswith('!') or (not text and not message.attachments)}
             return
-        if is_claude(message) and shared.watch_enabled():
+        if is_claude(message) and shared.watch_setting():   # not watch_enabled(): that is off whenever this bot exists
             turn = turns.setdefault(key, {'claude': []})
             if not turn.get('before'):
                 turn['before'] = await git_head()   # an automatic turn (lab notice): no owner message before it

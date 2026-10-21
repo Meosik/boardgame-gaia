@@ -338,10 +338,14 @@ def separate_codex():
     return bool(os.environ.get('CODEX_BOT_TOKEN', '').strip())
 
 
-def watch_enabled():
-    if separate_codex():
-        return False
+def watch_setting():
+    """CODEX_WATCH as the owner set it (the Codex bot's own switch; shared env, so it must not look at the token)."""
     return os.environ.get('CODEX_WATCH', '1').strip().lower() not in ('0', '', 'false', 'no', 'off')
+
+
+def watch_enabled():
+    """This bot's in-process watch: off when the Codex bot does it."""
+    return watch_setting() and not separate_codex()
 
 
 def addressed_to_other_bot(text, mentions_other_bot):

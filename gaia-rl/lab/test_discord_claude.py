@@ -122,6 +122,7 @@ class CodexTests(unittest.TestCase):
         try:
             self.assertTrue(bot.separate_codex())
             self.assertFalse(bot.watch_enabled())
+            self.assertTrue(bot.watch_setting())   # the Codex bot's switch stays on (04:04 log: "watch off" bug)
             self.assertTrue(bot.addressed_to_other_bot('!codex 왜?', False))
             self.assertTrue(bot.addressed_to_other_bot('<@42> 네 생각은?', True))
             self.assertFalse(bot.addressed_to_other_bot('진행해', False))
