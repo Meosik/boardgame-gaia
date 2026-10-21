@@ -23,7 +23,7 @@ __pycache__/
 
 # Local agent/runtime state (project skills under .claude/skills/ are shared through git)
 /.claude/*
-!/.claude/skills/
+!/.claude/skills
 /.omc/
 **/.omc/
 /.omh/
