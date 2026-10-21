@@ -66,6 +66,19 @@ tmux new -s lab                                   # 창을 닫아도 계속 돌�
 
 `external` — 다른 곳(Seraph 등)에서 돈다. 노트북은 돌리지 않고 `status`에 "외부 실행 대기"로 보인다.
 
+`review` — 두 번째 모델(OpenAI Codex CLI, `GAIA_LAB_REVIEW_MODEL` 기본 gpt-6-astra)의 코드 검수. 읽기 전용으로 돌고
+답은 **요약 없이 원문 그대로** `results/<이름>.md`와 🔍 알림에 실린다(사용자 2026-10-21 "최소한 다른 agent의 검수").
+```json
+{"kind": "review", "note": "무엇을 검수하나",
+ "commits": "abc1234..def5678", "paths": ["gaia-rl/tools/charge_rounds.py"],
+ "prompt": "특히 볼 것", "timeout_minutes": 30}
+```
+`commits`(diff), `paths`(파일 전체), `result`(A/B 결과 이름: 그 판정을 반박) 가운데 있는 것을 쓴다. 검수자 답의 첫 줄은
+`결론: 이상 없음` 또는 `결론: 지적 N건`. 자동으로 생기는 것 두 가지: ① `watch`가 pull에서 코드 파일(py·rs·ts·json 설정 등;
+results·queue·seeds·docs 제외)이 바뀐 걸 보면 `review-code-<커밋>` 큐 파일을 만들어 커밋한다 ② 모든 `ab` 결과는 끝에
+"## 검수" 절(판정 반박)을 달고 나온다(큐 파일에 `"review": false`면 생략, `review_minutes` 기본 20). lab 기계에 codex가
+없으면 검수는 `failed` 결과로 남는다(`npm install -g @openai/codex` 뒤 `codex login`, 로그인은 사용자).
+
 ## Seraph PPO 결과 넣기 (실행은 직접)
 
 Seraph 규칙(`seraph/README.md`)상 마스터 노드에서는 Python을 돌리지 않는다. 그래서 lab은 결과를 받는 통로만 제공한다.
@@ -146,4 +159,9 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
 - 자동 정리: `DISCORD_LAB_CHANNEL_ID`(모니터링 채널)를 설정하면, lab의 ✅ 결과 알림마다 봇이 `#claude`에서
   새 대화로 결과를 기록(사이클 문서, HANDOFF 갱신, 커밋·푸시)하고 다음 실험을 **제안만** 한다.
   큐에 넣을지는 그 대화에 답해서 정한다. 알림에서는 실험 이름만 읽는다.
+- 두 번째 모델 검수(2026-10-21): lab의 🔍 검수 알림(코드 검수, `review` 종류)에 지적이 있으면 봇이 새 대화로 지적을 하나씩
+  수정(커밋)하거나 반박한다. 반박이 있으면 답 첫 줄이 `불일치 — `로 시작하고 사용자가 정한다. `결론: 이상 없음`이면 턴을 열지 않는다.
+  `!codex 질문`(`!gpt`)은 Codex(`CODEX_MODEL` 기본 gpt-6-astra)에게 직접 묻는 일회성 답(작업 트리 읽기 전용, Claude 대화와 무관).
+  봇 기계에도 `codex`가 있어야 한다(`npm install -g @openai/codex`, `codex login`은 사용자). 설정은 호출마다 플래그로 주므로
+  `~/.codex/config.toml`을 고칠 일은 없다.
 - 같은 봇 토큰으로 채널 플러그인 세션(`claude --channels ...`)을 동시에 띄우지 않는다. 둘 다 답하게 된다.

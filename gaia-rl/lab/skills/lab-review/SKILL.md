@@ -34,6 +34,11 @@ Everything this needs is below; do not read HANDOFF for the procedure (only for 
   `plan_labels.py --prefix BGG-R1-` (which plan won, no replay), `charge_rounds.py` (recompute charges),
   `federation_chances.py --by-arm`, `endgame_tech_counts.py`, `endgame_stock.py` (6R stock), `shipmine_hits.py`.
   Pick the two or three that test *this* part; do not run them all.
+- **Second-model review (2026-10-21)**: the result page ends with `## 검수 (gpt-6-astra, 원문 그대로)`, a second model's
+  attack on the verdict (first line `결론: 이상 없음` or `결론: 지적 N건`). Answer every finding in the cycle document's
+  Reading section: accept it (and change the reading) or rebut it with evidence (a recount command and its numbers).
+  A rebuttal makes the reply start with `불일치 — ` and the Proposal section says 보류 until the user decides.
+  `## 검수 실패` (codex missing or timed out) is reported in one line; it does not block the record.
 
 ## 3. Write the cycle document
 `gaia-rl/research/strategy/cycles/<name>.md`, shape = `gaia-rl/research/strategy/cycles/TEMPLATE.md` (read that,
@@ -65,6 +70,7 @@ git push origin HEAD:claude/epic-goodall-0ot55w
 No model name in the subject line (HANDOFF 7).
 
 ## 6. Reply (Korean, phone-short)
-Verdict with numbers → what it means (one line per faction that matters) → next experiment **as a proposal
+Verdict with numbers → what it means (one line per faction that matters) → the reviewer's findings and your answer to
+each (`불일치 — ` first when you rebut any; the user decides) → next experiment **as a proposal
 only** (design, seeds, hours) and what the user must decide. Never add a queue file in this turn; config or
 deployment changes are proposals. If the result is `failed`, report the log tail and the likely cause instead.

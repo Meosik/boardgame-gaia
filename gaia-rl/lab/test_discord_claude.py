@@ -53,6 +53,36 @@ class McpTests(unittest.TestCase):
         self.assertNotIn('.json을 읽고', prompt)
 
 
+class CodexTests(unittest.TestCase):
+    """User 2026-10-21 "다른 agent의 검수": `!codex` asks the second model directly; a '🔍' review notice with
+    findings starts a response turn, a clean one starts nothing."""
+
+    def test_codex_prefix_gives_the_question(self):
+        self.assertEqual(bot.codex_request('!codex 이 판정 맞아?'), '이 판정 맞아?')
+        self.assertEqual(bot.codex_request('!gpt  왜? '), '왜?')
+        self.assertIsNone(bot.codex_request('!codex'))
+        self.assertIsNone(bot.codex_request('!q 질문'))
+        self.assertIsNone(bot.quick_request('!codex 질문'))
+
+    def test_codex_command_is_read_only_and_writes_its_last_message(self):
+        os.environ.pop('CODEX_MODEL', None)
+        argv = bot.codex_command('codex', '/work', '/tmp/out.md')
+        self.assertEqual(argv[:2], ['codex', 'exec'])
+        self.assertEqual(argv[argv.index('--model') + 1], 'gpt-6-astra')
+        self.assertEqual(argv[argv.index('--sandbox') + 1], 'read-only')
+        self.assertEqual(argv[argv.index('--output-last-message') + 1], '/tmp/out.md')
+        self.assertEqual(argv[-1], '-')
+
+    def test_review_notice_with_findings_starts_a_response_and_a_clean_one_does_not(self):
+        self.assertEqual(bot.finished_review('🔍 # review-code-abc1234 — 검수\n결론: 지적 2건\n...'),
+                         ('review-code-abc1234', True))
+        self.assertEqual(bot.finished_review('🔍 # review-code-abc1234 — 검수\n검수자\n\n결론: 이상 없음'),
+                         ('review-code-abc1234', False))
+        self.assertIsNone(bot.finished_review('✅ # 101-ships — 완료'))
+        self.assertIsNone(bot.finished_experiment('🔍 # review-code-abc1234 — 검수'))
+        self.assertIn('불일치', bot.respond_prompt('review-code-abc1234'))
+
+
 class TurnLimitTests(unittest.TestCase):
     def test_turns_count_per_conversation_and_reset_on_a_new_one(self):
         state = {}

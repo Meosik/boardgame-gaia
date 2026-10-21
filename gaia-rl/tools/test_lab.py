@@ -102,6 +102,57 @@ class LabTests(unittest.TestCase):
         self.assertEqual(lab.allocate(1), ['s-1'])
         self.assertTrue(any(p.endswith('cut.json') for p in lab._broken))
 
+    def test_review_experiment_publishes_the_reviewer_text_verbatim_under_a_review_notice(self):
+        """User 2026-10-21 "다른 agent의 검수": a review job runs codex read-only and keeps its text as is."""
+        from unittest import mock
+        self.queue('review-code-abc1234', {'kind': 'review', 'commits': 'abc1234..def5678',
+                                           'paths': ['gaia-rl/tools/charge_rounds.py']})
+        sent = []
+        with mock.patch.object(lab, 'notify', sent.append), \
+                mock.patch.object(lab, 'git', return_value=mock.Mock(stdout='diff --git a b\n', returncode=0)), \
+                mock.patch.object(lab, 'codex_review', return_value=('결론: 지적 2건\n- tools/x.py:3 창이 하나 짧다', '')):
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 1)
+        r = lab.result('review-code-abc1234')
+        self.assertEqual((r['status'], r['kind'], r['findings']), ('done', 'review', 2))
+        page = (self.dir/'results'/'review-code-abc1234.md').read_text()
+        self.assertTrue(page.startswith('# review-code-abc1234 — 검수'))
+        self.assertIn('창이 하나 짧다', page)
+        self.assertTrue(sent[-1].startswith('🔍 # review-code-abc1234 — 검수'))
+
+    def test_review_without_codex_is_a_failed_result_not_a_retry_loop(self):
+        from unittest import mock
+        self.queue('review-code-0000000', {'kind': 'review', 'paths': ['x.py']})
+        with mock.patch.object(lab, 'notify', lambda *_: None), mock.patch.object(lab, 'codex_bin', lambda: None), \
+                mock.patch.object(lab, 'git', return_value=mock.Mock(stdout='', returncode=0)):
+            lab.run_pending(jobs=1, push=False)
+        self.assertEqual(lab.result('review-code-0000000')['status'], 'failed')
+        self.assertIn('codex 미설치', (self.dir/'results'/'review-code-0000000.md').read_text())
+        self.assertEqual(lab.pending(), [])
+
+    def test_findings_and_code_paths(self):
+        self.assertEqual(lab.findings('결론: 이상 없음\n'), 0)
+        self.assertEqual(lab.findings('머리말\n결론: 지적 3건\n...'), 3)
+        self.assertIsNone(lab.findings('아무 말'))
+        self.assertTrue(lab.is_code('gaia-rl/tools/charge_rounds.py'))
+        self.assertTrue(lab.is_code('gaia-engine/src/lib.rs'))
+        self.assertTrue(lab.is_code('gaia-rl/tools/teacher-a-ships.json'))
+        self.assertFalse(lab.is_code('gaia-rl/lab/results/101.json'))
+        self.assertFalse(lab.is_code('gaia-rl/lab/queue/102.json'))
+        self.assertFalse(lab.is_code('gaia-rl/lab/HANDOFF.md'))
+        self.assertFalse(lab.is_code('gaia-rl/lab/seeds-quartet-a.txt'))
+
+    def test_a_pull_that_changes_code_queues_one_review_and_results_only_do_not(self):
+        from unittest import mock
+        def fake_git(*args, check=True):
+            names = 'gaia-rl/lab/results/101.md\ngaia-rl/tools/lab.py\n' if args[:2] == ('diff', '--name-only') else ''
+            return mock.Mock(stdout=names, returncode=0)
+        with mock.patch.object(lab, 'git', fake_git):
+            self.assertEqual(lab.queue_code_review('aaaaaaa1', 'bbbbbbb2', push=False), 'review-code-bbbbbbb')
+            self.assertIsNone(lab.queue_code_review('aaaaaaa1', 'bbbbbbb2', push=False))  # already queued
+            self.assertIsNone(lab.queue_code_review(None, 'bbbbbbb2', push=False))
+        spec = json.loads((self.dir/'queue'/'review-code-bbbbbbb.json').read_text())
+        self.assertEqual((spec['kind'], spec['commits'], spec['paths']), ('review', 'aaaaaaa1..bbbbbbb2', ['gaia-rl/tools/lab.py']))
+
     def test_low_disk_is_announced_once_until_it_recovers(self):
         import shutil
         from unittest import mock

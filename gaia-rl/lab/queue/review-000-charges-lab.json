@@ -1,0 +1,5 @@
+{"kind": "review",
+ "note": "소급 검수(E68, 사용자 2026-10-21 '코드를 제대로 작성했는지는 검수하지 않아도 되나?'): A/B 판정 숫자를 만드는 집계 코드. 지금까지 검수 없이 판정 근거가 됐다.",
+ "paths": ["gaia-rl/tools/charge_rounds.py", "gaia-rl/tools/lab.py", "gaia-rl/tools/teacher_ab.py"],
+ "prompt": "특히 볼 것: (1) 1–3라운드 충전량 창이 정확히 1R 시작부터 4R 시작까지인지(라운드 경계, 마지막 수, 패스 뒤 수입 포함 여부). (2) 좌석 교대 2판의 쌍 B−A 평균과 95% 신뢰구간 계산(표본 수, t 분포 또는 정규 근사, 쌍 수가 적을 때). (3) --vp-rate 처리(기본 1.5, 0이면 VP 제외)와 lab.py가 두 표를 만드는 경로. (4) 미완료·오류·타임아웃 판을 쌍에서 빼는 규칙이 두 팔에 같게 적용되는지. (5) lab.py의 final_scores·timing 집계와 watch_pick의 선택 기준. 재현 가능한 확인 방법을 적어라.",
+ "timeout_minutes": 40}

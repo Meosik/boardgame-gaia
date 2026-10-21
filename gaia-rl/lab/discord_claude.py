@@ -8,18 +8,22 @@ run it by hand. A channel keeps one conversation (`--resume`) until `!new`.
 
 Commands (owner only): `!new` start a fresh conversation, `!status` show state, `!stop` cancel
 the running turn, `!q <question>` a one-off answer on the cheaper quick model outside the channel
-conversation. Turns run one at a time; later messages wait in order. A channel conversation is
-dropped after CLAUDE_SESSION_TURNS turns (default 10): every resumed call re-sends the whole
-context, so long conversations cost far more tokens than a fresh one that reads HANDOFF.
+conversation, `!codex <question>` a one-off answer from the second model (OpenAI Codex CLI,
+read-only in the work tree, nothing of Claude's conversation). Turns run one at a time; later
+messages wait in order. A channel conversation is dropped after CLAUDE_SESSION_TURNS turns
+(default 10): every resumed call re-sends the whole context, so long conversations cost far more
+tokens than a fresh one that reads HANDOFF.
 
 Environment (lab/discord_claude.env, git-ignored; see lab/discord_claude.env.example):
   DISCORD_BOT_TOKEN, DISCORD_OWNER_ID, DISCORD_CHANNEL_IDS (comma-separated),
   DISCORD_LAB_CHANNEL_ID (lab's webhook channel: each '✅' result notice there starts an automatic
-  review in the first channel; only the experiment name is read from the notice),
+  review in the first channel, each '🔍' code-review notice with findings starts a response turn;
+  only the experiment name is read from the notice),
   DISCORD_LAB_WEBHOOK_ID (optional: accept only this webhook),
   GAIA_WORKDIR (default ~/projects/gaia-work), CLAUDE_BIN (default: claude on PATH),
   CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json),
-  CLAUDE_SESSION_TURNS (default 10), CLAUDE_QUICK_MODEL (default claude-sonnet-5-5, for `!q`).
+  CLAUDE_SESSION_TURNS (default 10), CLAUDE_QUICK_MODEL (default claude-sonnet-5-5, for `!q`),
+  CODEX_BIN (default: codex on PATH), CODEX_MODEL (default gpt-6-astra, for `!codex`).
 """
 import asyncio
 import hashlib
@@ -30,6 +34,7 @@ from pathlib import Path
 import py_compile
 import shutil
 import sys
+import tempfile
 
 SELF = Path(__file__).resolve()
 HERE = SELF.parent
@@ -65,7 +70,13 @@ SYSTEM = (
     'For code questions (gaia-engine, gaia-rl, gaia-server, gaia-frontend) start with `codegraph explore "<question>"` '
     '— it returns the relevant source, callers and blast radius in one output; then `codegraph node <symbol|file>`, '
     '`codegraph callers/callees/impact <symbol>`, `codegraph query <text>` — instead of grep/Read chains. '
-    'Research documents (research/, lab/) are not in the graph: use Grep/Read there.')
+    'Research documents (research/, lab/) are not in the graph: use Grep/Read there. '
+    # User 2026-10-21 "최소한 다른 agent의 검수가 필요하지 않을까?": a second model (Codex, gpt-6-astra) reviews code
+    # commits (lab kind "review", queued automatically) and every A/B verdict (section "검수" of the result page).
+    'A second model reviews every code commit and every A/B verdict; its text reaches the owner verbatim. Answer '
+    'each of its findings: fix what is right (commit, push), rebut what is wrong with evidence, and start the reply '
+    'with "불일치 — " when you rebut anything, so the owner decides; until they do, keep the disputed conclusion out '
+    'of cycle documents.')
 
 
 def chunks(text, size=1900):
@@ -109,6 +120,35 @@ def quick_request(text):
         if text.startswith(prefix) and text[len(prefix):].strip():
             return text[len(prefix):].strip()
     return None
+
+
+# User 2026-10-21 "codex한테 답을 듣고 싶은 경우가 생기나?": `!codex <text>` asks the second model directly, so a
+# disagreement between the two models reaches the owner without Claude in between. Read-only in the work tree.
+CODEX_PREFIXES = ('!codex ', '!gpt ')
+CODEX_NOTE = ('(디스코드에서 온 일회성 질문이다. 한국어로, 휴대폰에서 읽을 수 있게 짧게 답한다. 저장소는 읽기 전용이다: '
+              '파일을 고치지 말고 실험을 돌리지 마라. 맥락이 필요하면 gaia-rl/lab/HANDOFF.md의 5장만 읽는다.)\n\n')
+
+
+def codex_model():
+    return os.environ.get('CODEX_MODEL') or 'gpt-6-astra'
+
+
+def codex_bin():
+    return os.environ.get('CODEX_BIN') or shutil.which('codex')
+
+
+def codex_request(text):
+    """The question of a `!codex` / `!gpt` message, else None."""
+    for prefix in CODEX_PREFIXES:
+        if text.startswith(prefix) and text[len(prefix):].strip():
+            return text[len(prefix):].strip()
+    return None
+
+
+def codex_command(codex, workdir, out_path):
+    """`codex exec` reading the prompt from stdin, read-only, last message written to out_path."""
+    return [codex, 'exec', '--model', codex_model(), '--sandbox', 'read-only', '-c', 'approval_policy="never"',
+            '--cd', str(workdir), '--color', 'never', '--output-last-message', str(out_path), '-']
 
 
 # User 2026-10-21 "내부에서 해야할건 하고" (token saving): a resumed conversation re-sends its whole context on
@@ -245,6 +285,23 @@ def review_prompt(name):
             '의미를 짧게 정리하고 다음 실험을 제안만 한다 — 큐에 넣지 않고 사용자 확인을 기다린다. 설정 변경·배포는 제안만.)')
 
 
+REVIEW_NAME = re.compile(r'^🔍\s*#\s*([0-9A-Za-z._-]{1,80})\s*—\s*검수', re.M)
+CLEAN = '결론: 이상 없음'
+
+
+def finished_review(text):
+    """(name, has findings) from a lab '🔍 # <name> — 검수' notice, else None."""
+    match = REVIEW_NAME.search(text)
+    return (match.group(1), CLEAN not in text) if match else None
+
+
+def respond_prompt(name):
+    return (f'(lab 코드 검수 {name}: 두 번째 모델이 지적을 냈다. gaia-rl/lab/results/{name}.md의 지적을 하나씩 확인해, 맞으면 '
+            '고쳐서 커밋·푸시하고, 틀리면 근거를 적어 반박한다. 검수 원문은 이미 채널에 있으니 다시 옮기지 않는다. '
+            f'답 첫 줄은 "검수 대응 {name}: 수정 N건, 반박 M건"이고, 반박이 하나라도 있으면 그 앞에 "불일치 — "를 붙이고 각 반박의 '
+            '근거를 사용자가 판단할 수 있게 짧게 적는다. 사용자가 정하기 전에는 반박한 지적과 얽힌 결론을 사이클 문서에 올리지 않는다.)')
+
+
 ATTACHMENT_LIMIT = 50*1024*1024
 
 
@@ -337,19 +394,39 @@ def main():
         print('discord_claude.py changed: restarting', flush=True)
         os.execv(sys.executable, [sys.executable, *sys.argv])
 
-    async def run_turn(channel, key, prompt, resume=True, quick=False):
+    async def run_turn(channel, key, prompt, resume=True, quick=False, codex=False):
         """One `claude -p` turn whose reply goes to `channel`; turns run one at a time."""
         waiting[0] += 1
         try:
-            await locked_turn(channel, key, prompt, resume, quick)
+            await locked_turn(channel, key, prompt, resume, quick, codex)
         finally:
             waiting[0] -= 1
         restart_if_changed()
 
-    async def locked_turn(channel, key, prompt, resume, quick=False):
+    async def codex_turn(channel, prompt):
+        """One `codex exec` answer, read-only, outside every Claude conversation."""
+        binary = codex_bin()
+        if not binary:
+            await send(channel, '⚠️ codex 미설치: `npm install -g @openai/codex` 뒤 `codex login` (봇 기계에서)')
+            return
+        fd, out_path = tempfile.mkstemp(prefix='codex-discord-', suffix='.md')
+        os.close(fd)
+        out_path = Path(out_path)
+        try:
+            out, err, code = await claude_run(codex_command(binary, workdir, out_path), CODEX_NOTE + prompt)
+            text = out_path.read_text(errors='replace').strip() if out_path.exists() else ''
+        finally:
+            out_path.unlink(missing_ok=True)
+        reply = text or f'⚠️ codex 실행 실패 (종료 코드 {code})\n```\n{(err or out).strip()[-1200:]}\n```'
+        await send(channel, f'{reply}\n🧠 {codex_model()} · 일회성 답(Claude 대화에 안 남음)')
+
+    async def locked_turn(channel, key, prompt, resume, quick=False, codex=False):
         async with lock:
             note = ''
             async with channel.typing():
+                if codex:
+                    await codex_turn(channel, prompt)
+                    return
                 if quick:  # one-off on the quick model, no session kept, the channel conversation untouched
                     out, err, code = await claude_run(command(claude, None, quick_model(), fallback=False),
                                                       QUICK_NOTE + prompt)
@@ -434,9 +511,17 @@ def main():
     async def review_result(message):
         """A lab result notice: record it automatically in a fresh conversation in the first channel."""
         name = finished_experiment(message.content)
-        if not name or not channels:
+        review = finished_review(message.content)
+        if not (name or review) or not channels:
             return
         target = client.get_channel(channels[0]) or await client.fetch_channel(channels[0])
+        if review:  # a code review by the second model: Claude answers its findings; nothing to do when clean
+            name, has_findings = review
+            if not has_findings:
+                return
+            await target.send(f'🤖 **{name}** 검수 지적에 대응 시작 (수정은 커밋, 반박은 "불일치"로 표시)')
+            await run_turn(target, str(target.id), respond_prompt(name), resume=False)
+            return
         await target.send(f'🤖 **{name}** 결과 자동 정리 시작 (기록·커밋까지, 다음 실험은 제안만)')
         # A fresh conversation, kept as the channel's conversation so the owner can answer the proposal.
         await run_turn(target, str(target.id), review_prompt(name), resume=False)
@@ -468,6 +553,11 @@ def main():
         if quick and not message.attachments:
             await message.add_reaction('⏳' if lock.locked() else '👀')
             await run_turn(message.channel, key, quick, quick=True)
+            return
+        codex = codex_request(text)
+        if codex and not message.attachments:
+            await message.add_reaction('⏳' if lock.locked() else '👀')
+            await run_turn(message.channel, key, codex, codex=True)
             return
         if text == '!stop':
             proc = running.get('proc')

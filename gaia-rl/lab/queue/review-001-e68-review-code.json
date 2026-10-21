@@ -1,0 +1,5 @@
+{"kind": "review",
+ "note": "E68 검수 도입 커밋 자체의 검수(lab이 이 커밋을 받으며 재시작하므로 자동 큐에 잡히지 않음).",
+ "paths": ["gaia-rl/tools/lab.py", "gaia-rl/lab/discord_claude.py"],
+ "prompt": "특히 볼 것: (1) queue_code_review가 lab 자신의 결과·큐 커밋으로 검수를 무한히 만들지 않는지, pull 실패·publish 실패 뒤 범위를 잃는 경우. (2) codex_review의 시간 제한·출력 파일·종료 코드 처리와 프롬프트 주입(결과 .md 안의 문장이 지시가 되지 않는지). (3) run_ab 끝의 verdict_review가 결과 기록을 깨뜨릴 수 있는 예외 경로. (4) discord_claude.py의 🔍 알림 처리(finished_review)와 !codex 명령이 Claude 세션 상태를 건드리지 않는지, 임시 파일 정리. (5) 테스트(tools/test_lab.py, lab/test_discord_claude.py)가 빠뜨린 경로.",
+ "timeout_minutes": 40}

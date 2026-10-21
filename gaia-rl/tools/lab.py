@@ -16,6 +16,13 @@ Experiment kinds (`"kind"` in the queue file):
             (argv list), metrics (optional JSON file the command writes), timeout_hours, note.
   external  run elsewhere (e.g. Seraph PPO). Never run here; its result is added with
             `lab.py record`, which also accepts results without a queue file.
+  review    a second model (OpenAI Codex CLI, GAIA_LAB_REVIEW_MODEL, default gpt-6-astra) reviews
+            code, read-only. Keys: commits ("old..new": the diff), paths (files to read in full),
+            result (an ab result name: attack its verdict), prompt (extra instructions),
+            timeout_minutes (default 30), note. Its text is published verbatim under a '🔍'
+            notice; the Discord bot answers it (fix or rebut). `watch` queues one automatically
+            for every pull that changes code files, and every ab result carries a review of its
+            verdict (key review: false skips it).
 
   .venv/bin/python tools/lab.py watch --jobs 4        # laptop: keep running (tmux/nohup)
   .venv/bin/python tools/lab.py once --jobs 4         # run what is pending, then exit
@@ -25,6 +32,7 @@ Experiment kinds (`"kind"` in the queue file):
 
 Environment: GAIA_LAB_BRANCH (default claude/epic-goodall-0ot55w), GAIA_LAB_WEBHOOK (optional
 Discord webhook URL for start/failure notices; results reach Discord through the ops bot),
+GAIA_LAB_CODEX (codex binary; default: codex on PATH), GAIA_LAB_REVIEW_MODEL (default gpt-6-astra),
 GAIA_LAB_DIR (tests only).
 """
 import argparse
@@ -35,6 +43,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -44,7 +53,7 @@ import urllib.request
 GAIA_RL = Path(__file__).resolve().parents[1]
 LAB = Path(os.environ.get('GAIA_LAB_DIR') or GAIA_RL/'lab')
 BRANCH = os.environ.get('GAIA_LAB_BRANCH', 'claude/epic-goodall-0ot55w')
-KINDS = ('ab', 'command', 'external')
+KINDS = ('ab', 'command', 'external', 'review')
 
 
 def now():
@@ -483,6 +492,7 @@ def run_ab(name, spec, jobs):
     # User 2026-10-20 "결과에서 + -는 보이는데 최종 점수가 몇점인지 안보이던데": the absolute level per arm.
     level = f"{stop_round}라운드 종료 시점 VP" if stop_round else "최종 점수"
     body += f"\n\n참고: {level} 평균 (판정에 쓰지 않음)\n\n{scores_table(data['final_scores'])}"
+    body += verdict_review(name, spec, body, data)  # the second model's attack on the verdict, verbatim
     return 'done', data, body
 
 
@@ -508,6 +518,135 @@ def run_command(name, spec, jobs):
     return status, data, body
 
 
+# ── Codex review ────────────────────────────────────────────────────────────
+# User 2026-10-21 "최소한 다른 agent의 검수가 필요하지 않을까?" → "gpt는 astra로 하자": a second model reviews
+# every A/B verdict and every code commit. Its text is published verbatim (the user reads the reviewer, not
+# Claude's summary of it); the bot's Claude turn then fixes or rebuts each point, and a rebuttal is flagged
+# "불일치" for the user to decide.
+
+REVIEW_MODEL = os.environ.get('GAIA_LAB_REVIEW_MODEL', 'gpt-6-astra')
+REVIEW_RULES = ('너는 이 저장소의 독립 검수자다. 한국어로, 휴대폰에서 읽을 수 있게 짧게 답한다. '
+                '첫 줄은 반드시 `결론: 이상 없음` 또는 `결론: 지적 N건` 중 하나다. 지적마다 파일:줄, 무엇이 왜 틀렸는지, '
+                '확인 방법을 적고, 확신이 없으면 "확인 필요"라고 표시한다. 스타일 지적은 쓰지 않는다. '
+                '저장소는 읽기 전용이다: 파일을 고치지 말고 실험을 돌리지 마라.')
+VERDICT = re.compile(r'^결론:\s*(이상 없음|지적\s*(\d+)\s*건)', re.M)
+CODE_FILE = re.compile(r'\.(py|rs|ts|tsx|js|mjs|sh|toml|json|ya?ml)$')
+NOT_CODE = ('gaia-rl/lab/results/', 'gaia-rl/lab/queue/', 'gaia-rl/lab/seeds', '.codegraph/', 'docs/', 'package-lock.json')
+DIFF_LIMIT = 60000  # characters of diff put in the prompt; above it the reviewer runs git diff itself
+
+
+def codex_bin():
+    return os.environ.get('GAIA_LAB_CODEX') or shutil.which('codex')
+
+
+def is_code(path):
+    """A file whose change is reviewed (results, queue files, seeds, docs are not)."""
+    return bool(CODE_FILE.search(path)) and not any(path.startswith(p) or path.endswith(p) for p in NOT_CODE)
+
+
+def findings(text):
+    """Findings the reviewer's first line claims: 0 for '결론: 이상 없음', None when the line is missing."""
+    match = VERDICT.search(text or '')
+    if not match:
+        return None
+    return int(match.group(2)) if match.group(2) else 0
+
+
+def codex_review(prompt, timeout):
+    """(reviewer text or None, failure note): one read-only `codex exec` over the repository, prompt on stdin."""
+    codex = codex_bin()
+    if not codex:
+        return None, 'codex 미설치: lab 기계에서 `npm install -g @openai/codex` 뒤 `codex login`'
+    root = git('rev-parse', '--show-toplevel').stdout.strip()
+    out = GAIA_RL/'runs'/f'codex-{int(time.time())}.md'
+    out.parent.mkdir(exist_ok=True)
+    command = [codex, 'exec', '--model', REVIEW_MODEL, '--sandbox', 'read-only', '-c', 'approval_policy="never"',
+               '--cd', root, '--color', 'never', '--output-last-message', str(out), '-']
+    try:
+        done = subprocess.run(command, cwd=root, input=prompt, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return None, f'codex {timeout/60:.0f}분 제한 초과'
+    text = out.read_text(errors='replace').strip() if out.exists() else ''
+    if done.returncode or not text:
+        return None, f'codex 종료 코드 {done.returncode}\n\n```\n{(done.stderr or done.stdout).strip()[-800:]}\n```'
+    return text, ''
+
+
+def verdict_prompt(name, spec, body):
+    design = {k: v for k, v in spec.items() if k != 'seeds'}
+    return (f'{REVIEW_RULES}\n\n과제: lab 실험 {name}의 A/B 결과를 반박하라. 이 저장소의 판정은 1–3라운드 충전량(B−A, '
+            '95% 신뢰구간, 쌍 수)으로만 한다(최종 VP는 판정이 아니다; 읽을 수 있는 선은 종족당 25충전, 같은 코드의 흔들림은 '
+            '종족당 ±30·쌍당 ±50). 아래 큐 파일의 사전 등록 판정(note)이 이 숫자로 정당화되는지, 신뢰구간·쌍 수·판 상태'
+            '(오류·타임아웃·결정 시간)·측정 창·조건 불일치 가운데 판정을 뒤집거나 약하게 만드는 이유가 있는지 찾아라. '
+            '숫자를 만드는 코드는 gaia-rl/tools/charge_rounds.py와 gaia-rl/tools/teacher_ab.py다.\n\n'
+            f'큐 파일(설계와 사전 등록 판정):\n```json\n{json.dumps(design, ensure_ascii=False, indent=1)}\n```\n\n'
+            f'결과:\n\n{body}')
+
+
+def verdict_review(name, spec, body, data):
+    """The reviewer's attack on an ab result, as a section of the result page (data['review'] keeps it)."""
+    if spec.get('review', True) is False:
+        return ''
+    text, note = codex_review(verdict_prompt(name, spec, body), float(spec.get('review_minutes', 20))*60)
+    data['review'] = {'model': REVIEW_MODEL, 'text': text, 'note': note, 'findings': findings(text)}
+    if text is None:
+        return f'\n\n## 검수 실패 ({REVIEW_MODEL})\n\n{note}'
+    return f'\n\n## 검수 ({REVIEW_MODEL}, 원문 그대로)\n\n{text}'
+
+
+def code_prompt(spec):
+    parts = [REVIEW_RULES, '',
+             '과제: 아래 코드 변경(또는 파일)을 검수하라. 조용히 틀린 결과를 내는 경로를 먼저 찾아라: 집계·지표·규칙 해석의 오류, '
+             '경계 조건, 상태 갱신 누락, 성능 저하, 빠진 테스트. 규칙 코드는 룰북(docs/EN_Gaia_rulebook_lo.pdf, '
+             'docs/GP_Exp_Rule_EN_V1_Web.pdf)과 대조한다. 이 저장소의 A/B 판정은 gaia-rl/tools/charge_rounds.py가 세는 '
+             '1–3라운드 충전량에 의존하므로, 그 숫자에 닿는 코드는 특히 엄격히 본다.']
+    if spec.get('commits'):
+        paths = spec.get('paths') or []
+        parts.append(f"변경 범위: `git diff {spec['commits']}` (저장소 루트에서 직접 실행해 전체를 읽어라). "
+                     f"바뀐 파일: {', '.join(paths) or '(목록 없음)'}")
+        diff = git('diff', spec['commits'], '--', *[f':/{p}' for p in paths], check=False).stdout
+        if diff and len(diff) <= DIFF_LIMIT:
+            parts.append(f'```diff\n{diff}\n```')
+    elif spec.get('paths'):
+        parts.append('검수할 파일(전체를 읽어라): ' + ', '.join(spec['paths']))
+    if spec.get('result'):
+        page = LAB/'results'/f"{spec['result']}.md"
+        parts.append(f"반박할 A/B 결과: gaia-rl/lab/results/{spec['result']}.md\n\n{page.read_text() if page.exists() else '(결과 파일 없음)'}")
+    if spec.get('prompt'):
+        parts.append(spec['prompt'])
+    return '\n'.join(parts)
+
+
+def run_review(name, spec, jobs):
+    prompt = code_prompt(spec)
+    text, note = codex_review(prompt, float(spec.get('timeout_minutes', 30))*60)
+    data = {'model': REVIEW_MODEL, 'prompt_chars': len(prompt),
+            **{k: spec[k] for k in ('commits', 'paths', 'result') if k in spec}}
+    if text is None:
+        return 'failed', data, note
+    data['findings'] = findings(text)
+    return 'done', data, f'검수자 {REVIEW_MODEL} (원문 그대로)\n\n{text}'
+
+
+def queue_code_review(before, after, push):
+    """Queue a review of the code files a pull changed (before..after); nothing when no code changed."""
+    if not before or not after or before == after:
+        return None
+    paths = [p for p in git('diff', '--name-only', f'{before}..{after}', check=False).stdout.split() if is_code(p)]
+    if not paths:
+        return None
+    name = f'review-code-{after[:7]}'
+    path = LAB/'queue'/f'{name}.json'
+    if path.exists() or result(name) is not None:
+        return None
+    spec = {'kind': 'review', 'note': f'코드 검수 {before[:7]}..{after[:7]}: {len(paths)}개 파일 (자동)',
+            'commits': f'{before}..{after}', 'paths': paths[:60]}
+    path.write_text(json.dumps(spec, ensure_ascii=False, indent=1)+'\n')
+    if push:
+        publish([path], f'lab: queue {name}')
+    return name
+
+
 def write_result(name, spec, status, data, body, started):
     (LAB/'results').mkdir(parents=True, exist_ok=True)
     record = {'name': name, 'kind': spec.get('kind', 'ab'), 'status': status, 'note': spec.get('note'),
@@ -515,7 +654,8 @@ def write_result(name, spec, status, data, body, started):
               'finished_at': now(), **data}
     paths = [LAB/'results'/f'{name}.json', LAB/'results'/f'{name}.md']
     paths[0].write_text(json.dumps(record, indent=1, ensure_ascii=False)+'\n')
-    head = f"# {name} — {'완료' if status == 'done' else '실패'}\n\n"
+    word = '실패' if status != 'done' else '검수' if record['kind'] == 'review' else '완료'
+    head = f"# {name} — {word}\n\n"
     if spec.get('note'):
         head += f"{spec['note']}\n\n"
     meta = f"\n\n<sub>{record['host']} · 커밋 {record['commit']} · {started} → {record['finished_at']}</sub>\n"
@@ -546,13 +686,14 @@ def run_one(name, spec, jobs, push):
     notify(f'🧪 실험 시작: **{name}** ({kind}) — {platform.node()}' + describe(spec))
     print(f'[{started}] {name}: start', flush=True)
     try:
-        status, data, body = (run_ab if kind == 'ab' else run_command)(name, spec, jobs)
+        runner = {'ab': run_ab, 'command': run_command, 'review': run_review}[kind]
+        status, data, body = runner(name, spec, jobs)
     except Exception as error:  # record the failure instead of retrying forever
         status, data, body = 'failed', {'error': repr(error)}, f'```\n{error!r}\n```'
     paths = write_result(name, spec, status, data, body, started)
     print(f'[{now()}] {name}: {status}', flush=True)
-    if status == 'done':
-        notify('✅ '+discord_text(paths[1].read_text()))
+    if status == 'done':  # '🔍 … — 검수' (not '✅ … — 완료'): the bot answers a review instead of recording a result
+        notify(('🔍 ' if kind == 'review' else '✅ ')+discord_text(paths[1].read_text()))
     else:
         notify(f'⚠️ 실험 실패: **{name}** — lab/results/{name}.md 참고')
     if push:
@@ -576,6 +717,9 @@ def describe(spec):
     lines = [spec['note']] if spec.get('note') else []
     if spec.get('kind', 'ab') == 'ab':
         lines.append(f"A `{Path(spec['teacher_a']).name}` vs B `{Path(spec['teacher_b']).name}`")
+    elif spec.get('kind') == 'review':
+        lines.append(f"검수자 {REVIEW_MODEL}: " + ', '.join(spec[k] if isinstance(spec[k], str) else ', '.join(spec[k])
+                                                        for k in ('commits', 'paths', 'result') if spec.get(k))[:300])
     return ''.join(f'\n> {line}' for line in lines)
 
 
@@ -608,12 +752,18 @@ def source_digest():
 def cmd_watch(args):
     print(f'lab watching {BRANCH} every {args.interval}s (Ctrl+C to stop)', flush=True)
     digest, seen, reported, low_disk = source_digest(), None, set(), False
+    head = None  # commit before the previous pull; code it changed gets a review queued
     while True:
         try:
             pull()
             if source_digest() != digest:  # a pull changed lab.py: continue as the new version
                 print(f'[{now()}] lab.py changed: restarting', flush=True)
                 os.execv(sys.executable, [sys.executable, *sys.argv])
+            pulled = git('rev-parse', 'HEAD', check=False).stdout.strip()
+            queued = queue_code_review(head, pulled, push=True)
+            head = git('rev-parse', 'HEAD', check=False).stdout.strip()  # after the queue commit, if any
+            if queued:
+                print(f'[{now()}] queued {queued}', flush=True)
             low_disk = disk_warning(GAIA_RL, low_disk)
             seen = announce_new(seen)
             for path, error in list(_broken.items()):
