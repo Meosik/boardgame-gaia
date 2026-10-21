@@ -124,6 +124,10 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   새 명령을 허용할 때는 원형과 `rtk` 접두형을 함께 넣는다. 절약 통계: `rtk gain`.
 - 봇 턴은 MCP 서버를 싣지 않는다(`--strict-mcp-config --mcp-config lab/claude-bot-mcp.json`, 빈 설정; 계정의 Notion·Docs·Drive 커넥터는
   허용 목록 때문에 어차피 못 쓰면서 매 턴 도구 목록만 실렸음). 다시 켜려면 env `CLAUDE_BOT_MCP=1`.
+- 프로젝트 스킬(2026-10-21, 사용자 "효과 있는 거 skill 만들어"): 절차를 `lab/skills/<이름>/SKILL.md`에 두고 `.claude/skills`로 연결해 쓴다
+  (`lab-review` 결과 정리, `lab-queue` 큐 파일 작성, `explain` 수 하나 분석). 호출할 때만 본문이 실리므로 HANDOFF를 절차 때문에 읽지 않아도 된다.
+  연결은 사용자 한 번(`.claude/`는 봇이 쓸 수 없음): `cd ~/projects/gaia-work && mkdir -p .claude && ln -s ../gaia-rl/lab/skills .claude/skills && git add .claude/skills && git commit -m "bot: link project skills" && git push origin HEAD:claude/epic-goodall-0ot55w`.
+  스킬을 고칠 때는 `lab/skills/` 쪽 파일을 고친다(링크라 바로 반영).
 - 토큰 절약(2026-10-21): 채널 대화는 `CLAUDE_SESSION_TURNS`(기본 10)턴이 되면 자동으로 끊고 다음 메시지부터 새 대화로 시작한다
   (이어진 대화는 호출마다 전체 맥락을 다시 보내므로). 새 대화의 맥락은 HANDOFF 5장에서 읽는다 — 주제가 끝나면 5장을 갱신해 둘 것.
 - 설치 (agentmaco, 한 번):

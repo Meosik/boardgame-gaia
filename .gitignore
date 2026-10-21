@@ -21,8 +21,9 @@ __pycache__/
 .DS_Store
 *.swp
 
-# Local agent/runtime state
-/.claude/
+# Local agent/runtime state (project skills under .claude/skills/ are shared through git)
+/.claude/*
+!/.claude/skills/
 /.omc/
 **/.omc/
 /.omh/
