@@ -182,6 +182,12 @@ class DebateTests(unittest.TestCase):
         self.assertEqual(bot.objections_from(rows), '1. 첫째\n2. 둘째')
         self.assertIn('토론', bot.SYSTEM)
 
+    def test_simple_code_edits_are_delegated_to_a_sonnet_subagent(self):
+        """User 2026-10-22 "자꾸 명령어를 만들지 말고 … sonnet을 시켜": a rule in the turn, not a new `!` command."""
+        self.assertIn('model "sonnet"', bot.SYSTEM)
+        self.assertIn('run_in_background false', bot.SYSTEM)
+        self.assertEqual(bot.quick_request('!code fix it'), None)   # no `!code`/`!opus` command exists
+
     def test_only_the_codex_bot_opens_debate_turns_when_its_id_is_set(self):
         """Debate 1/1 objection 2026-10-22: without CODEX_BOT_ID any bot in the channel could open a Claude turn."""
         self.assertTrue(bot.from_codex(7, True, None, 1, 0))      # any other bot when no id is configured

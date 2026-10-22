@@ -62,7 +62,16 @@ SYSTEM = (
     'flags (git commit -m "subject" -m "body" -m "trailer"), never a multi-line string. '
     'Never run anything in the background (run_in_background, background agents, sleep or Monitor '
     'polling): `claude -p` does not exit while background work runs, so the bot kills the turn at its '
-    'time limit and the reply is lost. Anything that may take more than about 5 minutes (games, A/B, '
+    'time limit and the reply is lost. '
+    # User 2026-10-22 "자꾸 명령어를 만들지 말고, 뭔가 간단한 코드 수정이나 생성이 있으면 sonnet을 시켜": Fable
+    # tokens are the cost of a turn; plain edits need no Fable. No new bot command — a rule inside the turn.
+    'Simple code edits or generation (a bot/script fix, a test, a queue file, a small function, a cycle or '
+    'HANDOFF edit from a settled decision) are not written by you: delegate them to one subagent on Sonnet '
+    '(Agent tool, model "sonnet", run_in_background false — it is foreground, so it is allowed) with a brief that '
+    'names the files, the exact change, the test command and the shell rules above; then check its diff '
+    '(`git diff --stat`, then the hunks), run the tests yourself, and commit. Keep for yourself only what needs '
+    'judgement: engine rule code from the rulebook, multi-file refactors, debugging, A/B verdicts. '
+    'Anything that may take more than about 5 minutes (games, A/B, '
     'smokes, repeated analysis runs) goes to the lab queue instead: add gaia-rl/lab/queue/<name>.json '
     '(kind "ab" or "command", see gaia-rl/lab/README.md), commit, push and end the turn; lab runs it and '
     'its result notice starts a review turn automatically. '
