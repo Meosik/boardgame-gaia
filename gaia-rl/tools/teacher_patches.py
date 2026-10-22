@@ -3771,14 +3771,23 @@ def _plan_cost(snapshot, goal):
     for step in goal.steps if goal.family == 'ordered' else (goal,):
         if achieved(snapshot, actor, step):
             continue
+        qic_gain = 0
         if step.family == 'colony' and step.coord:
             cost = _mine_cost(state, player, step.coord)
         elif step.family == 'faction-action':
             cost = _mine_cost(state, player, step.coord) if step.target == 'Build' and step.coord else {}
+        elif step.family == 'research' and step.target in TRACK_KEYS:
+            track = TRACK_KEYS[step.target]
+            cost = {'knowledge': 4*max(0, step.level-player['research_tracks'].get(track, 0))}
+            after = _at_level(player, track, step.level)
+            qic_gain = after['resources'].get('qic', 0)-player['resources'].get('qic', 0)
+            player = after
         else:
             cost = funding_need(snapshot, step)
         for key, n in cost.items():
             total[key] = total.get(key, 0) + n
+        if qic_gain:
+            total['qic'] = total.get('qic', 0) - qic_gain
     return total
 
 
@@ -3834,11 +3843,21 @@ def plan_menu_goals(snapshot, goals):
     player = state['players'][actor]
     if not _part(player, 'plan_menu'):
         return goals
-    plans = track_plan_goals(snapshot)
+    from four_factions.preparation import achieved
+    all_plans = track_plan_goals(snapshot)
+    plans = [g for g in all_plans if plan_affordable(snapshot, g)]      # E86 (ㄱ)
     covered = {step.name for plan in plans for step in plan.steps if step.family == 'research'}
     pool = [g for g in (fed_compare_goal(snapshot, part=False), token_compare_goal(snapshot, part=False)) if g]
     pool += plans + [g for g in goals if not (getattr(g, 'family', None) == 'research' and g.name in covered)]
-    pool = [g for g in pool if plan_affordable(snapshot, g)]      # E86 (ㄱ)
+    # A dropped plan's research stays a bare goal (the goals_for wrapper may already have removed it from `goals`).
+    for plan in all_plans:
+        if plan in plans:
+            continue
+        for step in plan.steps:
+            if (step.family == 'research' and not achieved(snapshot, actor, step) and step.name not in covered
+                    and all(g.name != step.name for g in pool)):
+                pool.append(step)
+    pool = [g for g in pool if plan_affordable(snapshot, g)]
     condition = _round_condition(state)
     front = []
     for family in FACTION_MENU.get(player['faction'], MENU_DEFAULT):

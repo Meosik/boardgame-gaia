@@ -1297,7 +1297,7 @@ class OpeningBudgetTests(unittest.TestCase):
         state['round_tiles'] = [{'condition': 'BuildMineOnGaia', 'vp_per_unit': 3}]*6
         state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
                                           'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
-        state['players'][0]['resources'].update(ore=12, qic=1)                      # the Desert plan is affordable (E86 ㄱ)
+        state['players'][0]['resources'].update(ore=12, qic=1, knowledge=8)         # the Desert plan is affordable (E86 ㄱ; Navigation 0→2 = 8 knowledge)
         snapshot = {'player': 0, 'state': state, 'candidates': []}
         bare = Goal('Navigation-2', 'research', target='Navigation', level=2)
         plan = Goal('track-plan-Navigation-2>colony@2,0', 'ordered', steps=(bare, Goal('colony@2,0', 'colony', '2,0')))
@@ -1337,7 +1337,7 @@ class OpeningBudgetTests(unittest.TestCase):
         state['round_tiles'] = [{'condition': 'BuildMineOnGaia', 'vp_per_unit': 3}]*6
         state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
                                           'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
-        state['players'][0]['resources'].update(ore=12, qic=1)                      # the Desert plan is affordable (E86 ㄱ)
+        state['players'][0]['resources'].update(ore=12, qic=1, knowledge=8)         # the Desert plan is affordable (E86 ㄱ; Navigation 0→2 = 8 knowledge)
         snapshot = {'player': 0, 'state': state, 'candidates': []}
         tile, other = Goal('colony@3,0', 'colony', '3,0'), Goal('Science@0,0', 'upgrade', '0,0', 'Science')
         fed = Goal('federation-7', 'root', first=7)
@@ -1378,11 +1378,12 @@ class OpeningBudgetTests(unittest.TestCase):
         state = self.track_plan_state()
         state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
                                           'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
+        state['players'][0]['resources']['knowledge'] = 8
         snapshot = {'player': 0, 'state': state, 'candidates': []}
         research = Goal('Navigation-2', 'research', target='Navigation', level=2)
         plan = Goal('track-plan-Navigation-2>colony@3,0', 'ordered', steps=(research, Goal('colony@3,0', 'colony', '3,0')))
-        # 4 knowledge + a Gaia mine three hexes away at range 1: 1 ore, 2 credits, 1 range QIC + 1 Gaia QIC.
-        self.assertEqual(tp._plan_cost(snapshot, plan), {'knowledge': 4, 'ore': 1, 'credits': 2, 'qic': 2})
+        # 8 knowledge (0→2) + a Gaia mine three hexes away at range 2: 1 ore, 2 credits, 1 range QIC + 1 Gaia QIC.
+        self.assertEqual(tp._plan_cost(snapshot, plan), {'knowledge': 8, 'ore': 1, 'credits': 2, 'qic': 2})
         tp._guide['plan_menu'] = True                                                # restored by setUp's cleanup
         with mock.patch.object(tp._value, 'production', return_value=[0]*7):        # held only: 0 QIC
             self.assertFalse(tp.plan_affordable(snapshot, plan))
@@ -1411,6 +1412,53 @@ class OpeningBudgetTests(unittest.TestCase):
             self.assertEqual(tp._plan_cost(snapshot, plan), {'ore': 1, 'credits': 2, 'qic': 2})   # range 2: 1 + Gaia 1
             self.assertTrue(tp.plan_affordable(snapshot, plan))                     # one pending step: not covered
 
+    def test_plan_cost_counts_steps_in_order(self):
+        """Debate on E88: research effects reach the later mines, research costs 4 knowledge per level, AI grants QIC."""
+        from four_factions.preparation import Goal
+        state = self.track_plan_state()
+        state['players'][0]['resources'].update(ore=12, credits=10, knowledge=8, qic=0)
+        snapshot = {'player': 0, 'state': state, 'candidates': []}
+        nav = Goal('Navigation-2', 'research', target='Navigation', level=2)
+        mine = Goal('colony@2,0', 'colony', '2,0')
+        plan = Goal('track-plan-Navigation-2>colony@2,0', 'ordered', steps=(nav, mine))
+        # (a) The Desert hex is two away: range 1 needs 1 QIC, range 2 (after Navigation 2) none.
+        self.assertEqual(tp._mine_cost(state, state['players'][0], '2,0')['qic'], 1)
+        cost = tp._plan_cost(snapshot, plan)
+        self.assertEqual((cost['knowledge'], cost['qic']), (8, 0))
+        with mock.patch.object(tp._value, 'production', return_value=[0]*7):
+            self.assertTrue(tp.plan_affordable(snapshot, plan))                     # held 0 QIC suffices only in order
+        # (b) 0→2 on one step is 8 knowledge; two steps on one track are not counted twice.
+        self.assertEqual(tp._plan_cost(snapshot, nav), {'knowledge': 8})
+        two = Goal('two', 'ordered', steps=(Goal('Navigation-1', 'research', target='Navigation', level=1), nav))
+        self.assertEqual(tp._plan_cost(snapshot, two), {'knowledge': 8})
+        state['players'][0]['research_tracks']['navigation'] = 1
+        self.assertEqual(tp._plan_cost(snapshot, nav), {'knowledge': 4})
+        state['players'][0]['research_tracks']['navigation'] = 0
+        # The AI track's QIC (1 + 1 for levels 1–2) is credited against the later QIC costs.
+        ai = Goal('ArtificialIntelligence-2', 'research', target='ArtificialIntelligence', level=2)
+        self.assertEqual(tp._plan_cost(snapshot, Goal('ai', 'ordered', steps=(ai, mine))),
+                         {'knowledge': 8, 'qic': 1-2, 'ore': cost['ore'], 'credits': cost['credits']})
+
+    def test_plan_menu_keeps_the_research_of_a_dropped_plan(self):
+        """Debate on E88: the bare research goal returns to the pool when its only covering plan is unaffordable."""
+        from four_factions.preparation import Goal
+        state = self.track_plan_state()
+        state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
+                                          'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
+        state['players'][0]['resources']['knowledge'] = 8
+        snapshot = {'player': 0, 'state': state, 'candidates': []}
+        research = Goal('Navigation-2', 'research', target='Navigation', level=2)
+        plan = Goal('track-plan-Navigation-2>colony@3,0', 'ordered', steps=(research, Goal('colony@3,0', 'colony', '3,0')))
+        tp._guide['plan_menu'] = True                                                # restored by setUp's cleanup
+        with mock.patch.object(tp._value, 'production', return_value=[0]*7), \
+                mock.patch.object(tp, 'track_plan_goals', return_value=[plan]), \
+                mock.patch.object(tp, 'fed_compare_goal', return_value=None), \
+                mock.patch.object(tp, 'token_compare_goal', return_value=None):
+            self.assertFalse(tp.plan_affordable(snapshot, plan))
+            names = [g.name for g in tp.plan_menu_goals(snapshot, [])]               # the wrapper already removed it
+            self.assertEqual(names, ['Navigation-2'])
+            self.assertEqual([g.name for g in tp.plan_menu_goals(snapshot, [research])], ['Navigation-2'])   # no duplicate
+
     def test_plan_menu_forgets_a_remembered_plan_the_budget_cannot_pay(self):
         """E86 (ㄱ): the remembered plan is dropped from the memory search gets when its steps are unaffordable."""
         import four_factions.preparation as p
@@ -1422,6 +1470,7 @@ class OpeningBudgetTests(unittest.TestCase):
         state = self.track_plan_state()
         state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
                                           'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
+        state['players'][0]['resources']['knowledge'] = 8
         snapshot = {'player': 0, 'state': state, 'candidates': []}
         plan = Goal('track-plan-Navigation-2>colony@3,0', 'ordered', steps=(
             Goal('Navigation-2', 'research', target='Navigation', level=2), Goal('colony@3,0', 'colony', '3,0')))
