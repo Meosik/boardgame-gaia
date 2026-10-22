@@ -3690,6 +3690,7 @@ FACTION_MENU = {
     # Terrans, Taklons and the Lost Fleet factions: MENU_DEFAULT (T5, K3/K4: 3 federations, no ability plan).
 }
 _menu_front = set()      # id() of the goals plan_menu put in front, read by the interleave wrapper
+_menu_slots = []         # the same goals in row order; install_plan_menu hands them to the three task lists
 
 
 def _menu_family(snapshot, goal):
@@ -3707,9 +3708,11 @@ def _menu_family(snapshot, goal):
 
 
 def plan_menu_goals(snapshot, goals):
-    """The goal list with the menu's first MENU_FIRST plans in front (faction row order)."""
+    """The goal list with the menu's first MENU_FIRST plans in front (faction row order); `_menu_slots` keeps them
+    for the interleave / scoring_pairs wrappers that place them in the comparison order (install_plan_menu)."""
     state, actor = snapshot['state'], snapshot.get('player')
     _menu_front.clear()
+    _menu_slots.clear()
     if actor is None or not isinstance(state.get('phase'), dict) or 'ActionPhase' not in state['phase']:
         return goals
     player = state['players'][actor]
@@ -3732,6 +3735,7 @@ def plan_menu_goals(snapshot, goals):
         if pick is not None:
             front.append(pick)
     _menu_front.update(id(g) for g in front)
+    _menu_slots.extend(front)
     return front + [g for g in pool if g not in front]
 
 
@@ -3775,9 +3779,17 @@ def menu_tie_break(snapshot, result):
 
 
 def install_plan_menu():
-    """goals_for: plan_menu_goals over the frozen goals; interleave_families: the menu's front stays ahead of
-    the family round-robin; fed_remember_scores keeps the root ranking for the federation / token goals;
-    search: menu_tie_break after value_max (E74)."""
+    """goals_for: plan_menu_goals over the frozen goals; interleave_families / scoring_pairs: the menu's front
+    opens the comparison order (below); fed_remember_scores keeps the root ranking for the federation / token
+    goals; search: menu_tie_break after value_max (E74).
+
+    Comparison order (E82 (ㄱ), 102 `--positions`): preparation.search and parallel_search._planned_tasks build the
+    tasks as control, goals[0], roots[0], paired[0], goals[1], roots[1], ... — a front of three kept together in the
+    goals list landed at positions 1, 4 and 7, and cap60 compares four plans, so the second slot was compared only
+    when no scoring pair existed (102: federation at p3 ×2–23 per faction, token ×0–5) and the third never. The
+    three slots are spread over the three lists instead: goals keep slot 1 (and any slot beyond the third), the
+    roots list opens with slot 2, the scoring pairs with slot 3 — positions 1, 2, 3 after control. A remembered
+    plan (search inserts it at goals[0]) still takes position 1 and pushes slot 1 to 4, as before."""
     import four_factions.preparation as p
     if not getattr(p.search, '_menu_tie', False):
         inner_search = p.search
@@ -3808,11 +3820,25 @@ def install_plan_menu():
     inner_interleave = p.interleave_families
     if not getattr(inner_interleave, '_plan_menu', False):
         def interleave_families(items, family):
-            first = [g for g in items if id(g) in _menu_front]
-            return first + inner_interleave([g for g in items if id(g) not in _menu_front], family)
+            # Only search's two calls are touched: the proposals (they carry the front) and the root-N list.
+            # quick.py (candidate indices) and source_paths.py (cores) import this name too and pass through.
+            if any(id(g) in _menu_front for g in items):
+                return _menu_slots[0:1] + _menu_slots[3:] + inner_interleave(
+                    [g for g in items if id(g) not in _menu_front], family)
+            if items and all(str(getattr(g, 'name', '')).startswith('root-') for g in items):
+                return _menu_slots[1:2] + inner_interleave(items, family)
+            return inner_interleave(items, family)
         interleave_families._plan_menu = True
         interleave_families.__wrapped__ = inner_interleave
         p.interleave_families = interleave_families
+    inner_pairs = p.scoring_pairs
+    if not getattr(inner_pairs, '_plan_menu', False):
+        def scoring_pairs(snapshot, scores, goals):
+            # Slots 2 and 3 are not in `goals` any more; the pairs are still built over them.
+            return _menu_slots[2:3] + inner_pairs(snapshot, scores, [*goals, *_menu_slots[1:3]])
+        scoring_pairs._plan_menu = True
+        scoring_pairs.__wrapped__ = inner_pairs
+        p.scoring_pairs = scoring_pairs
     _wrap_rank('_fed_remember', fed_remember_scores)
 
 

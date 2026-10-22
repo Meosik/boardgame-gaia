@@ -70,6 +70,25 @@ def family_rows(rows, faction):
     return table
 
 
+def position_rows(rows, faction):
+    """Where in the comparison order each family entered (E82 (ㄱ)): {'lengths': Counter(number of compared
+    plans per decision), family: Counter(position in the compared list), family+'-incomplete': Counter(position)}.
+    The compared list is in task order (current-choice first), so position 1 is the first proposal compared."""
+    table = defaultdict(Counter)
+    for row in rows:
+        compared = row.get('compared') or []
+        if not compared:
+            continue
+        table['lengths'][len(compared)] += 1
+        for position, plan in enumerate(compared):
+            family = family_of(plan.get('goal'), faction)
+            if family == 'plain':
+                continue
+            key = family if plan.get('complete') else f'{family}-incomplete'
+            table[key][position] += 1
+    return table
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('run_dir', type=Path)
@@ -77,6 +96,8 @@ def main():
     parser.add_argument('--factions', default='', help='comma-separated faction filter')
     parser.add_argument('--top', type=int, default=8)
     parser.add_argument('--families', action='store_true', help='comparison entry / pick / loss per plan family')
+    parser.add_argument('--positions', action='store_true',
+                        help='how many plans each decision compared and at which position each family entered')
     args = parser.parse_args()
     wanted = {f for f in args.factions.split(',') if f}
     counts = defaultdict(Counter)
@@ -122,6 +143,19 @@ def main():
                 margin = c['margin_sum']/c['lost'] if c['lost'] else 0.0
                 cells.append(f"{family} {c['entered']}/{c['picked']}/{c['lost']} (−{margin:.1f})")
             print(f"{arm} {faction:<13} " + (' · '.join(cells) if cells else '(no compared rows: run before E74)'))
+    if args.positions:
+        print('\npositions: compared = plans per decision (count ×decisions); family = position in the comparison '
+              'order (0 = current-choice) ×entries; -incomplete = the forecast did not finish')
+        for arm, faction in sorted(by_seat):
+            table = position_rows(by_seat[(arm, faction)], faction)
+            if not table:
+                print(f'{arm} {faction:<13} (no compared rows: run before E74)')
+                continue
+            lengths = ' '.join(f'{n}×{c}' for n, c in sorted(table['lengths'].items()))
+            print(f'{arm} {faction:<13} compared {lengths}')
+            for key in sorted(k for k in table if k != 'lengths'):
+                spread = ' '.join(f'p{p}×{c}' for p, c in sorted(table[key].items()))
+                print(f'    {key:<22} {spread}')
 
 
 if __name__ == '__main__':

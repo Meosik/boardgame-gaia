@@ -30,6 +30,12 @@ class PlanLabelTests(unittest.TestCase):
         self.assertAlmostEqual(table['federation']['margin_sum'], 35.5, places=6)
         self.assertEqual((table['ability']['entered'], table['ability']['picked']), (1, 0))
         self.assertEqual(table['token']['entered'], 0)   # the incomplete flip plan does not count
+        positions = pl.position_rows(rows, 'Geodens')
+        self.assertEqual(dict(positions['lengths']), {3: 2})                # the empty comparison is not a decision
+        self.assertEqual(dict(positions['federation']), {1: 2})
+        self.assertEqual(dict(positions['ability']), {2: 1})
+        self.assertEqual(dict(positions['token-incomplete']), {2: 1})
+        self.assertNotIn('plain', positions)                                # current-choice / root-N are not counted
 
 
 if __name__ == '__main__':

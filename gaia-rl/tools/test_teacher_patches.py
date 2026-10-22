@@ -1320,6 +1320,52 @@ class OpeningBudgetTests(unittest.TestCase):
             menu = tp.plan_menu_goals(snapshot, goals)                              # no tile: ability → federation → track
             self.assertEqual([g.name for g in menu[:3]], [ability2.name, 'federation-7', plan.name])
 
+    def test_install_plan_menu_spreads_the_front_over_the_three_task_lists(self):
+        """E82 (ㄱ): search compares control, goals[0], roots[0], paired[0], goals[1], ... — in 102 the menu's second
+        slot entered at position 3 (federation ×2–23 per faction) and the third never (four comparisons). The front
+        now opens the goals, roots and scoring-pair lists, so its three slots are compared at positions 1, 2, 3."""
+        import four_factions.preparation as p
+        from four_factions.preparation import Goal
+        for name in ('goals_for', 'interleave_families', 'scoring_pairs', 'search'):
+            self.addCleanup(setattr, p, name, getattr(p, name))
+        self.addCleanup(setattr, p.Policies, 'rank', p.Policies.rank)
+        state = self.track_plan_state()
+        state['round_tiles'] = [{'condition': 'BuildMineOnGaia', 'vp_per_unit': 3}]*6
+        state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
+                                          'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
+        snapshot = {'player': 0, 'state': state, 'candidates': []}
+        tile, other = Goal('colony@3,0', 'colony', '3,0'), Goal('Science@0,0', 'upgrade', '0,0', 'Science')
+        fed = Goal('federation-7', 'root', first=7)
+        plan = Goal('track-plan-Navigation-2>colony@2,0', 'ordered',
+                    steps=(Goal('Navigation-2', 'research', target='Navigation', level=2), Goal('colony@2,0', 'colony', '2,0')))
+        roots = [Goal('root-2', 'root', first=2), Goal('root-5', 'root', first=5)]
+        p.goals_for = lambda snapshot, **kwargs: [tile, other]
+        p.scoring_pairs = lambda snapshot, scores, goals: [Goal(f'tile-action-1-then-{g.name}', g.family, first=1)
+                                                           for g in goals if g.family == 'colony']
+        tp._guide['plan_menu'] = True                                                # restored by setUp's cleanup
+        tp.install_plan_menu()
+        tp.install_plan_menu()                                                       # installs once
+        with mock.patch.object(tp, 'track_plan_goals', return_value=[plan]), \
+                mock.patch.object(tp, 'fed_compare_goal', return_value=fed), \
+                mock.patch.object(tp, 'token_compare_goal', return_value=None):
+            proposals = p.goals_for(snapshot)
+        self.assertEqual([g.name for g in proposals], ['colony@3,0', 'federation-7', plan.name, 'Science@0,0'])
+        goals = p.interleave_families(proposals, lambda g: g.family)
+        self.assertEqual([g.name for g in goals], ['colony@3,0', 'Science@0,0'])  # slot 1 leads; slots 2–3 wait
+        self.assertEqual([g.name for g in p.interleave_families(roots, lambda g: g.first)],
+                         ['federation-7', 'root-2', 'root-5'])                       # slot 2 opens the roots
+        # quick.py (candidate indices) and source_paths.py (cores) call the same name: untouched, as is an empty list.
+        self.assertEqual(p.interleave_families([3, 1, 2], lambda i: i % 2), [3, 2, 1])   # the plain round-robin
+        self.assertEqual(p.interleave_families([other], lambda g: g.family), [other])
+        self.assertEqual(p.interleave_families([], lambda g: g.first), [])
+        paired = p.scoring_pairs(snapshot, [], goals)
+        self.assertEqual([g.name for g in paired], [plan.name, 'tile-action-1-then-colony@3,0'])  # slot 3 opens the pairs
+        # Part off: nothing is inserted anywhere.
+        tp._guide['plan_menu'] = False
+        self.assertEqual(p.goals_for(snapshot), [tile, other])
+        self.assertEqual(p.interleave_families(roots, lambda g: g.first), roots)
+        self.assertEqual([g.name for g in p.scoring_pairs(snapshot, [], [tile])], ['tile-action-1-then-colony@3,0'])
+
     def test_menu_tie_goes_to_the_proposed_plan_and_remembers_it(self):
         """E74: 101 pair-002 step 114 — Geodens-new-type tied current-choice at 265.89 and lost the tie."""
         spec = {'name': 'Geodens-new-type@-3,-1', 'family': 'ordered', 'first': 3, 'steps': ()}
