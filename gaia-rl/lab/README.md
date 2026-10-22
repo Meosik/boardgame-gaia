@@ -197,6 +197,8 @@ open('gaia-rl/lab/seeds.txt','a').write(''.join(h+'\n' for h in hits));print(len
   반박 b건`(반박이 있으면 앞에 `불일치 — `)으로 답한다(맞으면 고쳐 커밋, 틀리면 근거로 반박) ④ r < N이면 Claude 답 뒤에 다음 라운드. 사용자는 양쪽을 읽고
   정한다. `!solo 질문`은 Claude만(독립 답·토론·검수 없음), `!q`·`!codex`·명령은 전처럼. `DEBATE_ROUNDS=0`이면 이전 방식(검수 지적을 다음 사용자 메시지 앞에).
   한계: 토론 중 사용자가 새 메시지를 보내면 진행 중인 라운드 답이 그 뒤에 섞일 수 있다; 토론 턴도 채널 대화의 턴 수(`CLAUDE_SESSION_TURNS`)에 든다.
+  **발신 봇 제한(권장)**: env `CODEX_BOT_ID`(Codex 봇의 사용자 ID)를 두면 그 봇의 🔍 메시지만 Claude 토론 턴을 열고 지적으로 모인다(비우면 채널의
+  다른 봇 전부); 반대쪽은 `CLAUDE_BOT_ID`. 설정 뒤 `systemctl --user restart discord-claude discord-codex`.
   설치(사용자 한 번): 개발자 포털에서 두 번째 앱·봇 생성 → **Message Content Intent 켜기** → 서버에 초대(메시지 읽기·보내기·기록 보기·반응)
   → 토큰을 env 파일 `CODEX_BOT_TOKEN`에 → 위 설치 블록의 service 복사·enable. 로그 `journalctl --user -u discord-codex -n 3`에
   "connected as …; watch on". **지시·스킬 공유**: Codex는 루트 `AGENTS.md`(CLAUDE.md와 같은 내용)와 `.agents/skills`(→ `gaia-rl/lab/skills`,

@@ -27,8 +27,9 @@ see lab/discord_claude.env.example):
   CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json),
   CLAUDE_SESSION_TURNS (default 10), CLAUDE_QUICK_MODEL (default claude-sonnet-5-5, for `!q`),
   DEBATE_ROUNDS (default 1; 0 = watch only, both bots read it), DEBATE_DELAY (seconds to wait for the
-  rest of a multi-part Codex round, default 3); the Codex bot's variables (CODEX_*) live in the same
-  file; see lab/discord_codex.py.
+  rest of a multi-part Codex round, default 3), CODEX_BOT_ID (optional but recommended: only this bot's
+  🔍 messages open debate turns or count as objections; default: any other bot that is not a webhook);
+  the Codex bot's variables (CODEX_*) live in the same file; see lab/discord_codex.py.
 """
 import asyncio
 import hashlib
@@ -364,6 +365,14 @@ def addressed_to_other_bot(text, mentions_other_bot):
     return mentions_other_bot or codex_request(text) is not None
 
 
+def from_codex(author_id, is_bot, webhook_id, self_id, codex_id):
+    """True when a channel message counts as the Codex bot's: a bot that is not a webhook and not this bot, and —
+    when CODEX_BOT_ID is set — that bot only (debate 1/1 objection 2026-10-22: any bot could open a Claude turn)."""
+    if not is_bot or webhook_id is not None or author_id == self_id:
+        return False
+    return not codex_id or author_id == codex_id
+
+
 def objections_from(rows):
     """Codex's objections to this bot's last reply, read from the channel.
 
@@ -450,6 +459,7 @@ def main():
     lab_channel = int(os.environ.get('DISCORD_LAB_CHANNEL_ID') or 0)  # where lab's webhook posts
     lab_webhook = int(os.environ.get('DISCORD_LAB_WEBHOOK_ID') or 0)  # optional: only this webhook
     workdir = Path(os.path.expanduser(os.environ.get('GAIA_WORKDIR', '~/projects/gaia-work')))
+    codex_bot = int(os.environ.get('CODEX_BOT_ID') or 0)   # optional: only this bot's 🔍 messages open debate turns
     claude = os.environ.get('CLAUDE_BIN') or shutil.which('claude') or 'claude'
     turn_seconds = float(os.environ.get('CLAUDE_TURN_MINUTES', '30'))*60
     state_path = Path(os.path.expanduser(os.environ.get('GAIA_BOT_STATE', '~/.gaia-claude-bot.json')))
@@ -657,8 +667,9 @@ def main():
         is_dm = isinstance(message.channel, discord.DMChannel)
         if not is_dm and message.channel.id not in channels:
             return
-        if message.author.bot and client.user and message.author.id != client.user.id:
-            await other_bot_message(message)
+        if message.author.bot:
+            if is_codex(message):
+                await other_bot_message(message)
             return
         if message.author.id != owner:
             return
@@ -709,13 +720,16 @@ def main():
         prompt = attachment_prompt(text, saved, skipped) if message.attachments else text
         await run_turn(message.channel, key, prompt, objections=await channel_objections(message.channel, message))
 
+    def is_codex(m):
+        return from_codex(m.author.id, m.author.bot, m.webhook_id, client.user.id if client.user else 0, codex_bot)
+
     async def channel_objections(channel, before=None):
         """The Codex bot's objections since this bot's last reply in the channel (up to `before`, or the newest)."""
         rows = []
         try:
             async for m in channel.history(limit=20, before=before):
                 is_self = bool(client.user) and m.author.id == client.user.id
-                rows.append((is_self, m.author.bot and not is_self and m.webhook_id is None, m.content))
+                rows.append((is_self, is_codex(m), m.content))
         except discord.DiscordException as error:
             print(f'history failed: {error!r}', flush=True)
             return None

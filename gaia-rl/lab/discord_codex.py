@@ -292,6 +292,10 @@ def main():
                 proc.kill()
                 await proc.wait()
                 out, err = b'', f'{seconds/60:.0f}분 제한 초과로 중단'.encode()
+            except asyncio.CancelledError:   # the task was cancelled: do not leave the codex process running
+                proc.kill()
+                await proc.wait()
+                raise
             finally:
                 if stoppable:
                     running.pop('proc', None)
@@ -402,7 +406,9 @@ def main():
             own = ''
             if turn.get('own'):
                 try:
-                    own = await turn['own']   # the independent answer, when it is still being written
+                    # The independent answer, when it is still being written. Shielded: cancelling this round
+                    # (a new Claude part or owner message resets the timer) must not cancel the answer itself.
+                    own = await asyncio.shield(turn['own'])
                 except Exception as error:   # noqa: BLE001 — a failed answer is just absent from the round
                     print(f'independent answer failed: {error!r}', flush=True)
             prompt = debate_prompt(user_text, own, turn.get('exchange') or [('Claude', reply)], round_no, rounds,

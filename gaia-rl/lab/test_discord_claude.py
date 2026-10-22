@@ -139,6 +139,15 @@ class DebateTests(unittest.TestCase):
         self.assertEqual(bot.objections_from(rows), '1. 첫째\n2. 둘째')
         self.assertIn('토론', bot.SYSTEM)
 
+    def test_only_the_codex_bot_opens_debate_turns_when_its_id_is_set(self):
+        """Debate 1/1 objection 2026-10-22: without CODEX_BOT_ID any bot in the channel could open a Claude turn."""
+        self.assertTrue(bot.from_codex(7, True, None, 1, 0))      # any other bot when no id is configured
+        self.assertTrue(bot.from_codex(7, True, None, 1, 7))
+        self.assertFalse(bot.from_codex(8, True, None, 1, 7))     # another bot
+        self.assertFalse(bot.from_codex(1, True, None, 1, 0))     # this bot itself
+        self.assertFalse(bot.from_codex(7, True, 99, 1, 7))       # a webhook (lab)
+        self.assertFalse(bot.from_codex(7, False, None, 1, 7))    # a person
+
 
 class SecretEnvTests(unittest.TestCase):
     def test_model_subprocesses_do_not_inherit_tokens(self):
