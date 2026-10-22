@@ -287,6 +287,18 @@ class ChargeTableTests(unittest.TestCase):
         self.assertIn('| **전체 (좌석 평균)** | 6 | +29.7 | [+0.2, +59.2] |  |  |', text)
         self.assertIn('충전량 계산 실패', lab.charges_table({'error': 'boom'}))
 
+    def test_basics_table_row_and_error(self):
+        def arm(scale):
+            return {'stock4': {'ore': 2*scale, 'credits': 10, 'knowledge': 3, 'qic': 1},
+                    'income': {'ore': 12, 'credits': 30, 'knowledge': 6, 'qic': 0},
+                    'pass_builds': 2.5*scale, 'pass_stock': 14.0*scale}
+        text = lab.basics_table({'factions': {'Xenos': {'pairs': 4, 'A': arm(1), 'B': arm(2)},
+                                              'Ivits': {'pairs': 0, 'A': None, 'B': None}}})
+        self.assertIn('| Xenos | 4 | 2.0/10.0/3.0/1.0 → 4.0/10.0/3.0/1.0 | 12.0/30.0/6.0/0.0 → 12.0/30.0/6.0/0.0 '
+                      '| 2.5 → 5.0 | 14.0 → 28.0 |', text)
+        self.assertIn('| Ivits | 0 |', text)
+        self.assertIn('기본기 지표 계산 실패', lab.basics_table({'error': 'boom'}))
+
     def test_watch_replay_is_the_lower_game_of_the_largest_gap(self):
         def row(faction, arm, charges):
             return {'faction': faction, 'arm': arm, 'charges': charges}
