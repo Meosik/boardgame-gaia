@@ -54,11 +54,11 @@ def game_basics(game_dir):
                     last[n] = now
         if 4 in first or row is None:
             break
-        action = snap['candidates'][row['index']]['action']
+        action = snap['candidates'][row['index']].get('action') or {}   # phase candidates carry no action
         seat, rnd = snap['player'], state['round']
-        if action['type'] == 'Pass' and rnd <= 3:
+        if action.get('type') == 'Pass' and rnd <= 3 and seat is not None:
             passes[seat].append({'round': rnd, 'builds': builds[seat, rnd], 'resources': held(state, seat)})
-        elif action['type'] in BUILD_TYPES:
+        elif action.get('type') in BUILD_TYPES:
             builds[seat, rnd] += 1
         env.step(row['decision_id'], row['index'])
     if 4 not in first:
