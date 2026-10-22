@@ -41,6 +41,7 @@ from pathlib import Path
 import py_compile
 import shutil
 import sys
+import time
 
 SELF = Path(__file__).resolve()
 HERE = SELF.parent
@@ -584,14 +585,19 @@ def main():
     async def run_turn(channel, key, prompt, resume=True, quick=False, objections=None):
         """One `claude -p` turn whose reply goes to `channel`; turns run one at a time."""
         waiting[0] += 1
+        queued = time.monotonic()
         try:
-            await locked_turn(channel, key, prompt, resume, quick, objections)
+            await locked_turn(channel, key, prompt, resume, quick, objections, queued)
         finally:
             waiting[0] -= 1
         restart_if_changed()
 
-    async def locked_turn(channel, key, prompt, resume, quick=False, objections=None):
+    async def locked_turn(channel, key, prompt, resume, quick=False, objections=None, queued=None):
         async with lock:
+            # Debate 2026-10-22 (Codex): the journal showed only restarts, so queue wait and run time could not be
+            # told apart; one line per turn records both (the reply itself is sent whole at the end).
+            started = time.monotonic()
+            waited = started - (queued or started)
             note = ''
             async with channel.typing():
                 if quick:  # one-off on the quick model, no session kept, the channel conversation untouched
@@ -659,6 +665,8 @@ def main():
                     tag += f'\n🔄 대화가 {turns}턴이라 다음 메시지부터 새 대화 (맥락은 HANDOFF에서; 토큰 절약)'
                     pending_fresh.add(key)
                 save()
+            print(f'turn {key}: waited {waited:.0f}s, ran {time.monotonic() - started:.0f}s, exit {code}, '
+                  f'{"resumed" if session_id else "fresh"}, reply {len(reply)} chars', flush=True)
             await send(channel, '\n'.join(p for p in (note + reply, tag) if p))
 
     async def claude_run(argv, prompt):
