@@ -98,6 +98,48 @@ class SecondModelTests(unittest.TestCase):
         self.assertEqual(state, {})
 
 
+class DebateTests(unittest.TestCase):
+    """User 2026-10-22 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습": independent answers, then DEBATE_ROUNDS
+    rounds that this bot answers at once; `!solo` keeps Codex out."""
+
+    def test_solo_prefix_gives_the_text_and_rounds_follow_the_environment(self):
+        self.assertEqual(bot.solo_request('!solo 이건 너만 답해'), '이건 너만 답해')
+        self.assertIsNone(bot.solo_request('!solo'))
+        self.assertIsNone(bot.solo_request('진행해'))
+        self.assertIsNone(bot.quick_request('!solo 질문'))
+        self.assertFalse(bot.addressed_to_other_bot('!solo 질문', False))
+        os.environ.pop('DEBATE_ROUNDS', None)
+        self.assertEqual(bot.debate_rounds(), 1)
+        for value, rounds in (('0', 0), ('2', 2), ('-1', 0), ('x', 1)):
+            os.environ['DEBATE_ROUNDS'] = value
+            try:
+                self.assertEqual(bot.debate_rounds(), rounds)
+            finally:
+                os.environ.pop('DEBATE_ROUNDS')
+
+    def test_only_the_first_part_of_a_round_with_objections_opens_a_debate_turn(self):
+        self.assertEqual(bot.debate_round_of('🔍 코덱스(gpt-6-astra) 토론 1/1 — Claude가 바로 답한다\n1. 지적'), (1, 1))
+        self.assertEqual(bot.debate_round_of('🔍 코덱스(m) 토론 2/3 — Claude가 바로 답한다\n1. 재반박'), (2, 3))
+        self.assertIsNone(bot.debate_round_of('🔍 코덱스(gpt-6-astra) 토론 1/1: 이상 없음'))
+        self.assertIsNone(bot.debate_round_of('🔍 (계속)\n2. 둘째'))
+        self.assertIsNone(bot.debate_round_of('🔍 코덱스(gpt-6-astra) 검수 지적 — 다음 메시지에서 Claude가 받는다\n1. 지적'))
+        self.assertIsNone(bot.debate_round_of('💭 코덱스(gpt-6-astra) 독립 답\n제 생각은…\n🧠 gpt-6-astra · 읽기 전용'))
+        self.assertIsNone(bot.debate_round_of('🔍 # review-code-abc — 검수 (토론 아님)'))
+        self.assertIsNone(bot.debate_round_of(''))
+
+    def test_debate_reply_prompt_asks_for_fixes_or_rebuttals_under_the_round_header(self):
+        prompt = bot.debate_reply_prompt('1. 첫 지적', 1, 1)
+        self.assertTrue(prompt.startswith('(토론 1/1:'))
+        self.assertIn('🗣️ 토론 1/1', prompt)
+        self.assertIn('불일치', prompt)
+        self.assertTrue(prompt.endswith('1. 첫 지적\n'))
+        # the independent answer (💭) is not an objection; a round's parts are collected like the watch's
+        rows = [(False, True, '🔍 (계속)\n2. 둘째'), (False, True, '🔍 코덱스(m) 토론 1/1 — Claude가 바로 답한다\n1. 첫째'),
+                (False, True, '💭 코덱스(m) 독립 답\n내 답\n🧠 m · 읽기 전용'), (True, False, '제 답')]
+        self.assertEqual(bot.objections_from(rows), '1. 첫째\n2. 둘째')
+        self.assertIn('토론', bot.SYSTEM)
+
+
 class SecretEnvTests(unittest.TestCase):
     def test_model_subprocesses_do_not_inherit_tokens(self):
         """User 2026-10-22 "토큰을 분리하지 않아도 괜찮나?": one env file for both bots is fine only if `claude -p`

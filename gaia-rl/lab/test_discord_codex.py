@@ -71,6 +71,32 @@ class WatchTests(unittest.TestCase):
         rows = [(False, True, p) for p in reversed(long)] + [(True, False, 'reply')]
         self.assertEqual(shared.objections_from(rows).count('. 지적'), 40)
 
+    def test_debate_prompts_carry_both_answers_and_the_exchange_and_rounds_are_marked_for_the_claude_bot(self):
+        """User 2026-10-22 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습"."""
+        own = bot.own_prompt('102 결과 어때?', bot.context_block([('사용자', '앞 질문')]))
+        self.assertTrue(own.startswith(bot.OWN_NOTE))
+        self.assertIn('Claude의 답을 보지 않고', own)
+        self.assertIn('## 최근 대화', own)
+        self.assertTrue(own.endswith('## 사용자\n102 결과 어때?\n'))
+        self.assertEqual(bot.own_message('내 답', 'm'), '💭 코덱스(m) 독립 답\n내 답\n🧠 m · 읽기 전용')
+        self.assertIsNone(shared.debate_round_of(bot.own_message('내 답', 'm')))
+        exchange = [('Claude', 'A 답'), ('Codex', '1. 반박'), ('Claude', '🗣️ 토론 1/2: 수정 0건, 반박 1건')]
+        prompt = bot.debate_prompt('질문', '내 독립 답', exchange, 2, 2, 'abc1234def', 'bcd2345efa', 'bcd2345 x\n')
+        self.assertTrue(prompt.startswith('(토론 2/2.'))
+        for part in ('## 사용자\n질문', '## 네 독립 답\n내 독립 답', '## Claude\nA 답', '## Codex\n1. 반박',
+                     '## Claude\n🗣️ 토론 1/2', '## 커밋 abc1234..bcd2345', shared.CLEAN):
+            self.assertIn(part, prompt)
+        self.assertIn('## 네 독립 답\n(없음)', bot.debate_prompt('q', '', [('Claude', 'a')], 1, 1, 's', 's', ''))
+        parts = bot.debate_messages('1. 첫 지적\n2. 둘째', 'gpt-6-astra', 1, 1)
+        self.assertEqual(len(parts), 1)
+        self.assertEqual(shared.debate_round_of(parts[0]), (1, 1))
+        self.assertEqual(shared.objections_from([(False, True, parts[0]), (True, False, 'reply')]), '1. 첫 지적\n2. 둘째')
+        long = bot.debate_messages('\n'.join(f'{i}. 지적 ' + 'x'*80 for i in range(40)), 'm', 2, 3)
+        self.assertGreater(len(long), 1)
+        self.assertEqual(shared.debate_round_of(long[0]), (2, 3))
+        self.assertIsNone(shared.debate_round_of(long[1]))   # a continuation part: the Claude bot waits for it instead
+        self.assertTrue(long[1].startswith(bot.CONTINUED))
+
     def test_one_off_claude_answers_are_not_reviewed_and_settings_follow_the_environment(self):
         self.assertTrue(bot.is_one_off('답\n🧠 Sonnet 5.5 · 일회성 답(본 대화에 안 남음)'))
         self.assertFalse(bot.is_one_off('보통 답\n🧠 Fable 5.1'))

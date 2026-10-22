@@ -10,7 +10,9 @@ Commands (owner only): `!new` start a fresh conversation, `!status` show state, 
 the running turn, `!q <question>` a one-off answer on the cheaper quick model outside the channel
 conversation. A message that mentions another bot or starts with `!codex ` is for the Codex bot
 (lab/discord_codex.py) and is skipped here; Codex's 🔍 objections posted since this bot's last reply
-are put in front of the owner's next message. Turns run one at a time; later messages wait in order. A channel conversation is dropped after CLAUDE_SESSION_TURNS turns
+are put in front of the owner's next message. Debate mode (DEBATE_ROUNDS, default 1): Codex answers
+the same message independently and then posts `🔍 … 토론 r/N` rounds, each answered here at once in a
+debate turn (`🗣️ 토론 r/N`); `!solo <text>` keeps Codex out. Turns run one at a time; later messages wait in order. A channel conversation is dropped after CLAUDE_SESSION_TURNS turns
 (default 10): every resumed call re-sends the whole context, so long conversations cost far more
 tokens than a fresh one that reads HANDOFF.
 
@@ -24,7 +26,9 @@ see lab/discord_claude.env.example):
   GAIA_WORKDIR (default ~/projects/gaia-work), CLAUDE_BIN (default: claude on PATH),
   CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json),
   CLAUDE_SESSION_TURNS (default 10), CLAUDE_QUICK_MODEL (default claude-sonnet-5-5, for `!q`),
-  the Codex bot's variables (CODEX_*) live in the same file; see lab/discord_codex.py.
+  DEBATE_ROUNDS (default 1; 0 = watch only, both bots read it), DEBATE_DELAY (seconds to wait for the
+  rest of a multi-part Codex round, default 3); the Codex bot's variables (CODEX_*) live in the same
+  file; see lab/discord_codex.py.
 """
 import asyncio
 import hashlib
@@ -94,7 +98,12 @@ SYSTEM = (
     'reply and your commits, and its objections arrive at the start of the owner\'s next message as "(직전 답에 대한 '
     '코덱스 검수 지적 …)". Treat them like a review: when the owner refers to them (or asks you to respond), fix what '
     'is right and rebut what is wrong with evidence under "불일치 — "; otherwise mention in one line which ones you '
-    'accept before going on.')
+    'accept before going on. '
+    # User 2026-10-22 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습": debate mode below.
+    'Debate mode: the second model answers the owner\'s message independently at the same time as you (its answer is '
+    'in the channel as "💭 코덱스 … 독립 답"; you do not see it while answering), then posts "🔍 코덱스(모델) 토론 r/N" '
+    'with rebuttals or a better proposal, and you get a debate turn "(토론 r/N …)" to answer it: fix and commit what '
+    'is right, rebut what is wrong with evidence, keep it short. The owner reads both sides and decides.')
 
 
 def chunks(text, size=1900):
@@ -151,6 +160,56 @@ def codex_request(text):
         if text.startswith(prefix) and text[len(prefix):].strip():
             return text[len(prefix):].strip()
     return None
+
+
+# User 2026-10-22 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습" (debate mode, shared by both bots):
+# on an ordinary owner message both bots answer independently at the same time (Codex posts `💭 코덱스(모델) 독립 답`,
+# written without seeing Claude's reply); then up to DEBATE_ROUNDS (default 1) rounds of exchange — Codex reads the
+# owner's message, both answers, the exchange so far and the commits, and posts `🔍 코덱스(모델) 토론 r/N` (rebuttals or a
+# better proposal; `이상 없음` ends the debate), and this bot answers it at once in a debate turn (`🗣️ 토론 r/N`: fix and
+# commit, or rebut under "불일치 — "). `!solo 질문` is Claude alone (no independent answer, no rounds, no watch).
+# DEBATE_ROUNDS=0 is the plain watch: Codex's objections wait for the owner's next message, as before.
+SOLO_PREFIXES = ('!solo ',)
+DEBATE_HEADER = re.compile(r'^🔍[^\n]*토론\s+(\d+)/(\d+)')
+
+
+def solo_request(text):
+    """The text of a `!solo` message (Claude alone, Codex stays out), else None."""
+    for prefix in SOLO_PREFIXES:
+        if text.startswith(prefix) and text[len(prefix):].strip():
+            return text[len(prefix):].strip()
+    return None
+
+
+def debate_rounds():
+    """Rounds of exchange after the independent answers (0: watch only, objections wait for the owner)."""
+    try:
+        return max(0, int(os.environ.get('DEBATE_ROUNDS') or 1))
+    except ValueError:
+        return 1
+
+
+def debate_round_of(text):
+    """(round, rounds) of a Codex `🔍 코덱스(모델) 토론 r/N …` message with objections, else None.
+
+    A `이상 없음` round, a continuation part (`🔍 (계속)`), an independent answer (💭) and the plain watch's
+    `검수 지적` header give None: only the first part of a round with objections opens a debate turn."""
+    text = (text or '').strip()
+    match = DEBATE_HEADER.match(text)
+    body = text.split('\n', 1)[1] if '\n' in text else ''   # a `이상 없음` round is its one header line
+    if not match or not body.strip() or CLEAN in text:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
+def debate_reply_prompt(findings, round_no, rounds):
+    """What Claude gets in the debate turn that answers one Codex round."""
+    return (f'(토론 {round_no}/{rounds}: 코덱스가 네 직전 답에 반박 또는 다른 제안을 냈다(아래). 지적마다 맞으면 고쳐서 '
+            '커밋·푸시하고, 틀리면 근거(파일:줄, 숫자, 명령)를 적어 반박한다; 코덱스의 독립 답(채널의 💭 메시지)이 네 답보다 '
+            f'나은 점이 있으면 받아들인다. 답 첫 줄은 "🗣️ 토론 {round_no}/{rounds}: 수정 N건, 반박 M건"이고, 반박이 하나라도 있으면 '
+            '그 앞에 "불일치 — "를 붙여 사용자가 정하게 한다. 동의하는 지적은 한 줄로 끝낸다. 사용자가 정하기 전에는 반박한 결론을 '
+            '사이클 문서에 올리지 않는다. 짧게.)\n'
+            f'{findings}\n')
 
 
 # User 2026-10-21 "내부에서 해야할건 하고" (token saving): a resumed conversation re-sends its whole context on
@@ -557,16 +616,51 @@ def main():
         # A fresh conversation, kept as the channel's conversation so the owner can answer the proposal.
         await run_turn(target, str(target.id), review_prompt(name), resume=False)
 
+    debates = {}   # channel key -> the task waiting for the rest of a Codex round before the debate turn
+
+    async def debate_turn(channel, key, round_no, rounds):
+        """Answer one Codex round: wait DEBATE_DELAY for its continuation parts, then one resumed turn."""
+        waiting[0] += 1
+        try:
+            await asyncio.sleep(float(os.environ.get('DEBATE_DELAY') or 3))
+            findings = await channel_objections(channel)
+            if findings:
+                await run_turn(channel, key, debate_reply_prompt(findings, round_no, rounds))
+        finally:
+            waiting[0] -= 1
+            restart_if_changed()
+
+    async def other_bot_message(message):
+        """A Codex `🔍 … 토론 r/N` round with objections opens a debate turn (debate mode only, r within the rounds)."""
+        key = str(message.channel.id)
+        pending = debates.get(key)   # (task, (round, rounds)) while the rest of a round is awaited
+        round_of = debate_round_of(message.content)
+        if round_of is None:
+            if pending and not pending[0].done() and message.content.startswith('🔍'):
+                round_of = pending[1]   # a continuation part (`🔍 (계속)`) of the round being awaited
+            else:
+                return
+        if not debate_rounds() or round_of[0] > debate_rounds():
+            return
+        if pending and not pending[0].done():
+            pending[0].cancel()   # wait again: another part may follow
+        debates[key] = (asyncio.create_task(debate_turn(message.channel, key, *round_of)), round_of)
+
     @client.event
     async def on_message(message):
         if (message.webhook_id is not None and lab_channel and message.channel.id == lab_channel
                 and (not lab_webhook or message.webhook_id == lab_webhook)):
             await review_result(message)
             return
-        if message.author.id != owner or message.webhook_id is not None:
+        if message.webhook_id is not None:
             return
         is_dm = isinstance(message.channel, discord.DMChannel)
         if not is_dm and message.channel.id not in channels:
+            return
+        if message.author.bot and client.user and message.author.id != client.user.id:
+            await other_bot_message(message)
+            return
+        if message.author.id != owner:
             return
         key = str(message.channel.id)
         text = message.content.strip()
@@ -580,8 +674,9 @@ def main():
         if text == '!status':
             busy = '실행 중' if running else '대기'
             turns = f' ({state.get(key + ":turns", 0)}/{session_turn_limit()}턴)' if state.get(key) else ''
+            debate = f'토론 {debate_rounds()}라운드' if debate_rounds() else '토론 꺼짐(검수만)'
             await message.channel.send(f'상태: {busy} · 대화 {state.get(key, "(새 대화)")}{turns} · 모델 {primary_model()} '
-                                       f'· 작업 폴더 {workdir}')
+                                       f'· {debate} · 작업 폴더 {workdir}')
             return
         quick = quick_request(text)
         if quick and not message.attachments:
@@ -598,6 +693,7 @@ def main():
             return
         if not text and not message.attachments:
             return
+        text = solo_request(text) or text   # `!solo`: Claude alone; the Codex bot skips every `!` message
         await message.add_reaction('⏳' if lock.locked() else '👀')
         saved, skipped = [], []
         for attachment in message.attachments:
@@ -611,13 +707,13 @@ def main():
             await attachment.save(path)
             saved.append(path)
         prompt = attachment_prompt(text, saved, skipped) if message.attachments else text
-        await run_turn(message.channel, key, prompt, objections=await channel_objections(message))
+        await run_turn(message.channel, key, prompt, objections=await channel_objections(message.channel, message))
 
-    async def channel_objections(message):
-        """The Codex bot's objections since this bot's last reply in the channel."""
+    async def channel_objections(channel, before=None):
+        """The Codex bot's objections since this bot's last reply in the channel (up to `before`, or the newest)."""
         rows = []
         try:
-            async for m in message.channel.history(limit=20, before=message):
+            async for m in channel.history(limit=20, before=before):
                 is_self = bool(client.user) and m.author.id == client.user.id
                 rows.append((is_self, m.author.bot and not is_self and m.webhook_id is None, m.content))
         except discord.DiscordException as error:

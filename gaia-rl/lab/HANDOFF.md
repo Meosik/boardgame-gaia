@@ -147,22 +147,28 @@
 
 ## 5. 진행 중 / 다음 할 일
 
-현재 상태(2026-10-22 새벽; 최신 기록은 5a의 E72부터 역순, 그 전 기록은 `lab/HANDOFF-archive.md`):
+현재 상태(2026-10-22 낮; 최신 기록은 5a의 E72부터 역순, 그 전 기록은 `lab/HANDOFF-archive.md`):
 
-- **lab**: **비어 있음**. 101 `101-ships-vs-menu-full` 완료(10-22 01:34, 9시간 26분; 2장 표·5a E72·`cycles/101-ships-vs-menu-full.md`) — 해 없음 확인, 편입 보류,
-  **cap60-p4는 과부하(100초 넘는 결정 91개·오류 판 1) → 다음 6R 측정은 p2 spec**. 큐 없음(097·100은 보류 `_`).
+- **lab**: **`102-ships-vs-menu-tie-p2-full` 실행 중**(E75; 02:12 시작, 12:15에 24판 중 17판, ≈ 7–8시간 예상 → 끝나면 ✅ 알림이 자동 정리 턴을 연다).
+  A = ships(배포 교사), B = ships_menu + menu_tie_break, 양팔 cap60-**p2**, 판정은 큐 note의 사전 등록(1–3R 충전 해 없음 + 최종 VP 방향).
+  **정리 턴에서 볼 것**: `plan_labels.py --families`(가족별 비교 진입/채택/패배 — "밀림 vs 패배"의 답), `menu-tie` 라벨 수, 결정 시간(p2),
+  기오덴 pair별 충전, known-bad-decisions 8·9. 뒤에 `review-code-d60b9b0`(코드 검수) 대기. 101(`cycles/101-ships-vs-menu-full.md`)은 해 없음·편입 보류,
+  cap60-p4 과부하(100초 넘는 결정 91개) → 6R 측정은 p2 spec. 097·100은 보류 `_`.
 - **lab.py 새 코드**(E66 시드 자동 보충, E68 `review` 종류·A/B 결과 "검수" 절·코드 커밋 자동 검수 큐)는 101이 끝났으므로 다음 루프의 pull부터 산다(스스로 재실행; 봇은 확인 못 함).
   101은 옛 코드로 끝나 "검수" 절이 없다. 큐에 소급 검수 `review-000-charges-lab`·`review-001-e68-review-code`(각 ≤40분) — **codex가 lab 기계에
   없으면 둘 다 `failed`로 남는다**(사용자가 `codex login` 뒤 결과 두 파일을 지우고 푸시하면 다시 돈다).
-- **두 번째 모델 검수(E68)**: 코드 커밋 → lab 자동 `review-code-<커밋>` → 🔍 알림 → 봇 대응 턴(불일치는 사용자 결정). `!codex 질문`으로 Codex에 직접 질문.
-  Codex 로그인 완료(21:50, `~/.codex/auth.json`, `/usr/local/bin/codex`). 남은 것: `!codex` 연결 확인.
-- **Codex 봇(E78–E80, 10-22)**: `Codex_Big_Bro#5356` 접속 확인(04:05). E80으로 Claude 봇의 내장 Codex 제거·명령/아이콘 통일·env 파일
-  이동(`~/.config/gaia/discord-bots.env`) → **사용자 명령 대기**: env 파일 이동, service 두 개 복사·daemon-reload·재시작,
-  `claude-bot-settings.json` deny 두 줄(봇이 못 고침). 그 뒤 **토론 모드**(사용자 "둘이 따로 생각하고, 나온 의견을 가지고 토론";
-  제안: 독립 답 동시 + `DEBATE_ROUNDS` 기본 1 + `!solo`) — 사용자 "그렇게 해" 대기.
+- **두 번째 모델 검수(E68)**: 코드 커밋 → lab 자동 `review-code-<커밋>` → 🔍 알림 → 봇 대응 턴(불일치는 사용자 결정). Codex 봇 가동 확인
+  (10-22 낮, 대화 검수 지적이 들어옴). **미대응**: `review-001-e68-review-code`(lab.py E68 코드에 대한 지적 9건, 결과 파일만 있고 대응 커밋·기록 없음;
+  review-000은 279138c로 대응됨) — 사용자가 시키면 지적별 수정/반박.
+- **Codex 봇(E78–E81, 10-22)**: E80 사용자 명령 4개 완료(env 파일 `~/.config/gaia/discord-bots.env`, service 복사, 04:30 두 봇 재시작, settings deny 1feba5b).
+  **토론 모드 구현(E81, 사용자 "구현 시작해")**: 보통 메시지마다 Codex 독립 답(💭) + Claude 답 뒤 `DEBATE_ROUNDS`(기본 1)라운드(`🔍 토론 r/N` ↔
+  Claude 봇이 곧바로 `🗣️ 토론 r/N` 턴), `!solo 질문`은 Claude만, `DEBATE_ROUNDS=0`이면 이전 검수 방식. 두 봇은 유휴 때 스스로 재시작한다(같은 env 파일이라
+  사용자 명령 없음; 라운드 수를 바꾸려면 env `DEBATE_ROUNDS` 뒤 `systemctl --user restart discord-claude discord-codex`). **확인할 것**: 다음 보통 메시지에서
+  💭 → 🔍 토론 1/1 → 🗣️ 순서로 오는지, 독립 답이 너무 길거나 쓸모없으면 `OWN_NOTE`(discord_codex.py) 조정.
 - **QMD(E69·E70) 가동**: 색인 237문서·1728벡터, 허용 목록 적용됨(사용자 cp, 커밋 b942694). **봇 턴은 `qmd search`만**(E70: `qmd query`는 CPU에서 2분 초과 → 백그라운드로 떨어짐, 금지).
   추천 스킬 5개(handoff-update, code-change, bot-change, find-research, deny-list)는 제안 본문이 지난 디스코드 대화에만 있어 기록이 없음 — 사용자가 "진짜 도움될 것만"이라 했으니 만들지 않음(필요하면 다시 제안).
-- **사용자 답 대기(큐 안 넣음, 자세한 것은 5a)**: **E72 101 후속 (ㄱ) p2 재측정 · (ㄴ) 기오덴·연방 explain · (ㄷ) 트랙 가족 단독 · (ㄹ) 소급 검수** / E66 (ㄴ) 102 쿼텟 b 새 6시드 byfaction vs guide 4R · (ㄷ) 네블라 6R 대안 /
+- **사용자 답 대기(큐 안 넣음, 자세한 것은 5a)**: **E72 101 후속 (ㄷ) 트랙 가족 단독 · (ㄹ) 소급 검수**((ㄱ) p2 재측정은 102로 실행 중, (ㄴ) 기오덴·연방 explain은
+  E74로 끝남 — 다음은 102의 가족별 계측 확인) / E66 (ㄴ) 102 쿼텟 b 새 6시드 byfaction vs guide 4R · (ㄷ) 네블라 6R 대안 /
   E65 (ㄱ) 발타크 가이드 부품 종족 편입 · (ㄴ)(ㄷ) 매드 안드로이드·글린 explain 봇 턴 / E64 (ㄱ) `endgame_prices` 편입 · (ㄷ) explain /
   E62 (ㄱ) 네블라 srctracks 6R · (ㄴ) 하이브 explain · (ㄷ) 란티다 L1 범위 / E61 shipmine (ㄴ)(ㄷ) / E60 사용자 `cargo test -p gaia-engine --test reach_memo` /
   E59 (ㄴ) opening_only 코치 경로 또는 목록 삭제 / 배포 D1–D7(5a 맨 위).
@@ -183,6 +189,16 @@
 - D6(080 뒤 새 제안, 미적용). **실서버 hard 상한 20초 → 40초**(062+080 18쌍 +12.2 [+4.2, +20.2] 유의; B 최대 46.6초, 가드 60초 안). `ai_worker.py` LEVELS hard max_seconds 한 줄, D1 배포에 같이 올릴 수 있음. 선택지: 그대로 40초 / 40초 + `GAIA_AI_PARALLEL=2`(.env, 대기 상쇄, 실서버 설정 여부 미확인) / `GAIA_AI_TIMEOUT_SECS=90`로 가드 여유 / 보류. 코드 변경·배포 없음.
 
 **최근 기록(E58부터, 최신이 위; E1–E57과 종족별 편입 결정(2026-10-19)은 `lab/HANDOFF-archive.md`, E51–E57은 2026-10-22 이동)**
+- E81(2026-10-22 낮, 새 대화; Codex 검수 지적 2건 수용 — E72(ㄴ)는 E74로 끝났고 HANDOFF 5장은 102 종료를 기다리지 않고 지금 갱신 → 사용자 "구현 시작해")
+  **토론 모드**. `discord_claude.py`(공용 규칙): `solo_request`(`!solo `), `debate_rounds()`(env `DEBATE_ROUNDS` 기본 1, 0이면 검수만), `debate_round_of`
+  (Codex `🔍 … 토론 r/N` 첫 조각만 — `이상 없음` 한 줄·`🔍 (계속)`·💭·`검수 지적` 헤더는 None), `debate_reply_prompt`; 봇은 다른 봇의 토론 메시지를 받으면
+  `DEBATE_DELAY`(3초) 뒤 자기 마지막 답 이후의 🔍 조각을 모아 이어진 대화로 토론 턴(`🗣️ 토론 r/N: 수정 a건, 반박 b건`, 반박이면 `불일치 — `)을 연다;
+  `!status`에 토론 라운드, SYSTEM 프롬프트에 토론 설명. `discord_codex.py`: 보통 사용자 메시지에 👀 반응 + `own_answer`(`OWN_NOTE`, 최근 대화 맥락,
+  `💭 코덱스(모델) 독립 답`, Claude 답을 보지 않음) 동시 실행; Claude 답이 20초 멈추면 `review`가 라운드 r = round+1을 돈다 — `debate_prompt`(사용자·네 독립 답·
+  Claude 답과 지금까지의 교환·커밋 범위) → `debate_messages`(`🔍 코덱스(모델) 토론 r/N — Claude가 바로 답한다`) 또는 `토론 r/N: 이상 없음`(끝);
+  r > N이면 턴을 닫는다(Claude의 마지막 답이 최종). Claude 봇의 🤖 알림 줄은 답으로 세지 않음(전에는 20초 뒤 그 줄만 검수했음). `DEBATE_ROUNDS=0`이면
+  E78 검수 경로 그대로. README(토론 모드 절·명령/아이콘 표 💭·🗣️·`!solo`), env 예시, 6장. 테스트 Claude 봇 16·Codex 봇 7 통과. 한계: 토론 중 새 사용자 메시지가
+  오면 라운드 답이 뒤섞일 수 있음; 토론 턴도 대화 턴 수에 든다. **사용자 명령 없음**(두 봇이 유휴 때 스스로 재시작).
 - E80(2026-10-22 04:3x, Codex 지적 "clean_env()는 환경 변수 상속만 막고 토큰 파일은 작업 트리에 남아 있다" → 사용자 "보안상 토큰 읽을 일이 적어야하지. AI-DLC는 폐기된거고 multi-ai claude.md는 없는데? claude는 내부에서 codex 호출하는건 없애되, codex봇이 claude의 말에 반박하는 체계는 유지. 명령어 양식 아이콘 통일해. 구분해야할건 구분하고") **지적 수용 + 네 가지**. ① env 파일을 작업 트리 밖 `~/.config/gaia/discord-bots.env`로(두 service의 `EnvironmentFile`, env 예시 머리, README 설치 블록; 허용 목록 deny `Read(**/discord-bots.env)`·`Read(~/.config/gaia/**)`는 봇이 settings.json을 못 고쳐 사용자 추가). 한계를 README에 명시: Codex `--sandbox read-only`는 디스크 읽기를 막지 않으므로 "뒤지다 보게 되는 경로 제거"이지 읽기 차단은 아님. ② `CLAUDE.md` 다시 씀: 없는 `multi-ai/CLAUDE.md` 가져오기·AI-DLC 줄 삭제(사용자 확인 "폐기"), AGENTS.md와 같은 내용(HANDOFF·결과·충전 판정·스킬·codegraph·qmd·룰북). ③ Claude 봇에서 Codex 호출 전부 제거: `!codex` 일회성 답·`codex_exec`·`watch_turn`·`state[key:codex]`·`CODEX_WATCH` 분기·`watching` 집합 삭제; 남은 것은 라우팅(`addressed_to_other_bot`: 다른 봇 멘션 또는 `!codex `)과 채널 🔍 수집(`objections_from` → `watch_prefix`). Codex 쪽 함수(`codex_command`·`WATCH_NOTE`·`watch_prompt`·`watch_findings`·모델/바이너리)는 `discord_codex.py`로 이동; `!gpt` 별칭 삭제. ④ 통일: 받는 봇 = 멘션/접두(없으면 Claude); Codex 봇도 `!status`(`상태: 실행 중|대기 · 검수 켜짐|꺼짐 · 모델 · 작업 폴더`)·`!stop`(직접 질문 프로세스 종료)·`!new`를 멘션/`!codex` 뒤에 받음; Claude `!status`에 모델 추가; 실패 문구 `⚠️ <봇> 실행 실패 (종료 코드 N)`; 반응 👀/⏳(Codex는 작업 중이면 ⏳); 아이콘 표(🧠 꼬리·🔍 검수·🔒/🔄/🤖 Claude만·✅ lab)를 README에. 테스트 Claude 봇 12·Codex 봇 7 통과. **사용자 명령**(순서): `mkdir -p ~/.config/gaia && mv ~/projects/gaia-work/gaia-rl/lab/discord_claude.env ~/.config/gaia/discord-bots.env` → `cp gaia-rl/lab/discord-claude.service gaia-rl/lab/discord-codex.service ~/.config/systemd/user/` → `systemctl --user daemon-reload && systemctl --user restart discord-claude discord-codex` → settings deny 두 줄.
 - E79(2026-10-22 04:0x, 사용자 "아직 봇이 활성화 안됐어" → 로그 `PrivilegedIntentsRequired`(포털 Message Content Intent) → 04:05 `Codex_Big_Bro#5356` 접속, "watch off" 버그(Codex 봇이 `watch_enabled()`를 써 토큰이 있으면 스스로 꺼짐 → `watch_setting()` 분리, c8fc4c5) → "토큰을 분리하지 않아도 괜찮나? claude에 설치된 스킬도 공유해야해") **토큰 한 파일 + 지시·스킬 공유**. ① 같은 env 파일은 유지(같은 사용자·기계); 대신 `claude -p`·`codex exec`가 `clean_env()`로 떠 TOKEN·SECRET·WEBHOOK·API_KEY 변수를 상속하지 않음(그동안 `claude -p`는 `DISCORD_BOT_TOKEN`을 상속하고 있었다). ② Codex는 루트 `AGENTS.md`를 읽는데 10-05의 oh-my-hermes 자동 생성본(없는 `.omh/` 참조)이었다 → CLAUDE.md 내용(codegraph·qmd·룰북·HANDOFF 6장·충전 판정)을 Codex용으로 다시 씀. ③ 스킬: codex 바이너리가 `.agents/skills`를 읽음(문자열 확인) → `.agents/skills → ../gaia-rl/lab/skills` 링크 추가(`.claude/skills`와 같은 폴더). **참고**: CLAUDE.md의 `@/home/sohegi/projects/multi-ai/CLAUDE.md`와 `../CLAUDE.md`(AI-DLC)는 이 기계에 없다(Claude는 codegraph·룰북 두 절만 받는다) — 사용자 확인. 사용자가 정한 다음 순서: Claude 봇 안의 Codex 경로 제거 → 두 봇 양식·아이콘 통일 → 토론 모드(사용자 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습"; 설계 제안은 디스코드 04:00 답: 독립 답 동시 + `DEBATE_ROUNDS` 기본 1 + `!solo`).
 - E78(2026-10-22 새벽, 사용자 "codex, 따로 봇으로 분리해주는거에 대해 어떻게 생각해" → Claude 한도 안내 두 번 → "claude 의견을 다시 들어보자" → 조건부 찬성(직접 대화 상대로 쓰면 가치, 안정성만이면 불필요) → Codex 지적 3건 수용: 멘션 라우팅 규칙 먼저·분리의 실익은 "긴 Claude 턴 중 독립 응답 + 장애 격리"(`!codex`도 같은 잠금을 기다림)·토큰은 선행 조건 아님 → 사용자 "토큰은 넣었다, 봇을 하나 새로 더 만드는 방식으로 가자") **Codex 별도 봇**. 새 `lab/discord_codex.py`(discord_claude의 codex_command·WATCH_NOTE·watch_prompt·watch_findings·chunks를 import): `CODEX_BOT_TOKEN`으로 접속, 같은 채널·DM에서 ① 사용자가 봇을 멘션하거나 `!codex`/`!gpt`로 시작한 메시지에 최근 대화 12개를 맥락으로 붙여 `codex exec --sandbox read-only` 답(제한 `CODEX_TURN_MINUTES` 10분, 꼬리 `🧠 <모델> · 읽기 전용`) ② 대화 검수: 사용자 보통 메시지에 HEAD를 기억하고, Claude 봇(다른 봇, 웹훅 아님; `CLAUDE_BOT_ID`로 한정 가능) 메시지가 `CODEX_WATCH_DELAY` 20초 멈추면 `watch_prompt(사용자, Claude 답 합침, before..after)`로 검수 → `🔍 코덱스(<모델>) 검수 지적 …`(긴 지적은 `🔍 (계속)` 조각) 또는 `🔍 코덱스(<모델>): 이상 없음`; `!`명령 답과 `일회성 답`은 검수 안 함; lab 알림이 연 자동 턴은 "사용자 메시지 없음"으로 검수 ③ 자기·discord_claude.py 변경 시 유휴 때 재시작. `discord_claude.py`: `separate_codex()`(토큰 유무) → `watch_enabled()` False, `addressed_to_other_bot`(다른 봇 멘션 또는 `!codex`)이면 건너뜀, 턴 시작 전 채널 기록 20개에서 자기 마지막 답 뒤 다른 봇의 🔍 메시지를 `objections_from`으로 모아 `watch_prefix`로 붙임(`state[key:codex]` 경로는 봇 내장 검수용으로 유지). `discord-codex.service`, env 예시, README·6장. 테스트 Claude 봇 13·Codex 봇 4 통과. 한계: 사용자가 Claude 답을 기다리지 않고 연속으로 보내면 앞 턴의 검수는 뒤 메시지에 합쳐진다. **사용자 명령**: README "Codex 별도 봇" 설치 줄(서비스 복사·enable, Claude 봇 재시작, 포털 Intent).
@@ -284,6 +300,11 @@ GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:baseline-teacher-20260917:tools .venv/bi
   답 뒤의 🔍 메시지를 다음 사용자 메시지 앞에 `(직전 답에 대한 코덱스 검수 지적 …)`으로 붙인다 — 사용자가 언급하면 지적마다 수정 또는
   `불일치 — ` 반박, 아니면 받아들이는 지적을 한 줄로 밝히고 진행. `CODEX_WATCH=0`으로 끔. 두 봇 모두 사용자 글에만 답한다(핑퐁 없음).
   명령·아이콘 표는 `lab/README.md` "두 봇의 명령·아이콘". env 파일은 작업 트리 밖 `~/.config/gaia/discord-bots.env`(E80).
+  **토론 모드(2026-10-22, 사용자 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습" → "구현 시작해", E81; `DEBATE_ROUNDS` 기본 1)**: 보통 메시지마다
+  Codex가 Claude 답을 보지 않고 `💭 코덱스(모델) 독립 답`을 동시에 올리고, Claude 답이 멈추면 `🔍 코덱스(모델) 토론 r/N`(반박·더 나은 제안, 또는
+  `이상 없음`)을 올린다. 지적이 있으면 Claude 봇이 **곧바로** 토론 턴을 열어 준다: 지적마다 맞으면 고쳐 커밋, 틀리면 근거로 반박하고 답 첫 줄은
+  `🗣️ 토론 r/N: 수정 a건, 반박 b건`(반박이 있으면 앞에 `불일치 — `), 짧게. r < N이면 다음 라운드. 사용자가 정하기 전에는 반박한 결론을 사이클 문서에
+  올리지 않는다. `!solo 질문`은 Claude만. `DEBATE_ROUNDS=0`이면 위 검수 방식으로 돌아간다.
   **설계 검수(2026-10-22, 사용자 "실험에서 문제가 있다는건 실험을 시작하기 전에 이야기할 수 있어야지")**: `ab` 실험은 lab이
   시작 전에 큐 파일을 Codex에 검수시킨다. 지적이 있으면 보류(`queue/<이름>.design.md`, 큐 파일 `design_review`)하고
   `🔍 # <이름> — 검수 (설계, 실험 보류)` 알림으로 봇이 대응 턴을 연다. 지적을 다 받아들여 고쳤으면 `"design_review": "accepted"`로
