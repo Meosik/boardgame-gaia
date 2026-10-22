@@ -80,6 +80,10 @@ def position_rows(rows, faction):
         if not compared:
             continue
         table['lengths'][len(compared)] += 1
+        # `menu` (E84 debate): the plan_menu front the worker saw — a family generated but absent from `compared`
+        # was pushed out; a family absent from `menu` was never generated (e.g. no legal federation now).
+        for name in row.get('menu') or []:
+            table['menu'][family_of(name, faction)] += 1
         for position, plan in enumerate(compared):
             family = family_of(plan.get('goal'), faction)
             if family == 'plain':
@@ -152,8 +156,9 @@ def main():
                 print(f'{arm} {faction:<13} (no compared rows: run before E74)')
                 continue
             lengths = ' '.join(f'{n}×{c}' for n, c in sorted(table['lengths'].items()))
-            print(f'{arm} {faction:<13} compared {lengths}')
-            for key in sorted(k for k in table if k != 'lengths'):
+            menu = ' '.join(f'{f}×{c}' for f, c in sorted(table['menu'].items())) if table.get('menu') else 'not recorded'
+            print(f'{arm} {faction:<13} compared {lengths} · menu generated {menu}')
+            for key in sorted(k for k in table if k not in ('lengths', 'menu')):
                 spread = ' '.join(f'p{p}×{c}' for p, c in sorted(table[key].items()))
                 print(f'    {key:<22} {spread}')
 

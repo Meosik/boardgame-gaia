@@ -294,7 +294,7 @@ def worker(args):
                    'unsearched_comparisons': audit.get('unsearched_comparisons') or 0,
                    'completed_comparisons': len(audit.get('plans') or ()),
                    'selected': audit.get('selected'),
-                   'compared': compared_plans(audit)})
+                   'compared': compared_plans(audit), 'menu': menu_slots()})
         elif command['op'] == 'step':
             before = snapshot
             env.step(command['decision_id'], command['index'])
@@ -315,6 +315,13 @@ def compared_plans(audit):
                      'complete': bool(plan.get('complete')),
                      'value': round(value, 2) if isinstance(value, (int, float)) and math.isfinite(value) else None})
     return rows
+
+
+def menu_slots():
+    """The plan_menu front this decision generated (goal names, row order), [] without the part (E84 debate: tells
+    "never generated" from "pushed out of the comparison" without a replay)."""
+    patches = sys.modules.get('teacher_patches')
+    return [str(getattr(g, 'name', g)) for g in getattr(patches, '_menu_slots', ())]
 
 
 def digest(snapshot):
@@ -417,7 +424,8 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None):
                                             'federation_limit_hits': limits.get('federation_limit_hits', 0),
                                             **{k: reply[k] for k in ('fallback_timeout', 'unsearched_comparisons',
                                                                      'completed_comparisons', 'selected')},
-                                            'compared': reply.get('compared', [])})+'\n')
+                                            'compared': reply.get('compared', []),
+                                            'menu': reply.get('menu', [])})+'\n')
                     env.step(snapshot['decision_id'], index)
                     snapshot = json.loads(env.snapshot_json())
                     expected = digest(snapshot)
