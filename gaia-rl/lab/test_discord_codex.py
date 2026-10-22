@@ -97,6 +97,15 @@ class WatchTests(unittest.TestCase):
         self.assertIsNone(shared.debate_round_of(long[1]))   # a continuation part: the Claude bot waits for it instead
         self.assertTrue(long[1].startswith(bot.CONTINUED))
 
+    def test_a_turn_lost_in_a_restart_is_recovered_from_the_channel_but_an_automatic_turn_is_not(self):
+        """2026-10-22 12:30: the restart to the debate code lost the owner's message and reviewed the reply as an
+        automatic turn."""
+        rows = [(False, False, '💭 코덱스(m) 독립 답\n…'), (True, False, '자동 토론 방식인가?'), (False, True, '옛 답')]
+        self.assertEqual(bot.recovered_turn(rows), {'user': '자동 토론 방식인가?', 'skip': False})
+        self.assertEqual(bot.recovered_turn([(True, False, '!q 질문')]), {'user': '!q 질문', 'skip': True})
+        self.assertEqual(bot.recovered_turn([(False, True, '🤖 **x** 결과 자동 정리 시작'), (True, False, '옛 질문')]), {})
+        self.assertEqual(bot.recovered_turn([]), {})
+
     def test_one_off_claude_answers_are_not_reviewed_and_settings_follow_the_environment(self):
         self.assertTrue(bot.is_one_off('답\n🧠 Sonnet 5.5 · 일회성 답(본 대화에 안 남음)'))
         self.assertFalse(bot.is_one_off('보통 답\n🧠 Fable 5.1'))

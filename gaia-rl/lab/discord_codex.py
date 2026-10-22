@@ -178,6 +178,20 @@ def is_one_off(text):
     return FOOTER_ONE_OFF in (text or '')
 
 
+def recovered_turn(rows):
+    """The turn an owner message began when Claude's reply finds no turn in memory (this bot restarted in between).
+
+    rows: (is_owner, is_claude, content) newest first, the channel before Claude's reply. The nearest owner message
+    gives {'user', 'skip'}; a Claude 🤖 notice first means an automatic lab turn (no owner message): {}."""
+    for is_owner, is_claude, content in rows:
+        content = (content or '').strip()
+        if is_owner:
+            return {'user': content, 'skip': content.startswith('!') or not content}
+        if is_claude and content.startswith('🤖'):
+            return {}
+    return {}
+
+
 def watch_enabled():
     return os.environ.get('CODEX_WATCH', '1').strip().lower() not in ('0', '', 'false', 'no', 'off')
 
@@ -352,6 +366,17 @@ def main():
             return False
         return not claude_bot or message.author.id == claude_bot
 
+    async def recover_turn(message):
+        """The owner's message before Claude's reply, from the channel, when memory has no turn for it."""
+        rows = []
+        try:
+            async for m in message.channel.history(limit=10, before=message):
+                if m.webhook_id is None:
+                    rows.append((m.author.id == owner, is_claude(m), m.content))
+        except discord.DiscordException as error:
+            print(f'history failed: {error!r}', flush=True)
+        return recovered_turn(rows)
+
     async def review(channel, key):
         """The watch (DEBATE_ROUNDS=0) or the next debate round, started when Claude's reply went quiet."""
         rounds = shared.debate_rounds()
@@ -449,9 +474,14 @@ def main():
             return
         if is_claude(message) and watch_enabled() and not message.content.startswith('🤖'):
             # (a 🤖 line only announces an automatic turn; the reply itself follows minutes later)
-            turn = turns.setdefault(key, {'claude': [], 'exchange': [], 'round': 0})
+            turn = turns.get(key)
+            if turn is None:
+                # No turn in memory: an automatic turn (lab notice), or this bot restarted after the owner's message
+                # (2026-10-22 12:30: the restart to the debate-mode code lost "자동 토론 방식인가?" and reviewed the
+                # reply as an automatic turn, without an independent answer). The channel says which.
+                turn = turns[key] = {'claude': [], 'exchange': [], 'round': 0, **await recover_turn(message)}
             if not turn.get('before'):
-                turn['before'] = await git('rev-parse', 'HEAD')   # an automatic turn (lab notice): no owner message
+                turn['before'] = await git('rev-parse', 'HEAD')
             turn.setdefault('claude', []).append(message.content)
             turn.setdefault('exchange', []).append(('Claude', message.content))
             schedule(message.channel, key)
