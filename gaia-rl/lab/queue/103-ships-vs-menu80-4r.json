@@ -1,0 +1,9 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-22 밤 \"plan_menu 다 만들고 돌려\"; E86·E88): A = ships(배포 교사), B = ships_menu ≈80% — 102의 B(동점 처리·계측)에 E84 앞자리 p1·p2·p3 배치, E86 (ㄱ) 지불 가능성(다단계 트랙·능력 계획의 남은 단계 비용 > 보유+다음 수입이면 생성 제외·기억 해제, 커밋 da2e7d5), (ㄴ) science_when·research_when_land 조건의 트랙 계획 생성 순서 흡수(같은 커밋), (ㄷ) 결과에 기본기 표(4R 보유·1–3R 수입·패스 전 건설·패스 시 보유; 커밋 1569b38·c079dd9). 양팔 cap60-p2, 비교 4, geo-quartet 새 시드 24쌍, 4R에서 종료(≈ 10시간: 102 4R 12쌍 추정 5시간의 2배). 판정(사전 등록, 끝에 한 번만 — 중간 추가 시드 없음, 토론 1/1 코덱스 ① 수용): 1–3라운드 충전 전체(좌석 평균) 95% CI 하한 > −15면 \"해 없음\"(비열등), 하한 > 0이면 \"개선\", 상한 < 0이면 \"손해\"; 그 밖은 \"판정 불가\"(24쌍은 SE≈5로 80% 검정력에 ≈15충전). 최종 VP·기본기 표·plan_labels --families/--positions(생성/진입/채택 분리)·menu_forgot 수·결정 시간(100초 초과 수: 102에서 36개가 4R 이전)은 보조 지표. 함께 볼 것: 기오덴 pair별 충전(101·102의 −97·−98 쌍 재현 여부), 타클론 방향(102 −23.2), known-bad 8 결정의 능력 계획 생존. 위험: cap60에서 645초 경로(E82 (ㄷ))는 미확인 — 4R 종료라 5–6R 긴 결정은 빠지지만 4R 이전 36개는 남을 수 있음.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap60-p2.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu-cap60-p2.json",
+  "pairs": 24,
+  "comparisons": 4,
+  "stop_round": 3
+}
