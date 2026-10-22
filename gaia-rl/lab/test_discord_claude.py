@@ -146,6 +146,14 @@ class DebateTests(unittest.TestCase):
                 (False, False, '!debate 질문', 6, True), (False, True, '💭 코덱스(m) 독립 답\n옛 답\n🧠 m', 5, False)]
         self.assertEqual(bot.own_answer_from(rows), '내 생각은 이렇다')
         self.assertEqual(bot.own_answer_from(rows[3:]), '')
+        # Debate 2026-10-22 (Codex): a long answer comes in parts and only the first has the header — the parts up to
+        # the 🧠 footer are joined; a later Codex message (here a status line) is not part of it.
+        long = [(False, True, '상태: 대기', 14, False), (False, True, '🔍 코덱스(m) 토론 1/2 — Claude가 바로 답한다\n1. 첫째', 13, False),
+                (True, False, '제 답', 12, False), (False, True, '셋째 조각\n🧠 m · 읽기 전용', 11, False),
+                (False, True, '둘째 조각', 10, False), (False, True, '💭 코덱스(m) 독립 답\n첫째 조각', 9, False),
+                (False, False, '!debate 질문', 8, True)]
+        self.assertEqual(bot.own_answer_from(long), '첫째 조각\n둘째 조각\n셋째 조각')
+        self.assertEqual(bot.own_answer_from([(False, True, '다른 글', 3, False), *long[5:]]), '첫째 조각\n다른 글')  # no footer: all
         prompt = bot.debate_reply_prompt('1. 첫째', 1, 2, own='내 생각은 이렇다')
         self.assertIn('코덱스의 독립 답', prompt)
         self.assertIn('---\n내 생각은 이렇다\n---', prompt)

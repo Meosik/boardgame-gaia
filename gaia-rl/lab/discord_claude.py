@@ -220,16 +220,26 @@ def own_answer_from(rows):
     """The Codex bot's independent answer (💭) to the owner's last message, header and 🧠 footer dropped, or ''.
 
     rows: (is_self, is_other_bot, content, message_id, is_owner) newest first; the walk stops at the owner's message
-    (the answer may be posted before or after this bot's reply)."""
+    (the answer may be posted before or after this bot's reply). A long answer arrives in 1,900-character parts and
+    only the first carries the header (debate 2026-10-22, Codex): the Codex bot's messages after the header, up to
+    the part ending with the 🧠 footer, are the rest of it."""
+    tail = []   # the Codex bot's messages after the header, newest first
     for row in rows:
         is_other_bot, content, is_owner = row[1], (row[2] or '').strip(), row[4] if len(row) > 4 else False
         if is_owner:
             break
-        if is_other_bot and content.startswith(OWN_HEADER):
-            lines = content.split('\n')[1:]
-            if lines and lines[-1].startswith('🧠'):
-                lines = lines[:-1]
+        if not is_other_bot:
+            continue
+        if content.startswith(OWN_HEADER):
+            lines = []
+            for i, part in enumerate([content, *reversed(tail)]):
+                part_lines = part.split('\n')[1 if i == 0 else 0:]
+                ended = bool(part_lines) and part_lines[-1].startswith('🧠')
+                lines.extend(part_lines[:-1] if ended else part_lines)
+                if ended:
+                    break
             return '\n'.join(lines).strip()
+        tail = [] if content.startswith('🔍') else [*tail, content]
     return ''
 
 
