@@ -6,9 +6,5 @@
  "pairs": 24,
  "comparisons": 4,
  "stop_round": 3,
- "design_review": {
-  "findings": 3,
-  "model": "gpt-6-astra",
-  "at": "2026-10-22T22:30:56+09:00"
- }
+ "design_review": "accepted"
 }
