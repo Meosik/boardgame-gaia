@@ -1,0 +1,9 @@
+{
+ "kind": "review",
+ "note": "코드 검수 5de6b1c..0c49e6c: 2개 파일 (자동)",
+ "commits": "5de6b1c435c282f65af21094c6f24b609b1ec343..0c49e6c3f8f59a8d4bdcff9aa619776b2b7e0ff1",
+ "paths": [
+  "gaia-rl/tools/teacher_patches.py",
+  "gaia-rl/tools/test_teacher_patches.py"
+ ]
+}
