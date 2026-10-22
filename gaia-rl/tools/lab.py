@@ -531,18 +531,11 @@ REVIEW_RULES = ('너는 이 저장소의 독립 검수자다. 한국어로, 휴�
                 '확인 방법을 적고, 확신이 없으면 "확인 필요"라고 표시한다. 스타일 지적은 쓰지 않는다. '
                 '저장소는 읽기 전용이다: 파일을 고치지 말고 실험을 돌리지 마라.')
 VERDICT = re.compile(r'^결론:\s*(이상 없음|지적\s*(\d+)\s*건)', re.M)
-CODE_FILE = re.compile(r'\.(py|rs|ts|tsx|js|mjs|sh|toml|json|ya?ml)$')
-NOT_CODE = ('gaia-rl/lab/results/', 'gaia-rl/lab/queue/', 'gaia-rl/lab/seeds', '.codegraph/', 'docs/', 'package-lock.json')
 DIFF_LIMIT = 60000  # characters of diff put in the prompt; above it the reviewer runs git diff itself
 
 
 def codex_bin():
     return os.environ.get('GAIA_LAB_CODEX') or shutil.which('codex')
-
-
-def is_code(path):
-    """A file whose change is reviewed (results, queue files, seeds, docs are not)."""
-    return bool(CODE_FILE.search(path)) and not any(path.startswith(p) or path.endswith(p) for p in NOT_CODE)
 
 
 def findings(text):
@@ -678,25 +671,6 @@ def design_review(name, spec, push):
     return True
 
 
-def queue_code_review(before, after, push):
-    """Queue a review of the code files a pull changed (before..after); nothing when no code changed."""
-    if not before or not after or before == after:
-        return None
-    paths = [p for p in git('diff', '--name-only', f'{before}..{after}', check=False).stdout.split() if is_code(p)]
-    if not paths:
-        return None
-    name = f'review-code-{after[:7]}'
-    path = LAB/'queue'/f'{name}.json'
-    if path.exists() or result(name) is not None:
-        return None
-    spec = {'kind': 'review', 'note': f'코드 검수 {before[:7]}..{after[:7]}: {len(paths)}개 파일 (자동)',
-            'commits': f'{before}..{after}', 'paths': paths[:60]}
-    path.write_text(json.dumps(spec, ensure_ascii=False, indent=1)+'\n')
-    if push:
-        publish([path], f'lab: queue {name}')
-    return name
-
-
 def write_result(name, spec, status, data, body, started):
     (LAB/'results').mkdir(parents=True, exist_ok=True)
     record = {'name': name, 'kind': spec.get('kind', 'ab'), 'status': status, 'note': spec.get('note'),
@@ -805,18 +779,14 @@ def source_digest():
 def cmd_watch(args):
     print(f'lab watching {BRANCH} every {args.interval}s (Ctrl+C to stop)', flush=True)
     digest, seen, reported, low_disk = source_digest(), None, set(), False
-    head = None  # commit before the previous pull; code it changed gets a review queued
+    # No automatic `review-code-<commit>` queue any more (user 2026-10-22 "모니터링에서 codex가 리뷰하는곳도 빼"):
+    # the Codex Discord bot reviews each conversation turn with its commits; a `review` item is queued by hand.
     while True:
         try:
             pull()
             if source_digest() != digest:  # a pull changed lab.py: continue as the new version
                 print(f'[{now()}] lab.py changed: restarting', flush=True)
                 os.execv(sys.executable, [sys.executable, *sys.argv])
-            pulled = git('rev-parse', 'HEAD', check=False).stdout.strip()
-            queued = queue_code_review(head, pulled, push=True)
-            head = git('rev-parse', 'HEAD', check=False).stdout.strip()  # after the queue commit, if any
-            if queued:
-                print(f'[{now()}] queued {queued}', flush=True)
             low_disk = disk_warning(GAIA_RL, low_disk)
             seen = announce_new(seen)
             for path, error in list(_broken.items()):
