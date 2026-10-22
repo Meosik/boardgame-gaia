@@ -558,6 +558,15 @@ def main():
         for part in chunks(text):
             await channel.send(part)
 
+    async def deliver(channel, text):
+        """send() with its outcome as text for the turn log ('sent' or 'send failed: …'), so a reply lost on the
+        way to Discord is told apart from a slow turn (debate 2/2, 2026-10-22)."""
+        try:
+            await send(channel, text)
+        except Exception as exc:  # discord.HTTPException, network errors: logged, not raised into the turn
+            return f'send failed: {type(exc).__name__}: {exc}'
+        return 'sent'
+
     @client.event
     async def on_ready():
         print(f'connected as {client.user}; channels {channels}; lab channel {lab_channel or "-"}; '
@@ -606,7 +615,9 @@ def main():
                     reply, _ = summarize(out, err, code)
                     used = models_used(out)
                     tag = f"🧠 {' + '.join(model_label(m) for m in used)} · " if used else ''
-                    await send(channel, '\n'.join(p for p in (reply, tag + '일회성 답(본 대화에 안 남음)') if p))
+                    outcome = await deliver(channel, '\n'.join(p for p in (reply, tag + '일회성 답(본 대화에 안 남음)') if p))
+                    print(f'turn {key} quick: waited {waited:.0f}s, ran {time.monotonic() - started:.0f}s, exit {code}, '
+                          f'{outcome}, reply {len(reply)} chars', flush=True)
                     return
                 model = primary_model()
                 if os.environ.get('CLAUDE_MODEL'):
@@ -665,9 +676,9 @@ def main():
                     tag += f'\n🔄 대화가 {turns}턴이라 다음 메시지부터 새 대화 (맥락은 HANDOFF에서; 토큰 절약)'
                     pending_fresh.add(key)
                 save()
+            outcome = await deliver(channel, '\n'.join(p for p in (note + reply, tag) if p))
             print(f'turn {key}: waited {waited:.0f}s, ran {time.monotonic() - started:.0f}s, exit {code}, '
-                  f'{"resumed" if session_id else "fresh"}, reply {len(reply)} chars', flush=True)
-            await send(channel, '\n'.join(p for p in (note + reply, tag) if p))
+                  f'{"resumed" if session_id else "fresh"}, {outcome}, reply {len(reply)} chars', flush=True)
 
     async def claude_run(argv, prompt):
         """(stdout, stderr, exit code) of one `claude -p` process, killed after the turn limit."""
