@@ -282,7 +282,8 @@ GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:baseline-teacher-20260917:tools .venv/bi
   결과 ✅ 알림이 자동 정리 턴을 연다.
 - **간단한 코드 수정·생성은 Sonnet 서브에이전트에게(2026-10-22, 사용자 "자꾸 명령어를 만들지 말고 … sonnet을 시켜")**: 봇 스크립트
   수정, 테스트, 큐 파일, 작은 함수, 정해진 결정의 사이클·HANDOFF 편집은 Fable이 직접 쓰지 않고 전경 서브에이전트(Agent 도구,
-  model sonnet, run_in_background false)에 파일·변경 내용·테스트 명령·셸 규칙을 적어 맡긴다. Fable은 diff 확인·테스트·커밋만.
+  model sonnet, run_in_background false)에 파일·변경 내용·테스트 명령·커밋 메시지·셸 규칙을 적어 맡긴다. 서브에이전트가 편집·테스트·
+  커밋까지(테스트 실패 시 커밋 없이 보고). Fable은 보고와 `git show --stat HEAD`만 보고 푸시(이상할 때만 hunk를 읽는다).
   판단이 필요한 것(룰북 기반 엔진 룰, 여러 파일 리팩터링, 디버깅, A/B 판정)은 Fable이 직접. 새 `!` 명령은 만들지 않는다.
   허용 목록(`claude-bot-settings.json`)에 `"Agent"`가 있어야 한다(봇은 그 파일을 편집하지 못함).
 - 주제가 끝나면 아래 5장 "진행 중"을 갱신해 다음 대화가 이어받게 한다.
