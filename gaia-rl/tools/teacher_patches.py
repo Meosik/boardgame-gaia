@@ -3410,11 +3410,39 @@ def _plan_tracks(state, actor):
     caps = TRACK_CAPS.get(faction, {})
     steps = [(t, level) for start, t, level in TRACK_STEPS.get(faction, ())
              if start <= state['round'] and levels.get(t, 0) < level]
+    if _guide.get('plan_menu'):
+        steps = _menu_track_steps(state, actor, steps)
     plan = list(steps)
     for t in tracks:
         if levels.get(t, 0) < min(caps.get(t, 5), 5) and all(t != s for s, _ in plan):
             plan.append((t, _plan_level(t, levels.get(t, 0))))
     return plan
+
+
+def _menu_track_steps(state, actor, steps):
+    """E86 (ㄴ): the resource conditions of two swap rules become the track plans' generation order under
+    plan_menu (the swap rules themselves are untouched). science_when (Nevlas, Ivits; science_first): the
+    faction's round target is the Science or the Economy entry by the tiles on the board. research_when_land
+    (LAND_ROUNDS, only when no faction round target is pending): no cheap land in reach → the Navigation plan
+    leads (Terraforming at Navigation 5); land in reach and none contested → the Economy plan to ECONOMY_SWEET.
+    Contested land: the guide order stands. Order of generation only; the rollout judges."""
+    player = state['players'][actor]
+    faction, levels = player['faction'], player['research_tracks']
+    if _part(player, 'science_when') and faction in SCIENCE_WHEN:
+        entry = SCIENCE_WHEN[faction][0 if science_first(state, player) else 1]
+        steps = [(t, level) for start, t, level in entry if start <= state['round'] and levels.get(t, 0) < level]
+    if steps or state['round'] not in LAND_ROUNDS:
+        return steps
+    reach, contested = _land_counts(state, player)
+    if reach == 0:
+        lead = 'navigation' if levels.get('navigation', 0) < 5 else 'terraforming'
+    elif contested == 0 and levels.get('economy', 0) < ECONOMY_SWEET:
+        lead = 'economy'
+    else:
+        return steps
+    if levels.get(lead, 0) >= 5:
+        return steps
+    return [(lead, _plan_level(lead, levels.get(lead, 0)))]
 
 
 def _at_level(player, track, level):
@@ -3708,6 +3736,92 @@ def _menu_family(snapshot, goal):
     return getattr(goal, 'family', None)
 
 
+# E86 (ㄱ) affordability (user 2026-10-22 "기본기를 올려서 자원 량을 늘리고 불필요한 자원 소모를 줄이면"): a multi-step
+# track / ability plan whose pending steps together cost more than the resources held plus the next income is not
+# generated and, when remembered from an earlier decision, is forgotten. Plans the next income can pay stay (E75:
+# the Geodens institute plan is not forced into the same round). Costs are facts: funding_need for upgrades and
+# research, the mine at rulebook prices (1 ore + terraforming ore, 2 credits, range QIC, 1 QIC on a Gaia planet),
+# power-paid or free faction actions cost nothing here (the Ivits station's range QIC is not budgeted either).
+def _mine_cost(state, player, coord):
+    from economy.teacher import RING, ORE_PER_STEP, path_distance
+    from four_factions.value import navigation
+    planet = state['board']['hexes'][coord]['planet']
+    if planet is None:
+        return {}
+    starts = [s['hex'] for s in player['structures']]
+    qic = max(0, (path_distance(state, starts, coord)-navigation(player)+1)//2)
+    kind = planet['planet_type']
+    if kind == 'Asteroid':
+        return {'qic': qic}
+    cost = {**MINE_COST, 'qic': qic}
+    if kind == 'Gaia':
+        cost['qic'] += 1
+    elif kind in RING:
+        gap = abs(RING.index(_home_type(player))-RING.index(kind))
+        cost['ore'] += min(gap, 7-gap)*ORE_PER_STEP[player['research_tracks'].get('terraforming', 0)]
+    return cost
+
+
+def _plan_cost(snapshot, goal):
+    """{resource: n} the pending steps of `goal` still cost together."""
+    from four_factions.preparation import achieved, funding_need
+    state, actor = snapshot['state'], snapshot['player']
+    player = state['players'][actor]
+    total = {}
+    for step in goal.steps if goal.family == 'ordered' else (goal,):
+        if achieved(snapshot, actor, step):
+            continue
+        if step.family == 'colony' and step.coord:
+            cost = _mine_cost(state, player, step.coord)
+        elif step.family == 'faction-action':
+            cost = _mine_cost(state, player, step.coord) if step.target == 'Build' and step.coord else {}
+        else:
+            cost = funding_need(snapshot, step)
+        for key, n in cost.items():
+            total[key] = total.get(key, 0) + n
+    return total
+
+
+def _plan_budget(state, player):
+    """Resources held plus the next income (the booster's only once the seat has passed, as colony_options)."""
+    income = _value.production(state, player, include_booster=bool(player.get('passed')))
+    return {key: player['resources'].get(key, 0) + income[i] for i, key in enumerate(RESOURCE_KEYS)}
+
+
+def _menu_multi_step(snapshot, goal):
+    """A track / ability plan with two or more pending steps — the plans the affordability rule covers."""
+    if goal.family != 'ordered' or _menu_family(snapshot, goal) not in ('track', 'ability'):
+        return False
+    from four_factions.preparation import achieved
+    return sum(not achieved(snapshot, snapshot['player'], step) for step in goal.steps) >= 2
+
+
+def plan_affordable(snapshot, goal):
+    """False only for a multi-step track / ability plan whose pending steps cost more than held + next income."""
+    if not _menu_multi_step(snapshot, goal):
+        return True
+    state = snapshot['state']
+    budget = _plan_budget(state, state['players'][snapshot['player']])
+    return all(budget.get(key, 0) >= n for key, n in _plan_cost(snapshot, goal).items())
+
+
+def forget_unaffordable_plan(snapshot, memory):
+    """The memory with the remembered plan dropped when plan_affordable says no; (memory, dropped name or None)."""
+    from four_factions.preparation import goal_from_dict
+    key = str(snapshot.get('player'))
+    plans = memory.get('_plans') if isinstance(memory, dict) else None
+    saved = plans.get(key) if isinstance(plans, dict) else None
+    if not saved:
+        return memory, None
+    try:
+        goal = goal_from_dict(saved)
+    except TypeError:
+        return memory, None
+    if plan_affordable(snapshot, goal):
+        return memory, None
+    return {**memory, '_plans': {k: v for k, v in plans.items() if k != key}}, goal.name
+
+
 def plan_menu_goals(snapshot, goals):
     """The goal list with the menu's first MENU_FIRST plans in front (faction row order); `_menu_slots` keeps them
     for the interleave / scoring_pairs wrappers that place them in the comparison order (install_plan_menu)."""
@@ -3724,6 +3838,7 @@ def plan_menu_goals(snapshot, goals):
     covered = {step.name for plan in plans for step in plan.steps if step.family == 'research'}
     pool = [g for g in (fed_compare_goal(snapshot, part=False), token_compare_goal(snapshot, part=False)) if g]
     pool += plans + [g for g in goals if not (getattr(g, 'family', None) == 'research' and g.name in covered)]
+    pool = [g for g in pool if plan_affordable(snapshot, g)]      # E86 (ㄱ)
     condition = _round_condition(state)
     front = []
     for family in FACTION_MENU.get(player['faction'], MENU_DEFAULT):
@@ -3804,9 +3919,14 @@ def install_plan_menu():
                 if _guide.get('plan_menu'):
                     menu_tie_break(snapshot, result)
                 publish(result)
+            forgot = None
+            if _guide.get('plan_menu'):
+                memory, forgot = forget_unaffordable_plan(snapshot, memory)      # E86 (ㄱ): the memory it gets is a copy
             result = inner_search(env, snapshot, memory, publish_tie, *args, **kwargs)
             if _guide.get('plan_menu'):
                 menu_tie_break(snapshot, result)
+                if forgot:
+                    result['menu_forgot'] = forgot
             return result
         search._menu_tie = True
         search._value_max = getattr(inner_search, '_value_max', False)
