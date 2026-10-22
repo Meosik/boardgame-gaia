@@ -40,7 +40,7 @@ def _compute(job):
     from gaia_rl import Environment
     import four_factions.preparation as preparation
     from four_factions.preparation import Policies, PolicyCache, goal_from_dict
-    state_json, memory, scores, goal_dict, settings, capture_r1, horizon = job
+    state_json, memory, scores, goal_dict, settings, capture_r1, horizon, deadline = job
     budget_teacher.set_horizon(horizon)
     env = Environment.from_state_json(state_json, 2000)
     snapshot = json.loads(env.snapshot_json())
@@ -49,11 +49,11 @@ def _compute(job):
     first = goal.first
     if first is None:
         select = getattr(preparation.select_goal, '__wrapped__', preparation.select_goal)
-        first = select(env, snapshot, scores, goal, policies, math.inf)
+        first = select(env, snapshot, scores, goal, policies, deadline)
     if capture_r1:
-        result = preparation.rollout(env, snapshot, first, goal, policies, math.inf, capture_r1=True)
+        result = preparation.rollout(env, snapshot, first, goal, policies, deadline, capture_r1=True)
     else:
-        result = preparation.rollout(env, snapshot, first, goal, policies, math.inf)
+        result = preparation.rollout(env, snapshot, first, goal, policies, deadline)
     return first, result
 
 
@@ -137,9 +137,10 @@ def _prefetch(env, snapshot, memory, budget, kwargs):
         horizon = decision_horizon(snapshot) or _state['horizon']
     except ImportError:
         horizon = _state['horizon']
+    deadline = kwargs.get('hard_deadline', math.inf)
     pending = {}
     for goal in tasks[:budget]:
-        job = (state_json, policies.memory, scores, asdict(goal), settings, capture, horizon)
+        job = (state_json, policies.memory, scores, asdict(goal), settings, capture, horizon, deadline)
         pending[goal] = _state['pool'].apply_async(_compute, (job,))
     _state['prefetch'] = (_key(snapshot), memory_after, pending)
 
@@ -151,6 +152,16 @@ def _lookup(snapshot, goal, policies):
     if prefetch[1] != _memory_key(policies.memory):
         return None
     return prefetch[2][goal]
+
+
+def _drop_unfinished():
+    """At search end: jobs still running would occupy the pool for the next decision, so replace it."""
+    prefetch = _state['prefetch']
+    if prefetch is None or all(f.ready() for f in prefetch[2].values()):
+        return
+    _state['pool'].terminate()
+    _state['pool'].join()
+    _state['pool'] = multiprocessing.get_context('fork').Pool(_state['processes'])
 
 
 def install(processes):
@@ -187,7 +198,11 @@ def install(processes):
         def select_goal(env, snapshot, scores, goal, policies, deadline):
             future = _lookup(snapshot, goal, policies)
             if future is not None:
-                return future.get()[0]
+                wait = None if deadline == math.inf else max(0.0, deadline-time.monotonic())
+                try:
+                    return future.get(wait)[0]
+                except multiprocessing.TimeoutError:
+                    raise p.SearchExpired('parallel comparison passed the deadline')
             return original_select(env, snapshot, scores, goal, policies, deadline)
         select_goal.__wrapped__ = original_select
         select_goal._parallel = True
@@ -222,6 +237,7 @@ def install(processes):
                 _prefetch(env, snapshot, memory, budget_teacher._installed or 0, kwargs)
                 return original_search(env, snapshot, memory, publish, **kwargs)
             finally:
+                _drop_unfinished()
                 _state['prefetch'] = None
                 _state['root'] = None
         search._parallel = True

@@ -51,5 +51,60 @@ class ParallelSearchTests(unittest.TestCase):
               f"{searched} searched decisions", file=sys.stderr)
 
 
+class DeadlineTests(unittest.TestCase):
+    def setUp(self):
+        sys.path[:0] = [str(GAIA_RL/p) for p in ('python', 'baseline-teacher-20260917', 'tools')]
+        import parallel_search
+        self.ps = parallel_search
+        self.saved = dict(parallel_search._state)
+
+    def tearDown(self):
+        self.ps._state.clear()
+        self.ps._state.update(self.saved)
+
+    def test_drop_unfinished_replaces_pool_only_when_a_job_is_pending(self):
+        from unittest import mock
+        ready, pending = mock.Mock(), mock.Mock()
+        ready.ready.return_value = True
+        pending.ready.return_value = False
+        old = mock.Mock()
+        self.ps._state.update(pool=old, processes=2, prefetch=('k', 'm', {'a': ready}))
+        self.ps._drop_unfinished()
+        self.assertIs(self.ps._state['pool'], old)
+        old.terminate.assert_not_called()
+        self.ps._state['prefetch'] = ('k', 'm', {'a': ready, 'b': pending})
+        with mock.patch('multiprocessing.get_context') as ctx:
+            self.ps._drop_unfinished()
+        old.terminate.assert_called_once()
+        old.join.assert_called_once()
+        ctx.assert_called_with('fork')
+        ctx.return_value.Pool.assert_called_with(2)
+        self.assertIs(self.ps._state['pool'], ctx.return_value.Pool.return_value)
+
+    def test_select_goal_wrapper_raises_search_expired_at_the_deadline(self):
+        import math
+        import multiprocessing
+        import time
+        from unittest import mock
+        import budget_teacher
+        import four_factions.preparation as p
+        saved = (p.Policies.rank, p.select_goal, p.rollout, p.search, budget_teacher.set_horizon)
+        self.addCleanup(lambda: (setattr(p.Policies, 'rank', saved[0]), setattr(p, 'select_goal', saved[1]),
+                                 setattr(p, 'rollout', saved[2]), setattr(p, 'search', saved[3]),
+                                 setattr(budget_teacher, 'set_horizon', saved[4])))
+        with mock.patch('multiprocessing.get_context'):
+            self.ps.install(2)
+        future = mock.Mock()
+        future.get.side_effect = multiprocessing.TimeoutError()
+        with mock.patch.object(self.ps, '_lookup', return_value=future):
+            with self.assertRaises(p.SearchExpired):
+                p.select_goal(None, {}, [], None, None, time.monotonic() - 1)
+            wait = future.get.call_args[0][0]
+            self.assertEqual(wait, 0.0)
+            with self.assertRaises(p.SearchExpired):
+                p.select_goal(None, {}, [], None, None, math.inf)
+            self.assertIsNone(future.get.call_args[0][0])
+
+
 if __name__ == '__main__':
     unittest.main()
