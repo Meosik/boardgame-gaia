@@ -178,6 +178,12 @@ class TeacherSpecTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ab.resolve_teacher('no-such-teacher')
 
+    def test_decision_trace_passes_menu_forgot_from_the_audit_to_the_row(self):
+        # the worker loop is not callable in isolation, so check both pass-through points in the source
+        source = Path(ab.__file__).read_text()
+        self.assertIn("'menu_forgot': audit.get('menu_forgot')", source)
+        self.assertIn("'menu_forgot': reply.get('menu_forgot')", source)
+
 
 if __name__ == '__main__':
     unittest.main()
