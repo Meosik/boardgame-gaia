@@ -3736,8 +3736,11 @@ def plan_menu_goals(snapshot, goals):
 
 
 def _plain_plan(plan):
+    """current-choice and the root-N alternatives preparation.search builds from the ranking. The menu's
+    federation-N / flip-N goals also carry family 'root' (single moves, never remembered) but they are
+    proposals and take an exact tie like any other plan (review-code-d60b9b0)."""
     name = str(plan.get('goal', ''))
-    return name == 'current-choice' or name.startswith('root-') or plan.get('family') in ('current', 'root')
+    return name == 'current-choice' or name.startswith('root-') or plan.get('family') == 'current'
 
 
 def menu_tie_break(snapshot, result):
@@ -3766,7 +3769,8 @@ def menu_tie_break(snapshot, result):
     result.setdefault('menu_tie', {'replaced': result.get('selected'), 'replaced_index': result.get('index')})
     result.update(index=pick['first'], selected=f'menu-tie {pick["goal"]}')
     memory, spec, actor = result.get('memory'), pick.get('goal_spec'), snapshot.get('player')
-    if isinstance(memory, dict) and isinstance(spec, dict) and actor is not None:
+    # Family 'root' (federation-N / flip-N) is a single move: played, not remembered (as in preparation.search).
+    if isinstance(memory, dict) and isinstance(spec, dict) and actor is not None and pick.get('family') != 'root':
         memory.setdefault('_plans', {})[str(actor)] = {**spec, 'first': None}
 
 

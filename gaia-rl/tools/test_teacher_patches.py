@@ -1344,6 +1344,26 @@ class OpeningBudgetTests(unittest.TestCase):
             self.assertEqual(result['selected'], selected)
             self.assertNotIn('menu_tie', result)
 
+    def test_menu_tie_goes_to_a_federation_or_flip_proposal_without_remembering_it(self):
+        """review-code-d60b9b0: federation-N / flip-N share family 'root' with the ranking's root-N moves but are
+        menu proposals; a tie with current-choice goes to them, and a root-N tie never counts as a proposal."""
+        for name in ('federation-2', 'flip-2'):
+            plans = [{'goal': 'current-choice', 'family': 'current', 'first': 3, 'complete': True, 'value': 265.89},
+                     {'goal': name, 'family': 'root', 'first': 2, 'complete': True, 'value': 265.89,
+                      'goal_spec': {'name': name, 'family': 'root', 'first': 2, 'steps': ()}}]
+            memory = {}
+            result = {'index': 3, 'selected': 'current-choice', 'plans': plans, 'memory': memory}
+            tp.menu_tie_break({'player': 2}, result)
+            self.assertEqual((result['index'], result['selected']), (2, f'menu-tie {name}'))
+            self.assertEqual(result['menu_tie'], {'replaced': 'current-choice', 'replaced_index': 3})
+            self.assertEqual(memory, {})                                                  # single move, not remembered
+        plans = [{'goal': 'current-choice', 'family': 'current', 'first': 3, 'complete': True, 'value': 265.89},
+                 {'goal': 'root-7', 'family': 'root', 'first': 7, 'complete': True, 'value': 265.89}]
+        result = {'index': 3, 'selected': 'current-choice', 'plans': plans, 'memory': {}}
+        tp.menu_tie_break({'player': 2}, result)
+        self.assertEqual((result['index'], result['selected']), (3, 'current-choice'))
+        self.assertNotIn('menu_tie', result)
+
     def test_install_track_plans_puts_plans_first_and_drops_the_bare_research_goal(self):
         import four_factions.preparation as p
         from four_factions.preparation import Goal
