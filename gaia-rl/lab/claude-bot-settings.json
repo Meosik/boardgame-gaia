@@ -198,7 +198,9 @@
       "Bash(rtk docker compose -p gaia up:*)",
       "Bash(rtk docker compose -p gaia down:*)",
       "Bash(rtk docker compose -p gaia restart:*)",
-      "Bash(rtk bypass docker:*)"
+      "Bash(rtk bypass docker:*)",
+      "Read(**/discord-bots.env)",
+      "Read(~/.config/gaia/**)"
     ],
     "additionalDirectories": [
       "~/projects/gaia-lab/gaia-rl/runs",
