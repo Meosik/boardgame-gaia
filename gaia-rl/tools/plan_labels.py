@@ -80,10 +80,13 @@ def position_rows(rows, faction):
         if not compared:
             continue
         table['lengths'][len(compared)] += 1
-        # `menu` (E84 debate): the plan_menu front the worker saw — a family generated but absent from `compared`
-        # was pushed out; a family absent from `menu` was never generated (e.g. no legal federation now).
+        # E84 debate: `menu_pool` = every menu-family goal plan_menu generated, `menu` = the front it kept. A family in
+        # neither was never generated (e.g. no legal federation now); in the pool but not the front sat behind the
+        # third slot; in the front but not in `compared` was pushed out of the comparison.
+        for name in row.get('menu_pool') or []:
+            table['generated'][family_of(name, faction)] += 1
         for name in row.get('menu') or []:
-            table['menu'][family_of(name, faction)] += 1
+            table['front'][family_of(name, faction)] += 1
         for position, plan in enumerate(compared):
             family = family_of(plan.get('goal'), faction)
             if family == 'plain':
@@ -156,9 +159,10 @@ def main():
                 print(f'{arm} {faction:<13} (no compared rows: run before E74)')
                 continue
             lengths = ' '.join(f'{n}×{c}' for n, c in sorted(table['lengths'].items()))
-            menu = ' '.join(f'{f}×{c}' for f, c in sorted(table['menu'].items())) if table.get('menu') else 'not recorded'
-            print(f'{arm} {faction:<13} compared {lengths} · menu generated {menu}')
-            for key in sorted(k for k in table if k not in ('lengths', 'menu')):
+            cells = lambda key: (' '.join(f'{f}×{c}' for f, c in sorted(table[key].items()))
+                                 if table.get(key) else 'not recorded')
+            print(f'{arm} {faction:<13} compared {lengths} · menu generated {cells("generated")} · front {cells("front")}')
+            for key in sorted(k for k in table if k not in ('lengths', 'generated', 'front')):
                 spread = ' '.join(f'p{p}×{c}' for p, c in sorted(table[key].items()))
                 print(f'    {key:<22} {spread}')
 

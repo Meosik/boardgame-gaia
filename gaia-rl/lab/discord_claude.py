@@ -373,22 +373,35 @@ def from_codex(author_id, is_bot, webhook_id, self_id, codex_id):
     return not codex_id or author_id == codex_id
 
 
-def objections_from(rows):
-    """Codex's objections to this bot's last reply, read from the channel.
+def collect_objections(rows, handled=()):
+    """(Codex's objections to this bot's last reply, ids of the 🔍 messages they came from), read from the channel.
 
-    rows: (is_self, is_other_bot, content) newest first; the walk stops at this bot's own last message.
+    rows: (is_self, is_other_bot, content[, message_id]) newest first; the walk stops at this bot's own last message.
     Collected: the other bot's messages starting with 🔍 (the watch's header or a continuation), header line
-    dropped; its 🧠 answers to the owner and '이상 없음' lines are not objections."""
-    found = []
-    for is_self, is_other_bot, content in rows:
+    dropped; its 🧠 answers to the owner and '이상 없음' lines are not objections. Messages whose id is in `handled`
+    were answered already (a debate turn or an earlier prefix) and are skipped — debate 2026-10-22: the owner's
+    next message can arrive before the debate reply is posted, and the history before that message then holds the
+    round's 🔍 but not the reply, so the walk alone handed the same objections to Claude twice."""
+    found, ids = [], []
+    for is_self, is_other_bot, content, *rest in rows:
         if is_self:
             break
+        message_id = rest[0] if rest else None
         content = (content or '').strip()
         if is_other_bot and content.startswith('🔍') and CLEAN not in content:
+            if message_id is not None and message_id in handled:
+                continue
             body = content.split('\n', 1)[1] if '\n' in content else ''
             if body.strip():
                 found.append(body.strip())
-    return '\n'.join(reversed(found))
+                if message_id is not None:
+                    ids.append(message_id)
+    return '\n'.join(reversed(found)), ids
+
+
+def objections_from(rows, handled=()):
+    """The objections text alone (see collect_objections)."""
+    return collect_objections(rows, handled)[0]
 
 
 def watch_prefix(findings):
@@ -633,8 +646,9 @@ def main():
         waiting[0] += 1
         try:
             await asyncio.sleep(float(os.environ.get('DEBATE_DELAY') or 3))
-            findings = await channel_objections(channel)
+            findings, ids = await channel_objections(channel)
             if findings:
+                mark_handled(key, ids)
                 await run_turn(channel, key, debate_reply_prompt(findings, round_no, rounds))
         finally:
             waiting[0] -= 1
@@ -718,22 +732,32 @@ def main():
             await attachment.save(path)
             saved.append(path)
         prompt = attachment_prompt(text, saved, skipped) if message.attachments else text
-        await run_turn(message.channel, key, prompt, objections=await channel_objections(message.channel, message))
+        objections, ids = await channel_objections(message.channel, message)
+        mark_handled(key, ids)
+        await run_turn(message.channel, key, prompt, objections=objections)
 
     def is_codex(m):
         return from_codex(m.author.id, m.author.bot, m.webhook_id, client.user.id if client.user else 0, codex_bot)
 
+    def mark_handled(key, ids):
+        """Remember the 🔍 messages Claude has answered (the last 50 per channel) so no prefix repeats them."""
+        if ids:
+            state[f'{key}:handled'] = (list(state.get(f'{key}:handled') or []) + list(ids))[-50:]
+            save()
+
     async def channel_objections(channel, before=None):
-        """The Codex bot's objections since this bot's last reply in the channel (up to `before`, or the newest)."""
-        rows = []
+        """(The Codex bot's objections since this bot's last reply in the channel — up to `before`, or the newest —
+        or None, ids of their messages); objections already answered in this channel are skipped."""
+        key, rows = str(channel.id), []
         try:
             async for m in channel.history(limit=20, before=before):
                 is_self = bool(client.user) and m.author.id == client.user.id
-                rows.append((is_self, is_codex(m), m.content))
+                rows.append((is_self, is_codex(m), m.content, m.id))
         except discord.DiscordException as error:
             print(f'history failed: {error!r}', flush=True)
-            return None
-        return objections_from(rows) or None
+            return None, []
+        findings, ids = collect_objections(rows, set(state.get(f'{key}:handled') or []))
+        return findings or None, ids
 
     client.run(token)
 

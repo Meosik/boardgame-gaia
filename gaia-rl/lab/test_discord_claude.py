@@ -90,6 +90,13 @@ class SecondModelTests(unittest.TestCase):
         ]
         self.assertEqual(bot.objections_from(rows), '1. 첫 지적\n2. 둘째 지적')
         self.assertEqual(bot.objections_from([(False, True, '🔍 코덱스(gpt-6-astra): 이상 없음'), (True, False, 'x')]), '')
+        # Debate 2026-10-22: the owner wrote before the debate reply was posted, so the history before that message
+        # still held the round's 🔍 — answered messages are remembered by id and skipped.
+        rows = [(False, False, '턴을 잘 모르겠는데?', 9), (False, True, '🔍 (계속)\n2. 둘째', 8),
+                (False, True, '🔍 코덱스(gpt-6-astra) 토론 1/1 — Claude가 바로 답한다\n1. 첫째', 7), (True, False, '제 답', 6)]
+        self.assertEqual(bot.collect_objections(rows), ('1. 첫째\n2. 둘째', [8, 7]))
+        self.assertEqual(bot.collect_objections(rows, handled={7, 8}), ('', []))
+        self.assertEqual(bot.collect_objections(rows, handled={7}), ('2. 둘째', [8]))
         prefix = bot.watch_prefix('1. 지적')
         self.assertTrue(prefix.startswith('(직전 답에 대한 코덱스 검수 지적'))
         self.assertIn('불일치', prefix)

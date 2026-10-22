@@ -3691,6 +3691,7 @@ FACTION_MENU = {
 }
 _menu_front = set()      # id() of the goals plan_menu put in front, read by the interleave wrapper
 _menu_slots = []         # the same goals in row order; install_plan_menu hands them to the three task lists
+_menu_pool = []          # every federation / token / track / ability goal generated this decision (front or not)
 
 
 def _menu_family(snapshot, goal):
@@ -3713,6 +3714,7 @@ def plan_menu_goals(snapshot, goals):
     state, actor = snapshot['state'], snapshot.get('player')
     _menu_front.clear()
     _menu_slots.clear()
+    _menu_pool.clear()
     if actor is None or not isinstance(state.get('phase'), dict) or 'ActionPhase' not in state['phase']:
         return goals
     player = state['players'][actor]
@@ -3736,6 +3738,9 @@ def plan_menu_goals(snapshot, goals):
             front.append(pick)
     _menu_front.update(id(g) for g in front)
     _menu_slots.extend(front)
+    # Debate 2026-10-22 (Codex): the front alone cannot tell "never generated" from "generated, behind the third
+    # slot" (Geodens' token is fourth in its row); the worker records both lists.
+    _menu_pool.extend(g for g in pool if _menu_family(snapshot, g) in ('federation', 'token', 'track', 'ability'))
     return front + [g for g in pool if g not in front]
 
 

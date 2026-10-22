@@ -18,7 +18,8 @@ class PlanLabelTests(unittest.TestCase):
                 {'goal': 'current-choice', 'value': 265.9, 'complete': True},
                 {'goal': 'federation-2', 'value': 230.4, 'complete': True},
                 {'goal': 'Geodens-new-type@-3,-1', 'value': 265.9, 'complete': True}]},
-            {'selected': 'value-max federation-5', 'menu': ['colony@3,0', 'federation-5', 'flip-3'], 'compared': [
+            {'selected': 'value-max federation-5', 'menu': ['colony@3,0', 'federation-5', 'flip-3'],
+             'menu_pool': ['federation-5', 'flip-3', 'track-plan-Navigation-2>colony@2,0'], 'compared': [
                 {'goal': 'current-choice', 'value': 250.0, 'complete': True},
                 {'goal': 'federation-5', 'value': 260.0, 'complete': True},
                 {'goal': 'flip-3', 'value': None, 'complete': False}]},
@@ -36,7 +37,8 @@ class PlanLabelTests(unittest.TestCase):
         self.assertEqual(dict(positions['ability']), {2: 1})
         self.assertEqual(dict(positions['token-incomplete']), {2: 1})
         self.assertNotIn('plain', positions)                                # current-choice / root-N are not counted
-        self.assertEqual(dict(positions['menu']), {'other': 1, 'federation': 1, 'token': 1})   # generated slots
+        self.assertEqual(dict(positions['generated']), {'federation': 1, 'token': 1, 'track': 1})  # the pool
+        self.assertEqual(dict(positions['front']), {'other': 1, 'federation': 1, 'token': 1})      # the slots kept
 
 
 if __name__ == '__main__':

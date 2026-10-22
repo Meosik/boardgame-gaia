@@ -294,7 +294,7 @@ def worker(args):
                    'unsearched_comparisons': audit.get('unsearched_comparisons') or 0,
                    'completed_comparisons': len(audit.get('plans') or ()),
                    'selected': audit.get('selected'),
-                   'compared': compared_plans(audit), 'menu': menu_slots()})
+                   'compared': compared_plans(audit), 'menu': menu_slots(), 'menu_pool': menu_slots('_menu_pool')})
         elif command['op'] == 'step':
             before = snapshot
             env.step(command['decision_id'], command['index'])
@@ -317,11 +317,12 @@ def compared_plans(audit):
     return rows
 
 
-def menu_slots():
-    """The plan_menu front this decision generated (goal names, row order), [] without the part (E84 debate: tells
-    "never generated" from "pushed out of the comparison" without a replay)."""
+def menu_slots(attribute='_menu_slots'):
+    """Goal names plan_menu kept for this decision: the front (`_menu_slots`, row order) or every menu-family goal it
+    generated (`_menu_pool`); [] without the part. E84 debate: generated vs front vs compared tells "never generated"
+    from "behind the third slot" from "pushed out of the comparison" without a replay."""
     patches = sys.modules.get('teacher_patches')
-    return [str(getattr(g, 'name', g)) for g in getattr(patches, '_menu_slots', ())]
+    return [str(getattr(g, 'name', g)) for g in getattr(patches, attribute, ())]
 
 
 def digest(snapshot):
@@ -425,7 +426,8 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None):
                                             **{k: reply[k] for k in ('fallback_timeout', 'unsearched_comparisons',
                                                                      'completed_comparisons', 'selected')},
                                             'compared': reply.get('compared', []),
-                                            'menu': reply.get('menu', [])})+'\n')
+                                            'menu': reply.get('menu', []),
+                                            'menu_pool': reply.get('menu_pool', [])})+'\n')
                     env.step(snapshot['decision_id'], index)
                     snapshot = json.loads(env.snapshot_json())
                     expected = digest(snapshot)
