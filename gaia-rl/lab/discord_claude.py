@@ -9,10 +9,11 @@ run it by hand. A channel keeps one conversation (`--resume`) until `!new`.
 Commands (owner only): `!new` start a fresh conversation, `!status` show state, `!stop` cancel
 the running turn, `!q <question>` a one-off answer on the cheaper quick model outside the channel
 conversation. A message that mentions another bot or starts with `!codex ` is for the Codex bot
-(lab/discord_codex.py) and is skipped here; Codex's 🔍 objections posted since this bot's last reply
-are put in front of the owner's next message. Debate mode (DEBATE_ROUNDS, default 1): Codex answers
-the same message independently and then posts `🔍 … 토론 r/N` rounds, each answered here at once in a
-debate turn (`🗣️ 토론 r/N`); `!solo <text>` keeps Codex out. Turns run one at a time; later messages wait in order. A channel conversation is dropped after CLAUDE_SESSION_TURNS turns
+(lab/discord_codex.py) and is skipped here. After each reply Codex posts a review round `🔍 … 토론 1/1`
+(rebuttals and its own view), answered here at once in a debate turn (`🗣️ 토론 1/1`); `!debate <text>` /
+`!토론 <text>` makes Codex answer the message itself too (💭) and runs DEBATE_ROUNDS (default 2) rounds;
+`!solo <text>` keeps Codex out. Unanswered 🔍 objections are put in front of the owner's next message.
+Turns run one at a time; later messages wait in order. A channel conversation is dropped after CLAUDE_SESSION_TURNS turns
 (default 10): every resumed call re-sends the whole context, so long conversations cost far more
 tokens than a fresh one that reads HANDOFF.
 
@@ -101,10 +102,13 @@ SYSTEM = (
     'is right and rebut what is wrong with evidence under "불일치 — "; otherwise mention in one line which ones you '
     'accept before going on. '
     # User 2026-10-22 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습": debate mode below.
-    'Debate mode: the second model answers the owner\'s message independently at the same time as you (its answer is '
-    'in the channel as "💭 코덱스 … 독립 답"; you do not see it while answering), then posts "🔍 코덱스(모델) 토론 r/N" '
-    'with rebuttals or a better proposal, and you get a debate turn "(토론 r/N …)" to answer it: fix and commit what '
-    'is right, rebut what is wrong with evidence, keep it short. The owner reads both sides and decides.')
+    'Review and debate: after every answer of yours the second model posts "🔍 코덱스(모델) 토론 r/N" with rebuttals '
+    'or its own proposal, and you get a debate turn "(토론 r/N …)" to answer it: fix and commit what is right, rebut '
+    'what is wrong with evidence, keep it short; an ordinary message has one round, then the owner decides. When '
+    'the owner asked for a debate ("!debate"/"!토론" message) the second model also answered the question '
+    'independently ("💭 코덱스 … 독립 답"; you do not see it while answering, your debate turn quotes it so you take '
+    'or rebut it too) and there are DEBATE_ROUNDS rounds (default 2: your rebuttal, its re-rebuttal, your answer). '
+    'The owner reads both sides and decides.')
 
 
 def chunks(text, size=1900):
@@ -163,15 +167,21 @@ def codex_request(text):
     return None
 
 
-# User 2026-10-22 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습" (debate mode, shared by both bots):
-# on an ordinary owner message both bots answer independently at the same time (Codex posts `💭 코덱스(모델) 독립 답`,
-# written without seeing Claude's reply); then up to DEBATE_ROUNDS (default 1) rounds of exchange — Codex reads the
-# owner's message, both answers, the exchange so far and the commits, and posts `🔍 코덱스(모델) 토론 r/N` (rebuttals or a
-# better proposal; `이상 없음` ends the debate), and this bot answers it at once in a debate turn (`🗣️ 토론 r/N`: fix and
-# commit, or rebut under "불일치 — "). `!solo 질문` is Claude alone (no independent answer, no rounds, no watch).
-# DEBATE_ROUNDS=0 is the plain watch: Codex's objections wait for the owner's next message, as before.
+# User 2026-10-22 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습" → (evening) "내가 원하는 체계는 일반 나 > 클로드 > 클로드
+# 반박 + 자기주장하는 코덱스 > 클로드가 수용 혹은 등등 > 나; 토론은 나 > 클로드, 코덱스 > 클로드 반박 > 코덱스 재반박" (shared by both bots):
+# - an ordinary owner message: Claude answers; Codex reviews the answer (rebuttals and its own view) and posts
+#   `🔍 코덱스(모델) 토론 1/1`; this bot answers it at once in a debate turn (`🗣️ 토론 1/1`: fix and commit, or rebut
+#   under "불일치 — "); then the owner. No independent Codex answer.
+# - `!debate 질문` / `!토론 질문`: both bots answer independently at the same time (Codex posts `💭 코덱스(모델) 독립 답`,
+#   written without seeing Claude's reply), then DEBATE_ROUNDS (default 2) rounds: Codex `🔍 … 토론 1/N` (having read
+#   both answers), this bot's `🗣️ 토론 1/N` (its debate prompt carries the 💭 answer, so it rebuts that too), Codex's
+#   re-rebuttal `🔍 … 토론 2/N`, this bot's answer. `이상 없음` ends a debate early.
+# - a lab notice's automatic turn is reviewed like an ordinary message (one round).
+# `!solo 질문` is Claude alone (no review, no rounds). DEBATE_ROUNDS=0 turns `!debate` into an ordinary message.
 SOLO_PREFIXES = ('!solo ',)
+DEBATE_PREFIXES = ('!debate ', '!토론 ')
 DEBATE_HEADER = re.compile(r'^🔍[^\n]*토론\s+(\d+)/(\d+)')
+OWN_HEADER = '💭 코덱스'   # the Codex bot's independent answer (lab/discord_codex.OWN_HEADER)
 
 
 def solo_request(text):
@@ -182,12 +192,45 @@ def solo_request(text):
     return None
 
 
+def debate_request(text):
+    """The text of a `!debate` / `!토론` message (both bots answer, then DEBATE_ROUNDS rounds), else None."""
+    for prefix in DEBATE_PREFIXES:
+        if text.startswith(prefix) and text[len(prefix):].strip():
+            return text[len(prefix):].strip()
+    return None
+
+
 def debate_rounds():
-    """Rounds of exchange after the independent answers (0: watch only, objections wait for the owner)."""
+    """Rounds of exchange a `!debate` message gets after the independent answers (0: none, it is an ordinary message)."""
     try:
-        return max(0, int(os.environ.get('DEBATE_ROUNDS') or 1))
+        return max(0, int(os.environ.get('DEBATE_ROUNDS') or 2))
     except ValueError:
-        return 1
+        return 2
+
+
+def rounds_for(text):
+    """Rounds of Codex review → Claude answer an owner message gets: a `!debate` request DEBATE_ROUNDS, else one
+    (Codex's review of Claude's answer and Claude's response; the owner then decides)."""
+    if debate_request(text or '') is not None and debate_rounds():
+        return debate_rounds()
+    return 1
+
+
+def own_answer_from(rows):
+    """The Codex bot's independent answer (💭) to the owner's last message, header and 🧠 footer dropped, or ''.
+
+    rows: (is_self, is_other_bot, content, message_id, is_owner) newest first; the walk stops at the owner's message
+    (the answer may be posted before or after this bot's reply)."""
+    for row in rows:
+        is_other_bot, content, is_owner = row[1], (row[2] or '').strip(), row[4] if len(row) > 4 else False
+        if is_owner:
+            break
+        if is_other_bot and content.startswith(OWN_HEADER):
+            lines = content.split('\n')[1:]
+            if lines and lines[-1].startswith('🧠'):
+                lines = lines[:-1]
+            return '\n'.join(lines).strip()
+    return ''
 
 
 def debate_round_of(text):
@@ -203,13 +246,16 @@ def debate_round_of(text):
     return int(match.group(1)), int(match.group(2))
 
 
-def debate_reply_prompt(findings, round_no, rounds):
-    """What Claude gets in the debate turn that answers one Codex round."""
+def debate_reply_prompt(findings, round_no, rounds, own=''):
+    """What Claude gets in the debate turn that answers one Codex round; `own` is Codex's independent answer (💭)
+    when the owner asked for a debate, so Claude can take or rebut it as well."""
+    own_part = (f'\n코덱스의 독립 답(같은 질문에 네 답을 보지 않고 쓴 것): 네 답보다 나은 점은 받아들이고, 틀린 점은 근거를 들어 '
+                f'반박한다.\n---\n{own.strip()}\n---\n' if own and own.strip() else '')
     return (f'(토론 {round_no}/{rounds}: 코덱스가 네 직전 답에 반박 또는 다른 제안을 냈다(아래). 지적마다 맞으면 고쳐서 '
-            '커밋·푸시하고, 틀리면 근거(파일:줄, 숫자, 명령)를 적어 반박한다; 코덱스의 독립 답(채널의 💭 메시지)이 네 답보다 '
-            f'나은 점이 있으면 받아들인다. 답 첫 줄은 "🗣️ 토론 {round_no}/{rounds}: 수정 N건, 반박 M건"이고, 반박이 하나라도 있으면 '
+            '커밋·푸시하고, 틀리면 근거(파일:줄, 숫자, 명령)를 적어 반박한다. '
+            f'답 첫 줄은 "🗣️ 토론 {round_no}/{rounds}: 수정 N건, 반박 M건"이고, 반박이 하나라도 있으면 '
             '그 앞에 "불일치 — "를 붙여 사용자가 정하게 한다. 동의하는 지적은 한 줄로 끝낸다. 사용자가 정하기 전에는 반박한 결론을 '
-            '사이클 문서에 올리지 않는다. 짧게.)\n'
+            f'사이클 문서에 올리지 않는다. 짧게.){own_part}\n'
             f'{findings}\n')
 
 
@@ -646,10 +692,10 @@ def main():
         waiting[0] += 1
         try:
             await asyncio.sleep(float(os.environ.get('DEBATE_DELAY') or 3))
-            findings, ids = await channel_objections(channel)
+            findings, ids, own = await channel_objections(channel)
             if findings:
                 mark_handled(key, ids)
-                await run_turn(channel, key, debate_reply_prompt(findings, round_no, rounds))
+                await run_turn(channel, key, debate_reply_prompt(findings, round_no, rounds, own if round_no == 1 else ''))
         finally:
             waiting[0] -= 1
             restart_if_changed()
@@ -664,7 +710,9 @@ def main():
                 round_of = pending[1]   # a continuation part (`🔍 (계속)`) of the round being awaited
             else:
                 return
-        if not debate_rounds() or round_of[0] > debate_rounds():
+        # The header's N is the Codex bot's count for this message (1 for an ordinary message, DEBATE_ROUNDS for a
+        # `!debate` one); r beyond N, or an N beyond what this bot allows, opens nothing.
+        if round_of[0] > round_of[1] or round_of[1] > max(1, debate_rounds()):
             return
         if pending and not pending[0].done():
             pending[0].cancel()   # wait again: another part may follow
@@ -699,7 +747,7 @@ def main():
         if text == '!status':
             busy = '실행 중' if running else '대기'
             turns = f' ({state.get(key + ":turns", 0)}/{session_turn_limit()}턴)' if state.get(key) else ''
-            debate = f'토론 {debate_rounds()}라운드' if debate_rounds() else '토론 꺼짐(검수만)'
+            debate = f'검수 1라운드 · !debate {debate_rounds()}라운드' if debate_rounds() else '검수 1라운드 · !debate 꺼짐'
             await message.channel.send(f'상태: {busy} · 대화 {state.get(key, "(새 대화)")}{turns} · 모델 {primary_model()} '
                                        f'· {debate} · 작업 폴더 {workdir}')
             return
@@ -718,7 +766,9 @@ def main():
             return
         if not text and not message.attachments:
             return
-        text = solo_request(text) or text   # `!solo`: Claude alone; the Codex bot skips every `!` message
+        # `!solo`: Claude alone (the Codex bot skips `!` messages); `!debate`/`!토론`: the Codex bot answers too and
+        # the review runs DEBATE_ROUNDS rounds. Either prefix is dropped from the prompt.
+        text = solo_request(text) or debate_request(text) or text
         await message.add_reaction('⏳' if lock.locked() else '👀')
         saved, skipped = [], []
         for attachment in message.attachments:
@@ -732,7 +782,7 @@ def main():
             await attachment.save(path)
             saved.append(path)
         prompt = attachment_prompt(text, saved, skipped) if message.attachments else text
-        objections, ids = await channel_objections(message.channel, message)
+        objections, ids, _ = await channel_objections(message.channel, message)
         mark_handled(key, ids)
         await run_turn(message.channel, key, prompt, objections=objections)
 
@@ -747,17 +797,18 @@ def main():
 
     async def channel_objections(channel, before=None):
         """(The Codex bot's objections since this bot's last reply in the channel — up to `before`, or the newest —
-        or None, ids of their messages); objections already answered in this channel are skipped."""
+        or None, ids of their messages, Codex's independent 💭 answer since the owner's last message or '');
+        objections already answered in this channel are skipped."""
         key, rows = str(channel.id), []
         try:
             async for m in channel.history(limit=20, before=before):
                 is_self = bool(client.user) and m.author.id == client.user.id
-                rows.append((is_self, is_codex(m), m.content, m.id))
+                rows.append((is_self, is_codex(m), m.content, m.id, m.author.id == owner))
         except discord.DiscordException as error:
             print(f'history failed: {error!r}', flush=True)
-            return None, []
+            return None, [], ''
         findings, ids = collect_objections(rows, set(state.get(f'{key}:handled') or []))
-        return findings or None, ids
+        return findings or None, ids, own_answer_from(rows)
 
     client.run(token)
 

@@ -116,13 +116,41 @@ class DebateTests(unittest.TestCase):
         self.assertIsNone(bot.quick_request('!solo 질문'))
         self.assertFalse(bot.addressed_to_other_bot('!solo 질문', False))
         os.environ.pop('DEBATE_ROUNDS', None)
-        self.assertEqual(bot.debate_rounds(), 1)
-        for value, rounds in (('0', 0), ('2', 2), ('-1', 0), ('x', 1)):
+        self.assertEqual(bot.debate_rounds(), 2)
+        for value, rounds in (('0', 0), ('3', 3), ('-1', 0), ('x', 2)):
             os.environ['DEBATE_ROUNDS'] = value
             try:
                 self.assertEqual(bot.debate_rounds(), rounds)
             finally:
                 os.environ.pop('DEBATE_ROUNDS')
+
+    def test_an_ordinary_message_gets_one_review_round_and_a_debate_request_gets_debate_rounds(self):
+        """User 2026-10-22 evening: "일반 나 > 클로드 > 클로드 반박 + 자기주장하는 코덱스 > 클로드가 수용 > 나; 토론은 나 > 클로드,
+        코덱스 > 클로드 반박 > 코덱스 재반박"."""
+        os.environ.pop('DEBATE_ROUNDS', None)
+        self.assertEqual(bot.debate_request('!debate 102 결과 어때?'), '102 결과 어때?')
+        self.assertEqual(bot.debate_request('!토론 102 결과 어때?'), '102 결과 어때?')
+        self.assertIsNone(bot.debate_request('!debate'))
+        self.assertIsNone(bot.debate_request('102 결과 어때?'))
+        self.assertEqual(bot.rounds_for('102 결과 어때?'), 1)
+        self.assertEqual(bot.rounds_for('!debate 102 결과 어때?'), 2)
+        self.assertEqual(bot.rounds_for(''), 1)                                   # an automatic turn
+        os.environ['DEBATE_ROUNDS'] = '0'
+        try:
+            self.assertEqual(bot.rounds_for('!debate 질문'), 1)                   # off: an ordinary message
+        finally:
+            os.environ.pop('DEBATE_ROUNDS')
+        # Claude's debate turn quotes Codex's independent answer when there is one (posted before or after the reply).
+        rows = [(False, True, '🔍 코덱스(m) 토론 1/2 — Claude가 바로 답한다\n1. 첫째', 9, False), (True, False, '제 답', 8, False),
+                (False, True, '💭 코덱스(m) 독립 답\n내 생각은 이렇다\n🧠 m · 읽기 전용', 7, False),
+                (False, False, '!debate 질문', 6, True), (False, True, '💭 코덱스(m) 독립 답\n옛 답\n🧠 m', 5, False)]
+        self.assertEqual(bot.own_answer_from(rows), '내 생각은 이렇다')
+        self.assertEqual(bot.own_answer_from(rows[3:]), '')
+        prompt = bot.debate_reply_prompt('1. 첫째', 1, 2, own='내 생각은 이렇다')
+        self.assertIn('코덱스의 독립 답', prompt)
+        self.assertIn('---\n내 생각은 이렇다\n---', prompt)
+        self.assertTrue(prompt.endswith('1. 첫째\n'))
+        self.assertNotIn('코덱스의 독립 답', bot.debate_reply_prompt('1. 첫째', 1, 1))
 
     def test_only_the_first_part_of_a_round_with_objections_opens_a_debate_turn(self):
         self.assertEqual(bot.debate_round_of('🔍 코덱스(gpt-6-astra) 토론 1/1 — Claude가 바로 답한다\n1. 지적'), (1, 1))

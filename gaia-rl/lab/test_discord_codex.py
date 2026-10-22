@@ -101,8 +101,16 @@ class WatchTests(unittest.TestCase):
         """2026-10-22 12:30: the restart to the debate code lost the owner's message and reviewed the reply as an
         automatic turn."""
         rows = [(False, False, '💭 코덱스(m) 독립 답\n…'), (True, False, '자동 토론 방식인가?'), (False, True, '옛 답')]
-        self.assertEqual(bot.recovered_turn(rows), {'user': '자동 토론 방식인가?', 'skip': False})
-        self.assertEqual(bot.recovered_turn([(True, False, '!q 질문')]), {'user': '!q 질문', 'skip': True})
+        os.environ.pop('DEBATE_ROUNDS', None)
+        self.assertEqual(bot.recovered_turn(rows), {'user': '자동 토론 방식인가?', 'skip': False, 'rounds': 1})
+        self.assertEqual(bot.recovered_turn([(True, False, '!q 질문')]), {'user': '!q 질문', 'skip': True, 'rounds': 1})
+        self.assertEqual(bot.recovered_turn([(True, False, '!debate 질문')]), {'user': '!debate 질문', 'skip': False, 'rounds': 2})
+        # User 2026-10-22 evening: `!` messages are Claude's alone except a `!debate` / `!토론` request.
+        self.assertTrue(bot.skips_review('!solo 질문'))
+        self.assertTrue(bot.skips_review('!status'))
+        self.assertTrue(bot.skips_review(''))
+        self.assertFalse(bot.skips_review('질문'))
+        self.assertFalse(bot.skips_review('!토론 질문'))
         self.assertEqual(bot.recovered_turn([(False, True, '🤖 **x** 결과 자동 정리 시작'), (True, False, '옛 질문')]), {})
         self.assertEqual(bot.recovered_turn([]), {})
 

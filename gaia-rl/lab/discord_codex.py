@@ -8,15 +8,17 @@ In the Claude bot's channels (DISCORD_CHANNEL_IDS) and the owner's DMs:
   - a message addressed to this bot — a mention (`@Codex 질문`) or the `!codex ` prefix — gets an answer with the
     last CODEX_CONTEXT channel messages (owner, Claude, itself) as context; `!status`, `!stop`, `!new` addressed
     the same way are this bot's commands. The Claude bot skips every message addressed here.
-  - debate mode (DEBATE_ROUNDS, default 1; user 2026-10-22 "둘이 따로 생각하고, 나온 의견을 가지고 토론하는 모습"):
-    an ordinary owner message gets this bot's own answer at once (`💭 코덱스(<model>) 독립 답`, written while Claude
-    is still answering, so neither sees the other); when Claude's reply has been quiet for CODEX_WATCH_DELAY seconds,
-    round 1: Codex reads the owner's message, both answers and the commits made meanwhile (HEAD before/after) and
-    posts `🔍 코덱스(<model>) 토론 1/N …` (rebuttals or a better proposal) or one line `토론 1/N: 이상 없음`; the Claude
-    bot answers a round at once (`🗣️ 토론 r/N`), and after its answer round r+1 follows while r < N. `!solo <text>`
-    (any `!` message) keeps Codex out. DEBATE_ROUNDS=0 is the plain watch: `🔍 코덱스(<model>) 검수 지적 …` after
-    Claude's reply, read by the Claude bot in front of the owner's next message. The Claude bot's `!q` answers
-    (`일회성 답`) and its answers to `!`-commands are never reviewed.
+  - review (user 2026-10-22 evening "일반 나 > 클로드 > 클로드 반박 + 자기주장하는 코덱스 > 클로드가 수용 혹은 등등 > 나"): an
+    ordinary owner message is Claude's; when Claude's reply has been quiet for CODEX_WATCH_DELAY seconds this bot
+    reads the owner's message, the reply and the commits made meanwhile (HEAD before/after) and posts
+    `🔍 코덱스(<model>) 토론 1/1 …` (rebuttals and its own view) or one line `토론 1/1: 이상 없음`; the Claude bot answers
+    at once (`🗣️ 토론 1/1`), then the owner decides. A lab notice's automatic Claude turn is reviewed the same way.
+  - debate (`!debate <text>` / `!토론 <text>`; "토론은 나 > 클로드, 코덱스 > 클로드 반박 > 코덱스 재반박"): this bot also
+    answers the message itself at once (`💭 코덱스(<model>) 독립 답`, written while Claude is still answering, so
+    neither sees the other), and the review runs DEBATE_ROUNDS rounds (default 2): `토론 1/N` (both answers read),
+    Claude's answer (its prompt quotes the 💭 answer), this bot's re-rebuttal `토론 2/N`, Claude's answer.
+    DEBATE_ROUNDS=0 makes `!debate` an ordinary message. `!solo <text>` (any other `!` message) keeps Codex out; the
+    Claude bot's `!q` answers (`일회성 답`) and its answers to `!`-commands are never reviewed.
 
 Icons and commands follow the table in lab/README.md ("두 봇의 명령·아이콘"): 👀 received, ⏳ queued behind a
 running task, `🧠 <model> · <note>` as the last line of every model answer, ⚠️ a failure, 🔍 a review.
@@ -186,10 +188,17 @@ def recovered_turn(rows):
     for is_owner, is_claude, content in rows:
         content = (content or '').strip()
         if is_owner:
-            return {'user': content, 'skip': content.startswith('!') or not content}
+            return {'user': content, 'skip': skips_review(content), 'rounds': shared.rounds_for(content)}
         if is_claude and content.startswith('🤖'):
             return {}
     return {}
+
+
+def skips_review(text):
+    """True for owner messages Claude answers alone: empty, `!solo`, `!q`, commands — every `!` message except a
+    `!debate` request."""
+    text = (text or '').strip()
+    return not text or (text.startswith('!') and shared.debate_request(text) is None)
 
 
 def watch_enabled():
@@ -351,7 +360,7 @@ def main():
             state = '실행 중' if running or busy else '대기'
             watch = '켜짐' if watch_enabled() else '꺼짐'
             rounds = shared.debate_rounds()
-            debate = f'토론 {rounds}라운드' if rounds else '토론 꺼짐(검수만)'
+            debate = f'검수 1라운드 · !debate {rounds}라운드' if rounds else '검수 1라운드 · !debate 꺼짐'
             await message.channel.send(f'상태: {state} · 검수 {watch} · {debate} · 모델 {codex_model()} · 작업 폴더 {workdir}')
         elif command == '!stop':
             proc = running.get('proc')
@@ -382,12 +391,13 @@ def main():
         return recovered_turn(rows)
 
     async def review(channel, key):
-        """The watch (DEBATE_ROUNDS=0) or the next debate round, started when Claude's reply went quiet."""
-        rounds = shared.debate_rounds()
+        """The next review round (one for an ordinary message or an automatic turn, DEBATE_ROUNDS for a `!debate`
+        message), started when Claude's reply went quiet."""
         turn = turns.get(key)
         if not turn or turn.get('skip') or not turn.get('claude'):
             turns.pop(key, None)
             return
+        rounds = turn.get('rounds') or 1
         round_no = turn.get('round', 0) + 1
         if rounds and round_no > rounds:
             turns.pop(key, None)   # the debate is over: Claude's answer to the last round stands
@@ -468,15 +478,17 @@ def main():
                 await message.add_reaction('⏳' if busy else '👀')
                 await track(answer(message, addressed))
                 return
-            # An ordinary message: Claude will answer it; remember it (and HEAD) for the watch or the debate.
-            # `!` messages (`!q`, `!solo`, commands) are Claude's alone.
+            # An ordinary message: Claude answers it; remember it (and HEAD) for the review round. `!` messages
+            # (`!q`, `!solo`, commands) are Claude's alone — except `!debate`/`!토론`: this bot answers too, and the
+            # review runs DEBATE_ROUNDS rounds.
             cancel_timer(key)
-            skip = text.startswith('!') or (not text and not message.attachments)
+            debate = shared.debate_request(text)
+            skip = skips_review(text) and not (not text and message.attachments)
             turns[key] = {'user': text, 'before': await git('rev-parse', 'HEAD'), 'claude': [], 'exchange': [],
-                          'round': 0, 'skip': skip, 'own': None}
-            if not skip and text and watch_enabled() and shared.debate_rounds():
+                          'round': 0, 'skip': skip, 'own': None, 'rounds': shared.rounds_for(text)}
+            if debate and watch_enabled() and shared.debate_rounds():
                 await message.add_reaction('⏳' if busy else '👀')
-                turns[key]['own'] = track(own_answer(message, text))
+                turns[key]['own'] = track(own_answer(message, debate))
             return
         if is_claude(message) and watch_enabled() and not message.content.startswith('🤖'):
             # (a 🤖 line only announces an automatic turn; the reply itself follows minutes later)
