@@ -45,6 +45,11 @@ Posted watch replay: none (smoke). VP at round 1 end (not used): A 7.4, B 9.2.
   copy and the track_plans goal both reach the comparison order. A local unpushed WIP commit on the work tree
   (`wip: task dedup order (temporary)`, teacher_patches + tests) already wraps `bgg_openings.planning.goals` and rebuilds
   one round-robin order over all lists — it was not part of this run and is not reviewed or pushed.
+- **Correction (2026-10-23, next bot turn): the BGG lead above is wrong.** Cause = two dedup layers: the ships factory
+  installs `install_task_dedup`, plan_menu wraps it and installs it again; in the roots interleave call the inner layer
+  consumes and clears the shared `_task_seen`, plan_menu then prepends slot 2, and the outer layer has nothing left to
+  filter with. Not BGG-specific (R2+ would show it too); the WIP has the same flaw (inner layer pops `_task_build`).
+  Fix 588c076 (each wrapper acts only while it is the module's outermost function); re-smoke 104b to round 3 start.
 - ⑤ window / design gap: stopping at round 2 start tests only the BGG branch; the non-BGG path (rounds 2+, where 103's
   duplicates mostly were) was not exercised at all. The re-smoke should run to round 3 start.
 - Health and timing clean; max 60.2 s both arms.

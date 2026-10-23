@@ -1,0 +1,12 @@
+{
+ "kind": "ab",
+ "note": "사용자(2026-10-23 \"그렇게 해\"; HANDOFF E91 (ㄱ)): 104a 실패(B 19/88 완전 중복)의 원인은 BGG 경로가 아니라 중복 제거 래퍼 두 겹 — ships 팩토리가 install_task_dedup을 깔고 plan_menu가 그 위를 감싼 뒤 다시 깔아, 안쪽 층이 roots 호출에서 `_task_seen`을 먼저 비워 바깥 층이 메뉴 2칸 사본을 못 거름(A는 메뉴가 없어 0). 588c076: 각 래퍼는 자기가 모듈의 가장 바깥 함수일 때만 동작(아니면 그대로 통과). WIP `wip-task-dedup-order`(BGG 목록 감싸기·순서 재구성)는 같은 결함이 있어 쓰지 않음. 설계 = 104a와 같음(A = ships, B = ships_menu, 양팔 cap60-p2, 비교 4, 103 시드 pair-003·pair-016) 단 **3R 시작 종료**(1R BGG 분기 + 2R 일반 분기 모두 검사). 판정(사전 등록): decisions.jsonl.gz `compared`에서 (goal, spec, first) 완전 중복 행이 있는 결정 수 — 양팔·두 분기(1R BGG, 2R) 각각 0이면 통과. 함께 볼 것: 오류·타임아웃 0, 최대 결정 시간, 결정당 완료 비교 수(라운드별), 이름만 같은 중복 수.",
+ "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap60-p2.json",
+ "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu-cap60-p2.json",
+ "seeds": [
+  "geo-quartet-996541",
+  "geo-quartet-1021452"
+ ],
+ "comparisons": 4,
+ "stop_round": 2
+}
