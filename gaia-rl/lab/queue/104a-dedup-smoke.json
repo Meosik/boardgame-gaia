@@ -3,7 +3,15 @@
  "note": "사용자(2026-10-23 \"그렇게 해\"; HANDOFF E90 (ㄱ)): 비교 칸 중복 제거(커밋 7057aa5, preparation.search·parallel_search._planned_tasks의 최종 tasks에서 같은 Goal 제거) 스모크. A = ships, B = ships_menu(103과 같은 스펙), 양팔 cap60-p2, 비교 4, 103의 시드 pair-003·pair-016(최악 두 쌍) 재사용(스모크라 판정 풀 아님), 2R 시작 종료(충전 판정 없음). 판정(사전 등록): decisions.jsonl.gz의 `compared` 목록에서 같은 goal 이름이 두 번 나오는 결정 수 — 양팔 0이면 통과(103: A 15%·B 31%). 이름이 같고 내용이 다른 계획(단계·첫 수 다름)이 남으면 0이 아닐 수 있으니 그 경우 이름별로 보고. 함께 볼 것: 결정당 완료 비교 수(103 A 2.825·B 2.782), 오류·타임아웃 0, 최대 결정 시간, pair-003 제노스 B 1R 아카데미 여부(103은 없음).",
  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-cap60-p2.json",
  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu-cap60-p2.json",
- "seeds": ["geo-quartet-996541", "geo-quartet-1021452"],
+ "seeds": [
+  "geo-quartet-996541",
+  "geo-quartet-1021452"
+ ],
  "comparisons": 4,
- "stop_round": 1
+ "stop_round": 1,
+ "design_review": {
+  "findings": 1,
+  "model": "gpt-6-astra",
+  "at": "2026-10-23T12:24:02+09:00"
+ }
 }
