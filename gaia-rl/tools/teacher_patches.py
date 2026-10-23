@@ -1921,6 +1921,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs):
     while the Brainstone is in bowl I (brainstone_ships)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs)
     install_brainstone_ships()
+    install_task_dedup()            # E90: each plan once in the comparison order (deployed stack and everything on top)
     return teacher
 
 
@@ -3559,6 +3560,7 @@ def install_track_plans():
         interleave_families._track_plans = True
         interleave_families.__wrapped__ = inner_interleave
         p.interleave_families = interleave_families
+    install_task_dedup()
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_plans(seed, **kwargs):
@@ -3984,6 +3986,76 @@ def install_plan_menu():
         scoring_pairs.__wrapped__ = inner_pairs
         p.scoring_pairs = scoring_pairs
     _wrap_rank('_fed_remember', fed_remember_scores)
+    install_task_dedup()
+
+
+_task_seen = []     # the goals and scoring pairs of the search being built; the roots list that follows drops them
+
+
+def _wrapper_flags(wrapper, inner, flag):
+    """Keep the inner wrappers' install flags visible on the outermost function (installers test the outermost)."""
+    for name, value in vars(inner).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(wrapper, name, value)
+    setattr(wrapper, flag, True)
+    wrapper.__wrapped__ = inner
+
+
+def install_task_dedup():
+    """Each plan once in the comparison order (lab 103, E90). search builds control, goals[0], roots[0], paired[0],
+    goals[1], … and a remembered plan inserted at goals[0] can be proposed again — by goals_for itself (A arm, 15% of
+    103's decisions) or by plan_menu's slots 2 and 3 at the head of the roots / scoring-pair lists (B, 31%) — so it
+    rolled out twice and took one of the four comparisons. The frozen tree cannot change (teacher_ab refuses a
+    changed FROZEN.json), so the three names search calls are wrapped, outermost: goals_for starts a new list,
+    scoring_pairs (called right after the remembered plan is inserted) drops later duplicates from search's own
+    goals list in place and from its pairs, and the roots interleave that search calls next drops what goals and
+    pairs already hold. parallel_search._planned_tasks makes the same calls, so its prediction stays exact.
+    Equality is the whole Goal (name, steps, first …), not the name. Installers that wrap these names call this
+    again at their end so it stays outermost."""
+    import four_factions.preparation as p
+    inner_goals = p.goals_for
+    if not getattr(inner_goals, '_task_dedup_outer', False):
+        def goals_for(snapshot, **kwargs):
+            _task_seen.clear()
+            return inner_goals(snapshot, **kwargs)
+        _wrapper_flags(goals_for, inner_goals, '_task_dedup')
+        goals_for.__wrapped__ = getattr(inner_goals, '__wrapped__', inner_goals)
+        goals_for._task_dedup_outer = True
+        p.goals_for = goals_for
+    inner_pairs = p.scoring_pairs
+    if not getattr(inner_pairs, '_task_dedup_outer', False):
+        def scoring_pairs(snapshot, scores, goals):
+            kept = []
+            for goal in goals:
+                if goal not in kept:
+                    kept.append(goal)
+            goals[:] = kept
+            paired = []
+            for goal in inner_pairs(snapshot, scores, goals):
+                if goal not in kept and goal not in paired:
+                    paired.append(goal)
+            _task_seen[:] = kept + paired
+            return paired
+        _wrapper_flags(scoring_pairs, inner_pairs, '_task_dedup')
+        scoring_pairs._task_dedup_outer = True
+        p.scoring_pairs = scoring_pairs
+    inner_interleave = p.interleave_families
+    if not getattr(inner_interleave, '_task_dedup_outer', False):
+        def interleave_families(items, family):
+            result = inner_interleave(items, family)
+            # Only search's roots call (all root-N); quick.py / source_paths.py pass other items through.
+            if _task_seen and items and all(str(getattr(g, 'name', '')).startswith('root-') for g in items):
+                seen = list(_task_seen)
+                _task_seen.clear()
+                kept = []
+                for goal in result:
+                    if goal not in seen and goal not in kept:
+                        kept.append(goal)
+                return kept
+            return result
+        _wrapper_flags(interleave_families, inner_interleave, '_task_dedup')
+        interleave_families._task_dedup_outer = True
+        p.interleave_families = interleave_families
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu(seed, **kwargs):

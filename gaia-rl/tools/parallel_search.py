@@ -110,7 +110,7 @@ def _planned_tasks(env, snapshot, memory, scores, policies, kwargs):
             tasks.append(interleaved[i])
         if i < len(paired):
             tasks.append(paired[i])
-    return p.distinct_tasks(tasks), capture
+    return tasks, capture
 
 
 def _prefetch(env, snapshot, memory, budget, kwargs):

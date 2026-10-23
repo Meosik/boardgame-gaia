@@ -106,18 +106,6 @@ class Goal:
     sources: tuple[str, ...] = ()
 
 
-def distinct_tasks(tasks):
-    """Each plan once, first position kept: a remembered plan and the same plan proposed again (plan_menu's
-    roots/paired slots) would roll out identically and waste a comparison (lab 103, E90)."""
-    seen = set()
-    kept = []
-    for goal in tasks:
-        if goal not in seen:
-            seen.add(goal)
-            kept.append(goal)
-    return kept
-
-
 def goal_from_dict(value):
     return Goal(**{**value, 'steps': tuple(goal_from_dict(s) for s in value.get('steps', ())),
                    'sources': tuple(value.get('sources', ()))})
@@ -688,7 +676,6 @@ def search(env, snapshot, memory, publish, *, soft_deadline, hard_deadline, bgg_
             tasks.append(interleaved[i])
         if i < len(paired):
             tasks.append(paired[i])
-    tasks = distinct_tasks(tasks)
     best_value = None
     result['extended_reason'] = None
     result['extension_policy'] = 'finish-current-comparison-only'

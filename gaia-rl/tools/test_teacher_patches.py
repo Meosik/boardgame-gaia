@@ -1290,19 +1290,34 @@ class OpeningBudgetTests(unittest.TestCase):
         state['round'] = 7                                                           # no tile: untouched
         self.assertIs(tp.round_tile_lead_goals(snapshot, goals), goals)
 
-    def test_distinct_tasks_keeps_the_first_of_equal_goals_only(self):
-        from four_factions.preparation import Goal, distinct_tasks
-        step_a = Goal('colony@2,0', 'colony', '2,0')
-        step_b = Goal('colony@3,0', 'colony', '3,0')
+    def test_task_dedup_drops_a_regenerated_remembered_plan_without_the_menu(self):
+        """E90, A arm: goals_for proposes the remembered plan again; search inserts it at goals[0] too. The wrapped
+        scoring_pairs (called right after) drops the later copy from search's own list; a same-name plan with other
+        steps stays; the roots list drops what goals / pairs hold; other interleave calls pass through."""
+        import four_factions.preparation as p
+        from four_factions.preparation import Goal
+        for name in ('goals_for', 'interleave_families', 'scoring_pairs'):
+            self.addCleanup(setattr, p, name, getattr(p, name))
+        step_a, step_b = Goal('colony@2,0', 'colony', '2,0'), Goal('colony@3,0', 'colony', '3,0')
         remembered = Goal('track-plan-Economy-2', 'ordered', steps=(Goal('Economy-2', 'research'), step_a))
-        again = Goal('track-plan-Economy-2', 'ordered', steps=(Goal('Economy-2', 'research'), step_a))
         other = Goal('track-plan-Economy-2', 'ordered', steps=(Goal('Economy-2', 'research'), step_b))
-        control = Goal('current-choice', first=0)
-        root = Goal('root-1', 'root', first=1)
-        tasks = [control, remembered, root, again, other, root, control]
-        self.assertEqual(distinct_tasks(tasks), [control, remembered, root, other])
-        self.assertEqual(distinct_tasks([]), [])
-        self.assertEqual(len(tasks), 7)                                              # input untouched
+        again = Goal('track-plan-Economy-2', 'ordered', steps=(Goal('Economy-2', 'research'), step_a))
+        root1 = Goal('root-1', 'root', first=1)
+        p.goals_for = lambda snapshot, **kwargs: [again, other]
+        p.interleave_families = lambda items, family: list(items)
+        p.scoring_pairs = lambda snapshot, scores, goals: [root1, remembered]
+        tp.install_task_dedup()
+        tp.install_task_dedup()                                                      # installs once
+        self.assertTrue(p.scoring_pairs._task_dedup_outer)
+        goals = p.interleave_families(p.goals_for({}), lambda g: g.family)
+        goals.insert(0, remembered)                                                  # as search does
+        paired = p.scoring_pairs({}, [], goals)
+        self.assertEqual(goals, [remembered, other])                                 # in place
+        self.assertEqual(paired, [root1])
+        roots = [root1, Goal('root-2', 'root', first=2)]
+        self.assertEqual([g.name for g in p.interleave_families(roots, None)], ['root-2'])
+        self.assertEqual(p.interleave_families(roots, None), roots)                  # consumed: next call untouched
+        self.assertEqual(p.interleave_families([3, 1], None), [3, 1])
 
     def test_plan_menu_orders_the_front_by_the_faction_row(self):
         from four_factions.preparation import Goal
@@ -1429,12 +1444,13 @@ class OpeningBudgetTests(unittest.TestCase):
             names = [g.name for g in tasks]
             self.assertEqual(names.count(plan.name), 1)
             self.assertEqual(len(names), len(set(names)))
-            # cap60 compares four: control, the remembered plan, the slot that is not the plan, and the first
-            # candidate the duplicate used to push out (slot 1's tile colony) — five without the dedup.
+            # cap60 compares four distinct plans: control, the remembered plan, and the next roots / pairs entries in
+            # place of the dropped copy (the copy is removed from its own list, so that list's next entry moves up).
             self.assertEqual(names[0], 'current-choice')
             self.assertEqual(names[1], plan.name)
-            self.assertIn('colony@3,0', names[:4])
-            self.assertIn('federation-7' if with_fed else 'tile-action-1-then-colony@3,0', names[:4])
+            self.assertIn('federation-7' if with_fed else 'root-1', names[:4])
+            self.assertIn('tile-action-1-then-colony@3,0', names[:4])
+            self.assertIn('colony@3,0', names)
             # The sequential search rolls out the same list in the same order.
             rolled = []
             def rollout(env, snap, first, goal, *args, **kwargs):
