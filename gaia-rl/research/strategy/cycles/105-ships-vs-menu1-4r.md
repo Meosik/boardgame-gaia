@@ -56,8 +56,10 @@ slots instead. Federation plans enter 125 times, win once.
   (−9.7) does not appear on the same seeds. So 103's loss is best explained by ④ the three front slots pushing root out, not by
   the menu plans themselves — with the caveat that A's code also changed (dedup), so 103 → 105 is not a clean comparison.
 - What the menu buys in 1–3R is nothing measurable: federation plans enter (125) but win once, `ordered`/`colony` win 146/28
-  mostly in place of `current`. ⑤ the menu's targets (federations, track plans, round tiles) pay off in 4–6R, so a 4R window
-  can only show "no harm". The 6R question needs the 645 s path (E82 (ㄷ)) closed first — 102 p2 6R still ran to 757 s.
+  mostly in place of `current`. ⑤ **hypothesis, untested** (debate 1/1): the menu's targets (federations, track plans, round tiles)
+  may pay off in 4–6R; this run stopped at the 4R start, and CI [−4.8, +10.8] means "gain not shown", not "no gain". A late effect vs
+  plain non-firing can only be separated by a 6R run with pre-registered late metrics (Proposal (ㄹ)). The 6R question needs the
+  645 s path (E82 (ㄷ)) closed first — 102 p2 6R still ran to 757 s.
 - Taklons: 9/24 signs but mean +2.5 — 7 pairs beyond ±50 both ways (pair-019 +120, pair-004·005 +80/+77) = ① spread, not a direction.
   Geodens pair-014 −107 (114 vs 221) is the single large loss — explain candidate (101/102 had −97/−98 Geodens pairs too).
 - Health clean; >60 s gap 0.90 %p sits just under the 1 %p bound (B slightly slower, 17.3 vs 16.6 s mean).
@@ -72,6 +74,9 @@ No code or deployment change. Lab queue empty (097·100 held `_`).
 - (ㄴ) explain bot turn (lab 0): Geodens pair-014 (B `pair-014/game-0-A03` 114 vs A `game-1-A12` 221) first divergence, and
   whether a menu plan won there.
 - (ㄷ) Before any 6R menu run: E82 (ㄷ) find the cap60 path that ran to 645–757 s in 102 (bot turn, code reading + the 102 decisions).
-- (ㄹ) Then 6R ships vs ships_menu1, 12–24 seeds cap60-p2, final VP as pre-registered secondary (≈ 8–15 h lab) — the window where the
-  menu's federation/track targets should show.
+- (ㄹ) Then 6R ships vs ships_menu1, 12–24 seeds cap60-p2, final VP as pre-registered secondary (≈ 8–15 h lab). Verdict stays
+  1–3R charges; pre-register late metrics with success lines before the run (debate 1/1): 4–6R charges by faction (`charge_rounds.py`
+  window 4–6), federations per seat and green-token flips (`federation_chances.py --by-arm`, `endgame_stock.py`), menu federation/track
+  plans entered → selected → completed (`plan_labels.py --families`). "Late effect" only if B's menu plans are selected and completed
+  more AND 4–6R charges or final VP move the same way; selected but no outcome change = fired without effect; not selected = non-firing.
 Bot recommendation: (ㄱ) now, (ㄴ) and (ㄷ) as bot turns, then (ㄹ).
