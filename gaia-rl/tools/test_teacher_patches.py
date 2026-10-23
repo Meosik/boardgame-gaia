@@ -1427,6 +1427,7 @@ class OpeningBudgetTests(unittest.TestCase):
         p.scoring_pairs = lambda snapshot, scores, goals: [Goal(f'tile-action-1-then-{g.name}', g.family, first=1)
                                                            for g in goals if g.family == 'colony']
         tp._guide['plan_menu'] = True                                                # restored by setUp's cleanup
+        tp.install_task_dedup()  # as the ships factory does before plan_menu (two dedup layers, lab 104a)
         tp.install_plan_menu()
         memory = {'_plans': {'0': asdict(plan)}}
         return snapshot, scores, memory, (tile, other, fed, plan)

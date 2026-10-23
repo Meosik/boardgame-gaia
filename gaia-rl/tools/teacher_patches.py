@@ -4011,11 +4011,14 @@ def install_task_dedup():
     goals list in place and from its pairs, and the roots interleave that search calls next drops what goals and
     pairs already hold. parallel_search._planned_tasks makes the same calls, so its prediction stays exact.
     Equality is the whole Goal (name, steps, first …), not the name. Installers that wrap these names call this
-    again at their end so it stays outermost."""
+    again at their end so it stays outermost. Each wrapper acts only while it is the outermost function (otherwise it
+    passes straight through), so two layers left by repeated installs do not let the inner one consume _task_seen."""
     import four_factions.preparation as p
     inner_goals = p.goals_for
     if not getattr(inner_goals, '_task_dedup_outer', False):
         def goals_for(snapshot, **kwargs):
+            if p.goals_for is not goals_for:    # an inner layer left by an earlier install must not consume _task_seen
+                return inner_goals(snapshot, **kwargs)
             _task_seen.clear()
             return inner_goals(snapshot, **kwargs)
         _wrapper_flags(goals_for, inner_goals, '_task_dedup')
@@ -4025,6 +4028,8 @@ def install_task_dedup():
     inner_pairs = p.scoring_pairs
     if not getattr(inner_pairs, '_task_dedup_outer', False):
         def scoring_pairs(snapshot, scores, goals):
+            if p.scoring_pairs is not scoring_pairs:
+                return inner_pairs(snapshot, scores, goals)
             kept = []
             for goal in goals:
                 if goal not in kept:
@@ -4042,6 +4047,8 @@ def install_task_dedup():
     inner_interleave = p.interleave_families
     if not getattr(inner_interleave, '_task_dedup_outer', False):
         def interleave_families(items, family):
+            if p.interleave_families is not interleave_families:
+                return inner_interleave(items, family)
             result = inner_interleave(items, family)
             # Only search's roots call (all root-N); quick.py / source_paths.py pass other items through.
             if _task_seen and items and all(str(getattr(g, 'name', '')).startswith('root-') for g in items):
