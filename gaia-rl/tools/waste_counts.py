@@ -1,6 +1,9 @@
 """Count costly moves per arm and faction in rounds low-high over a lab/teacher_ab run:
 how much ore a Build paid, how many credits an Upgrade to a trading station paid,
-and which free-action conversions were taken.
+and which free-action conversions were taken. Free conversions print as
+`free {kind: decisions/units/seat-games}`: FreeAction rows, sum of their count, and the number of
+(game, seat) pairs where it happened. Then, per arm and conversion kind, `follow-up {label: n}` (top 6)
+lists the same seat's next non-FreeAction action after the conversion (what the resources paid for).
 
   .venv/bin/python tools/waste_counts.py ~/projects/gaia-lab/gaia-rl/runs/lab-048-... [--rounds 1-3] [--examples]
 """
@@ -36,14 +39,18 @@ def main():
     low, _, high = args.rounds.partition('-')
     low, high = int(low), int(high or low)
     run_dir = args.run_dir.expanduser()
-    build_ore, ts_credits, free = defaultdict(Counter), defaultdict(Counter), defaultdict(Counter)
+    build_ore, ts_credits = defaultdict(Counter), defaultdict(Counter)
+    free_decisions, free_units = defaultdict(Counter), defaultdict(Counter)
+    free_games = defaultdict(lambda: defaultdict(set))
+    follow = defaultdict(Counter)
     first_free = {}
     big = {'ore': [], 'credits': []}
     games = 0
     for game_dir in sorted(run_dir.glob('pair-*/game-*')):
         result = json.loads((game_dir/'result.json').read_text())
         games += 1
-        env = Environment(result['seed'], 2000)
+        pending = {}
+        env =Environment(result['seed'], 2000)
         with gzip.open(game_dir/'decisions.jsonl.gz', 'rt') as f:
             rows = [json.loads(line) for line in f]
         for row in rows:
@@ -56,11 +63,18 @@ def main():
             seat = snapshot['player']
             before = resources(snapshot, seat)
             env.step(row['decision_id'], row['index'])
+            arm = 'A' if seat in result['a_seats'] else 'B'
+            if kind != 'FreeAction' and pending.get(seat):
+                label = kind
+                if kind == 'Upgrade':
+                    target = next((action[k] for k in ('to', 'building', 'target') if k in action), None)
+                    label = f'Upgrade {target if target is not None else json.dumps(action)[:40]}'
+                for name in set(pending.pop(seat)):
+                    follow[(arm, name)][label] += 1
             if state['round'] < low or kind not in ('Build', 'Upgrade', 'FreeAction'):
                 continue
             after = resources(json.loads(env.snapshot_json()), seat)
             delta = {k: after.get(k, 0) - before.get(k, 0) for k in before}
-            arm = 'A' if seat in result['a_seats'] else 'B'
             faction = state['players'][seat]['faction']
             key = (arm, faction)
             where = (str(game_dir.relative_to(run_dir)), row['decision_id'], state['round'], faction, arm)
@@ -76,16 +90,25 @@ def main():
                     big['credits'].append(where)
             elif kind == 'FreeAction':
                 name = action['kind'] if isinstance(action['kind'], str) else json.dumps(action['kind'])
-                free[key][name] += action.get('count', 1)
+                free_decisions[key][name] += 1
+                free_units[key][name] += action.get('count', 1)
+                free_games[key][name].add((str(game_dir), seat))
+                pending.setdefault(seat, []).append(name)
                 first_free.setdefault(name, where)
     print(f'rounds {low}-{high}  games {games}')
     for arm in ('A', 'B'):
-        for faction in sorted({f for a, f in list(build_ore) + list(ts_credits) + list(free) if a == arm}):
+        for faction in sorted({f for a, f in list(build_ore) + list(ts_credits) + list(free_decisions) if a == arm}):
             key = (arm, faction)
             print(f'{arm} {faction}')
             print(f'  Build ore paid {show(build_ore[key])}')
             print(f'  TS credits paid {show(ts_credits[key])}')
-            print(f'  free {show(free[key])}')
+            names = sorted(free_decisions[key], key=str)
+            print('  free {' + ', '.join(
+                f'{n}: {free_decisions[key][n]}/{free_units[key][n]}/{len(free_games[key][n])}' for n in names) + '}')
+    for arm in ('A', 'B'):
+        for name in sorted({n for a, n in follow if a == arm}, key=str):
+            top = follow[(arm, name)].most_common(6)
+            print(f'{arm} {name} follow-up {{' + ', '.join(f'{label}: {n}' for label, n in top) + '}')
     print('examples')
     for name, where in sorted(first_free.items()):
         print(f'  free {name}: {where}')
