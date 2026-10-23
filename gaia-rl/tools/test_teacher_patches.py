@@ -1289,6 +1289,20 @@ class OpeningBudgetTests(unittest.TestCase):
         state['round'] = 7                                                           # no tile: untouched
         self.assertIs(tp.round_tile_lead_goals(snapshot, goals), goals)
 
+    def test_distinct_tasks_keeps_the_first_of_equal_goals_only(self):
+        from four_factions.preparation import Goal, distinct_tasks
+        step_a = Goal('colony@2,0', 'colony', '2,0')
+        step_b = Goal('colony@3,0', 'colony', '3,0')
+        remembered = Goal('track-plan-Economy-2', 'ordered', steps=(Goal('Economy-2', 'research'), step_a))
+        again = Goal('track-plan-Economy-2', 'ordered', steps=(Goal('Economy-2', 'research'), step_a))
+        other = Goal('track-plan-Economy-2', 'ordered', steps=(Goal('Economy-2', 'research'), step_b))
+        control = Goal('current-choice', first=0)
+        root = Goal('root-1', 'root', first=1)
+        tasks = [control, remembered, root, again, other, root, control]
+        self.assertEqual(distinct_tasks(tasks), [control, remembered, root, other])
+        self.assertEqual(distinct_tasks([]), [])
+        self.assertEqual(len(tasks), 7)                                              # input untouched
+
     def test_plan_menu_orders_the_front_by_the_faction_row(self):
         from four_factions.preparation import Goal
         for faction, row in tp.FACTION_MENU.items():
