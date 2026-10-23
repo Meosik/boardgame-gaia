@@ -1354,6 +1354,27 @@ class OpeningBudgetTests(unittest.TestCase):
             menu = tp.plan_menu_goals(snapshot, goals)                              # no tile: ability → federation → track
             self.assertEqual([g.name for g in menu[:3]], [ability2.name, 'federation-7', plan.name])
 
+    def test_plan_menu_first_slots_follow_guide_menu_first(self):
+        """E89 (ㄷ) B': _guide['menu_first'] = 1 puts one goal in front; the default 3 is unchanged."""
+        from four_factions.preparation import Goal
+        state = self.track_plan_state()
+        state['round_tiles'] = [{'condition': 'BuildMineOnGaia', 'vp_per_unit': 3}]*6
+        state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
+                                          'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
+        snapshot = {'player': 0, 'state': state, 'candidates': []}
+        goals = [Goal('colony@3,0', 'colony', '3,0'), Goal('Science@0,0', 'upgrade', '0,0', 'Science')]
+        fed = Goal('federation-7', 'root', first=7)
+        tp._guide['plan_menu'] = True                                                # restored by setUp's cleanup
+        with mock.patch.object(tp, 'track_plan_goals', return_value=[]), \
+                mock.patch.object(tp, 'fed_compare_goal', return_value=fed), \
+                mock.patch.object(tp, 'token_compare_goal', return_value=None):
+            for first, expected in ((3, 2), (1, 1)):
+                tp._guide['menu_first'] = first
+                menu = tp.plan_menu_goals(snapshot, goals)
+                self.assertEqual(len(tp._menu_slots), expected, first)
+                self.assertEqual(len(tp._menu_front), expected, first)
+                self.assertEqual(menu[0].name, 'colony@3,0')
+
     def test_install_plan_menu_spreads_the_front_over_the_three_task_lists(self):
         """E82 (ㄱ): search compares control, goals[0], roots[0], paired[0], goals[1], ... — in 102 the menu's second
         slot entered at position 3 (federation ×2–23 per faction) and the third never (four comparisons). The front

@@ -391,6 +391,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'track_plans': False,         # True: ..._ships_plans (a research step compared as the plan it opens)
           'round_tile_lead': False,     # True: ..._ships_roundtile (the goals this round's tile scores lead)
           'plan_menu': False,           # True: ..._ships_menu (one plan menu: tile, federation, token, track, ability)
+          'menu_first': 3,              # plan_menu front slots (MENU_FIRST); ..._ships_menu1 sets 1 (E89 (ㄷ) B')
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -3863,7 +3864,7 @@ def plan_menu_goals(snapshot, goals):
     condition = _round_condition(state)
     front = []
     for family in FACTION_MENU.get(player['faction'], MENU_DEFAULT):
-        if len(front) >= MENU_FIRST:
+        if len(front) >= _guide.get('menu_first', MENU_FIRST):
             break
         if family == 'tile':
             pick = next((g for g in pool if g not in front and condition
@@ -4071,6 +4072,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships(seed, **kwargs)
     _guide['plan_menu'] = True
     install_plan_menu()
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1(seed, **kwargs):
+    """Teacher factory: ..._ships_menu with one menu front slot instead of three (E89 (ㄷ) B': 103's menu took three
+    of the four comparisons and pushed the root / upgrade plans out)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu(seed, **kwargs)
+    _guide['menu_first'] = 1
     return teacher
 
 
