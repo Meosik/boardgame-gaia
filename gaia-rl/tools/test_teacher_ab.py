@@ -179,5 +179,21 @@ class TeacherSpecTests(unittest.TestCase):
             ab.resolve_teacher('no-such-teacher')
 
 
+class ComparedPlansTests(unittest.TestCase):
+    def test_rows_carry_a_short_content_key_of_the_goal_spec(self):
+        spec = {'name': 'a', 'family': 'upgrade', 'steps': [], 'first': None}
+        audit = {'plans': [
+            {'goal': 'a', 'goal_spec': spec, 'family': 'upgrade', 'first': 1, 'complete': True, 'value': 1.234},
+            {'goal': 'a', 'goal_spec': dict(spec), 'family': 'upgrade', 'first': 1, 'complete': True, 'value': 1.0},
+            {'goal': 'a', 'goal_spec': {**spec, 'target': 'x'}, 'family': 'upgrade', 'first': 1, 'complete': True, 'value': 1.0},
+            {'goal': 'root-1', 'family': 'root', 'first': 2, 'complete': False, 'value': None}]}
+        rows = ab.compared_plans(audit)
+        self.assertEqual(len(rows[0]['spec']), 10)
+        self.assertEqual(rows[0]['spec'], rows[1]['spec'])           # the same plan twice
+        self.assertNotEqual(rows[0]['spec'], rows[2]['spec'])        # same name, other content
+        self.assertIsNone(rows[3]['spec'])
+        self.assertEqual(rows[0]['value'], 1.23)
+
+
 if __name__ == '__main__':
     unittest.main()

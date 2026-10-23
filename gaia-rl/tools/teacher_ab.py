@@ -312,7 +312,10 @@ def compared_plans(audit):
     rows = []
     for plan in audit.get('plans') or ():
         value = plan.get('value')
-        rows.append({'goal': plan.get('goal'), 'family': plan.get('family'), 'first': plan.get('first'),
+        spec = plan.get('goal_spec')
+        key = (hashlib.sha1(json.dumps(spec, sort_keys=True, default=str).encode()).hexdigest()[:10]
+               if spec is not None else None)       # same name, different content (or the same plan twice) shows here
+        rows.append({'goal': plan.get('goal'), 'spec': key, 'family': plan.get('family'), 'first': plan.get('first'),
                      'complete': bool(plan.get('complete')),
                      'value': round(value, 2) if isinstance(value, (int, float)) and math.isfinite(value) else None})
     return rows

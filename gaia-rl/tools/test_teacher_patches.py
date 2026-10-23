@@ -1,5 +1,6 @@
 """symmetric_pass: exact against native passes, and only unpassed action-phase states change."""
 import json
+import time
 import unittest
 from unittest import mock
 
@@ -1384,6 +1385,74 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(p.goals_for(snapshot), [tile, other])
         self.assertEqual(p.interleave_families(roots, lambda g: g.first), roots)
         self.assertEqual([g.name for g in p.scoring_pairs(snapshot, [], [tile])], ['tile-action-1-then-colony@3,0'])
+
+    def _menu_task_fixture(self, with_fed):
+        """plan_menu installed over fake proposals; returns (snapshot, scores, memory, goals) where `plan` is the track
+        plan (menu slot 3 with a federation goal, slot 2 without one) and the memory remembers it (lab 103, E90)."""
+        import four_factions.preparation as p
+        from dataclasses import asdict
+        from four_factions.preparation import Goal
+        for name in ('goals_for', 'interleave_families', 'scoring_pairs', 'search'):
+            self.addCleanup(setattr, p, name, getattr(p, name))
+        self.addCleanup(setattr, p.Policies, 'rank', p.Policies.rank)
+        state = self.track_plan_state()
+        state['round_tiles'] = [{'condition': 'BuildMineOnGaia', 'vp_per_unit': 3}]*6
+        state['board']['hexes']['3,0'] = {**state['board']['hexes']['3,0'],
+                                          'planet': {'planet_type': 'Gaia', 'owner': None, 'is_gaia_formed': False}}
+        state['players'][0]['resources'].update(ore=12, qic=1, knowledge=8)
+        state['phase'] = {'ActionPhase': {}}
+        snapshot = {'player': 0, 'state': state, 'decision_id': 'd', 'steps': 0,
+                    'candidates': [{'action': {'type': t}} for t in ('Pass', 'Build', 'Research', 'Power')]}
+        scores = [(4.0, ''), (3.0, ''), (2.0, ''), (1.0, '')]
+        tile, other = Goal('colony@3,0', 'colony', '3,0'), Goal('Science@0,0', 'upgrade', '0,0', 'Science')
+        fed = Goal('federation-7', 'root', first=3) if with_fed else None
+        plan = Goal('track-plan-Navigation-2>colony@2,0', 'ordered',
+                    steps=(Goal('Navigation-2', 'research', target='Navigation', level=2), Goal('colony@2,0', 'colony', '2,0')))
+        p.goals_for = lambda snapshot, **kwargs: [tile, other]
+        p.scoring_pairs = lambda snapshot, scores, goals: [Goal(f'tile-action-1-then-{g.name}', g.family, first=1)
+                                                           for g in goals if g.family == 'colony']
+        tp._guide['plan_menu'] = True                                                # restored by setUp's cleanup
+        tp.install_plan_menu()
+        memory = {'_plans': {'0': asdict(plan)}}
+        return snapshot, scores, memory, (tile, other, fed, plan)
+
+    def _assert_plan_once_and_next_candidate_kept(self, with_fed):
+        import four_factions.preparation as p
+        import parallel_search
+        snapshot, scores, memory, (tile, other, fed, plan) = self._menu_task_fixture(with_fed)
+        policies = mock.Mock(memory=memory, delta_factions=())
+        with mock.patch.object(tp, 'track_plan_goals', return_value=[plan]), \
+                mock.patch.object(tp, 'fed_compare_goal', return_value=fed), \
+                mock.patch.object(tp, 'token_compare_goal', return_value=None), \
+                mock.patch.object(p, 'viable', return_value=True), mock.patch.object(p, 'achieved', return_value=False):
+            tasks, _ = parallel_search._planned_tasks(None, snapshot, memory, scores, policies, {})
+            names = [g.name for g in tasks]
+            self.assertEqual(names.count(plan.name), 1)
+            self.assertEqual(len(names), len(set(names)))
+            # cap60 compares four: control, the remembered plan, the slot that is not the plan, and the first
+            # candidate the duplicate used to push out (slot 1's tile colony) — five without the dedup.
+            self.assertEqual(names[0], 'current-choice')
+            self.assertEqual(names[1], plan.name)
+            self.assertIn('colony@3,0', names[:4])
+            self.assertIn('federation-7' if with_fed else 'tile-action-1-then-colony@3,0', names[:4])
+            # The sequential search rolls out the same list in the same order.
+            rolled = []
+            def rollout(env, snap, first, goal, *args, **kwargs):
+                rolled.append(goal.name)
+                return {'complete': True, 'value': 1.0, 'actions': [], 'decisions': 1}
+            with mock.patch.object(p, 'rollout', rollout), mock.patch.object(p, 'select_goal', lambda *a, **k: 1), \
+                    mock.patch.object(p.Policies, 'rank', lambda self, env, snap: scores):
+                result = p.search(None, snapshot, json.loads(json.dumps(memory)), lambda r: None,
+                                  soft_deadline=time.monotonic()+1e6, hard_deadline=time.monotonic()+1e6)
+            self.assertEqual(rolled, names)
+            self.assertEqual(result['planned_comparisons'], len(names))
+            self.assertEqual(len({json.dumps(r['goal_spec'], sort_keys=True) for r in result['plans']}), len(names))
+
+    def test_a_remembered_plan_that_is_menu_slot_3_is_compared_once_and_pushes_nothing_out(self):
+        self._assert_plan_once_and_next_candidate_kept(with_fed=True)
+
+    def test_a_remembered_plan_that_is_menu_slot_2_is_compared_once_and_pushes_nothing_out(self):
+        self._assert_plan_once_and_next_candidate_kept(with_fed=False)
 
     def test_plan_menu_drops_a_multi_step_plan_the_next_income_cannot_pay(self):
         """E86 (ㄱ): a track / ability plan whose pending steps cost more than held + next income is not generated;
