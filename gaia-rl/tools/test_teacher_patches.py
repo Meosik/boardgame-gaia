@@ -1025,6 +1025,12 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual([s[0] for s in tp.range_tile_scores(None, snapshot, scores)], [4.0, 9.0])
         player['tech_tiles'] = [5]                                              # not the first tile any more
         self.assertIs(tp.range_tile_scores(None, snapshot, scores), scores)
+        # Round 3, first tile, 12 = 9, 8 = 8, 2 = 4: both avoidances hold, tile 2 leads (debate 1/1).
+        player['tech_tiles'], state['round'] = [], 3
+        snapshot['candidates'] = [{'action': up(12)}, {'action': up(8)}, {'action': up(2)}]
+        scores = [(9.0, 't12'), (8.0, 't8'), (4.0, 't2')]
+        self.assertEqual([s[0] for s in tp.range_tile_scores(None, snapshot, scores)], [4.0, 8.0, 9.0])
+        state['round'] = 2
         xenos = {'faction': 'Taklons', 'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()}}
         self.assertEqual(tp._track_caps(xenos, table=False)['gaia'], 1)        # Gaia only for the former
         giants = {'faction': 'SpaceGiants', 'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()}}

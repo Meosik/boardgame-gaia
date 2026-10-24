@@ -2422,22 +2422,19 @@ def range_tile_scores(env, snapshot, scores):
     early = state['round'] <= RANGE_TILE_LAST_ROUND
     player = state['players'][actor]
     first_tile = not (player.get('tech_tiles') or ())
+    # Both avoidances apply together (debate 1/1: one swap must not hand the top to a tile the other avoids).
+    avoid = ({GAIA_VP_TILE} if first_tile else set()) | (set() if early else {RANGE_TILE})
     for members in groups.values():
-        if first_tile:
-            top = max(members, key=lambda i: lifted[i][0])
-            rest = [i for i in members if tiles[i] != GAIA_VP_TILE]
-            if tiles[top] == GAIA_VP_TILE and rest:
-                _swap(lifted, list(lifted), max(rest, key=lambda i: lifted[i][0]), top,
-                      'no Gaia-VP tile as the first tile (SH11, SH04)')
-        wanted = [i for i in members if tiles[i] == RANGE_TILE]
-        rest = [i for i in members if tiles[i] != RANGE_TILE]
-        if not wanted or not rest:
-            continue
         top = max(members, key=lambda i: lifted[i][0])
-        if early and top not in wanted:
+        wanted = [i for i in members if tiles[i] == RANGE_TILE] if early else []
+        if wanted and top not in wanted:
             _swap(lifted, list(lifted), max(wanted, key=lambda i: lifted[i][0]), top, 'range tile in rounds 1-2 (MJ01-08)')
-        elif not early and top in wanted:
-            _swap(lifted, list(lifted), max(rest, key=lambda i: lifted[i][0]), top, 'no range tile from round 3 (MJ01-08)')
+            continue
+        allowed = [i for i in members if tiles[i] not in avoid]
+        if tiles[top] in avoid and allowed:
+            why = 'no Gaia-VP tile as the first tile (SH11, SH04)' if tiles[top] == GAIA_VP_TILE else \
+                'no range tile from round 3 (MJ01-08)'
+            _swap(lifted, list(lifted), max(allowed, key=lambda i: lifted[i][0]), top, why)
     return lifted if lifted != scores else scores
 
 
@@ -3713,7 +3710,10 @@ def _opened_colonies(state, player, track, level):
                 if min(gap, 7-gap):
                     opened.add(coord)
     elif track == 'gaia':
-        opened = reach(after, ('Transdim',)) if level in FORMER_LEVELS or _formers_free(player) else set()
+        former = level in FORMER_LEVELS or _formers_free(player)
+        # mj01: the former also opens an Asteroid mine (Lost Fleet; _asteroid_gaia's reason for Gaia 1, debate 1/1).
+        types = ('Transdim', 'Asteroid') if _part(player, 'mj01') else ('Transdim',)
+        opened = reach(after, types) if former else set()
     else:
         return []
     return sorted(opened, key=lambda c: (_colony_cost(state, after, c)[1], c))[:TRACK_PLAN_COLONIES]
