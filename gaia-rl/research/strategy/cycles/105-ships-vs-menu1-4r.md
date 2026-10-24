@@ -63,6 +63,8 @@ slots instead. Federation plans enter 125 times, win once.
 - Taklons: 9/24 signs but mean +2.5 — 7 pairs beyond ±50 both ways (pair-019 +120, pair-004·005 +80/+77) = ① spread, not a direction.
   Geodens pair-014 −107 (114 vs 221) is the single large loss — explain candidate (101/102 had −97/−98 Geodens pairs too).
 - Health clean; >60 s gap 0.90 %p sits just under the 1 %p bound (B slightly slower, 17.3 vs 16.6 s mean).
+  Against 103 (same seeds, result pages' timing tables): A 16.09 → 16.55 s (+0.46), B 15.82 → 17.33 s (+1.51, +9.5%) — B grew more.
+  Dedup (both arms) and the one-slot menu layout (B) changed together, so the cause is not separated (debate, user question on speed).
 - Review: the result page has no `## 검수` section (no second-model review attached) — noted.
 
 No code or deployment change. Lab queue empty (097·100 held `_`).
