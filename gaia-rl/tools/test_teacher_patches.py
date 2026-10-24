@@ -345,7 +345,7 @@ class OpeningBudgetTests(unittest.TestCase):
                 "import four_factions.preparation as p\n"
                 "outer = p.Policies.rank\n"
                 "print(tp.fed_remember_scores in [c.cell_contents for c in outer.__closure__] "
-                "and outer._gaia_asteroid_hold)")
+                "and outer._gaia_asteroid_hold and outer._dead_tile)")
         out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True,
                              env=env).stdout
         # The last word: the federation / token comparisons read the final ranking (outermost recorder, debate 1/1),
@@ -1405,6 +1405,33 @@ class OpeningBudgetTests(unittest.TestCase):
 
     def test_gaia_riders_are_the_factions_with_a_gaia_guide_track(self):
         self.assertEqual(tp.GAIA_RIDERS, {'Xenos', 'Terrans', 'Gleens', 'Itars', 'Firaks', 'BalTaks'})
+
+    def _dead_tile(self, faction, structures=(), tracks=None, mj01=True):
+        tp._guide['mj01'] = mj01                           # restored by setUp's cleanup
+        player = {'faction': faction, 'structures': list(structures), 'research_tracks': tracks or {}}
+        state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player],
+                 'research_board': {'tech_tile_slots': [10, 3, 6, 5, 2, 7, 9, 8, 4]}}
+        up = lambda tile: {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                           'tech_tile_choice': {'kind': 'Standard', 'tile': tile, 'advance_track': None}}
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': up(3)}, {'action': up(5)}]}
+        scores = [(9.0, 'tile3'), (4.0, 'tile5')]
+        return scores, tp.dead_tile_scores(None, snapshot, scores)
+
+    def test_dead_tile_baltaks_navigation_tile_yields_before_the_institute(self):
+        scores, out = self._dead_tile('BalTaks')
+        self.assertGreater(out[1][0], out[0][0])
+        self.assertEqual((out[1][0], out[0][0]), (9.0, 4.0))
+        self.assertIn('dead_tile', out[1][1])
+
+    def test_dead_tile_any_faction_with_the_column_track_at_5_is_swapped(self):
+        scores, out = self._dead_tile('Geodens', tracks={'navigation': 5})
+        self.assertGreater(out[1][0], out[0][0])
+
+    def test_dead_tile_leaves_live_columns_institute_and_no_mj01_alone(self):
+        for kwargs in ({'faction': 'BalTaks', 'structures': [{'kind': 'PlanetaryInstitute', 'hex': '0,0'}]},
+                       {'faction': 'Geodens', 'tracks': {'navigation': 4}}, {'faction': 'BalTaks', 'mj01': False}):
+            scores, out = self._dead_tile(**kwargs)
+            self.assertEqual(out, scores, kwargs)
 
     def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup (ALL_FACTION_PARTS on)

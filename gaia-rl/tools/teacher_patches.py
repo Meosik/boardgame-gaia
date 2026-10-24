@@ -4837,6 +4837,46 @@ def gaia_asteroid_hold_scores(env, snapshot, scores):
     return result
 
 
+# dead_tile (ships_menu1_all only; lab 107 pair-005 game-0-A12 step 24): a standard tile on a column slot carries that
+# column's track step, which is lost when the track cannot advance (BalTaks Navigation before the Planetary Institute,
+# engine.rs:4359; a track already at 5). tile_prefs (inner) may have put such a tile first; a live variant of the same
+# move takes the top place then. Order only.
+def dead_tile_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'mj01'):
+        return scores
+    slots = list((state.get('research_board') or {}).get('tech_tile_slots') or ())
+    columns = list(TRACK_KEYS.values())
+    institute = any(s.get('kind') == 'PlanetaryInstitute' for s in player.get('structures') or ())
+
+    def dead(tile):
+        if tile not in slots[:6]:
+            return False
+        track = columns[slots.index(tile)]
+        return ((player['faction'] == 'BalTaks' and track == 'navigation' and not institute)
+                or (player.get('research_tracks') or {}).get(track, 0) >= 5)
+
+    groups, tiles = {}, {}
+    for i, c in enumerate(snapshot['candidates']):
+        found = None if blocked(scores[i]) else _tile_choice(c['action'])
+        if found is None:
+            continue
+        key, tiles[i] = found
+        groups.setdefault(key, []).append(i)
+    lifted = list(scores)
+    for members in groups.values():
+        top = max(members, key=lambda i: lifted[i][0])
+        live = [i for i in members if not dead(tiles[i])]
+        if dead(tiles[top]) and live:
+            _swap(lifted, list(lifted), max(live, key=lambda i: lifted[i][0]), top,
+                  f'{player["faction"]} tile {tiles[top]}: its column step is impossible (dead_tile)')
+    return lifted if lifted != scores else scores
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     """Teacher factory: every faction part the sources gave so far on top of ships_menu1 (user 2026-10-24 "일단
     반영할거 다 반영해봐", E103; integrate first, fix by replays): ..._byfaction_guide_res (CANDIDATE, GUIDE, SOURCE
@@ -4871,6 +4911,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     # the federation / token comparisons would read the ranking before track_race, fed_cluster and the rest (debate
     # 1/1). A second recorder as the outermost wrapper stores the final ranking.
     _wrap_rank('_gaia_asteroid_hold', gaia_asteroid_hold_scores)    # user 10-25
+    _wrap_rank('_dead_tile', dead_tile_scores)                      # lab 107 pair-005 step 24
     _wrap_rank('_fed_remember_outer', fed_remember_scores)
     return teacher
 
