@@ -354,8 +354,9 @@ pub enum GameAction {
     /// Lost Fleet expansion, T F Mars spaceship's Appendix II action space: once explored,
     /// costs 2 power to immediately gaiaform a Transdim planet — a flat-cost, once-per-round
     /// alternative to the normal `GaiaFormation` action's Gaia Project track-level-scaled power
-    /// cost (and doesn't require having researched the Gaia Project track at all). Requires the
-    /// player to have explored T F Mars specifically.
+    /// cost. It still needs an available Gaiaformer (`validate_immediate_gaia_formation_impl`
+    /// rejects without one; LF rulebook p.14 "start a Gaia Project"). Requires the player to have
+    /// explored T F Mars specifically.
     TFMarsGaiaFormation { coord: HexCoord },
 
     /// Lost Fleet expansion, Eclipse spaceship's Appendix II action space: once explored, costs
