@@ -4389,6 +4389,23 @@ def install_plan_menu():
 
 
 _task_seen = []     # the goals and scoring pairs of the search being built; the roots list that follows drops them
+_task_exec_key = [False]    # ..._ships_menu1_all: dedup by execution key (set by goals_for, which starts each search)
+
+
+def _exec_key(goal):
+    """The Goal with its label-only fields cleared: name; sources down to the one flag the rollout reads
+    ('B19' in preparation.viable / funding_need); steps recursively. family, coord, target, level, tile, first, payoff
+    all steer moves and stay."""
+    from dataclasses import replace
+    return replace(goal, name='', sources=('B19',) if 'B19' in goal.sources else (),
+                   steps=tuple(_exec_key(step) for step in goal.steps))
+
+
+def _task_in(goal, goals):
+    if not _task_exec_key[0]:
+        return goal in goals
+    key = _exec_key(goal)
+    return any(goal == other or key == _exec_key(other) for other in goals)
 
 
 def _wrapper_flags(wrapper, inner, flag):
@@ -4419,6 +4436,11 @@ def install_task_dedup():
             if p.goals_for is not goals_for:    # an inner layer left by an earlier install must not consume _task_seen
                 return inner_goals(snapshot, **kwargs)
             _task_seen.clear()
+            try:
+                player = snapshot['state']['players'][snapshot['player']]
+                _task_exec_key[0] = bool(_part(player, 'mj01'))
+            except (KeyError, TypeError, IndexError):
+                _task_exec_key[0] = False
             return inner_goals(snapshot, **kwargs)
         _wrapper_flags(goals_for, inner_goals, '_task_dedup')
         goals_for.__wrapped__ = getattr(inner_goals, '__wrapped__', inner_goals)
@@ -4431,12 +4453,12 @@ def install_task_dedup():
                 return inner_pairs(snapshot, scores, goals)
             kept = []
             for goal in goals:
-                if goal not in kept:
+                if not _task_in(goal, kept):
                     kept.append(goal)
             goals[:] = kept
             paired = []
             for goal in inner_pairs(snapshot, scores, goals):
-                if goal not in kept and goal not in paired:
+                if not _task_in(goal, kept) and not _task_in(goal, paired):
                     paired.append(goal)
             _task_seen[:] = kept + paired
             return paired
@@ -4455,7 +4477,7 @@ def install_task_dedup():
                 _task_seen.clear()
                 kept = []
                 for goal in result:
-                    if goal not in seen and goal not in kept:
+                    if not _task_in(goal, seen) and not _task_in(goal, kept):
                         kept.append(goal)
                 return kept
             return result

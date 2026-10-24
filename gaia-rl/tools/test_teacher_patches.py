@@ -1634,6 +1634,49 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(p.interleave_families(roots, None), roots)                  # consumed: next call untouched
         self.assertEqual(p.interleave_families([3, 1], None), [3, 1])
 
+    def _exec_dedup(self, mj01, goals_in, pairs_out=()):
+        """goals_for -> insert nothing -> scoring_pairs, with the mj01 gate on or off; returns (goals, paired)."""
+        import four_factions.preparation as p
+        for name in ('goals_for', 'interleave_families', 'scoring_pairs'):
+            self.addCleanup(setattr, p, name, getattr(p, name))
+        self.addCleanup(tp._guide.__setitem__, 'mj01', tp._guide['mj01'])
+        tp._guide['mj01'] = mj01
+        snapshot = {'state': {'players': {0: {'faction': 'Terrans'}}}, 'player': 0}
+        p.goals_for = lambda snapshot, **kwargs: list(goals_in)
+        p.interleave_families = lambda items, family: list(items)
+        p.scoring_pairs = lambda snapshot, scores, goals: list(pairs_out)
+        tp.install_task_dedup()
+        goals = p.goals_for(snapshot)
+        paired = p.scoring_pairs(snapshot, [], goals)
+        return goals, paired
+
+    def test_task_dedup_execution_key_with_the_gate_on(self):
+        """ships_menu1_all: plans that differ only by name / sources are one comparison (the first stays); a different
+        steps / first / family keeps both; the B19 source flag steers viable(), so it stays in the key."""
+        from four_factions.preparation import Goal
+        step = Goal('colony@2,0', 'colony', '2,0')
+        a = Goal('BGG-R1-1RL+2M', 'sequence', steps=(step,), sources=('x',))
+        b = Goal('BalTaks-former-QIC-then-expand', 'sequence', steps=(Goal('other-name', 'colony', '2,0'),), sources=('y',))
+        goals, _ = self._exec_dedup(True, [a, b])
+        self.assertEqual(goals, [a])
+        c = Goal('c', 'sequence', steps=(Goal('colony@3,0', 'colony', '3,0'),))
+        d = Goal('d', 'sequence', steps=(step,), first=4)
+        goals, _ = self._exec_dedup(True, [a, c, d])
+        self.assertEqual(goals, [a, c, d])
+        goals, _ = self._exec_dedup(True, [a, Goal('e', 'sequence', steps=(step,), sources=('B19',))])
+        self.assertEqual(len(goals), 2)
+        goals, paired = self._exec_dedup(True, [a], pairs_out=[b, d])           # the pairs drop what goals hold
+        self.assertEqual(paired, [d])
+
+    def test_task_dedup_name_only_difference_stays_with_the_gate_off(self):
+        from four_factions.preparation import Goal
+        step = Goal('colony@2,0', 'colony', '2,0')
+        a = Goal('one', 'sequence', steps=(step,), sources=('x',))
+        b = Goal('two', 'sequence', steps=(step,), sources=('y',))
+        goals, paired = self._exec_dedup(False, [a, b], pairs_out=[Goal('three', 'sequence', steps=(step,))])
+        self.assertEqual(goals, [a, b])
+        self.assertEqual(len(paired), 1)
+
     def test_plan_menu_orders_the_front_by_the_faction_row(self):
         from four_factions.preparation import Goal
         for faction, row in tp.FACTION_MENU.items():
