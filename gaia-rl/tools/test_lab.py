@@ -299,7 +299,7 @@ class ChargeTableTests(unittest.TestCase):
         self.assertIn('| Ivits | 0 |', text)
         self.assertIn('기본기 지표 계산 실패', lab.basics_table({'error': 'boom'}))
 
-    def test_watch_replay_is_the_lower_game_of_the_largest_gap(self):
+    def test_watch_replay_is_the_b_arm_game_of_the_largest_gap(self):
         def row(faction, arm, charges):
             return {'faction': faction, 'arm': arm, 'charges': charges}
         seats = {'pair-000/game-0-A02': [row('Xenos', 'A', 262), row('Terrans', 'B', 123)],
@@ -307,7 +307,13 @@ class ChargeTableTests(unittest.TestCase):
                  'pair-001/game-0-A01': [row('Xenos', 'A', 100)]}
         game, seat, label = lab.watch_pick(seats)
         self.assertEqual((game, seat), ('pair-000/game-1-A13', 0))
-        self.assertEqual(label, 'Xenos B팔 충전 79 (상대 팔 262)')
+        self.assertEqual(label, 'Xenos B팔 충전 79 (A팔 262)')
+        # B gained more: still the B arm's game and seat.
+        seats = {'pair-000/game-0-A02': [row('Xenos', 'A', 50)],
+                 'pair-000/game-1-A13': [row('Terrans', 'A', 1), row('Xenos', 'B', 200)]}
+        game, seat, label = lab.watch_pick(seats)
+        self.assertEqual((game, seat), ('pair-000/game-1-A13', 1))
+        self.assertEqual(label, 'Xenos B팔 충전 200 (A팔 50)')
         self.assertIsNone(lab.watch_pick({}))
 
     def test_charges_passes_end_round_only_when_not_default(self):

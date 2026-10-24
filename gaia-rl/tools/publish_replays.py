@@ -1,4 +1,4 @@
-"""Publish replays; a lab experiment batch replaces other experiments' replays; show newest 24, prune older viewing files after 30 days."""
+"""Publish replays; a newer lab experiment's batch replaces older experiments' replays (an older batch is added without deleting); show newest 24, prune older viewing files after 30 days."""
 import argparse
 import json
 import math
@@ -48,6 +48,12 @@ def experiment_key(game):
     return match.group(1) if match else None
 
 
+def experiment_order(key):
+    # Lab names start with a number ("106-ships-...", "104a-dedup-smoke"); None when they do not.
+    match = re.match(r'^(\d+)(.*)$', key or '')
+    return (int(match.group(1)), match.group(2)) if match else None
+
+
 def publish(source, destination, *, now=None):
     now = time.time() if now is None else now
     if not isinstance(now, (int, float)) or not math.isfinite(now) or now < 0:
@@ -90,10 +96,18 @@ def publish(source, destination, *, now=None):
                     or (target.exists() and target.read_bytes() != data)):
                 raise ValueError(f'Replay collision; originals preserved: {game["id"]}')
             payloads[game['file']] = data
-        # A lab experiment batch replaces every other experiment's replays.
-        keys = {experiment_key(g) for g in incoming} - {None}
+        # Only a newer (or equal) lab experiment replaces the other experiments' replays.
+        current_path = destination/'current-experiment.json'
+        if current_path.is_symlink():
+            raise ValueError('Refusing symlink current experiment')
+        current = json.loads(current_path.read_text()).get('experiment') if current_path.exists() else None
+        keys = [k for k in {experiment_key(g) for g in incoming} if experiment_order(k) is not None]
+        newest = max(keys, key=experiment_order) if keys else None
+        replace = newest is not None and (
+            current is None or experiment_order(current) is None
+            or experiment_order(newest) >= experiment_order(current))
         incoming_ids = {g['id'] for g in incoming}
-        replaced = [g for g in history if keys and experiment_key(g) not in keys
+        replaced = [g for g in history if replace and experiment_key(g) != newest
                     and g['id'] not in incoming_ids]
         replaced_ids = {g['id'] for g in replaced}
         for game in history:
@@ -122,6 +136,8 @@ def publish(source, destination, *, now=None):
         write_catalog(archive, retained)
         write_catalog(index, retained[:VISIBLE_LIMIT])
         write_json(times_path, times)
+        if replace:
+            write_json(current_path, {'experiment': newest})
         for game in expired:
             (destination/game['file']).unlink()
         for game in replaced:

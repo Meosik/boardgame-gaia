@@ -426,10 +426,11 @@ REPLAY_DIR = Path(os.environ.get('GAIA_LAB_REPLAY_DIR') or '~/gaia-media/ai-repl
 
 
 def watch_pick(seats):
-    """The game to watch: the (pair, faction) with the largest charge gap between the arms, in the
-    game where that faction gained less. -> (game, seat, label) or None.
+    """The game to watch: the (pair, faction) with the largest charge gap between the arms, always
+    the B arm's game and seat. -> (game, seat, label) or None.
 
-    User (2026-10-09): every experiment publishes one replay worth looking at."""
+    User (2026-10-09): every experiment publishes one replay worth looking at.
+    User (2026-10-25): B arm only (the changed teacher)."""
     by_key = {}
     for game, rows in seats.items():
         for seat, row in enumerate(rows):
@@ -439,10 +440,9 @@ def watch_pick(seats):
     if not gaps:
         return None
     _, faction, arms = max(gaps, key=lambda g: g[0])
-    low, high = sorted(arms.values(), key=lambda v: v[0])
-    low_arm = 'A' if arms['A'] is low else 'B'
-    label = f'{faction} {low_arm}팔 충전 {low[0]:.0f} (상대 팔 {high[0]:.0f})'
-    return low[1], low[2], label
+    a, b = arms['A'], arms['B']
+    label = f'{faction} B팔 충전 {b[0]:.0f} (A팔 {a[0]:.0f})'
+    return b[1], b[2], label
 
 
 def publish_watch_replay(name, run_dir, env, data):

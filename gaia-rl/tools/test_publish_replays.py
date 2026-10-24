@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from publish_replays import publish
+from publish_replays import experiment_order, publish
 
 
 class PublishReplayTests(unittest.TestCase):
@@ -114,26 +114,46 @@ class PublishReplayTests(unittest.TestCase):
         (path/'index.json').write_text(json.dumps({'schema_version': 1, 'games': games}))
         return path
 
-    def test_lab_batch_replaces_other_experiments(self):
-        publish(self.lab_batch('w', 'exp-w', 2), self.dest)
-        w_files = [p.name for p in self.dest.glob('*exp-w*.gz')]
+    def current(self):
+        return json.loads((self.dest/'current-experiment.json').read_text())['experiment']
+
+    def test_newer_lab_batch_replaces_older_experiment(self):
+        publish(self.lab_batch('w', '106-w', 2), self.dest)
+        self.assertEqual(self.current(), '106-w')
+        w_files = [p.name for p in self.dest.glob('*106-w*.gz')]
         self.assertEqual(len(w_files), 2)
-        publish(self.lab_batch('x', 'exp-x', 2), self.dest)
+        publish(self.lab_batch('x', '107-x', 2), self.dest)
         for name in ('index.json', 'archive-index.json'):
-            self.assertEqual({g['id'] for g in self.catalog(name)}, {'exp-x-0', 'exp-x-1'})
+            self.assertEqual({g['id'] for g in self.catalog(name)}, {'107-x-0', '107-x-1'})
         for name in w_files:
             self.assertFalse((self.dest/name).exists())
-        self.assertEqual(len(list(self.dest.glob('*exp-x*.gz'))), 2)
+        self.assertEqual(len(list(self.dest.glob('*107-x*.gz'))), 2)
+        self.assertEqual(self.current(), '107-x')
+
+    def test_older_lab_batch_is_added_without_deleting_newer(self):
+        publish(self.lab_batch('w', '106-w', 2), self.dest)
+        publish(self.lab_batch('x', '107-x', 2), self.dest)
+        publish(self.lab_batch('w2', '106-w', 2, start=10), self.dest)
+        self.assertEqual({g['id'] for g in self.catalog()},
+                         {'107-x-0', '107-x-1', '106-w-10', '106-w-11'})
+        self.assertEqual(len(list(self.dest.glob('*.gz'))), 4)
+        self.assertEqual(self.current(), '107-x')
 
     def test_same_experiment_second_batch_keeps_earlier_games(self):
-        publish(self.lab_batch('x1', 'exp-x', 2), self.dest)
-        publish(self.lab_batch('x2', 'exp-x', 2, start=2), self.dest)
+        publish(self.lab_batch('x1', '107-x', 2), self.dest)
+        publish(self.lab_batch('x2', '107-x', 2, start=2), self.dest)
         self.assertEqual(len(self.catalog()), 4)
         self.assertEqual(len(self.catalog('archive-index.json')), 4)
-        self.assertEqual(len(list(self.dest.glob('*exp-x*.gz'))), 4)
+        self.assertEqual(len(list(self.dest.glob('*107-x*.gz'))), 4)
+
+    def test_experiment_order(self):
+        self.assertEqual(experiment_order('106-ships-vs-menu1-allbase-1r'), (106, '-ships-vs-menu1-allbase-1r'))
+        self.assertLess(experiment_order('104a-dedup-smoke'), experiment_order('105-x'))
+        self.assertLess(experiment_order('095b-guide'), experiment_order('104a-dedup-smoke'))
+        self.assertIsNone(experiment_order('exp-w'))
 
     def test_non_lab_batch_leaves_existing_games_alone(self):
-        publish(self.lab_batch('w', 'exp-w', 2), self.dest)
+        publish(self.lab_batch('w', '106-w', 2), self.dest)
         publish(self.batch('plain', 2), self.dest)
         self.assertEqual(len(self.catalog()), 4)
         self.assertEqual(len(list(self.dest.glob('*.gz'))), 4)
