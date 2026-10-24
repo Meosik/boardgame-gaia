@@ -4839,7 +4839,7 @@ def gaia_asteroid_hold_scores(env, snapshot, scores):
 
 # dead_tile (ships_menu1_all only; lab 107 pair-005 game-0-A12 step 24): a standard tile on a column slot carries that
 # column's track step, which is lost when the track cannot advance (BalTaks Navigation before the Planetary Institute,
-# engine.rs:4359; a track already at 5). tile_prefs (inner) may have put such a tile first, and in 107 the dead tile won
+# engine.rs:4359). A maxed column is not dead: the tile itself is still wanted late (debate 1/1). tile_prefs (inner) may have put such a tile first, and in 107 the dead tile won
 # the rollout comparison by 2.2: blocked while a live variant of the same move exists.
 def dead_tile_scores(env, snapshot, scores):
     from current_actions.conservation import BLOCKED, PREFIX, blocked
@@ -4857,8 +4857,7 @@ def dead_tile_scores(env, snapshot, scores):
         if tile not in slots[:6]:
             return False
         track = columns[slots.index(tile)]
-        return ((player['faction'] == 'BalTaks' and track == 'navigation' and not institute)
-                or (player.get('research_tracks') or {}).get(track, 0) >= 5)
+        return player['faction'] == 'BalTaks' and track == 'navigation' and not institute
 
     groups, tiles = {}, {}
     for i, c in enumerate(snapshot['candidates']):

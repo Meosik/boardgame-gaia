@@ -1424,11 +1424,9 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertIn('dead_tile', out[0][1])
         self.assertEqual(out[1], scores[1])
 
-    def test_dead_tile_any_faction_with_the_column_track_at_5_is_blocked(self):
-        from current_actions.conservation import blocked
+    def test_dead_tile_a_maxed_column_is_not_dead(self):
         scores, out = self._dead_tile('Geodens', tracks={'navigation': 5})
-        self.assertTrue(blocked(out[0]))
-        self.assertEqual(out[1], scores[1])
+        self.assertEqual(out, scores)
 
     def test_dead_tile_without_a_live_variant_changes_nothing(self):
         scores, out = self._dead_tile('Geodens', tracks={'navigation': 5, 'gaia': 5})
