@@ -4540,14 +4540,51 @@ def setup_places(snapshot, scores):
     returns the ranking's best index for every plan outside SETUP_FIRST_FAMILIES, so those plans all start on the control's
     place and only repeat its first move."""
     from current_actions.conservation import blocked
+    if not scores:
+        return 0
+    return sum(1 for i in _setup_placement(snapshot) if not blocked(scores[i]))
+
+
+def _setup_placement(snapshot):
+    """Candidate indices of a PlaceStartingStructure decision of an mj01 (ships_menu1_all) player, else []."""
     try:
         player = snapshot['state']['players'][snapshot['player']]
-        if not _part(player, 'mj01') or not scores:
-            return 0
-        places = [i for i, c in enumerate(snapshot['candidates']) if c['action']['type'] == 'PlaceStartingStructure']
+        if not _part(player, 'mj01'):
+            return []
+        return [i for i, c in enumerate(snapshot['candidates']) if c['action']['type'] == 'PlaceStartingStructure']
     except (KeyError, TypeError, IndexError):
-        return 0
-    return sum(1 for i in places if not blocked(scores[i]))
+        return []
+
+
+_bgg_setup = [False]    # the last bgg_openings.planning.goals call was for a setup placement
+
+
+def install_setup_no_bgg():
+    """User 2026-10-25, lab 106, known-bad 15/18 and "debate 1/1: BGG opening path still filled setup slots": the BGG
+    opening goals (preparation.search / parallel_search._planned_tasks) go first in the task list and take budget slots,
+    and select_forecast may override the chosen place and store _bgg_targets. At a setup placement of the all factory
+    goals returns [] and select_forecast None, so every start place keeps its comparison slot. preparation calls goals
+    before publish_current (same process), so goals sets the flag select_forecast reads; every goals call resets it."""
+    import bgg_openings.planning as planning
+    inner_goals = planning.goals
+    if not getattr(inner_goals, '_setup_no_bgg', False):
+        def goals(snapshot, remembered=None):
+            _bgg_setup[0] = bool(_setup_placement(snapshot))
+            if _bgg_setup[0]:
+                return []
+            return inner_goals(snapshot, remembered)
+        goals._setup_no_bgg = True
+        goals.__wrapped__ = inner_goals
+        planning.goals = goals
+    inner_forecast = planning.select_forecast
+    if not getattr(inner_forecast, '_setup_no_bgg', False):
+        def select_forecast(*args, **kwargs):
+            if _bgg_setup[0]:
+                return None
+            return inner_forecast(*args, **kwargs)
+        select_forecast._setup_no_bgg = True
+        select_forecast.__wrapped__ = inner_forecast
+        planning.select_forecast = select_forecast
 
 
 def setup_places_budget(snapshot, scores, budget):
@@ -4775,6 +4812,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     _guide['weak_factions'] = True
     _guide['mj01'] = True      # E104: the MJ01 Lost Fleet track corrections (MJ_TRACK_CAPS)
     install_setup_places()     # lab 106: every open start place is rolled out once
+    install_setup_no_bgg()     # ... and the BGG opening path no longer fills setup slots
     install_ambas_nav2()
     _wrap_rank('_artifact_tokens', artifact_tokens_scores)
     _wrap_rank('_range_tile', range_tile_scores)

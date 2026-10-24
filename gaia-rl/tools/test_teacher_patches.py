@@ -1870,6 +1870,68 @@ class OpeningBudgetTests(unittest.TestCase):
         p.scoring_pairs(snapshot, scores, goals)
         self.assertEqual(goals, [ordered])
 
+    def _bgg_wrapped(self, mj01):
+        import bgg_openings.planning as planning
+        self.addCleanup(setattr, planning, 'goals', planning.goals)
+        self.addCleanup(setattr, planning, 'select_forecast', planning.select_forecast)
+        self.addCleanup(tp._guide.__setitem__, 'mj01', tp._guide['mj01'])
+        self.addCleanup(tp._bgg_setup.__setitem__, 0, tp._bgg_setup[0])
+        tp._guide['mj01'] = mj01
+        sentinel = ['original-goals']
+        planning.goals = lambda snapshot, remembered=None: sentinel
+        planning.select_forecast = lambda rows, remembered, comparisons: 'original-forecast'
+        tp.install_setup_no_bgg()
+        tp.install_setup_no_bgg()                                                    # wraps once
+        self.assertFalse(hasattr(planning.goals.__wrapped__, '_setup_no_bgg'))
+        return planning, sentinel
+
+    def test_setup_no_bgg_blocks_goals_and_forecast_only_at_a_setup_placement(self):
+        planning, sentinel = self._bgg_wrapped(True)
+        setup = {'state': {'players': {0: {'faction': 'Terrans'}}}, 'player': 0,
+                 'candidates': [{'action': {'type': 'PlaceStartingStructure'}}]}
+        other = {**setup, 'candidates': [{'action': {'type': 'Upgrade'}}]}
+        self.assertEqual(planning.goals(setup, None), [])
+        self.assertIsNone(planning.select_forecast((), None, []))
+        self.assertIs(planning.goals(other, None), sentinel)                          # the flag is reset by every goals call
+        self.assertEqual(planning.select_forecast((), None, []), 'original-forecast')
+        planning.goals(setup)
+        planning.goals(other)
+        self.assertEqual(planning.select_forecast((), None, []), 'original-forecast')
+        planning, sentinel = self._bgg_wrapped(False)                                 # gate off: always the original
+        self.assertIs(planning.goals(setup, None), sentinel)
+        self.assertEqual(planning.select_forecast((), None, []), 'original-forecast')
+
+    def test_setup_placement_real_planned_tasks_have_no_bgg_goal_and_compare_every_place(self):
+        import budget_teacher
+        import four_factions.preparation as p
+        import parallel_search
+        from four_factions.preparation import Policies, PolicyCache
+        from current_actions.conservation import blocked
+        for name in ('goals_for', 'interleave_families', 'scoring_pairs'):
+            self.addCleanup(setattr, p, name, getattr(p, name))
+        self.addCleanup(lambda saved=list(budget_teacher.budget_hooks): budget_teacher.budget_hooks.__setitem__(slice(None), saved))
+        tp._guide['mj01'] = True
+        self.addCleanup(tp._guide.__setitem__, 'mj01', False)
+        import bgg_openings.planning as planning
+        self.addCleanup(setattr, planning, 'goals', planning.goals)
+        self.addCleanup(setattr, planning, 'select_forecast', planning.select_forecast)
+        tp.install_setup_places()
+        tp.install_setup_no_bgg()
+        tp.install_task_dedup()
+        env = Environment(SEED, 2000)
+        snapshot = json.loads(env.snapshot_json())
+        self.assertTrue(any(c['action']['type'] == 'PlaceStartingStructure' for c in snapshot['candidates']))
+        policies = Policies({}, cache=PolicyCache(), shared_factions=True)
+        scores = policies.rank(env, snapshot)
+        tasks, _ = parallel_search._planned_tasks(env, snapshot, {}, scores, policies,
+                                                  {'bgg_openings': True, 'shared_factions': True})
+        self.assertFalse([t for t in tasks if t.family == 'bgg-opening'])
+        firsts = {t.first for t in tasks if t.first is not None}
+        open_places = {i for i, c in enumerate(snapshot['candidates'])
+                       if c['action']['type'] == 'PlaceStartingStructure' and not blocked(scores[i])}
+        self.assertGreater(len(open_places), 1)
+        self.assertLessEqual(open_places, firsts)
+
     def start_snapshot_two_placed(self, mine):
         """far_start_snapshot where the actor already placed the structures at `mine`."""
         snapshot = self.far_start_snapshot()
