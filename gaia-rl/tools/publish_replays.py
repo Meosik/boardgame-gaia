@@ -1,4 +1,4 @@
-"""Publish replays; show newest 24, prune older viewing files after 30 days."""
+"""Publish replays; a lab experiment batch replaces other experiments' replays; show newest 24, prune older viewing files after 30 days."""
 import argparse
 import json
 import math
@@ -43,6 +43,11 @@ def write_catalog(path, games):
     write_json(path, {'schema_version': 1, 'games': games})
 
 
+def experiment_key(game):
+    match = re.match(r'^ab-lab-(.+?)-pair-\d', game['file'])
+    return match.group(1) if match else None
+
+
 def publish(source, destination, *, now=None):
     now = time.time() if now is None else now
     if not isinstance(now, (int, float)) or not math.isfinite(now) or now < 0:
@@ -85,7 +90,15 @@ def publish(source, destination, *, now=None):
                     or (target.exists() and target.read_bytes() != data)):
                 raise ValueError(f'Replay collision; originals preserved: {game["id"]}')
             payloads[game['file']] = data
+        # A lab experiment batch replaces every other experiment's replays.
+        keys = {experiment_key(g) for g in incoming} - {None}
+        incoming_ids = {g['id'] for g in incoming}
+        replaced = [g for g in history if keys and experiment_key(g) not in keys
+                    and g['id'] not in incoming_ids]
+        replaced_ids = {g['id'] for g in replaced}
         for game in history:
+            if game['id'] in replaced_ids:
+                continue
             if (destination/game['file']).is_symlink():
                 raise ValueError('Refusing symlink archived replay')
             if not (destination/game['file']).is_file():
@@ -100,7 +113,7 @@ def publish(source, destination, *, now=None):
         fresh = [g for g in incoming if g['id'] not in by_id]
         for game in fresh:
             times[game['id']] = now
-        combined = fresh + history
+        combined = fresh + [g for g in history if g['id'] not in replaced_ids]
         expired = [g for g in combined[VISIBLE_LIMIT:]
                    if now - times[g['id']] > RETENTION_SECONDS]
         expired_ids = {g['id'] for g in expired}
@@ -111,6 +124,8 @@ def publish(source, destination, *, now=None):
         write_json(times_path, times)
         for game in expired:
             (destination/game['file']).unlink()
+        for game in replaced:
+            (destination/game['file']).unlink(missing_ok=True)
         return len(retained[:VISIBLE_LIMIT]), len(retained)
     finally:
         lock.unlink()

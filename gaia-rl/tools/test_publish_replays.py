@@ -103,6 +103,41 @@ class PublishReplayTests(unittest.TestCase):
             publish(old, self.dest, now=33 * 86400)
         self.assertEqual((self.dest/'index.json').read_bytes(), before)
 
+    def lab_batch(self, directory, experiment, count, start=0):
+        path = self.root/directory
+        path.mkdir()
+        games = [{'id': f'{experiment}-{i}',
+                  'file': f'ab-lab-{experiment}-pair-{i:03d}-game-a.json.gz'}
+                 for i in range(start, start + count)]
+        for game in games:
+            (path/game['file']).write_bytes(game['id'].encode())
+        (path/'index.json').write_text(json.dumps({'schema_version': 1, 'games': games}))
+        return path
+
+    def test_lab_batch_replaces_other_experiments(self):
+        publish(self.lab_batch('w', 'exp-w', 2), self.dest)
+        w_files = [p.name for p in self.dest.glob('*exp-w*.gz')]
+        self.assertEqual(len(w_files), 2)
+        publish(self.lab_batch('x', 'exp-x', 2), self.dest)
+        for name in ('index.json', 'archive-index.json'):
+            self.assertEqual({g['id'] for g in self.catalog(name)}, {'exp-x-0', 'exp-x-1'})
+        for name in w_files:
+            self.assertFalse((self.dest/name).exists())
+        self.assertEqual(len(list(self.dest.glob('*exp-x*.gz'))), 2)
+
+    def test_same_experiment_second_batch_keeps_earlier_games(self):
+        publish(self.lab_batch('x1', 'exp-x', 2), self.dest)
+        publish(self.lab_batch('x2', 'exp-x', 2, start=2), self.dest)
+        self.assertEqual(len(self.catalog()), 4)
+        self.assertEqual(len(self.catalog('archive-index.json')), 4)
+        self.assertEqual(len(list(self.dest.glob('*exp-x*.gz'))), 4)
+
+    def test_non_lab_batch_leaves_existing_games_alone(self):
+        publish(self.lab_batch('w', 'exp-w', 2), self.dest)
+        publish(self.batch('plain', 2), self.dest)
+        self.assertEqual(len(self.catalog()), 4)
+        self.assertEqual(len(list(self.dest.glob('*.gz'))), 4)
+
     def test_symlink_payload_refused_before_writes(self):
         batch = self.batch('new', 1)
         target = batch/'new-0.json.gz'
