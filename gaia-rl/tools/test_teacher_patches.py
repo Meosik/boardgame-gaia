@@ -976,6 +976,29 @@ class OpeningBudgetTests(unittest.TestCase):
         snapshot['candidates'] = [{'action': big(2)}, {'action': big(6)}, {'action': {'type': 'Pass'}}]
         self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [4.0, 9.0, 1.0])
 
+    def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):
+        tp._guide['mj01'] = True                           # restored by setUp's cleanup (ALL_FACTION_PARTS on)
+        player = {'faction': 'Taklons', 'research_tracks': {}}
+        state = {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player],
+                 'research_board': {'tech_tile_slots': [6, 10, 8, 2, 9, 3, 4, 7, 5]}}
+        up = lambda tile: {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                           'tech_tile_choice': {'kind': 'Standard', 'tile': tile, 'advance_track': None}}
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': up(3)}, {'action': up(10)}, {'action': up(5)}]}
+        scores = [(9.0, 't3'), (4.0, 't10'), (6.0, 't5')]
+        self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [4.0, 9.0, 6.0])  # charge-4 leads
+        state['research_board']['tech_tile_slots'] = [6, 5, 8, 10, 9, 3, 4, 7, 2]                       # 10 under Gaia
+        scores = [(9.0, 't3'), (8.0, 't10'), (6.0, 't5')]
+        self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [6.0, 8.0, 9.0])  # K2: tile 5
+        xenos = {'faction': 'Xenos', 'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()}}
+        research = lambda track: {'action': {'type': 'ResearchAdvance', 'track': track}}
+        snap = {'player': 0, 'state': {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [xenos],
+                                       'research_board': {'advanced_tech_tiles': [1, 2, 3, 5, 6, 9]}},
+                'candidates': [research('ArtificialIntelligence'), research('Navigation')]}
+        lifted = tp.track_set_scores(None, snap, [(9.0, 'ai'), (5.0, 'nav')])
+        self.assertEqual([s[0] for s in lifted], [5.0, 9.0])                  # AI late
+        snap['state']['research_board']['advanced_tech_tiles'][2] = 11          # X4: a good tile on AI
+        self.assertEqual([s[0] for s in tp.track_set_scores(None, snap, [(9.0, 'ai'), (5.0, 'nav')])], [9.0, 5.0])
+
     def test_niche_tracks_for_hadsch_hallas_and_xenos(self):
         tp._guide.update(byfaction=True, faction_guide=True)   # restored by setUp's cleanup
         lv = lambda **k: {**{t: 0 for t in tp.TRACK_KEYS.values()}, **k}

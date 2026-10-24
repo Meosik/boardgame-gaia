@@ -231,6 +231,14 @@ RESOLVED_FACTION_PARTS = {
 }
 
 
+# Parts that only ..._ships_menu1_all adds (E103 ②b, with the mj01 flag): Taklons' charge-4 tile (tile_prefs, K2), Xenos'
+# guide tracks with AI late unless a good advanced tile sits on AI (track_set, X4: E97 (ㄱ)).
+ALL_FACTION_PARTS = {
+    'Taklons': frozenset({'tile_prefs'}),
+    'Xenos': frozenset({'track_set'}),
+}
+
+
 def _faction_parts(faction):
     parts = set(BASE_FACTION_PARTS.get(faction, ()))
     if _guide['byfaction']:
@@ -257,6 +265,7 @@ def _faction_parts(faction):
         parts.update({'plan_menu', 'track_plans'})
     if _guide['mj01']:
         parts.add('mj01')
+        parts.update(ALL_FACTION_PARTS.get(faction, ()))
     return parts
 
 
@@ -2199,6 +2208,9 @@ def track_set_scores(env, snapshot, scores):
     levels = player.get('research_tracks') or {}
     # A guide track at its cap counts as off the faction's tracks (track_caps).
     tracks = tuple(t for t in _faction_tracks(player) if levels.get(t, 0) < caps.get(t, 99))
+    if player['faction'] == 'Xenos' and _part(player, 'mj01') and \
+            state['research_board']['advanced_tech_tiles'][AI_SLOT] in GOOD_ADVANCED:
+        tracks += ('ai',)      # X4 (base-factions.md:65): a good advanced tile on AI makes early AI worth it
     candidates = snapshot['candidates']
     act = {i: c['action'] for i, c in enumerate(candidates) if not blocked(scores[i])}
 
@@ -2685,7 +2697,12 @@ TILE_PREFS = {
     'Ivits': {'prefer': (10, 4, 9), 'avoid': ()},
     'Lantids': {'prefer': (3,), 'avoid': (10,)},
     'Geodens': {'prefer': (10,), 'avoid': (), 'late_prefer': (9,), 'late_from': 4},
+    # Taklons (E97 (ㄱ), E103 ②b): the charge-4 tile first (paia-timing-rules R3, PG02-S40), but not when it lies
+    # under Gaia (B19-S46, K2 base-factions.md:83) — then the knowledge + credit income tile (K2).
+    'Taklons': {'prefer': (10, 5), 'avoid': (), 'not_under_gaia': (10,)},
 }
+AI_SLOT = 2        # advanced_tech_tiles / tech_tile_slots index of the AI column
+GAIA_SLOT = 3      # tech_tile_slots: the six track columns in ResearchTrack order (TF, Nav, AI, Gaia, Eco, Sci), then 3
 
 
 def _tile_choice(action, scope=None):
@@ -2715,9 +2732,15 @@ def tile_prefs_scores(env, snapshot, scores):
     prefs = TILE_PREFS.get(player['faction'])
     if prefs is None or not _part(player, 'tile_prefs'):
         return scores
-    prefer = prefs['prefer']
+    prefer, avoid = prefs['prefer'], prefs['avoid']
     if prefs.get('late_from') and state['round'] >= prefs['late_from']:
         prefer = prefs['late_prefer']
+    # A tile the guide wants only off the Gaia column (Taklons K2): there it is avoided and the next preference leads.
+    slots = (state.get('research_board') or {}).get('tech_tile_slots') or ()
+    on_gaia = slots[GAIA_SLOT] if len(slots) > GAIA_SLOT else None
+    if on_gaia is not None and on_gaia in prefs.get('not_under_gaia', ()):
+        prefer = tuple(t for t in prefer if t != on_gaia)
+        avoid = (*avoid, on_gaia)
     candidates = snapshot['candidates']
     groups, tiles = {}, {}
     for i, c in enumerate(candidates):
@@ -2737,8 +2760,8 @@ def tile_prefs_scores(env, snapshot, scores):
             _swap(lifted, list(lifted), max(wanted, key=lambda i: lifted[i][0]), top,
                   f'{player["faction"]} guide tile {tile(wanted[0])} (tile_prefs)')
             continue
-        if tile(top) in prefs['avoid']:
-            allowed = [i for i in members if tile(i) not in prefs['avoid']]
+        if tile(top) in avoid:
+            allowed = [i for i in members if tile(i) not in avoid]
             if allowed:
                 _swap(lifted, list(lifted), max(allowed, key=lambda i: lifted[i][0]), top,
                       f'{player["faction"]} avoids tile {tile(top)} (tile_prefs)')
