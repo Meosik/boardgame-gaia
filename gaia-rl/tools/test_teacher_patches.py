@@ -1119,6 +1119,29 @@ class OpeningBudgetTests(unittest.TestCase):
         tp._guide['mj01'] = False                                                       # gate off: unchanged
         self.assertFalse(blocked(tp.knowledge_to_credit_scores(None, snapshot, scores + [(2.0, 'o')])[0]))
 
+    def test_all_factory_gleens_never_take_booster9_before_institute(self):
+        from current_actions.conservation import blocked
+        pick = lambda b: {'action': {'type': 'SelectStartingBooster', 'booster_id': b}}
+        pas = lambda b: {'action': {'type': 'Pass', 'booster_id': b}}
+        player = {'faction': 'Gleens', 'structures': [{'kind': 'Mine', 'hex': '0,0'}]}
+        state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        snapshot = {'player': 0, 'state': state, 'candidates': [pick(9), pick(8), pas(9), pas(5)]}
+        scores = [(9.0, 'a'), (6.0, 'b'), (5.0, 'c'), (4.0, 'd')]
+        tp._guide['mj01'] = True
+        flags = lambda: [blocked(s) for s in tp.gleens_qic_booster_scores(None, snapshot, scores)]
+        self.assertEqual(flags(), [True, False, True, False])
+        player['structures'].append({'kind': 'PlanetaryInstitute', 'hex': '1,0'})
+        self.assertIs(tp.gleens_qic_booster_scores(None, snapshot, scores), scores)   # institute built
+        player['structures'].pop()
+        player['faction'] = 'Terrans'
+        self.assertIs(tp.gleens_qic_booster_scores(None, snapshot, scores), scores)   # another faction
+        player['faction'] = 'Gleens'
+        snapshot['candidates'] = [pick(9), pas(9)]                                    # booster 9 the only candidate
+        self.assertEqual([blocked(s) for s in tp.gleens_qic_booster_scores(None, snapshot, scores[:2])], [False, False])
+        tp._guide['mj01'] = False                                                     # gate off
+        snapshot['candidates'] = [pick(9), pick(8), pas(9), pas(5)]
+        self.assertIs(tp.gleens_qic_booster_scores(None, snapshot, scores), scores)
+
     def test_all_factory_sh11_gaia_vp_tile_not_first_and_gaia1_for_asteroid(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup
         player = {'faction': 'Gleens', 'research_tracks': {'navigation': 1}, 'tech_tiles': [], 'covered_tech_tiles': []}

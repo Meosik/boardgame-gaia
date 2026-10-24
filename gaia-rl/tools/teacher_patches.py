@@ -4620,6 +4620,32 @@ def knowledge_to_credit_scores(env, snapshot, scores):
     return result
 
 
+def gleens_qic_booster_scores(env, snapshot, scores):
+    """ships_menu1_all only (user 2026-10-25, lab 106 pair-015 Gleens, known-bad-decisions.md 14): round booster 9 (2 credits +
+    1 QIC) is bad for Gleens before their Planetary Institute, because a Gleens QIC turns into ore. The rollout still preferred
+    it (286.86 vs 258.52 for the range booster), so ordering cannot fix it: the setup pick and the Pass that take booster 9 are
+    blocked, per action type, unless that would leave no unblocked candidate of that type."""
+    from current_actions.conservation import BLOCKED, PREFIX, blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'mj01') or player.get('faction') != 'Gleens':
+        return scores
+    if any(s['kind'] == 'PlanetaryInstitute' for s in player.get('structures', [])):
+        return scores
+    result = list(scores)
+    for kind in ('SelectStartingBooster', 'Pass'):
+        live = [(i, c['action']) for i, c in enumerate(snapshot['candidates'])
+                if c['action'].get('type') == kind and not blocked(scores[i])]
+        bad = [i for i, a in live if a.get('booster_id') == CREDIT_QIC_BOOSTER]
+        if not bad or len(bad) == len(live):
+            continue
+        for i in bad:
+            result[i] = (BLOCKED, PREFIX+'Gleens: 2 credits + QIC booster before the institute (the QIC becomes ore)')
+    return result
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     """Teacher factory: every faction part the sources gave so far on top of ships_menu1 (user 2026-10-24 "일단
     반영할거 다 반영해봐", E103; integrate first, fix by replays): ..._byfaction_guide_res (CANDIDATE, GUIDE, SOURCE
@@ -4632,6 +4658,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     _wrap_rank('_power_prefs', power_prefs_scores)
     _wrap_rank('_start_booster5', start_booster5_scores)
     _wrap_rank('_knowledge_to_credit', knowledge_to_credit_scores)
+    _wrap_rank('_gleens_qic_booster', gleens_qic_booster_scores)
     # User 10-25 "넣을거 다 넣어봐 일단": the measured families not in the stack yet — ship_adjacent_mine in its E61 (ㄱ)
     # form (095), endgame_prices (096; watch round-5 ore→power, Taklons 7→41), federations (089: fed_compare +
     # fed_cluster) and green tokens (090: token_compare + track_race + race_prune); fed_remember stays last.
