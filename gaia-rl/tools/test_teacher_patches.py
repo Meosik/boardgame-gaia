@@ -1377,9 +1377,9 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertTrue(tp._tfmars_gaia_ready(state, player))
         self.assertEqual(tp._tfmars_tokens(player), 1)
 
-    def _former_late(self, faction, types, values, mj01=True, phase='ActionPhase'):
+    def _former_late(self, faction, types, values, mj01=True, phase='ActionPhase', rnd=2):
         tp._guide['mj01'] = mj01                           # restored by setUp's cleanup
-        state = {'round': 2, 'phase': {phase: {}}, 'players': [{'faction': faction}]}
+        state = {'round': rnd, 'phase': {phase: {}}, 'players': [{'faction': faction}]}
         snapshot = {'player': 0, 'state': state, 'candidates': [{'action': {'type': t}} for t in types]}
         scores = [(v, f's{i}') for i, v in enumerate(values)]
         return scores, tp.former_late_scores(None, snapshot, scores)
@@ -1395,11 +1395,23 @@ class OpeningBudgetTests(unittest.TestCase):
         from current_actions.conservation import blocked
         _, out = self._former_late('Terrans', ['GaiaFormation', 'Build', 'Pass'], [1.0, 2.0, 5.0])
         self.assertGreater(out[0][0], 5.0)
-        self.assertFalse(blocked(out[0]) or blocked(out[2]))
-        self.assertEqual(out[2][0], 5.0)
+        self.assertFalse(blocked(out[0]))
+        self.assertTrue(blocked(out[2]))                              # Pass blocked until the former is placed
+        self.assertFalse(blocked(out[1]))
         _, out = self._former_late('Itars', ['GaiaFormation', 'FreeAction', 'Pass'], [1.0, 8.0, 3.0])
         self.assertGreater(out[0][0], 3.0)
-        self.assertFalse(blocked(out[2]))
+        self.assertFalse(blocked(out[0]) or blocked(out[1]))
+        self.assertTrue(blocked(out[2]))
+
+    def test_former_late_round_6_leaves_scores_unchanged(self):
+        scores, out = self._former_late('Terrans', ['GaiaFormation', 'Pass'], [1.0, 5.0], rnd=6)
+        self.assertEqual(out, scores)
+
+    def test_former_late_top_ranked_former_still_blocks_pass(self):
+        from current_actions.conservation import blocked
+        _, out = self._former_late('Terrans', ['GaiaFormation', 'FreeAction', 'Pass'], [9.0, 4.0, 2.0])
+        self.assertFalse(blocked(out[0]))
+        self.assertTrue(blocked(out[2]))                              # no rollout comparison can pick Pass
 
     def test_former_late_leaves_other_factions_missing_mj01_and_other_phases_alone(self):
         types, values = ['GaiaFormation', 'Build', 'Pass'], [9.0, 5.0, 1.0]

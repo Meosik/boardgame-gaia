@@ -4807,7 +4807,9 @@ def knowledge_to_credit_scores(env, snapshot, scores):
 # former_late (ships_menu1_all only; user 2026-10-25 "가이아 올리자마자 포머 던지는거 좀 막아. 특히 가이아 트랙타야하는 애들이
 # 아이타 테란"): a Gaia Project planet completes in the Gaia phase (base rulebook p.11) whatever time in the round the former
 # was placed, so placing it right after the Gaia track step only locks the power tokens for the rest of the round; place it
-# just before passing. The factions that ride the Gaia track and so hold a former early.
+# just before passing. The factions that ride the Gaia track and so hold a former early. Pass is blocked while the delayed
+# former can still be placed (rounds 1–5), because the rollout comparison could otherwise pick Pass over the lifted former
+# (debate 1/1).
 FORMER_LATE_FACTIONS = frozenset({'Itars', 'Terrans'})
 
 
@@ -4834,8 +4836,13 @@ def former_late_scores(env, snapshot, scores):
                          *scores[i][2:])
         return result
     best = max(forming, key=lambda i: scores[i][0])
+    if state['round'] >= 6:        # a former placed in round 6 never completes (no Gaia phase after round 6)
+        return result
     if passes and scores[best][0] <= top_pass:
         result[best] = (top_pass+0.001, f'{scores[best][1]}; former_late: form before passing', *scores[best][2:])
+    for i, k in enumerate(kinds):
+        if k == 'Pass' and not blocked(scores[i]):
+            result[i] = (BLOCKED, PREFIX+'former_late: place the delayed former before passing', *scores[i][2:])
     return result
 
 
