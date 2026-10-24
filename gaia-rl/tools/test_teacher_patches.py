@@ -319,6 +319,22 @@ class OpeningBudgetTests(unittest.TestCase):
                                  env=env).stdout
             self.assertEqual(out.split(), want, factory)
 
+    def test_menu1_all_factory_turns_on_every_faction_part(self):
+        # Subprocess like the test above: the factory rebinds module-level functions for the whole process.
+        import os
+        import subprocess
+        import sys
+        env = {**os.environ, 'PYTHONPATH': os.pathsep.join(sys.path)}
+        code = ("import teacher_patches as tp\n"
+                "tp.guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all('geo-quartet-1050620', "
+                "bgg_openings=True, shared_factions=True)\n"
+                "print(tp._guide['plan_menu'], tp._guide['menu_first'], tp._guide['resolved_parts'], "
+                "tp._guide['weak_factions'], 'opening_res' in tp._faction_parts('Taklons'), "
+                "'opening_only' in tp._faction_parts('HadschHallas'))")
+        out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True,
+                             env=env).stdout
+        self.assertEqual(out.split(), ['True', '1', 'True', 'True', 'True', 'True'])
+
     def test_faction_parts_come_from_the_tables(self):
         # Base stack: only the faction parts of BASE_FACTION_PARTS; a faction not in the table has none.
         self.assertEqual(tp._faction_parts('Xenos'), set())

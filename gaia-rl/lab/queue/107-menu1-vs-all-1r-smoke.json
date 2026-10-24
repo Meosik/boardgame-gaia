@@ -1,0 +1,22 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-24 \"일단 반영할거 다 반영해봐\", E103): **1R 스모크, 판정 없음** — B = ships_menu1_all(지금까지의 종족 부품 전부: CANDIDATE·GUIDE·SOURCE·RESOLVED·WEAK + plan_menu 1칸)이 18종족에서 오류·타임아웃 없이 1R을 도는지와 결정 시간. A = ships_menu1. 쿼텟 geo·a·b·c·d·e × 새 시드 2개 = 12쌍 × 좌석 교대, 양팔 cap60-p2, 비교 4, stop_round 1(2R 시작 종료, ≈ 2시간 추정). 정리 턴은 건강(오류·타임아웃·최대 결정 시간)과 종족별 1R 충전(참고)만 적는다.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-cap60-p2.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-cap60-p2.json",
+  "seeds": [
+    "geo-quartet-168206",
+    "geo-quartet-168654",
+    "quartet-a-103863",
+    "quartet-a-104115",
+    "quartet-b-99143",
+    "quartet-b-101488",
+    "quartet-c-111893",
+    "quartet-c-112049",
+    "quartet-d-113082",
+    "quartet-d-113944",
+    "quartet-e-106400",
+    "quartet-e-113676"
+  ],
+  "comparisons": 4,
+  "stop_round": 1
+}

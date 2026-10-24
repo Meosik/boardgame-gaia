@@ -4095,6 +4095,18 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1(seed, **kwargs):
     return teacher
 
 
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
+    """Teacher factory: every faction part the sources gave so far on top of ships_menu1 (user 2026-10-24 "일단
+    반영할거 다 반영해봐", E103; integrate first, fix by replays): ..._byfaction_guide_res (CANDIDATE, GUIDE, SOURCE
+    and RESOLVED parts) plus WEAK_FACTION_PARTS, then plan_menu with one front slot as in ships_menu1."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_res(seed, **kwargs)
+    _guide['weak_factions'] = True
+    _guide['plan_menu'] = True
+    install_plan_menu()
+    _guide['menu_first'] = 1
+    return teacher
+
+
 # ── helpers kept from the removed families ─────────────────────────────────────────────
 def _home_type(player):
     from faction_teachers.profiles import profiles
