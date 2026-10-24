@@ -4872,8 +4872,8 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     # byfaction_guide_res already installed '_fed_remember' inside these wrappers and _wrap_rank does not move it, so
     # the federation / token comparisons would read the ranking before track_race, fed_cluster and the rest (debate
     # 1/1). A second recorder as the outermost wrapper stores the final ranking.
+    _wrap_rank('_former_late', former_late_scores)    # user 10-25: inside the outer recorder
     _wrap_rank('_fed_remember_outer', fed_remember_scores)
-    _wrap_rank('_former_late', former_late_scores)    # user 10-25: outermost; touches only GaiaFormation scores
     return teacher
 
 

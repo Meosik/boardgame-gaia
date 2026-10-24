@@ -344,12 +344,12 @@ class OpeningBudgetTests(unittest.TestCase):
                 "'opening_only' in tp._faction_parts('HadschHallas'))\n"
                 "import four_factions.preparation as p\n"
                 "outer = p.Policies.rank\n"
-                "print(tp.former_late_scores in [c.cell_contents for c in outer.__closure__] "
-                "and outer._fed_remember_outer)")
+                "print(tp.fed_remember_scores in [c.cell_contents for c in outer.__closure__] "
+                "and outer._former_late)")
         out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True,
                              env=env).stdout
-        # The last word: former_late is outermost (it only touches GaiaFormation scores) and the federation / token
-        # recorder (debate 1/1) sits right inside it.
+        # The last word: the federation / token comparisons read the final ranking (outermost recorder, debate 1/1),
+        # and former_late is installed inside it.
         self.assertEqual(out.split(), ['True', '1', 'True', 'True', 'True', 'True', 'True'])
 
     def test_faction_parts_come_from_the_tables(self):
