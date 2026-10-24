@@ -1226,41 +1226,71 @@ def _near_places(snapshot, scores):
 # Far-start exception, ships_menu1_all only (user 2026-10-25, lab 106 pair-014 Bescods, known-bad-decisions.md 12): a start
 # that is not next to an opponent stays allowed when (a) a free planet within the setup reach of it is a cheap mine (at most
 # one terraforming step from the home type) and itself next to an opponent — a cheap trading station without upgrading the
-# setup planet — or (b) round booster 5 (instant Gaia, engine actions.rs:166) is in the supply and a free Transdim planet is
-# within distance 1 of the start.
+# setup planet — or (b) round booster 5 (instant Gaia, engine actions.rs:166) is in the supply and instant_gaia_spot holds.
 FAR_START_TERRAFORM_STEPS = 1
-FAR_START_TRANSDIM_RANGE = 1
+# instant_gaia_spot (user 2026-10-25 "booster 5 first is too eager: only with 2 Transdim planets nearby and hard expansion
+# elsewhere", known-bad-decisions.md 12/15): at least this many free Transdim planets and at most EASY_EXPANSION_MAX cheap
+# non-Transdim free planets within reach.
+INSTANT_GAIA_TRANSDIM = 2
+EASY_EXPANSION_MAX = 1
 
 
 def _free_planet(cell):
     return bool(cell['planet']) and cell['planet']['owner'] is None and not cell['structures']
 
 
-def far_start_allowed(state, actor, start):
+def _reach(player):
+    return _value.navigation(player) if player.get('research_tracks') else 1
+
+
+def _cheap_planet(home, kind):
+    """True when `kind` is on the terraforming ring and at most FAR_START_TERRAFORM_STEPS steps from `home`."""
     from economy.teacher import RING
+    if home not in RING or kind not in RING:
+        return False
+    gap = abs(RING.index(home)-RING.index(kind))
+    return min(gap, 7-gap) <= FAR_START_TERRAFORM_STEPS
+
+
+def instant_gaia_spot(state, actor, coords):
+    """Within reach of any of `coords`: at least INSTANT_GAIA_TRANSDIM free Transdim planets and at most EASY_EXPANSION_MAX
+    cheap free planets of other types."""
+    from faction_teachers.profiles import profiles
+    from strategy_teacher import distance
+    player = state['players'][actor]
+    reach = _reach(player)
+    profile = profiles().get(player['faction'])
+    home = profile.home if profile else None
+    transdim = easy = 0
+    for c, cell in state['board']['hexes'].items():
+        if c in coords or not _free_planet(cell) or not any(distance(h, c) <= reach for h in coords):
+            continue
+        kind = cell['planet']['planet_type']
+        if kind == 'Transdim':
+            transdim += 1
+        elif _cheap_planet(home, kind):
+            easy += 1
+    return transdim >= INSTANT_GAIA_TRANSDIM and easy <= EASY_EXPANSION_MAX
+
+
+def far_start_allowed(state, actor, start):
     from faction_teachers.profiles import profiles
     from strategy_teacher import distance
     player = state['players'][actor]
     if not _part(player, 'mj01'):
         return False
     hexes = state['board']['hexes']
-    if INSTANT_GAIA_BOOSTER in state.get('boosters', ()) and any(
-            _free_planet(cell) and cell['planet']['planet_type'] == 'Transdim'
-            and distance(start, c) <= FAR_START_TRANSDIM_RANGE for c, cell in hexes.items()):
+    if INSTANT_GAIA_BOOSTER in state.get('boosters', ()) and instant_gaia_spot(state, actor, [start]):
         return True
     profile = profiles().get(player['faction'])
-    if not profile or profile.home not in RING:
+    if not profile:
         return False
-    reach = _value.navigation(player) if player.get('research_tracks') else 1
+    reach = _reach(player)
     sites = _future_opponent_sites(state, actor)
     for c, cell in hexes.items():
         if c == start or not _free_planet(cell) or distance(start, c) > reach:
             continue
-        kind = cell['planet']['planet_type']
-        if kind not in RING:
-            continue
-        gap = abs(RING.index(profile.home)-RING.index(kind))
-        if min(gap, 7-gap) <= FAR_START_TERRAFORM_STEPS and (
+        if _cheap_planet(profile.home, cell['planet']['planet_type']) and (
                 _next_to_opponent(state, actor, c) or _near_sites(state, actor, c, sites)):
             return True
     return False
@@ -2442,6 +2472,7 @@ def _asteroid_gaia(state, player):
 
 
 INSTANT_GAIA_BOOSTER = 5        # engine ROUND_BOOSTER_IMMEDIATE_GAIA
+CREDIT_QIC_BOOSTER = 9          # round booster 9: 2 credits + 1 QIC (user 2026-10-25)
 
 
 def _instant_gaia_source(state, player):
@@ -4539,10 +4570,11 @@ def artifact_tokens_scores(env, snapshot, scores):
 
 
 def start_booster5_scores(env, snapshot, scores):
-    """ships_menu1_all only (user 2026-10-25, known-bad-decisions.md 12): at the setup booster pick, round booster 5 (instant
-    Gaia) goes first when a free Transdim planet is within distance 1 of one of our structures. Order only."""
+    """ships_menu1_all only (user 2026-10-25, known-bad-decisions.md 12/15): at the setup booster pick, when instant_gaia_spot
+    holds around our structures (two Transdim planets in reach, at most one easy expansion), round booster 5 (instant Gaia)
+    goes first and booster 9 (2 credits + 1 QIC), if it is an unblocked candidate, second, so the comparison sees both.
+    Order only: the picks' scores are permuted (5, 9, then the rest in their old order)."""
     from current_actions.conservation import blocked
-    from strategy_teacher import distance
     state, actor = snapshot['state'], snapshot.get('player')
     if actor is None:
         return scores
@@ -4552,18 +4584,19 @@ def start_booster5_scores(env, snapshot, scores):
     picks = {i: c['action'] for i, c in enumerate(snapshot['candidates'])
              if c['action'].get('type') == 'SelectStartingBooster' and not blocked(scores[i])}
     five = [i for i, a in picks.items() if a.get('booster_id') == INSTANT_GAIA_BOOSTER]
-    if not five:
+    if not five or not instant_gaia_spot(state, actor, [s['hex'] for s in player['structures']]):
         return scores
-    mine = [s['hex'] for s in player['structures']]
-    if not any(_free_planet(cell) and cell['planet']['planet_type'] == 'Transdim'
-               and any(distance(h, c) <= FAR_START_TRANSDIM_RANGE for h in mine)
-               for c, cell in state['board']['hexes'].items()):
-        return scores
-    top = max(picks, key=lambda i: scores[i][0])
-    if top == five[0]:
+    nine = [i for i, a in picks.items() if a.get('booster_id') == CREDIT_QIC_BOOSTER]
+    order = five[:1] + nine[:1]
+    order += sorted((i for i in picks if i not in order), key=lambda i: -scores[i][0])
+    slots = sorted(picks, key=lambda i: -scores[i][0])
+    if order == slots:
         return scores
     lifted = list(scores)
-    _swap(lifted, list(scores), five[0], top, 'booster 5 with a Transdim planet in reach (instant Gaia)')
+    for i, j in zip(order, slots):
+        why = '; booster 5 with two Transdim planets in reach and little easy expansion (instant Gaia)' if i == five[0] \
+            else '; kept second against booster 5 (2 credits + 1 QIC)' if nine and i == nine[0] else ''
+        lifted[i] = (scores[j][0], f'{scores[i][1]}{why}', *scores[i][2:])
     return lifted
 
 

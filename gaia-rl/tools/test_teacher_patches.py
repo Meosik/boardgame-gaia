@@ -1015,11 +1015,12 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertIs(tp.power_prefs_scores(None, snapshot, scores), scores)                              # not a power move
 
     @staticmethod
-    def far_start_snapshot(boosters=(), transdim=False):
+    def far_start_snapshot(boosters=(), transdim=0):
         cell = lambda planet=None, owner=None, structures=(): {
             'planet': {'planet_type': planet, 'owner': None} if planet else None, 'structures': list(structures)}
         hexes = {'0,0': cell('Volcanic'), '1,0': cell('Desert'), '3,0': cell('Terra', structures=[{'owner': 1}]),
-                 '4,0': cell('Volcanic'), '0,1': cell('Transdim' if transdim else None)}
+                 '4,0': cell('Volcanic'), '0,1': cell('Transdim' if transdim >= 1 else None),
+                 '-1,0': cell('Transdim' if transdim >= 2 else None)}
         me = {'player_id': 0, 'faction': 'Geodens', 'structures': [], 'tech_tiles': [], 'covered_tech_tiles': [],
               'research_tracks': {'navigation': 0}}
         other = {'player_id': 1, 'faction': 'Terrans', 'structures': [{}]*9}
@@ -1038,22 +1039,51 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(tp.guide_r1_scores(snapshot, scores), scores)
         snapshot['state']['board']['hexes']['1,0']['planet']['planet_type'] = 'Ice'   # three steps: not cheap
         self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))
-        instant = self.far_start_snapshot(boosters=(5, 8), transdim=True)
+        instant = self.far_start_snapshot(boosters=(5, 8), transdim=2)
         instant['state']['board']['hexes']['1,0']['planet']['planet_type'] = 'Ice'
-        self.assertEqual(tp.guide_r1_scores(instant, scores), scores)         # booster 5 and a Transdim next to the start
-        instant['state']['boosters'] = [8]
+        self.assertEqual(tp.guide_r1_scores(instant, scores), scores)         # booster 5, two Transdim, no easy site
+        instant['state']['board']['hexes']['-1,0']['planet'] = None           # one Transdim only
         self.assertTrue(blocked(tp.guide_r1_scores(instant, scores)[0]))
+        instant['state']['board']['hexes']['-1,0']['planet'] = {'planet_type': 'Transdim', 'owner': None}
+        instant['state']['boosters'] = [8]
+        self.assertTrue(blocked(tp.guide_r1_scores(instant, scores)[0]))      # booster 5 not in the supply
 
-    def test_all_factory_booster5_first_with_transdim_in_reach(self):
-        snapshot = self.far_start_snapshot(boosters=(5, 8), transdim=True)
+    def test_all_factory_instant_gaia_spot_needs_two_transdim_and_at_most_one_easy_site(self):
+        tp._guide['mj01'] = True
+        snapshot = self.far_start_snapshot(boosters=(5,), transdim=2)         # 1,0 Desert: one easy site
+        state, hexes = snapshot['state'], snapshot['state']['board']['hexes']
+        self.assertTrue(tp.instant_gaia_spot(state, 0, ['0,0']))
+        hexes['0,-1'] = {'planet': {'planet_type': 'Ice', 'owner': None}, 'structures': []}    # three steps: not cheap
+        self.assertTrue(tp.instant_gaia_spot(state, 0, ['0,0']))
+        hexes['0,-1']['planet']['planet_type'] = 'Desert'                      # second easy site
+        self.assertFalse(tp.instant_gaia_spot(state, 0, ['0,0']))
+        self.assertFalse(tp.instant_gaia_spot(state, 0, ['4,0']))              # measured from another spot: no Transdim in reach
+        hexes['0,-1']['planet'] = None
+        hexes['-1,0']['planet'] = None
+        self.assertFalse(tp.instant_gaia_spot(state, 0, ['0,0']))              # one Transdim
+
+    def test_all_factory_booster5_first_and_booster9_second_with_two_transdim_and_little_expansion(self):
+        snapshot = self.far_start_snapshot(boosters=(5, 8, 9), transdim=2)
+        snapshot['state']['board']['hexes']['1,0']['planet']['planet_type'] = 'Ice'
         snapshot['state']['players'][0]['structures'] = [{'hex': '0,0', 'owner': 0}]
-        snapshot['candidates'] = [{'action': {'type': 'SelectStartingBooster', 'booster_id': b}} for b in (8, 5)]
-        scores = [(9.0, 'b8'), (4.0, 'b5')]
+        snapshot['candidates'] = [{'action': {'type': 'SelectStartingBooster', 'booster_id': b}} for b in (8, 9, 5)]
+        scores = [(9.0, 'b8'), (6.0, 'b9'), (4.0, 'b5')]
         self.assertIs(tp.start_booster5_scores(None, snapshot, scores), scores)   # gate off
         tp._guide['mj01'] = True
-        self.assertEqual([s[0] for s in tp.start_booster5_scores(None, snapshot, scores)], [4.0, 9.0])
-        snapshot['state']['board']['hexes']['0,1']['planet'] = None
-        self.assertIs(tp.start_booster5_scores(None, snapshot, scores), scores)   # no Transdim in reach
+        self.assertEqual([s[0] for s in tp.start_booster5_scores(None, snapshot, scores)], [4.0, 6.0, 9.0])
+        snapshot['candidates'] = [{'action': {'type': 'SelectStartingBooster', 'booster_id': b}} for b in (9, 8, 5)]
+        scores = [(9.0, 'b9'), (6.0, 'b8'), (4.0, 'b5')]
+        self.assertEqual([s[0] for s in tp.start_booster5_scores(None, snapshot, scores)], [6.0, 4.0, 9.0])
+        snapshot['candidates'] = [{'action': {'type': 'SelectStartingBooster', 'booster_id': b}} for b in (8, 5)]
+        scores = [(9.0, 'b8'), (4.0, 'b5')]
+        self.assertEqual([s[0] for s in tp.start_booster5_scores(None, snapshot, scores)], [4.0, 9.0])   # no booster 9
+        hexes = snapshot['state']['board']['hexes']
+        hexes['-1,0']['planet'] = None
+        self.assertIs(tp.start_booster5_scores(None, snapshot, scores), scores)   # one Transdim: unchanged
+        hexes['-1,0']['planet'] = {'planet_type': 'Transdim', 'owner': None}
+        hexes['1,0']['planet']['planet_type'] = 'Desert'
+        hexes['0,-1'] = {'planet': {'planet_type': 'Desert', 'owner': None}, 'structures': []}
+        self.assertIs(tp.start_booster5_scores(None, snapshot, scores), scores)   # two easy sites: unchanged
 
     def test_all_factory_bescods_lab_openings_and_no_round1_academy(self):
         self.assertNotIn('opening_res', tp._faction_parts('Bescods'))
