@@ -4047,6 +4047,8 @@ def _plan_cost(snapshot, goal):
             after = _at_level(player, track, step.level)
             qic_gain = after['resources'].get('qic', 0)-player['resources'].get('qic', 0)
             player = after
+        elif step.family == 'upgrade' and step.coord and _part(player, 'mj01'):
+            cost, player = _upgrade_chain_cost(snapshot, player, step)
         else:
             cost = funding_need(snapshot, step)
         for key, n in cost.items():
@@ -4054,6 +4056,30 @@ def _plan_cost(snapshot, goal):
         if qic_gain:
             total['qic'] = total.get('qic', 0) - qic_gain
     return total
+
+
+def _upgrade_chain_cost(snapshot, player, step):
+    """mj01 (codex review 10-25 ②): funding_need prices only the next upgrade (Mine → Trading Station of a 'Mine → Institute'
+    plan), so the plan looked cheap. Every upgrade up to the target is summed, the building replaced step by step
+    (preparation.next_upgrade, engine prices as funding_need). Returns (cost, player after)."""
+    from four_factions.preparation import next_upgrade, owned, funding_need
+
+    def reached(kind):
+        if step.target in ('Science', 'Qic'):
+            return isinstance(kind, dict) and 'Academy' in kind
+        return kind == step.target
+    total, current = {}, player
+    for _ in range(3):                                   # Mine → TS → lab / institute → academy at most
+        old = owned(current, step.coord)
+        if old is None or reached(old) or old == 'PlanetaryInstitute' or isinstance(old, dict):
+            break
+        players = [current if i == snapshot['player'] else p for i, p in enumerate(snapshot['state']['players'])]
+        for key, n in funding_need(dict(snapshot, state=dict(snapshot['state'], players=players)), step).items():
+            total[key] = total.get(key, 0) + n
+        new = next_upgrade(current, step)
+        current = {**current, 'structures': [{**s, 'kind': new} if s['hex'] == step.coord else s
+                                             for s in current['structures']]}
+    return total, current
 
 
 def _plan_budget(state, player):
@@ -4075,8 +4101,26 @@ def plan_affordable(snapshot, goal):
     if not _menu_multi_step(snapshot, goal):
         return True
     state = snapshot['state']
-    budget = _plan_budget(state, state['players'][snapshot['player']])
-    return all(budget.get(key, 0) >= n for key, n in _plan_cost(snapshot, goal).items())
+    player = state['players'][snapshot['player']]
+    budget = _plan_budget(state, player)
+    cost = _plan_cost(snapshot, goal)
+    if not _part(player, 'mj01'):
+        return all(budget.get(key, 0) >= n for key, n in cost.items())
+    # mj01 (codex review 10-25 ①): a shortfall the free power conversions cover is affordable — rulebook free actions
+    # 1 power → 1 credit, 3 → 1 ore, 4 → 1 knowledge or 1 QIC; Nevlas move one bowl-III token to the Gaia area for 1
+    # knowledge (their plan 'knowledge-then-<track>'). Power counted: bowl III (a Brainstone there 3) plus what a burn
+    # of bowl II brings (half of it). Coverage only — the plan's own conversions are what the rollout plays.
+    power = player['resources']['power']
+    tokens = power['bowl3'] + power['bowl2']//2
+    brainstone = 3 if power.get('brainstone') == 'Area3' else 0
+    short = {key: n - budget.get(key, 0) for key, n in cost.items() if n > budget.get(key, 0)}
+    rates = dict(POWER_CONVERSION, **({'knowledge': 1} if player['faction'] == 'Nevlas' else {}))
+    if any(key not in rates for key in short):
+        return False
+    return sum(rates[key]*n for key, n in short.items()) <= tokens + brainstone
+
+
+POWER_CONVERSION = {'credits': 1, 'ore': 3, 'knowledge': 4, 'qic': 4}      # rulebook free actions, power per resource
 
 
 def forget_unaffordable_plan(snapshot, memory):

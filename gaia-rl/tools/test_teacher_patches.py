@@ -1059,6 +1059,30 @@ class OpeningBudgetTests(unittest.TestCase):
         finally:
             tp._reach_targets = original
 
+    def test_all_factory_plan_cost_sums_the_upgrade_chain_and_counts_power_conversions(self):
+        from four_factions.preparation import Goal
+        tp._guide['mj01'] = True                           # restored by setUp's cleanup
+        player = {'faction': 'Xenos', 'player_id': 0, 'research_tracks': {}, 'structures': [{'kind': 'Mine', 'hex': '0,0'}],
+                  'resources': {'ore': 0, 'credits': 0, 'knowledge': 0, 'qic': 0,
+                                'power': {'bowl1': 0, 'bowl2': 0, 'bowl3': 0}}}
+        state = {'board': {'hexes': {'0,0': {'structures': []}}}, 'players': [player]}
+        snapshot = {'player': 0, 'state': state}
+        cost, after = tp._upgrade_chain_cost(snapshot, player, Goal('PI@0,0', 'upgrade', '0,0', 'PlanetaryInstitute'))
+        self.assertEqual(cost, {'ore': 6, 'credits': 12})                       # TS 2+6 (no neighbour) + PI 4+6
+        self.assertEqual(after['structures'][0]['kind'], 'PlanetaryInstitute')
+        originals = tp._menu_multi_step, tp._plan_cost, tp._plan_budget
+        try:
+            tp._menu_multi_step = lambda snapshot, goal: True
+            tp._plan_cost = lambda snapshot, goal: {'knowledge': 4}
+            tp._plan_budget = lambda state, player: {'knowledge': 2}
+            nevlas = dict(player, faction='Nevlas', resources=dict(player['resources'], power={'bowl1': 0, 'bowl2': 0, 'bowl3': 2}))
+            state['players'] = [nevlas]
+            self.assertTrue(tp.plan_affordable(snapshot, None))                    # 2 short, 2 tokens to the Gaia area
+            nevlas['faction'] = 'Xenos'
+            self.assertFalse(tp.plan_affordable(snapshot, None))                   # 8 power needed, 2 held
+        finally:
+            tp._menu_multi_step, tp._plan_cost, tp._plan_budget = originals
+
     def test_all_factory_range_tile_early_only_and_stops_navigation(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup
         player = {'faction': 'Gleens', 'research_tracks': {'navigation': 1}, 'tech_tiles': [], 'covered_tech_tiles': []}
