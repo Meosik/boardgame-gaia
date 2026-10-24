@@ -4839,10 +4839,10 @@ def gaia_asteroid_hold_scores(env, snapshot, scores):
 
 # dead_tile (ships_menu1_all only; lab 107 pair-005 game-0-A12 step 24): a standard tile on a column slot carries that
 # column's track step, which is lost when the track cannot advance (BalTaks Navigation before the Planetary Institute,
-# engine.rs:4359; a track already at 5). tile_prefs (inner) may have put such a tile first; a live variant of the same
-# move takes the top place then. Order only.
+# engine.rs:4359; a track already at 5). tile_prefs (inner) may have put such a tile first, and in 107 the dead tile won
+# the rollout comparison by 2.2: blocked while a live variant of the same move exists.
 def dead_tile_scores(env, snapshot, scores):
-    from current_actions.conservation import blocked
+    from current_actions.conservation import BLOCKED, PREFIX, blocked
     state, actor = snapshot['state'], snapshot.get('player')
     if actor is None or 'ActionPhase' not in state['phase']:
         return scores
@@ -4869,11 +4869,12 @@ def dead_tile_scores(env, snapshot, scores):
         groups.setdefault(key, []).append(i)
     lifted = list(scores)
     for members in groups.values():
-        top = max(members, key=lambda i: lifted[i][0])
-        live = [i for i in members if not dead(tiles[i])]
-        if dead(tiles[top]) and live:
-            _swap(lifted, list(lifted), max(live, key=lambda i: lifted[i][0]), top,
-                  f'{player["faction"]} tile {tiles[top]}: its column step is impossible (dead_tile)')
+        if all(dead(tiles[i]) for i in members):
+            continue
+        for i in members:
+            if dead(tiles[i]):
+                lifted[i] = (BLOCKED, PREFIX+f'{player["faction"]} tile {tiles[i]}: its column step is impossible '
+                             '(dead_tile)', *scores[i][2:])
     return lifted if lifted != scores else scores
 
 

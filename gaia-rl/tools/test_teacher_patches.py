@@ -1418,14 +1418,21 @@ class OpeningBudgetTests(unittest.TestCase):
         return scores, tp.dead_tile_scores(None, snapshot, scores)
 
     def test_dead_tile_baltaks_navigation_tile_yields_before_the_institute(self):
+        from current_actions.conservation import blocked
         scores, out = self._dead_tile('BalTaks')
-        self.assertGreater(out[1][0], out[0][0])
-        self.assertEqual((out[1][0], out[0][0]), (9.0, 4.0))
-        self.assertIn('dead_tile', out[1][1])
+        self.assertTrue(blocked(out[0]))
+        self.assertIn('dead_tile', out[0][1])
+        self.assertEqual(out[1], scores[1])
 
-    def test_dead_tile_any_faction_with_the_column_track_at_5_is_swapped(self):
+    def test_dead_tile_any_faction_with_the_column_track_at_5_is_blocked(self):
+        from current_actions.conservation import blocked
         scores, out = self._dead_tile('Geodens', tracks={'navigation': 5})
-        self.assertGreater(out[1][0], out[0][0])
+        self.assertTrue(blocked(out[0]))
+        self.assertEqual(out[1], scores[1])
+
+    def test_dead_tile_without_a_live_variant_changes_nothing(self):
+        scores, out = self._dead_tile('Geodens', tracks={'navigation': 5, 'gaia': 5})
+        self.assertEqual(out, scores)
 
     def test_dead_tile_leaves_live_columns_institute_and_no_mj01_alone(self):
         for kwargs in ({'faction': 'BalTaks', 'structures': [{'kind': 'PlanetaryInstitute', 'hex': '0,0'}]},
