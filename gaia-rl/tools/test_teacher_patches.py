@@ -345,7 +345,7 @@ class OpeningBudgetTests(unittest.TestCase):
                 "import four_factions.preparation as p\n"
                 "outer = p.Policies.rank\n"
                 "print(tp.fed_remember_scores in [c.cell_contents for c in outer.__closure__] "
-                "and outer._gaia_asteroid_hold and outer._dead_tile)")
+                "and outer._gaia_asteroid_hold and outer._dead_tile and outer._rebellion_ts)")
         out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True,
                              env=env).stdout
         # The last word: the federation / token comparisons read the final ranking (outermost recorder, debate 1/1),
@@ -1438,6 +1438,47 @@ class OpeningBudgetTests(unittest.TestCase):
         for kwargs in ({'faction': 'BalTaks', 'structures': [{'kind': 'PlanetaryInstitute', 'hex': '0,0'}]},
                        {'faction': 'Geodens', 'tracks': {'navigation': 4}}, {'faction': 'BalTaks', 'mj01': False}):
             scores, out = self._dead_tile(**kwargs)
+            self.assertEqual(out, scores, kwargs)
+
+    def _rebellion(self, forked, direct=False, paid=True, mj01=True):
+        import json
+        tp._guide['mj01'] = mj01
+        state = {'phase': {'ActionPhase': {}}, 'players': [{'faction': 'Ivits'}]}
+        cands = [{'action': {'type': 'Upgrade', 'coord': '1,1', 'to': 'TradingStation' if paid else 'Academy'}},
+                 {'action': {'type': 'FreeAction', 'kind': 'BurnPower', 'count': 1}},
+                 {'action': {'type': 'Pass'}}]
+        if direct:
+            cands.append({'action': {'type': 'RebellionFreeTradingStation', 'coord': '1,1'}})
+        snapshot = {'player': 0, 'decision_id': 7, 'state': state, 'candidates': cands}
+        scores = [(6.32, 'paid'), (-0.25, 'burn'), (-5.0, 'pass')] + ([(-4.3, 'free')] if direct else [])
+        after = {'player': 0, 'candidates': [{'action': {'type': 'RebellionFreeTradingStation', 'coord': c}}
+                                             for c in forked]}
+
+        class Fork:
+            def snapshot_json(self):
+                return json.dumps(after)
+
+        class Env:
+            def fork(self, decision_id, i):
+                assert (decision_id, i) == (7, 1)
+                return Fork()
+        return scores, tp.rebellion_ts_scores(Env(), snapshot, scores)
+
+    def test_rebellion_ts_direct_free_trading_station_goes_above_the_paid_one(self):
+        scores, out = self._rebellion([], direct=True)
+        self.assertAlmostEqual(out[3][0], 6.321)
+        self.assertIn('rebellion_ts', out[3][1])
+        self.assertEqual(out[:3], scores[:3])
+
+    def test_rebellion_ts_burn_that_opens_it_goes_above_the_paid_trading_station(self):
+        scores, out = self._rebellion(['1,1'])
+        self.assertAlmostEqual(out[1][0], 6.321)
+        self.assertIn('burn 1 then Rebellion free trading station at 1,1', out[1][1])
+        self.assertEqual((out[0], out[2]), (scores[0], scores[2]))
+
+    def test_rebellion_ts_leaves_other_coords_no_mj01_and_no_paid_trading_station_alone(self):
+        for kwargs in ({'forked': ['2,2']}, {'forked': ['1,1'], 'mj01': False}, {'forked': ['1,1'], 'paid': False}):
+            scores, out = self._rebellion(**kwargs)
             self.assertEqual(out, scores, kwargs)
 
     def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):

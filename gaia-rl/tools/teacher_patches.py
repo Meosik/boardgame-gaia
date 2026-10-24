@@ -4878,6 +4878,50 @@ def dead_tile_scores(env, snapshot, scores):
     return lifted if lifted != scores else scores
 
 
+# rebellion_ts (ships_menu1_all only; lab 106 pair-006 game-0-A02 step 46, user 2026-10-25 "파워 3개 만들 수 있었고 리벨리온
+# 들어가 있었잖아"): the paid trading station root score carries soft terms (ts_chain) while a burn's funded follow-up is
+# read with bare potential, so a burn that opens Rebellion's free trading station was never compared with the paid one.
+def rebellion_ts_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or not _part(state['players'][actor], 'mj01'):
+        return scores
+    candidates = snapshot['candidates']
+    paid = {}
+    for i, c in enumerate(candidates):
+        a = c['action']
+        if a['type'] == 'Upgrade' and a.get('to') == 'TradingStation' and not blocked(scores[i]):
+            paid[a.get('coord')] = max(paid.get(a.get('coord'), scores[i][0]), scores[i][0])
+    if not paid:
+        return scores
+    lifted = list(scores)
+
+    def lift(i, coord, why):
+        top = paid[coord] + 0.001
+        if scores[i][0] < top:
+            lifted[i] = (top, f'{scores[i][1]}; rebellion_ts: {why}', *scores[i][2:])
+
+    direct = [i for i, c in enumerate(candidates) if c['action']['type'] == 'RebellionFreeTradingStation'
+              and not blocked(scores[i]) and c['action'].get('coord') in paid]
+    for i in direct:
+        lift(i, candidates[i]['action']['coord'], 'free trading station instead of paying')
+    if direct:
+        return lifted if lifted != scores else scores
+    burns = sorted((c['action'].get('count'), i) for i, c in enumerate(candidates)
+                   if c['action']['type'] == 'FreeAction' and c['action'].get('kind') == 'BurnPower'
+                   and c['action'].get('count') in (1, 2) and not blocked(scores[i]))
+    for count, i in burns:
+        after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
+        if after.get('player') != actor:
+            continue
+        coords = [c['action'].get('coord') for c in after['candidates']
+                  if c['action']['type'] == 'RebellionFreeTradingStation' and c['action'].get('coord') in paid]
+        if coords:
+            lift(i, coords[0], f'burn {count} then Rebellion free trading station at {coords[0]}')
+            break
+    return lifted if lifted != scores else scores
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     """Teacher factory: every faction part the sources gave so far on top of ships_menu1 (user 2026-10-24 "일단
     반영할거 다 반영해봐", E103; integrate first, fix by replays): ..._byfaction_guide_res (CANDIDATE, GUIDE, SOURCE
@@ -4913,6 +4957,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     # 1/1). A second recorder as the outermost wrapper stores the final ranking.
     _wrap_rank('_gaia_asteroid_hold', gaia_asteroid_hold_scores)    # user 10-25
     _wrap_rank('_dead_tile', dead_tile_scores)                      # lab 107 pair-005 step 24
+    _wrap_rank('_rebellion_ts', rebellion_ts_scores)                # lab 106 pair-006 step 46
     _wrap_rank('_fed_remember_outer', fed_remember_scores)
     return teacher
 
