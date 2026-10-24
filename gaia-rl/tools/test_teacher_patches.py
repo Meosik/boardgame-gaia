@@ -109,6 +109,17 @@ class GeodensGuideTests(unittest.TestCase):
             checked += 1
         self.assertGreater(checked, 0)
 
+    def test_colony_cost_with_a_non_ring_home_prices_ring_planets_as_three_steps(self):
+        from unittest import mock
+        import economy.teacher as economy
+        import four_factions.value as value
+        state = {'board': {'hexes': {'h': {'planet': {'planet_type': 'Terra'}}}}}
+        for faction in ('Moweyds', 'Tinkeroids', 'Darkanians', 'SpaceGiants'):
+            player = {'faction': faction, 'structures': [{'hex': 's'}], 'resources': {'qic': 0}}
+            with mock.patch.object(economy, 'path_distance', lambda *a: 0), \
+                    mock.patch.object(value, 'navigation', lambda p: 1):
+                self.assertEqual(tp._colony_cost(state, player, 'h'), (False, 3), faction)
+
     def test_only_geodens_rollouts_use_the_second_income_boundary(self):
         import four_factions.preparation as preparation
         states = {s['state']['players'][s['player']]['faction']: s for _, s in play(rounds=1)}

@@ -317,15 +317,17 @@ def _colony_cost(state, player, coord):
     starts = [s['hex'] for s in player['structures']]
     qic = max(0, (path_distance(state, starts, coord)-navigation(player)+1)//2)
     kind = planet['planet_type']
+    from faction_teachers.profiles import profiles
+    home = profiles()[player['faction']].home
     if kind == 'Gaia':
         steps, qic = 0, qic+1
-    elif kind in RING:
-        from faction_teachers.profiles import profiles
-        home = profiles()[player['faction']].home
+    elif kind in RING and home in RING:
         gap = abs(RING.index(home)-RING.index(kind))
         steps = min(gap, 7-gap)
     else:
-        steps = 3   # Asteroid / ProtoPlanet / Lost planet: not a ring colour; examined last
+        # Asteroid / ProtoPlanet / Lost planet target, or a non-ring home (Lost Fleet
+        # Asteroid/ProtoPlanet factions): no ring distance; examined last
+        steps = 3
     return (qic > player['resources']['qic'], steps+qic)
 
 
