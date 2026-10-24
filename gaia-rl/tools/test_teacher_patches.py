@@ -1041,6 +1041,14 @@ class OpeningBudgetTests(unittest.TestCase):
             lone = dict(xenos, structures=[{'kind': 'Mine', 'hex': '0,0'}], gaiaformers_total=0)
             self.assertTrue(tp._asteroid_gaia({'players': [lone]}, lone))
             self.assertFalse(tp._asteroid_gaia({'players': [lone]}, dict(lone, gaiaformers_total=1)))
+            # No Asteroid in reach now, but booster 5 forms a reachable Transdim planet with an Asteroid next to it (user).
+            tp._reach_targets = lambda state, player, types: (
+                [('2,0', {'planet_type': 'Transdim'}, 0, 0)] if types == ('Transdim',) else [])
+            board = {'hexes': {'3,0': {'planet': {'planet_type': 'Asteroid'}, 'structures': []}}}
+            later = dict(lone, booster=5, research_tracks=dict(lone['research_tracks'], navigation=1),
+                         tech_tiles=[], covered_tech_tiles=[])
+            self.assertTrue(tp._asteroid_gaia({'players': [later], 'board': board}, later))
+            self.assertFalse(tp._asteroid_gaia({'players': [later], 'board': board}, dict(later, booster=1)))
         finally:
             tp._reach_targets = original
 

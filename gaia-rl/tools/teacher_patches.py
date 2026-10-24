@@ -2371,7 +2371,28 @@ def _asteroid_gaia(state, player):
         return False
     if player.get('gaiaformers_total', 0) > 0 or not player.get('structures'):
         return False
-    return bool(_reach_targets(state, player, ('Asteroid',)))
+    if _reach_targets(state, player, ('Asteroid',)):
+        return True
+    # User 10-25 "가이아 즉시포밍 > 그 후 닿는 곳에 소행성이면 충분": with an instant formation at hand (the T F Mars action or
+    # round booster 5) the former first turns a reachable Transdim planet into a mine, then goes to an Asteroid in range
+    # of that new mine (SH02 T F Mars opening: Gaia 1 → instant formation → former removed → Asteroid mine).
+    if not _instant_gaia_source(state, player):
+        return False
+    rng = _value.navigation(player)
+    asteroids = [c for c, cell in state['board']['hexes'].items() if cell.get('planet')
+                 and cell['planet'].get('planet_type') == 'Asteroid' and not cell.get('structures')]
+    return any(_value.distance(t, a) <= rng for t, _, _, _ in _reach_targets(state, player, ('Transdim',))
+               for a in asteroids)
+
+
+INSTANT_GAIA_BOOSTER = 5        # engine ROUND_BOOSTER_IMMEDIATE_GAIA
+
+
+def _instant_gaia_source(state, player):
+    """An instant Gaia formation this round: round booster 5 held, or T F Mars explored with its action space free."""
+    return (player.get('booster') == INSTANT_GAIA_BOOSTER
+            or (TFMARS_SHIP in (player.get('explored_ships') or ())
+                and TFMARS_GAIA_ACTION not in (state.get('used_spaceship_actions') or ())))
 
 
 def _faction_tracks(player):
