@@ -2378,11 +2378,18 @@ def _asteroid_gaia(state, player):
     # of that new mine (SH02 T F Mars opening: Gaia 1 → instant formation → former removed → Asteroid mine).
     if not _instant_gaia_source(state, player):
         return False
-    rng = _value.navigation(player)
+    # Both legs as four_factions.value.targets counts reach (range + 2 hexes a QIC); the second leg from the new mine
+    # with the QIC left after the first (debate 1/1).
+    from economy.teacher import path_distance
+    rng, qic = _value.navigation(player), player['resources']['qic']
     asteroids = [c for c, cell in state['board']['hexes'].items() if cell.get('planet')
-                 and cell['planet'].get('planet_type') == 'Asteroid' and not cell.get('structures')]
-    return any(_value.distance(t, a) <= rng for t, _, _, _ in _reach_targets(state, player, ('Transdim',))
-               for a in asteroids)
+                 and cell['planet'].get('planet_type') == 'Asteroid' and cell['planet'].get('owner') is None
+                 and not cell.get('structures')]
+    for t, _, first, _ in _reach_targets(state, player, ('Transdim',)):
+        for a in asteroids:
+            if max(0, (path_distance(state, [t], a) - rng + 1)//2) <= qic - first:
+                return True
+    return False
 
 
 INSTANT_GAIA_BOOSTER = 5        # engine ROUND_BOOSTER_IMMEDIATE_GAIA

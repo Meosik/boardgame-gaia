@@ -1044,11 +1044,18 @@ class OpeningBudgetTests(unittest.TestCase):
             # No Asteroid in reach now, but booster 5 forms a reachable Transdim planet with an Asteroid next to it (user).
             tp._reach_targets = lambda state, player, types: (
                 [('2,0', {'planet_type': 'Transdim'}, 0, 0)] if types == ('Transdim',) else [])
-            board = {'hexes': {'3,0': {'planet': {'planet_type': 'Asteroid'}, 'structures': []}}}
+            import economy.teacher as et
+            distance = et.path_distance
+            et.path_distance = lambda state, starts, coord: 3          # Transdim → Asteroid 3 hexes
+            board = {'hexes': {'4,0': {'planet': {'planet_type': 'Asteroid', 'owner': None}, 'structures': []}}}
             later = dict(lone, booster=5, research_tracks=dict(lone['research_tracks'], navigation=1),
-                         tech_tiles=[], covered_tech_tiles=[])
-            self.assertTrue(tp._asteroid_gaia({'players': [later], 'board': board}, later))
-            self.assertFalse(tp._asteroid_gaia({'players': [later], 'board': board}, dict(later, booster=1)))
+                         tech_tiles=[], covered_tech_tiles=[], resources={'qic': 1})
+            try:
+                self.assertTrue(tp._asteroid_gaia({'players': [later], 'board': board}, later))   # range 1 + 1 QIC
+                self.assertFalse(tp._asteroid_gaia({'players': [later], 'board': board}, dict(later, resources={'qic': 0})))
+                self.assertFalse(tp._asteroid_gaia({'players': [later], 'board': board}, dict(later, booster=1)))
+            finally:
+                et.path_distance = distance
         finally:
             tp._reach_targets = original
 
