@@ -504,7 +504,8 @@ def run_ab(name, spec, jobs):
     data['timing'] = timing(out)
     data['final_scores'] = final_scores(out)
     vp_rate = spec.get('vp_rate')  # user 2026-10-08: judge by charges with VP held left out (0)
-    end_round = stop_round+1 if stop_round else 4
+    # the verdict stays rounds 1-3; only runs stopped earlier (106: stop_round 1) are measured to their last round
+    end_round = min(stop_round+1, 4) if stop_round else 4
     data['charges'] = charges(out, env, vp_rate, end_round=end_round)
     data['basics'] = basics(out, env)
     reference = ''
