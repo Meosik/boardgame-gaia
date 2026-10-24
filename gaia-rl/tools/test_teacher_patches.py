@@ -1007,6 +1007,23 @@ class OpeningBudgetTests(unittest.TestCase):
         player['tech_tiles'] = [12]
         self.assertEqual(tp._track_caps(player, table=False)['navigation'], 1)
 
+    def test_all_factory_tfmars_instant_gaia_needs_entry_free_action_power_and_former(self):
+        tp._guide['mj01'] = True                           # restored by setUp's cleanup
+        levels = {t: 0 for t in tp.TRACK_KEYS.values()}
+        player = {'faction': 'Taklons', 'research_tracks': levels, 'explored_ships': [2],
+                  'gaiaformers_total': 1, 'gaiaformers_deployed': 0, 'gaiaformers_in_gaia_area': 0,
+                  'resources': {'power': {'bowl1': 2, 'bowl2': 2, 'bowl3': 2}, 'spent_gaia_formers': 0}}
+        state = {'round': 2, 'used_spaceship_actions': [], 'players': [player]}
+        self.assertTrue(tp._tfmars_gaia_ready(state, player))
+        self.assertIn(('gaia', 1), tp._plan_tracks(state, 0))                  # Taklons Gaia 1 once on T F Mars
+        state['used_spaceship_actions'] = [6]
+        self.assertFalse(tp._tfmars_gaia_ready(state, player))
+        state['used_spaceship_actions'] = []
+        player['gaiaformers_total'] = 0
+        self.assertFalse(tp._tfmars_gaia_ready(state, player))
+        player['explored_ships'] = []
+        self.assertNotIn('gaia', [t for t, _ in tp._plan_tracks(state, 0)])
+
     def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup (ALL_FACTION_PARTS on)
         player = {'faction': 'Taklons', 'research_tracks': {}}

@@ -1678,14 +1678,33 @@ def _colony_costs(state, player, home):
         transdim = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Transdim',)))[:room]
         options += [({**MINE_COST, 'qic': qic}, GAIA_TOKENS[level]*terrans, nav) for qic, nav in transdim]
     # Formers on a planet or in the Gaia area come back, so every former not yet used up counts.
+    mj01 = _part(player, 'mj01')
     formers = (max(0, player['gaiaformers_total'] - player['resources']['spent_gaia_formers'])
-               if former_use else 0)
+               if former_use or mj01 else 0)
+    if mj01 and _tfmars_gaia_ready(state, player):
+        # MJ01-06: the T F Mars action gaiaforms a Transdim planet at once for 2 power, no tokens locked — only once
+        # explored, unused this round, payable and with an idle former (engine.rs validate_tfmars_gaia_formation).
+        transdim = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Transdim',)))[:1]
+        options += [({**MINE_COST, 'qic': qic}, -2*TFMARS_GAIA_POWER, nav) for qic, nav in transdim]
     if formers:
         # Lost Fleet rulebook: a mine on an Asteroid costs no ore or credits, only the range QIC,
         # and uses up one Gaia former.
         asteroids = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Asteroid',)))[:formers]
         options += [({'qic': qic}, 0, nav) for qic, nav in asteroids]
     return options
+
+
+TFMARS_SHIP = 2                 # engine spaceship_id_to_ship_id(TFMars)
+TFMARS_GAIA_ACTION = 6          # engine SPACESHIP_ACTION_TFMARS_GAIA_FORMATION
+TFMARS_GAIA_POWER = 2           # power spent from bowl III (2 charges each in the charge measure)
+
+
+def _tfmars_gaia_ready(state, player):
+    """The T F Mars instant Gaia formation is usable now: ship explored, action space free, 2 power, an idle former."""
+    return (TFMARS_SHIP in (player.get('explored_ships') or ())
+            and TFMARS_GAIA_ACTION not in (state.get('used_spaceship_actions') or ())
+            and player['resources']['power']['bowl3'] >= TFMARS_GAIA_POWER
+            and _idle_formers(player) > 0)
 
 
 def _idle_formers(player):
@@ -2285,7 +2304,7 @@ TRACK_STEPS = {'Gleens': ((1, 'navigation', 2),),
 # TF Mars and Eclipse ships carry the expansion); Geodens may take Gaia 1 (MJ01-20). Order and scope only.
 MJ_ECONOMY_CAP = 2
 MJ_TRACK_CAPS = {'Terrans': {'gaia': 1}, 'SpaceGiants': {'terraforming': 0},
-                 'Darkanians': {'terraforming': 0}, 'Geodens': {'gaia': 1}}
+                 'Darkanians': {'terraforming': 0}, 'Geodens': {'gaia': 1}, 'Taklons': {'gaia': 1}}
 MJ_TRACK_STEPS = {'Firaks': ((1, 'economy', 2), (3, 'navigation', 2)),
                   'Darkanians': ((1, 'economy', 2), (1, 'navigation', 3))}
 MJ_FACTION_TRACKS = {'Terrans': ('navigation', 'terraforming', 'ai', 'economy'),
@@ -3522,6 +3541,8 @@ def _plan_tracks(state, actor):
         tracks = ['navigation', 'gaia' if gaia_rival else 'science', 'economy']
     elif faction == 'Xenos' and gaia_rival:                    # X3 / B15-02 (niche_tracks' reading)
         tracks = [t for t in tracks if t != 'gaia']
+    if faction == 'Taklons' and _part(player, 'mj01') and TFMARS_SHIP in (player.get('explored_ships') or ()):
+        tracks.append('gaia')      # user 10-24: T F Mars forms at once, no tokens locked — Gaia 1 for the former only
     caps = _track_caps(player)
     steps = [(t, level) for start, t, level in _track_steps_table(player)
              if start <= state['round'] and levels.get(t, 0) < level]
