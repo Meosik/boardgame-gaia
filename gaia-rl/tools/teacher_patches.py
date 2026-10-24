@@ -4804,6 +4804,41 @@ def knowledge_to_credit_scores(env, snapshot, scores):
     return result
 
 
+# former_late (ships_menu1_all only; user 2026-10-25 "가이아 올리자마자 포머 던지는거 좀 막아. 특히 가이아 트랙타야하는 애들이
+# 아이타 테란"): a Gaia Project planet completes in the Gaia phase (base rulebook p.11) whatever time in the round the former
+# was placed, so placing it right after the Gaia track step only locks the power tokens for the rest of the round; place it
+# just before passing. The factions that ride the Gaia track and so hold a former early.
+FORMER_LATE_FACTIONS = frozenset({'Itars', 'Terrans'})
+
+
+def former_late_scores(env, snapshot, scores):
+    from current_actions.conservation import BLOCKED, PREFIX, blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'mj01') or player['faction'] not in FORMER_LATE_FACTIONS:
+        return scores
+    kinds = [c['action'].get('type') for c in snapshot['candidates']]
+    forming = [i for i, k in enumerate(kinds) if k == 'GaiaFormation' and not blocked(scores[i])]
+    if not forming:
+        return scores
+    others = [scores[i][0] for i, k in enumerate(kinds)
+              if k not in ('GaiaFormation', 'Pass', 'FreeAction') and not blocked(scores[i])]
+    passes = [scores[i][0] for i, k in enumerate(kinds) if k == 'Pass' and not blocked(scores[i])]
+    top_pass = max(passes, default=float('-inf'))
+    result = list(scores)
+    if others and max(others) > top_pass:
+        for i in forming:
+            result[i] = (BLOCKED, PREFIX+'former_late: form just before passing (Gaia phase completes it anyway)',
+                         *scores[i][2:])
+        return result
+    best = max(forming, key=lambda i: scores[i][0])
+    if passes and scores[best][0] <= top_pass:
+        result[best] = (top_pass+0.001, f'{scores[best][1]}; former_late: form before passing', *scores[best][2:])
+    return result
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     """Teacher factory: every faction part the sources gave so far on top of ships_menu1 (user 2026-10-24 "일단
     반영할거 다 반영해봐", E103; integrate first, fix by replays): ..._byfaction_guide_res (CANDIDATE, GUIDE, SOURCE
@@ -4838,6 +4873,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     # the federation / token comparisons would read the ranking before track_race, fed_cluster and the rest (debate
     # 1/1). A second recorder as the outermost wrapper stores the final ranking.
     _wrap_rank('_fed_remember_outer', fed_remember_scores)
+    _wrap_rank('_former_late', former_late_scores)    # user 10-25: outermost; touches only GaiaFormation scores
     return teacher
 
 

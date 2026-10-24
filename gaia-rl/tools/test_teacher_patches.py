@@ -344,10 +344,12 @@ class OpeningBudgetTests(unittest.TestCase):
                 "'opening_only' in tp._faction_parts('HadschHallas'))\n"
                 "import four_factions.preparation as p\n"
                 "outer = p.Policies.rank\n"
-                "print(tp.fed_remember_scores in [c.cell_contents for c in outer.__closure__])")
+                "print(tp.former_late_scores in [c.cell_contents for c in outer.__closure__] "
+                "and outer._fed_remember_outer)")
         out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True,
                              env=env).stdout
-        # The last word: the federation / token comparisons read the final ranking (outermost recorder, debate 1/1).
+        # The last word: former_late is outermost (it only touches GaiaFormation scores) and the federation / token
+        # recorder (debate 1/1) sits right inside it.
         self.assertEqual(out.split(), ['True', '1', 'True', 'True', 'True', 'True', 'True'])
 
     def test_faction_parts_come_from_the_tables(self):
@@ -1374,6 +1376,37 @@ class OpeningBudgetTests(unittest.TestCase):
         player.update(faction='Nevlas', structures=[{'kind': 'PlanetaryInstitute', 'hex': '0,0'}])
         self.assertTrue(tp._tfmars_gaia_ready(state, player))
         self.assertEqual(tp._tfmars_tokens(player), 1)
+
+    def _former_late(self, faction, types, values, mj01=True, phase='ActionPhase'):
+        tp._guide['mj01'] = mj01                           # restored by setUp's cleanup
+        state = {'round': 2, 'phase': {phase: {}}, 'players': [{'faction': faction}]}
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': {'type': t}} for t in types]}
+        scores = [(v, f's{i}') for i, v in enumerate(values)]
+        return scores, tp.former_late_scores(None, snapshot, scores)
+
+    def test_former_late_blocks_forming_while_another_main_action_outranks_pass(self):
+        from current_actions.conservation import blocked
+        scores, out = self._former_late('Terrans', ['GaiaFormation', 'Build', 'Pass'], [9.0, 5.0, 1.0])
+        self.assertTrue(blocked(out[0]))
+        self.assertFalse(blocked(out[1]) or blocked(out[2]))
+        self.assertEqual(scores[0], (9.0, 's0'))                      # input untouched
+
+    def test_former_late_lifts_forming_above_pass_when_pass_is_next(self):
+        from current_actions.conservation import blocked
+        _, out = self._former_late('Terrans', ['GaiaFormation', 'Build', 'Pass'], [1.0, 2.0, 5.0])
+        self.assertGreater(out[0][0], 5.0)
+        self.assertFalse(blocked(out[0]) or blocked(out[2]))
+        self.assertEqual(out[2][0], 5.0)
+        _, out = self._former_late('Itars', ['GaiaFormation', 'FreeAction', 'Pass'], [1.0, 8.0, 3.0])
+        self.assertGreater(out[0][0], 3.0)
+        self.assertFalse(blocked(out[2]))
+
+    def test_former_late_leaves_other_factions_missing_mj01_and_other_phases_alone(self):
+        types, values = ['GaiaFormation', 'Build', 'Pass'], [9.0, 5.0, 1.0]
+        for kwargs in ({'faction': 'Geodens'}, {'faction': 'Terrans', 'mj01': False},
+                       {'faction': 'Terrans', 'phase': 'GaiaPhase'}):
+            scores, out = self._former_late(types=types, values=values, **kwargs)
+            self.assertEqual(out, scores)
 
     def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup (ALL_FACTION_PARTS on)
