@@ -239,6 +239,8 @@ ALL_FACTION_PARTS = {
     'Moweyds': frozenset({'opening_res'}),   # institute opening only with a tech federation (TECH_FEDERATION_OPENINGS)
     'Nevlas': frozenset({'tile_prefs'}),     # B19-S60 charge-4 tile not under Gaia (TILE_PREFS)
     'Geodens': frozenset({'opening_res'}),   # E106 institute start (RESOLVED_OPENINGS, SH04/SH09/MJ01-20)
+    # User 2026-10-25 (lab 106 Bescods): lab openings, no academy in round 1 (faction-tracks-openings.md, PG01-S23).
+    'Bescods': frozenset({'opening_res', 'building_limits'}),
 }
 
 # power_prefs (E103 ④, ships_menu1_all only): the power actions a guide ranks, used when a power action is the best
@@ -800,6 +802,9 @@ RESOLVED_OPENINGS = {
     # SH04 rank 1 의4광·의교2광, SH09 "의회 빌드가 강제", MJ01-20 — against B14's base-game academy start (UIQOO_OPENINGS,
     # user 2026-10-16 "기오덴 빼줘" removed the BGG institute-first part then). A label the catalog lacks is not proposed.
     'Geodens': ('1PI+1TS+2M', '1PI+4M', '1PI+2M', '1RL+1TS+2M', '1AC+2M'),
+    # Bescods, ships_menu1_all only (user 2026-10-25, lab 106 pair-014; faction-tracks-openings.md, PG01-S23): lab openings,
+    # the academy first is the worst (UIQOO_OPENINGS ends with '1AC+2M'; BUILDING_LIMITS blocks the round-1 academy).
+    'Bescods': ('1RL+1TS+2M', '1RL+2M', '2RL'),
 }
 # With a round-1 tech federation in reach (LF token 12 "tech tile of choice" on a ship board within
 # SHIP_SETUP_RANGE of our buildings: C004, LF3-10, SH02-S07 "the only reason to design a round-1 opening"):
@@ -1218,6 +1223,49 @@ def _near_places(snapshot, scores):
     return near
 
 
+# Far-start exception, ships_menu1_all only (user 2026-10-25, lab 106 pair-014 Bescods, known-bad-decisions.md 12): a start
+# that is not next to an opponent stays allowed when (a) a free planet within the setup reach of it is a cheap mine (at most
+# one terraforming step from the home type) and itself next to an opponent — a cheap trading station without upgrading the
+# setup planet — or (b) round booster 5 (instant Gaia, engine actions.rs:166) is in the supply and a free Transdim planet is
+# within distance 1 of the start.
+FAR_START_TERRAFORM_STEPS = 1
+FAR_START_TRANSDIM_RANGE = 1
+
+
+def _free_planet(cell):
+    return bool(cell['planet']) and cell['planet']['owner'] is None and not cell['structures']
+
+
+def far_start_allowed(state, actor, start):
+    from economy.teacher import RING
+    from faction_teachers.profiles import profiles
+    from strategy_teacher import distance
+    player = state['players'][actor]
+    if not _part(player, 'mj01'):
+        return False
+    hexes = state['board']['hexes']
+    if INSTANT_GAIA_BOOSTER in state.get('boosters', ()) and any(
+            _free_planet(cell) and cell['planet']['planet_type'] == 'Transdim'
+            and distance(start, c) <= FAR_START_TRANSDIM_RANGE for c, cell in hexes.items()):
+        return True
+    profile = profiles().get(player['faction'])
+    if not profile or profile.home not in RING:
+        return False
+    reach = _value.navigation(player) if player.get('research_tracks') else 1
+    sites = _future_opponent_sites(state, actor)
+    for c, cell in hexes.items():
+        if c == start or not _free_planet(cell) or distance(start, c) > reach:
+            continue
+        kind = cell['planet']['planet_type']
+        if kind not in RING:
+            continue
+        gap = abs(RING.index(profile.home)-RING.index(kind))
+        if min(gap, 7-gap) <= FAR_START_TERRAFORM_STEPS and (
+                _next_to_opponent(state, actor, c) or _near_sites(state, actor, c, sites)):
+            return True
+    return False
+
+
 def guide_r1_scores(snapshot, scores):
     from current_actions.conservation import BLOCKED, PREFIX, blocked
     state, actor = snapshot['state'], snapshot['player']
@@ -1231,7 +1279,8 @@ def guide_r1_scores(snapshot, scores):
         action = candidate['action']
         if blocked(scores[i]):
             continue
-        if action['type'] == 'PlaceStartingStructure' and near and i not in near:
+        if action['type'] == 'PlaceStartingStructure' and near and i not in near \
+                and not far_start_allowed(state, actor, action['coord']):
             # Setup comparisons end at the round-1/2 income and differ by noise (034: 154.3
             # vs 153.5), so ordering alone let an isolated start win; compare only the near ones.
             result[i] = (BLOCKED, PREFIX+'guide: start next to an opponent (LF4-02, B10-02)')
@@ -2592,7 +2641,9 @@ BUILDING_LIMITS = {'Firaks': (('Academy', 6),),
                    # weak_factions: no institute in rounds 1-2 (BGG PI openings 110-127 vs 141 without, BGGO1-S10,
                    # BGGO2-S22; PG19-S27 "2R 의회는 실수", PG19-S33 3-4R). The LF Rebellion 3-QIC exception is the
                    # institute_rebellion part (resolved_parts): the rule is dropped while rebellion_reachable.
-                   'HadschHallas': (('PlanetaryInstitute', 2),)}
+                   'HadschHallas': (('PlanetaryInstitute', 2),),
+                   # ships_menu1_all only (ALL_FACTION_PARTS): no academy in round 1 (user 2026-10-25, PG01-S23).
+                   'Bescods': (('Academy', 1),)}
 
 
 REBELLION = 1                # ship id in explored_ships (engine spaceship_id_to_ship_id)
@@ -4465,6 +4516,55 @@ def artifact_tokens_scores(env, snapshot, scores):
     return lifted
 
 
+def start_booster5_scores(env, snapshot, scores):
+    """ships_menu1_all only (user 2026-10-25, known-bad-decisions.md 12): at the setup booster pick, round booster 5 (instant
+    Gaia) goes first when a free Transdim planet is within distance 1 of one of our structures. Order only."""
+    from current_actions.conservation import blocked
+    from strategy_teacher import distance
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'mj01'):
+        return scores
+    picks = {i: c['action'] for i, c in enumerate(snapshot['candidates'])
+             if c['action'].get('type') == 'SelectStartingBooster' and not blocked(scores[i])}
+    five = [i for i, a in picks.items() if a.get('booster_id') == INSTANT_GAIA_BOOSTER]
+    if not five:
+        return scores
+    mine = [s['hex'] for s in player['structures']]
+    if not any(_free_planet(cell) and cell['planet']['planet_type'] == 'Transdim'
+               and any(distance(h, c) <= FAR_START_TRANSDIM_RANGE for h in mine)
+               for c, cell in state['board']['hexes'].items()):
+        return scores
+    top = max(picks, key=lambda i: scores[i][0])
+    if top == five[0]:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(scores), five[0], top, 'booster 5 with a Transdim planet in reach (instant Gaia)')
+    return lifted
+
+
+def knowledge_to_credit_scores(env, snapshot, scores):
+    """ships_menu1_all only (user 2026-10-25, lab 106 pair-005 Geodens "지식 > 돈은 최악의 수"): knowledge to credits is blocked
+    while a research advance, or an ore or power to credit conversion of the same count, is open."""
+    from current_actions.conservation import BLOCKED, PREFIX, blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or not _part(state['players'][actor], 'mj01'):
+        return scores
+    live = [(i, c['action']) for i, c in enumerate(snapshot['candidates']) if not blocked(scores[i])]
+    research = any(a.get('type') == 'ResearchAdvance' for _, a in live)
+    result = list(scores)
+    for i, a in live:
+        if a.get('type') != 'FreeAction' or a.get('kind') != 'KnowledgeToCredit':
+            continue
+        cheaper = any(b.get('type') == 'FreeAction' and b.get('kind') in ('OreToCredit', 'PowerToCredit')
+                      and b.get('count', 1) == a.get('count', 1) for _, b in live)
+        if research or cheaper:
+            result[i] = (BLOCKED, PREFIX+'knowledge to credits is the worst conversion (research or ore/power to credits open)')
+    return result
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     """Teacher factory: every faction part the sources gave so far on top of ships_menu1 (user 2026-10-24 "일단
     반영할거 다 반영해봐", E103; integrate first, fix by replays): ..._byfaction_guide_res (CANDIDATE, GUIDE, SOURCE
@@ -4475,6 +4575,8 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     _wrap_rank('_artifact_tokens', artifact_tokens_scores)
     _wrap_rank('_range_tile', range_tile_scores)
     _wrap_rank('_power_prefs', power_prefs_scores)
+    _wrap_rank('_start_booster5', start_booster5_scores)
+    _wrap_rank('_knowledge_to_credit', knowledge_to_credit_scores)
     # User 10-25 "넣을거 다 넣어봐 일단": the measured families not in the stack yet — ship_adjacent_mine in its E61 (ㄱ)
     # form (095), endgame_prices (096; watch round-5 ore→power, Taklons 7→41), federations (089: fed_compare +
     # fed_cluster) and green tokens (090: token_compare + track_race + race_prune); fed_remember stays last.

@@ -1014,6 +1014,81 @@ class OpeningBudgetTests(unittest.TestCase):
         scores = [(1.0, 'k2'), (6.0, 'tf1'), (9.0, 'pass')]
         self.assertIs(tp.power_prefs_scores(None, snapshot, scores), scores)                              # not a power move
 
+    @staticmethod
+    def far_start_snapshot(boosters=(), transdim=False):
+        cell = lambda planet=None, owner=None, structures=(): {
+            'planet': {'planet_type': planet, 'owner': None} if planet else None, 'structures': list(structures)}
+        hexes = {'0,0': cell('Volcanic'), '1,0': cell('Desert'), '3,0': cell('Terra', structures=[{'owner': 1}]),
+                 '4,0': cell('Volcanic'), '0,1': cell('Transdim' if transdim else None)}
+        me = {'player_id': 0, 'faction': 'Geodens', 'structures': [], 'tech_tiles': [], 'covered_tech_tiles': [],
+              'research_tracks': {'navigation': 0}}
+        other = {'player_id': 1, 'faction': 'Terrans', 'structures': [{}]*9}
+        state = {'round': 0, 'phase': {'Setup': {}}, 'players': [me, other], 'boosters': list(boosters),
+                 'board': {'hexes': hexes}}
+        place = lambda coord: {'action': {'type': 'PlaceStartingStructure', 'coord': coord}}
+        return {'state': state, 'player': 0, 'candidates': [place('0,0'), place('4,0')]}
+
+    def test_far_start_blocked_unless_cheap_mine_next_to_opponent_or_instant_gaia(self):
+        from current_actions.conservation import blocked
+        snapshot = self.far_start_snapshot()
+        scores = [(5.0, 'far'), (4.0, 'near')]
+        self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))     # gate off: unchanged
+        tp._guide['mj01'] = True                                             # restored by setUp's cleanup
+        # 1,0 is Desert, one step from Geodens' Volcanic, in reach 1 of the start and 2 hexes from the opponent at 3,0.
+        self.assertEqual(tp.guide_r1_scores(snapshot, scores), scores)
+        snapshot['state']['board']['hexes']['1,0']['planet']['planet_type'] = 'Ice'   # three steps: not cheap
+        self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))
+        instant = self.far_start_snapshot(boosters=(5, 8), transdim=True)
+        instant['state']['board']['hexes']['1,0']['planet']['planet_type'] = 'Ice'
+        self.assertEqual(tp.guide_r1_scores(instant, scores), scores)         # booster 5 and a Transdim next to the start
+        instant['state']['boosters'] = [8]
+        self.assertTrue(blocked(tp.guide_r1_scores(instant, scores)[0]))
+
+    def test_all_factory_booster5_first_with_transdim_in_reach(self):
+        snapshot = self.far_start_snapshot(boosters=(5, 8), transdim=True)
+        snapshot['state']['players'][0]['structures'] = [{'hex': '0,0', 'owner': 0}]
+        snapshot['candidates'] = [{'action': {'type': 'SelectStartingBooster', 'booster_id': b}} for b in (8, 5)]
+        scores = [(9.0, 'b8'), (4.0, 'b5')]
+        self.assertIs(tp.start_booster5_scores(None, snapshot, scores), scores)   # gate off
+        tp._guide['mj01'] = True
+        self.assertEqual([s[0] for s in tp.start_booster5_scores(None, snapshot, scores)], [4.0, 9.0])
+        snapshot['state']['board']['hexes']['0,1']['planet'] = None
+        self.assertIs(tp.start_booster5_scores(None, snapshot, scores), scores)   # no Transdim in reach
+
+    def test_all_factory_bescods_lab_openings_and_no_round1_academy(self):
+        self.assertNotIn('opening_res', tp._faction_parts('Bescods'))
+        self.assertNotIn('building_limits', tp._faction_parts('Bescods'))
+        tp._guide['mj01'] = True
+        self.assertIn('building_limits', tp._faction_parts('Bescods'))
+        self.assertEqual(tp.guide_opening_labels('Bescods', {})[:2], ('1RL+1TS+2M', '1RL+2M'))
+        self.assertNotIn('1AC+2M', tp.guide_opening_labels('Bescods', {}))
+        player = {'faction': 'Bescods'}
+        up = lambda to: {'type': 'Upgrade', 'coord': '0,0', 'to': to}
+        snapshot = {'player': 0, 'state': {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player]},
+                    'candidates': [{'action': up({'Academy': 'Science'})}, {'action': up('ResearchLab')}]}
+        scores = [(9.0, 'ac'), (4.0, 'rl')]
+        self.assertEqual([s[0] for s in tp.building_limits_scores(None, snapshot, scores)], [4.0, 9.0])
+        snapshot['state']['round'] = 2
+        self.assertIs(tp.building_limits_scores(None, snapshot, scores), scores)
+
+    def test_all_factory_knowledge_to_credit_blocked_when_better_options_exist(self):
+        from current_actions.conservation import blocked
+        free = lambda kind, count=2: {'action': {'type': 'FreeAction', 'kind': kind, 'count': count}}
+        player = {'faction': 'Geodens'}
+        state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        snapshot = {'player': 0, 'state': state, 'candidates': [free('KnowledgeToCredit'), {'action': {'type': 'Pass'}}]}
+        scores = [(5.0, 'k2c'), (1.0, 'pass')]
+        tp._guide['mj01'] = True
+        self.assertEqual(tp.knowledge_to_credit_scores(None, snapshot, scores), scores)   # nothing better open
+        snapshot['candidates'].append({'action': {'type': 'ResearchAdvance', 'track': 'Economy'}})
+        self.assertTrue(blocked(tp.knowledge_to_credit_scores(None, snapshot, scores + [(2.0, 'r')])[0]))
+        snapshot['candidates'][2] = free('PowerToCredit', 1)
+        self.assertFalse(blocked(tp.knowledge_to_credit_scores(None, snapshot, scores + [(2.0, 'p')])[0]))  # count differs
+        snapshot['candidates'][2] = free('OreToCredit', 2)
+        self.assertTrue(blocked(tp.knowledge_to_credit_scores(None, snapshot, scores + [(2.0, 'o')])[0]))
+        tp._guide['mj01'] = False                                                       # gate off: unchanged
+        self.assertFalse(blocked(tp.knowledge_to_credit_scores(None, snapshot, scores + [(2.0, 'o')])[0]))
+
     def test_all_factory_sh11_gaia_vp_tile_not_first_and_gaia1_for_asteroid(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup
         player = {'faction': 'Gleens', 'research_tracks': {'navigation': 1}, 'tech_tiles': [], 'covered_tech_tiles': []}
