@@ -330,10 +330,14 @@ class OpeningBudgetTests(unittest.TestCase):
                 "bgg_openings=True, shared_factions=True)\n"
                 "print(tp._guide['plan_menu'], tp._guide['menu_first'], tp._guide['resolved_parts'], "
                 "tp._guide['weak_factions'], 'opening_res' in tp._faction_parts('Taklons'), "
-                "'opening_only' in tp._faction_parts('HadschHallas'))")
+                "'opening_only' in tp._faction_parts('HadschHallas'))\n"
+                "import four_factions.preparation as p\n"
+                "outer = p.Policies.rank\n"
+                "print(tp.fed_remember_scores in [c.cell_contents for c in outer.__closure__])")
         out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True,
                              env=env).stdout
-        self.assertEqual(out.split(), ['True', '1', 'True', 'True', 'True', 'True'])
+        # The last word: the federation / token comparisons read the final ranking (outermost recorder, debate 1/1).
+        self.assertEqual(out.split(), ['True', '1', 'True', 'True', 'True', 'True', 'True'])
 
     def test_faction_parts_come_from_the_tables(self):
         # Base stack: only the faction parts of BASE_FACTION_PARTS; a faction not in the table has none.
