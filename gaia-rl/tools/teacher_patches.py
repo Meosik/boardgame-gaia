@@ -4033,12 +4033,19 @@ def _plan_cost(snapshot, goal):
     state, actor = snapshot['state'], snapshot['player']
     player = state['players'][actor]
     total = {}
+    mj01 = _part(player, 'mj01')
     for step in goal.steps if goal.family == 'ordered' else (goal,):
-        if achieved(snapshot, actor, step):
+        # mj01: an upgrade is judged on the simulated buildings (_upgrade_chain_cost: 0 when already there), not on the
+        # real board — a Firaks rebuild after its downgrade is not "achieved" by the lab standing now (debate 1/1).
+        if not (mj01 and step.family == 'upgrade' and step.coord) and achieved(snapshot, actor, step):
             continue
         qic_gain = 0
         if step.family == 'colony' and step.coord:
             cost = _mine_cost(state, player, step.coord)
+        elif step.family == 'faction-action' and mj01 and step.target == 'FiraksDowngradeResearchLab' and step.coord:
+            cost = {}       # the lab goes back to a trading station (rulebook p.21 Firaks institute), so the rebuild pays again
+            player = {**player, 'structures': [{**s, 'kind': 'TradingStation'} if s['hex'] == step.coord else s
+                                               for s in player['structures']]}
         elif step.family == 'faction-action':
             cost = _mine_cost(state, player, step.coord) if step.target == 'Build' and step.coord else {}
         elif step.family == 'research' and step.target in TRACK_KEYS:
@@ -4114,10 +4121,15 @@ def plan_affordable(snapshot, goal):
     tokens = power['bowl3'] + power['bowl2']//2
     brainstone = 3 if power.get('brainstone') == 'Area3' else 0
     short = {key: n - budget.get(key, 0) for key, n in cost.items() if n > budget.get(key, 0)}
-    rates = dict(POWER_CONVERSION, **({'knowledge': 1} if player['faction'] == 'Nevlas' else {}))
-    if any(key not in rates for key in short):
+    if any(key not in POWER_CONVERSION for key in short):
         return False
-    return sum(rates[key]*n for key, n in short.items()) <= tokens + brainstone
+    if player['faction'] == 'Nevlas':
+        # Knowledge: one token to the Gaia area each; the rest is spent as power, two per token with the institute
+        # (rulebook p.21) — the two uses counted apart (debate 1/1).
+        pi = any(_structure_kind(s) == 'PlanetaryInstitute' for s in player['structures'])
+        spent = sum(POWER_CONVERSION[key]*n for key, n in short.items() if key != 'knowledge')
+        return short.get('knowledge', 0) + -(-spent // (2 if pi else 1)) <= tokens
+    return sum(POWER_CONVERSION[key]*n for key, n in short.items()) <= tokens + brainstone
 
 
 POWER_CONVERSION = {'credits': 1, 'ore': 3, 'knowledge': 4, 'qic': 4}      # rulebook free actions, power per resource

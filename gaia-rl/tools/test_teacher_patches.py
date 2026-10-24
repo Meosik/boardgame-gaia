@@ -1070,6 +1070,14 @@ class OpeningBudgetTests(unittest.TestCase):
         cost, after = tp._upgrade_chain_cost(snapshot, player, Goal('PI@0,0', 'upgrade', '0,0', 'PlanetaryInstitute'))
         self.assertEqual(cost, {'ore': 6, 'credits': 12})                       # TS 2+6 (no neighbour) + PI 4+6
         self.assertEqual(after['structures'][0]['kind'], 'PlanetaryInstitute')
+        # Firaks lab → downgrade → lab from a trading station: both labs paid (debate 1/1).
+        firaks = dict(player, faction='Firaks', structures=[{'kind': 'TradingStation', 'hex': '0,0'}])
+        state['players'] = [firaks]
+        lab = Goal('ResearchLab@0,0', 'upgrade', '0,0', 'ResearchLab')
+        cycle = Goal('Firaks-lab-downgrade-rebuild@0,0', 'ordered',
+                     steps=(lab, Goal('FiraksDowngradeResearchLab@0,0', 'faction-action', '0,0', 'FiraksDowngradeResearchLab'), lab))
+        self.assertEqual(tp._plan_cost(snapshot, cycle), {'ore': 6, 'credits': 10})
+        state['players'] = [player]
         originals = tp._menu_multi_step, tp._plan_cost, tp._plan_budget
         try:
             tp._menu_multi_step = lambda snapshot, goal: True
@@ -1080,6 +1088,13 @@ class OpeningBudgetTests(unittest.TestCase):
             self.assertTrue(tp.plan_affordable(snapshot, None))                    # 2 short, 2 tokens to the Gaia area
             nevlas['faction'] = 'Xenos'
             self.assertFalse(tp.plan_affordable(snapshot, None))                   # 8 power needed, 2 held
+            # Nevlas institute: 1 ore short = 3 power = 2 tokens at 2 power each (debate 1/1).
+            tp._plan_cost = lambda snapshot, goal: {'ore': 1}
+            tp._plan_budget = lambda state, player: {'ore': 0}
+            nevlas.update(faction='Nevlas', structures=[{'kind': 'PlanetaryInstitute', 'hex': '0,0'}])
+            self.assertTrue(tp.plan_affordable(snapshot, None))
+            nevlas['structures'] = [{'kind': 'Mine', 'hex': '0,0'}]
+            self.assertFalse(tp.plan_affordable(snapshot, None))                   # no institute: 3 tokens needed
         finally:
             tp._menu_multi_step, tp._plan_cost, tp._plan_budget = originals
 
