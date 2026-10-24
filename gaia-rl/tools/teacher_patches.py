@@ -1674,18 +1674,19 @@ def _colony_costs(state, player, home):
     options += [(dict(MINE_COST), 0, 0)]*reserved
     room = _gaia_room(player)
     former_use = _guide['former_use'] or _part(player, 'former_use')
-    if room and not former_use:
-        transdim = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Transdim',)))[:room]
-        options += [({**MINE_COST, 'qic': qic}, GAIA_TOKENS[level]*terrans, nav) for qic, nav in transdim]
-    # Formers on a planet or in the Gaia area come back, so every former not yet used up counts.
     mj01 = _part(player, 'mj01')
+    transdim = sorted((qic, nav, coord) for coord, _, qic, nav in _reach_targets(state, player, ('Transdim',)))
+    if mj01 and transdim and _tfmars_gaia_ready(state, player):
+        # MJ01-06: the T F Mars action gaiaforms a Transdim planet at once for 2 printed power, no tokens locked — only
+        # once explored, unused this round, payable and with an idle former (engine.rs validate_tfmars_gaia_formation).
+        # The cheapest planet takes this path and leaves the normal Gaia projects (one planet, one path).
+        qic, nav, _ = transdim.pop(0)
+        options.append(({**MINE_COST, 'qic': qic}, -2*_tfmars_tokens(player), nav))
+    if room and not former_use:
+        options += [({**MINE_COST, 'qic': qic}, GAIA_TOKENS[level]*terrans, nav) for qic, nav, _ in transdim[:room]]
+    # Formers on a planet or in the Gaia area come back, so every former not yet used up counts.
     formers = (max(0, player['gaiaformers_total'] - player['resources']['spent_gaia_formers'])
                if former_use or mj01 else 0)
-    if mj01 and _tfmars_gaia_ready(state, player):
-        # MJ01-06: the T F Mars action gaiaforms a Transdim planet at once for 2 power, no tokens locked — only once
-        # explored, unused this round, payable and with an idle former (engine.rs validate_tfmars_gaia_formation).
-        transdim = sorted((qic, nav) for _, _, qic, nav in _reach_targets(state, player, ('Transdim',)))[:1]
-        options += [({**MINE_COST, 'qic': qic}, -2*TFMARS_GAIA_POWER, nav) for qic, nav in transdim]
     if formers:
         # Lost Fleet rulebook: a mine on an Asteroid costs no ore or credits, only the range QIC,
         # and uses up one Gaia former.
@@ -1696,14 +1697,24 @@ def _colony_costs(state, player, home):
 
 TFMARS_SHIP = 2                 # engine spaceship_id_to_ship_id(TFMars)
 TFMARS_GAIA_ACTION = 6          # engine SPACESHIP_ACTION_TFMARS_GAIA_FORMATION
-TFMARS_GAIA_POWER = 2           # power spent from bowl III (2 charges each in the charge measure)
+TFMARS_GAIA_POWER = 2           # printed power cost (each token spent from bowl III is 2 charges in the charge measure)
+
+
+def _tfmars_tokens(player):
+    """Tokens the 2-power action spends: Nevlas with the institute pay half, rounded up (engine power_action_token_cost)."""
+    nevlas_pi = player['faction'] == 'Nevlas' and any(
+        _structure_kind(s) == 'PlanetaryInstitute' for s in player.get('structures', ()))
+    return -(-TFMARS_GAIA_POWER // 2) if nevlas_pi else TFMARS_GAIA_POWER
 
 
 def _tfmars_gaia_ready(state, player):
-    """The T F Mars instant Gaia formation is usable now: ship explored, action space free, 2 power, an idle former."""
+    """The T F Mars instant Gaia formation is usable now: ship explored, action space free, payable (bowl III plus a
+    Brainstone there counting 3 — engine spendable_power_value), an idle former."""
+    power = player['resources']['power']
+    spendable = power['bowl3'] + (3 if power.get('brainstone') == 'Area3' else 0)
     return (TFMARS_SHIP in (player.get('explored_ships') or ())
             and TFMARS_GAIA_ACTION not in (state.get('used_spaceship_actions') or ())
-            and player['resources']['power']['bowl3'] >= TFMARS_GAIA_POWER
+            and spendable >= _tfmars_tokens(player)
             and _idle_formers(player) > 0)
 
 

@@ -1023,6 +1023,15 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertFalse(tp._tfmars_gaia_ready(state, player))
         player['explored_ships'] = []
         self.assertNotIn('gaia', [t for t, _ in tp._plan_tracks(state, 0)])
+        # Payable as the engine counts it (debate 1/1): a Brainstone in area III, Nevlas' institute half cost.
+        player.update(explored_ships=[2], gaiaformers_total=1)
+        player['resources']['power'] = {'bowl1': 3, 'bowl2': 2, 'bowl3': 0, 'brainstone': 'Area3'}
+        self.assertTrue(tp._tfmars_gaia_ready(state, player))
+        player['resources']['power'] = {'bowl1': 3, 'bowl2': 2, 'bowl3': 1}
+        self.assertFalse(tp._tfmars_gaia_ready(state, player))
+        player.update(faction='Nevlas', structures=[{'kind': 'PlanetaryInstitute', 'hex': '0,0'}])
+        self.assertTrue(tp._tfmars_gaia_ready(state, player))
+        self.assertEqual(tp._tfmars_tokens(player), 1)
 
     def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup (ALL_FACTION_PARTS on)
