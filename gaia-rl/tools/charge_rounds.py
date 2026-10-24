@@ -47,7 +47,7 @@ def charges(state, seat):
 
 
 def game_charges(game_dir):
-    """{seat: (charges at round 1, charges at round 4)} or None if round 4 is never reached."""
+    """{seat: (charges at round 1, charges at END_ROUND)} or None if END_ROUND is never reached."""
     from gaia_rl import Environment
     result = json.loads((game_dir/'result.json').read_text())
     env = Environment(result['seed'], 2000)
@@ -62,7 +62,7 @@ def game_charges(game_dir):
         if round_started(state, END_ROUND):
             return result, {s: (start[s], charges(state, s)) for s in seats}
         env.step(row['decision_id'], row['index'])
-    state = json.loads(env.snapshot_json())['state']  # a game stopped at round 4 (teacher_ab --stop-round 3)
+    state = json.loads(env.snapshot_json())['state']  # a game stopped at END_ROUND (teacher_ab --stop-round END_ROUND-1)
     if start is not None and round_started(state, END_ROUND):
         return result, {s: (start[s], charges(state, s)) for s in range(len(state['players']))}
     return result, None
@@ -112,9 +112,13 @@ def main():
     parser.add_argument('--vp-rate', type=float,
                         help='Charges per VP held (default the guide rate 1.5; 0 leaves VP out). '
                              'Only the measure changes, not what the teachers played.')
+    parser.add_argument('--end-round', type=int, default=4,
+                        help='Round whose start ends the measure (default 4 = rounds 1-3; '
+                             'lab.py passes stop_round+1)')
     args = parser.parse_args()
-    global VP_RATE
+    global VP_RATE, END_ROUND
     VP_RATE = args.vp_rate
+    END_ROUND = args.end_round
     import teacher_patches as tp
     tp._guide.update(qic_reach=False, track_income=False, lf_tables=True)
     gained = defaultdict(dict)   # (pair, faction) -> {arm: charges gained}
@@ -144,8 +148,8 @@ def main():
         if args.games:
             print(games[-1])
     rate = 1.5 if VP_RATE is None else VP_RATE
-    print(f'Charges gained, rounds 1-3 (round-1 start to round-4 start, 1 VP = {rate:g} charges; '
-          f'{len(games)} games reached round 4, {incomplete} of them did not finish)')
+    print(f'Charges gained, rounds {START_ROUND}-{END_ROUND-1} (round-{START_ROUND} start to round-{END_ROUND} start, '
+          f'1 VP = {rate:g} charges; {len(games)} games reached round {END_ROUND}, {incomplete} of them did not finish)')
     print(f"{'faction':<9} {'pairs':>5} {'A':>7} {'B':>7} {'B-A':>7}  95% CI")
     table = summarize(gained)
     for faction, r in table.items():

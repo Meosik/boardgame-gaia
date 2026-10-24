@@ -367,13 +367,15 @@ def timing_table(stats):
     return '\n'.join(rows)
 
 
-def charges(run_dir, env, vp_rate=None):
+def charges(run_dir, env, vp_rate=None, end_round=4):
     """charge_rounds.py over the run: {'factions': {...}, 'games': [...]}, or {'error': ...}.
 
     User (2026-10-07): A/B results are judged only by charges gained in rounds 1-3.
     vp_rate: charges per VP held (None = the guide rate 1.5, 0 = VP left out)."""
     out = run_dir/('charges.json' if vp_rate is None else f'charges-vp{vp_rate:g}.json')
     extra = [] if vp_rate is None else ['--vp-rate', str(vp_rate)]
+    if end_round != 4:   # games stopped before round 4 (stop_round < 3) are measured to their last round
+        extra += ['--end-round', str(end_round)]
     done = subprocess.run([sys.executable, 'tools/charge_rounds.py', str(run_dir), '--json', str(out), *extra],
                           cwd=GAIA_RL, env=env, capture_output=True, text=True)
     if done.returncode or not out.exists():
@@ -502,11 +504,12 @@ def run_ab(name, spec, jobs):
     data['timing'] = timing(out)
     data['final_scores'] = final_scores(out)
     vp_rate = spec.get('vp_rate')  # user 2026-10-08: judge by charges with VP held left out (0)
-    data['charges'] = charges(out, env, vp_rate)
+    end_round = stop_round+1 if stop_round else 4
+    data['charges'] = charges(out, env, vp_rate, end_round=end_round)
     data['basics'] = basics(out, env)
     reference = ''
     if vp_rate is not None:
-        data['charges_vp1.5'] = charges(out, env)
+        data['charges_vp1.5'] = charges(out, env, end_round=end_round)
         reference = f"참고: 1점 = 1.5충전으로 잰 충전량\n\n{charges_table(data['charges_vp1.5'])}\n\n"
     data['watch_replay'] = publish_watch_replay(name, out, env, data['charges'])
     reference += f"{data['watch_replay']}\n\n"

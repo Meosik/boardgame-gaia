@@ -310,6 +310,23 @@ class ChargeTableTests(unittest.TestCase):
         self.assertEqual(label, 'Xenos B팔 충전 79 (상대 팔 262)')
         self.assertIsNone(lab.watch_pick({}))
 
+    def test_charges_passes_end_round_only_when_not_default(self):
+        """106 design review: a stop_round 1 run is measured to round 2 instead of being dropped."""
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            Path(args[args.index('--json')+1]).write_text('{"factions": {}}')
+            return type('Done', (), {'returncode': 0, 'stdout': '', 'stderr': ''})()
+        original = lab.subprocess.run
+        lab.subprocess.run = fake_run
+        self.addCleanup(setattr, lab.subprocess, 'run', original)
+        run_dir = Path(tempfile.mkdtemp())
+        lab.charges(run_dir, {})
+        lab.charges(run_dir, {}, end_round=2)
+        self.assertNotIn('--end-round', calls[0])
+        self.assertEqual(calls[1][calls[1].index('--end-round')+1], '2')
+
 
 if __name__ == '__main__':
     unittest.main()
