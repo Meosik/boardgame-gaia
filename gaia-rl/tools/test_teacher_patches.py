@@ -1048,6 +1048,45 @@ class OpeningBudgetTests(unittest.TestCase):
         instant['state']['boosters'] = [8]
         self.assertTrue(blocked(tp.guide_r1_scores(instant, scores)[0]))      # booster 5 not in the supply
 
+    def test_all_factory_far_start_allowed_when_more_cheap_planets_within_3_than_near_start(self):
+        from current_actions.conservation import blocked
+        snapshot = self.far_start_snapshot()
+        hexes = snapshot['state']['board']['hexes']
+        hexes['1,0']['planet']['planet_type'] = 'Ice'                       # no cheap-mine exception for the far start
+        planet = lambda kind: {'planet': {'planet_type': kind, 'owner': None}, 'structures': []}
+        hexes['5,0'] = planet('Desert')                                     # near start 4,0: room 1
+        for coord in ('0,-1', '-1,1', '0,2'):
+            hexes[coord] = planet('Volcanic')                               # far start 0,0: room 3
+        scores = [(5.0, 'far'), (4.0, 'near')]
+        self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))   # gate off: as before
+        tp._guide['mj01'] = True
+        self.assertEqual(tp.expansion_room(snapshot['state'], 0, '0,0'), 3)
+        self.assertEqual(tp.expansion_room(snapshot['state'], 0, '4,0'), 1)
+        self.assertEqual(tp.guide_r1_scores(snapshot, scores), scores)
+        hexes['0,2']['planet']['planet_type'] = 'Transdim'                  # not counted: room 2 vs 1 still wins
+        self.assertEqual(tp.expansion_room(snapshot['state'], 0, '0,0'), 2)
+        hexes['-1,1']['planet']['planet_type'] = 'Gaia'                     # not counted: room 1 == near room 1
+        self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))
+        hexes['-1,1']['planet']['planet_type'] = 'Ice'                      # not cheap either
+        self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))
+
+    def test_all_factory_booster5_worth_income_only_unless_faction_rides_gaia_track(self):
+        import guide_value as gv
+        state = {'round': 0}
+        player = {'faction': 'Ambas', 'research_tracks': {'gaia': 0}}
+        full = gv.booster_value(state, 5)
+        self.assertEqual(tp._booster_value(state, player, 5), full)          # gate off
+        tp._guide['mj01'] = True
+        self.assertNotIn('gaia', tp._faction_tracks(player))
+        income = gv.to_vp(dict(state, round=1), tp.BOOSTER5_INCOME_ONLY)
+        self.assertEqual(tp._booster_value(state, player, 5), income)
+        self.assertLess(income, full)
+        self.assertEqual(tp._booster_value(state, player, 8), gv.booster_value(state, 8))
+        player['research_tracks']['gaia'] = 1
+        self.assertEqual(tp._booster_value(state, player, 5), full)
+        self.assertIn('gaia', tp._faction_tracks({'faction': 'SpaceGiants'}))
+        self.assertEqual(tp._booster_value(state, {'faction': 'SpaceGiants', 'research_tracks': {'gaia': 0}}, 5), full)
+
     def test_all_factory_instant_gaia_spot_needs_two_transdim_and_at_most_one_easy_site(self):
         tp._guide['mj01'] = True
         snapshot = self.far_start_snapshot(boosters=(5,), transdim=2)         # 1,0 Desert: one easy site

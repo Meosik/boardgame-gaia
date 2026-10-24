@@ -1296,6 +1296,24 @@ def far_start_allowed(state, actor, start):
     return False
 
 
+# Expansion-room exception, ships_menu1_all only (user 2026-10-25, lab 106 pair-022 Ambas, known-bad-decisions.md 16): the
+# near-opponent rule left one start and pushed starts into corners. A far start stays allowed when more free planets that
+# are cheap for the faction (_cheap_planet, Transdim and Gaia not counted) lie within this many hexes of it than of the best
+# near start.
+EXPANSION_RADIUS = 3
+
+
+def expansion_room(state, actor, coord):
+    from faction_teachers.profiles import profiles
+    from strategy_teacher import distance
+    profile = profiles().get(state['players'][actor]['faction'])
+    if not profile:
+        return 0
+    return sum(1 for c, cell in state['board']['hexes'].items()
+               if c != coord and _free_planet(cell) and distance(coord, c) <= EXPANSION_RADIUS
+               and _cheap_planet(profile.home, cell['planet']['planet_type']))
+
+
 def guide_r1_scores(snapshot, scores):
     from current_actions.conservation import BLOCKED, PREFIX, blocked
     state, actor = snapshot['state'], snapshot['player']
@@ -1305,12 +1323,16 @@ def guide_r1_scores(snapshot, scores):
     bottom = min(finite)
     result = list(scores)
     near = _near_places(snapshot, scores)
+    near_room = None
+    if near and _part(state['players'][actor], 'mj01'):
+        near_room = max(expansion_room(state, actor, snapshot['candidates'][j]['action']['coord']) for j in near)
     for i, candidate in enumerate(snapshot['candidates']):
         action = candidate['action']
         if blocked(scores[i]):
             continue
         if action['type'] == 'PlaceStartingStructure' and near and i not in near \
-                and not far_start_allowed(state, actor, action['coord']):
+                and not far_start_allowed(state, actor, action['coord']) \
+                and not (near_room is not None and expansion_room(state, actor, action['coord']) > near_room):
             # Setup comparisons end at the round-1/2 income and differ by noise (034: 154.3
             # vs 153.5), so ordering alone let an isolated start win; compare only the near ones.
             result[i] = (BLOCKED, PREFIX+'guide: start next to an opponent (LF4-02, B10-02)')
@@ -1970,8 +1992,17 @@ def guide_r1_charge3_lf_more_vm_lf_ts(seed, **kwargs):
     return teacher
 
 
+# Booster 5 (instant Gaia) needs a gaiaformer, so guide_value's flat 8.0 charges hold only for a faction on the Gaia track
+# (user 2026-10-25, lab 106 pair-022 Ambas, known-bad-decisions.md 16); otherwise only its 2-power charge income counts.
+# ships_menu1_all only. "Rides the Gaia track": Gaia level >= 1, or 'gaia' in _faction_tracks (FACTION_TRACKS + MJ_FACTION_TRACKS).
+BOOSTER5_INCOME_ONLY = 2.0
+
+
 def _booster_value(state, player, booster):
     import guide_value as gv
+    if booster == INSTANT_GAIA_BOOSTER and _part(player, 'mj01') \
+            and (player.get('research_tracks') or {}).get('gaia', 0) < 1 and 'gaia' not in _faction_tracks(player):
+        return gv.to_vp(dict(state, round=min(state['round']+1, 6)), BOOSTER5_INCOME_ONLY)
     return gv.booster_value(state, booster)
 
 
