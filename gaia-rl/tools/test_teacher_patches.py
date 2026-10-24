@@ -991,6 +991,22 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(tp.TECH_FEDERATION_OPENINGS['Moweyds'][0], '1PI+1TS')
         self.assertEqual(tp.LOST_FLEET_OPENINGS['Moweyds'][0], '1RL+4M')
 
+    def test_all_factory_range_tile_early_only_and_stops_navigation(self):
+        tp._guide['mj01'] = True                           # restored by setUp's cleanup
+        player = {'faction': 'Gleens', 'research_tracks': {'navigation': 1}, 'tech_tiles': [], 'covered_tech_tiles': []}
+        state = {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        up = lambda tile: {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                           'tech_tile_choice': {'kind': 'Standard', 'tile': tile, 'advance_track': None}}
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': up(5)}, {'action': up(12)}]}
+        scores = [(9.0, 't5'), (4.0, 't12')]
+        self.assertEqual([s[0] for s in tp.range_tile_scores(None, snapshot, scores)], [4.0, 9.0])
+        state['round'] = 3
+        scores = [(4.0, 't5'), (9.0, 't12')]
+        self.assertEqual([s[0] for s in tp.range_tile_scores(None, snapshot, scores)], [9.0, 4.0])
+        self.assertNotIn('navigation', tp._track_caps(player, table=False))
+        player['tech_tiles'] = [12]
+        self.assertEqual(tp._track_caps(player, table=False)['navigation'], 1)
+
     def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup (ALL_FACTION_PARTS on)
         player = {'faction': 'Taklons', 'research_tracks': {}}

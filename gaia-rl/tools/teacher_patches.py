@@ -2307,7 +2307,45 @@ def _track_caps(player, table=True):
     if _part(player, 'mj01'):
         caps['economy'] = min(caps.get('economy', 5), MJ_ECONOMY_CAP)
         caps.update(MJ_TRACK_CAPS.get(player['faction'], {}))
+        active = set(player.get('tech_tiles') or ()) - set(player.get('covered_tech_tiles') or ())
+        if RANGE_TILE in active:      # MJ01-08: with the +1 range tile Navigation is not raised any more
+            caps['navigation'] = min(caps.get('navigation', 5), (player.get('research_tracks') or {}).get('navigation', 0))
     return caps
+
+
+# range_tile (MJ01-08; ships_menu1_all only): the Lost Fleet +1 range standard tile (engine id 12, four_factions.value
+# .navigation) is taken in round 1 — round 2 at the latest — and not from round 3; with it Navigation stops (_track_caps).
+# Among the tile variants of one move: rounds 1-2 the tile-12 variant leads, from round 3 it swaps with the best other.
+RANGE_TILE = 12
+RANGE_TILE_LAST_ROUND = 2
+
+
+def range_tile_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    if not _part(state['players'][actor], 'mj01'):
+        return scores
+    groups, tiles = {}, {}
+    for i, c in enumerate(snapshot['candidates']):
+        found = None if blocked(scores[i]) else _tile_choice(c['action'])
+        if found is not None:
+            key, tiles[i] = found
+            groups.setdefault(key, []).append(i)
+    lifted = list(scores)
+    early = state['round'] <= RANGE_TILE_LAST_ROUND
+    for members in groups.values():
+        wanted = [i for i in members if tiles[i] == RANGE_TILE]
+        rest = [i for i in members if tiles[i] != RANGE_TILE]
+        if not wanted or not rest:
+            continue
+        top = max(members, key=lambda i: lifted[i][0])
+        if early and top not in wanted:
+            _swap(lifted, list(lifted), max(wanted, key=lambda i: lifted[i][0]), top, 'range tile in rounds 1-2 (MJ01-08)')
+        elif not early and top in wanted:
+            _swap(lifted, list(lifted), max(rest, key=lambda i: lifted[i][0]), top, 'no range tile from round 3 (MJ01-08)')
+    return lifted if lifted != scores else scores
 
 
 def _track_steps_table(player):
@@ -4211,6 +4249,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     _guide['weak_factions'] = True
     _guide['mj01'] = True      # E104: the MJ01 Lost Fleet track corrections (MJ_TRACK_CAPS)
     _wrap_rank('_artifact_tokens', artifact_tokens_scores)
+    _wrap_rank('_range_tile', range_tile_scores)
     _guide['plan_menu'] = True
     install_plan_menu()
     _guide['menu_first'] = 1
