@@ -976,6 +976,21 @@ class OpeningBudgetTests(unittest.TestCase):
         snapshot['candidates'] = [{'action': big(2)}, {'action': big(6)}, {'action': {'type': 'Pass'}}]
         self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [4.0, 9.0, 1.0])
 
+    def test_all_factory_artifact_needs_four_tokens_left_and_moweyds_institute_needs_tech_federation(self):
+        tp._guide['mj01'] = True                           # restored by setUp's cleanup
+        player = {'faction': 'Xenos', 'resources': {'power': {'bowl1': 2, 'bowl2': 4, 'bowl3': 3}}}
+        snapshot = {'player': 0, 'state': {'phase': {'ActionPhase': {}}, 'players': [player]},
+                    'candidates': [{'action': {'type': 'ExamineArtifact', 'artifact': 3}}, {'action': {'type': 'Pass'}}]}
+        scores = [(9.0, 'art'), (2.0, 'pass')]
+        self.assertEqual([s[0] for s in tp.artifact_tokens_scores(None, snapshot, scores)], [2.0, 9.0])  # 9-6 = 3 left
+        player['resources']['power']['bowl1'] = 3                                                       # 4 left
+        self.assertIs(tp.artifact_tokens_scores(None, snapshot, scores), scores)
+        player['faction'] = 'Itars'
+        self.assertEqual([s[0] for s in tp.artifact_tokens_scores(None, snapshot, scores)], [2.0, 9.0])
+        self.assertIn('opening_res', tp._faction_parts('Moweyds'))
+        self.assertEqual(tp.TECH_FEDERATION_OPENINGS['Moweyds'][0], '1PI+1TS')
+        self.assertEqual(tp.LOST_FLEET_OPENINGS['Moweyds'][0], '1RL+4M')
+
     def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup (ALL_FACTION_PARTS on)
         player = {'faction': 'Taklons', 'research_tracks': {}}

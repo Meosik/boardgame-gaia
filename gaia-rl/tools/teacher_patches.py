@@ -236,6 +236,7 @@ RESOLVED_FACTION_PARTS = {
 ALL_FACTION_PARTS = {
     'Taklons': frozenset({'tile_prefs'}),
     'Xenos': frozenset({'track_set'}),
+    'Moweyds': frozenset({'opening_res'}),   # institute opening only with a tech federation (TECH_FEDERATION_OPENINGS)
 }
 
 
@@ -773,6 +774,9 @@ TECH_FEDERATION_TOKEN = 12
 TECH_FEDERATION_OPENINGS = {
     'Terrans': ('1PI+1TS+2M', '1PI+2M', '1RL+4M', '1AC+1M'),
     'Xenos': ('1PI+1TS+1M', '1RL+5M', '1RL+6M', '1AC+2M'),
+    # Moweyds (E103, ships_menu1_all only): the institute first only with a tech federation to make (SH-MW
+    # MW-02~04, MJ01-14 "선의회는 특수한 경우 외 비권장"); otherwise LOST_FLEET_OPENINGS' lab openings stay first.
+    'Moweyds': ('1PI+1TS', '1PI+1TS+1M', '1PI+1RL', '1PI+2M', '1RL+4M', '1RL+1TS+2M'),
 }
 
 
@@ -4164,6 +4168,41 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1(seed, **kwargs):
     return teacher
 
 
+# artifact_tokens (E103 ②b-2, MJ01-09 / MJ01-17; ships_menu1_all only): an Artifact discards 6 power tokens, so it is taken
+# only when 4 or more tokens are left afterwards ("토큰이 없으면 거의 진행 불가"), and Itars do not take one (their 6 tokens
+# are worth more as tech tiles). Such an ExamineArtifact on top swaps with the best other move. Order only.
+ARTIFACT_TOKENS_DISCARDED = 6
+ARTIFACT_TOKEN_FLOOR = 4
+
+
+def artifact_tokens_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'mj01'):
+        return scores
+    power = player['resources']['power']
+    left = sum(power.get(k, 0) for k in ('bowl1', 'bowl2', 'bowl3')) - ARTIFACT_TOKENS_DISCARDED
+    if left >= ARTIFACT_TOKEN_FLOOR and player['faction'] != 'Itars':
+        return scores
+    live = [i for i in range(len(scores)) if not blocked(scores[i])]
+    if not live:
+        return scores
+    top = max(live, key=lambda i: scores[i][0])
+    if snapshot['candidates'][top]['action'].get('type') != 'ExamineArtifact':
+        return scores
+    others = [i for i in live if snapshot['candidates'][i]['action'].get('type') != 'ExamineArtifact']
+    if not others:
+        return scores
+    lifted = list(scores)
+    why = 'Itars skip artifacts (MJ01-17)' if player['faction'] == 'Itars' else \
+        f'artifact leaves {left} tokens < {ARTIFACT_TOKEN_FLOOR} (MJ01-09)'
+    _swap(lifted, list(scores), max(others, key=lambda i: scores[i][0]), top, why)
+    return lifted
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     """Teacher factory: every faction part the sources gave so far on top of ships_menu1 (user 2026-10-24 "일단
     반영할거 다 반영해봐", E103; integrate first, fix by replays): ..._byfaction_guide_res (CANDIDATE, GUIDE, SOURCE
@@ -4171,6 +4210,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_res(seed, **kwargs)
     _guide['weak_factions'] = True
     _guide['mj01'] = True      # E104: the MJ01 Lost Fleet track corrections (MJ_TRACK_CAPS)
+    _wrap_rank('_artifact_tokens', artifact_tokens_scores)
     _guide['plan_menu'] = True
     install_plan_menu()
     _guide['menu_first'] = 1
