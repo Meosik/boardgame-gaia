@@ -1639,6 +1639,19 @@ class OpeningBudgetTests(unittest.TestCase):
         state['round_tiles'] = [{'condition': 'BuildMine'}]*4 + [{'condition': 'ResearchAdvance'}]*2
         self.assertEqual(tp._plan_tracks(state, 0)[0], ('science', 3))             # round 5 tile pays research: Science 3
 
+    def test_menu_track_steps_put_geodens_terraforming_and_navigation_first_from_round_2(self):
+        """E97: under plan_menu Geodens' track plans lead with Terraforming 3, then Navigation 2, from round 2."""
+        state = self.track_plan_state()
+        state['players'][0]['faction'] = 'Geodens'
+        state['round'] = 2
+        tp._guide['plan_menu'] = True                                                # restored by setUp's cleanup
+        self.assertEqual(tp._plan_tracks(state, 0)[:2], [('terraforming', 3), ('navigation', 2)])
+        state['players'][0]['research_tracks']['terraforming'] = 3
+        self.assertEqual(tp._plan_tracks(state, 0)[0], ('navigation', 2))
+        state['round'] = 1
+        state['players'][0]['research_tracks']['terraforming'] = 0
+        self.assertNotEqual(tp._plan_tracks(state, 0)[0], ('terraforming', 3))   # round 1: Economy/Science start
+
     def test_menu_tie_goes_to_the_proposed_plan_and_remembers_it(self):
         """E74: 101 pair-002 step 114 — Geodens-new-type tied current-choice at 265.89 and lost the tie."""
         spec = {'name': 'Geodens-new-type@-3,-1', 'family': 'ordered', 'first': 3, 'steps': ()}

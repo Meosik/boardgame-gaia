@@ -1204,6 +1204,8 @@ def geodens_r1_goals(snapshot, goals):
         return goals
     kinds = [kind(s['kind']) for s in player['structures']]
     late = [g for g in goals if g.name in GEODENS_LATE_RESEARCH]
+    if _guide.get('plan_menu') and state['round'] >= 2:
+        late = []    # E96 debate: the BGG round-1 order demoted Terraforming-3 / Navigation-2 in every round
     rest = [g for g in goals if g not in late]
     first = []
     if 'PlanetaryInstitute' not in kinds and ('Academy' in kinds or kinds.count('ResearchLab') >= 2):
@@ -3421,6 +3423,13 @@ def _plan_tracks(state, actor):
     return plan
 
 
+# Round targets that only the plan_menu track plans read (E97, user 2026-10-24 "자료 기반으로 종족별 좋은 테크트리를
+# 최대한 올릴 수 있게" → "plan_menu 보충"): Geodens Terraforming 3 and Navigation 2 first after the round-1 Economy /
+# Science start (faction-tracks-openings.md Geodens row, B14; "the round terraforming starts" read as round 2, the bot's
+# reading). 105 rounds 1-3: Geodens Terraforming 3 / 0 steps, AI 67 / 53 (research_counts). Generation order only.
+MENU_TRACK_STEPS = {'Geodens': ((2, 'terraforming', 3), (2, 'navigation', 2))}
+
+
 def _menu_track_steps(state, actor, steps):
     """E86 (ㄴ): the resource conditions of two swap rules become the track plans' generation order under
     plan_menu (the swap rules themselves are untouched). science_when (Nevlas, Ivits; science_first): the
@@ -3433,6 +3442,9 @@ def _menu_track_steps(state, actor, steps):
     if _part(player, 'science_when') and faction in SCIENCE_WHEN:
         entry = SCIENCE_WHEN[faction][0 if science_first(state, player) else 1]
         steps = [(t, level) for start, t, level in entry if start <= state['round'] and levels.get(t, 0) < level]
+    if not steps and faction in MENU_TRACK_STEPS:
+        steps = [(t, level) for start, t, level in MENU_TRACK_STEPS[faction]
+                 if start <= state['round'] and levels.get(t, 0) < level]
     if steps or state['round'] not in LAND_ROUNDS:
         return steps
     reach, contested = _land_counts(state, player)
