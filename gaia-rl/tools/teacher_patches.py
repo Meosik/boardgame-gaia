@@ -255,6 +255,8 @@ def _faction_parts(faction):
         parts.add('round_tile_lead')
     if _guide['plan_menu']:
         parts.update({'plan_menu', 'track_plans'})
+    if _guide['mj01']:
+        parts.add('mj01')
     return parts
 
 
@@ -392,6 +394,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'round_tile_lead': False,     # True: ..._ships_roundtile (the goals this round's tile scores lead)
           'plan_menu': False,           # True: ..._ships_menu (one plan menu: tile, federation, token, track, ability)
           'menu_first': 3,              # plan_menu front slots (MENU_FIRST); ..._ships_menu1 sets 1 (E89 (ㄷ) B')
+          'mj01': False,                # True: ..._ships_menu1_all (MJ01 Lost Fleet track corrections, see MJ_TRACK_CAPS)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -538,10 +541,12 @@ def _track_income_excess(state, player):
     """Track income left uncounted under track_income 'sweet' (see above)."""
     from four_factions.value import INCOME
     faction = player['faction']
-    tracks = FACTION_TRACKS.get(faction, ())
+    tracks = _faction_tracks(player)
     economy = INCOME['economy'][state['research_board']['economy_research_tile_side']]
     level = player['research_tracks']['economy']
     counted = level if tracks[:1] == ('economy',) else min(level, ECONOMY_COUNTED.get(faction, ECONOMY_SWEET))
+    if _part(player, 'mj01'):
+        counted = min(counted, MJ_ECONOMY_CAP)
     excess = [a-b for a, b in zip(economy[level], economy[counted])]
     if 'science' not in tracks:
         excess = [a+b for a, b in zip(excess, INCOME['science'][player['research_tracks']['science']])]
@@ -2190,10 +2195,10 @@ def track_set_scores(env, snapshot, scores):
     player = state['players'][actor]
     if not _part(player, 'track_set') or player['faction'] not in FACTION_TRACKS:
         return scores
-    caps = TRACK_CAPS.get(player['faction'], {}) if _part(player, 'track_caps') else {}
+    caps = _track_caps(player, table=_part(player, 'track_caps'))
     levels = player.get('research_tracks') or {}
     # A guide track at its cap counts as off the faction's tracks (track_caps).
-    tracks = tuple(t for t in FACTION_TRACKS[player['faction']] if levels.get(t, 0) < caps.get(t, 99))
+    tracks = tuple(t for t in _faction_tracks(player) if levels.get(t, 0) < caps.get(t, 99))
     candidates = snapshot['candidates']
     act = {i: c['action'] for i, c in enumerate(candidates) if not blocked(scores[i])}
 
@@ -2253,6 +2258,47 @@ TRACK_STEPS = {'Gleens': ((1, 'navigation', 2),),
                'Lantids': ((1, 'navigation', 2),),
                'HadschHallas': ((1, 'economy', 2),),
                'Darkanians': ((1, 'economy', 2),)}
+
+# mj01 (research/strategy/mj01-lf-changes-factions.md, user 2026-10-24 "일단 반영할거 다 반영해봐", E104; on in
+# ..._ships_menu1_all only): the Lost Fleet corrections of the tables above. Economy 3-4 were weakened in the
+# expansion and are not raised before the late game, Economy 2 stays good (MJ01-10; Firaks MJ01-21 "초반 경제 3–4
+# 비추"): every faction's Economy is capped at 2 before round 6 and track_income counts it at most to 2, and Firaks'
+# round-1 Economy 4 target becomes Economy 2. Terrans keep Gaia 1 and go Terraforming or AI (MJ01-23, too many Gaia
+# rivals in the expansion; replaces T2 there); Space Giants skip Terraforming for Gaia forming (MJ01-13, the free two
+# steps a round are enough); Darkanians skip Terraforming and get Navigation 3 early, then Economy / AI (MJ01-11, the
+# TF Mars and Eclipse ships carry the expansion); Geodens may take Gaia 1 (MJ01-20). Order and scope only.
+MJ_ECONOMY_CAP = 2
+MJ_TRACK_CAPS = {'Terrans': {'gaia': 1}, 'SpaceGiants': {'terraforming': 0},
+                 'Darkanians': {'terraforming': 0}, 'Geodens': {'gaia': 1}}
+MJ_TRACK_STEPS = {'Firaks': ((1, 'economy', 2), (3, 'navigation', 2)),
+                  'Darkanians': ((1, 'economy', 2), (1, 'navigation', 3))}
+MJ_FACTION_TRACKS = {'Terrans': ('navigation', 'terraforming', 'ai', 'economy'),
+                     'SpaceGiants': ('navigation', 'gaia'),
+                     'Darkanians': ('navigation', 'economy', 'ai'),
+                     'Geodens': ('terraforming', 'navigation', 'economy', 'ai', 'gaia')}
+
+
+def _faction_tracks(player):
+    """The faction's guide tracks (FACTION_TRACKS), with the mj01 corrections when that part is on."""
+    if _part(player, 'mj01') and player['faction'] in MJ_FACTION_TRACKS:
+        return MJ_FACTION_TRACKS[player['faction']]
+    return FACTION_TRACKS.get(player['faction'], ())
+
+
+def _track_caps(player, table=True):
+    """{track: cap} — TRACK_CAPS (when `table`), with the mj01 Economy cap and corrections on top."""
+    caps = dict(TRACK_CAPS.get(player['faction'], {})) if table else {}
+    if _part(player, 'mj01'):
+        caps['economy'] = min(caps.get('economy', 5), MJ_ECONOMY_CAP)
+        caps.update(MJ_TRACK_CAPS.get(player['faction'], {}))
+    return caps
+
+
+def _track_steps_table(player):
+    """TRACK_STEPS for the faction, or its mj01 replacement."""
+    if _part(player, 'mj01') and player['faction'] in MJ_TRACK_STEPS:
+        return MJ_TRACK_STEPS[player['faction']]
+    return TRACK_STEPS.get(player['faction'], ())
 # track_steps_src (SOURCE_FACTION_PARTS): the PG order where conflicts/base-factions.md found the B blog
 # order in TRACK_STEPS against a "상" podcast source; replaces the faction's TRACK_STEPS entry. Nevlas
 # Science 3 in round 1, Economy first is "a trap" (N1: PG10-S18·S19); Lantids Economy 2 first, round-1
@@ -2328,7 +2374,7 @@ def track_steps_scores(env, snapshot, scores):
     elif when:
         steps = SCIENCE_WHEN[player['faction']][0 if science_first(state, player) else 1]
     else:
-        steps = (TRACK_STEPS_SRC if src else TRACK_STEPS).get(player['faction'], ())
+        steps = TRACK_STEPS_SRC.get(player['faction'], ()) if src else _track_steps_table(player)
     wanted = [TRACK_NAMES[t] for start, t, level in steps
               if start <= state['round'] and levels.get(t, 0) < level]
     if not wanted:
@@ -3406,13 +3452,13 @@ def _plan_tracks(state, actor):
     levels = player['research_tracks']
     others = [p for i, p in enumerate(state['players']) if i != actor]
     gaia_rival = any(p.get('faction') in GAIA_FACTIONS for p in others)
-    tracks = list(FACTION_TRACKS.get(faction, ()))
-    if faction == 'Terrans':                                   # T2 (conflicts/base-factions.md)
+    tracks = list(_faction_tracks(player))
+    if faction == 'Terrans' and not _part(player, 'mj01'):    # T2 (conflicts/base-factions.md); mj01: MJ01-23
         tracks = ['navigation', 'gaia' if gaia_rival else 'science', 'economy']
     elif faction == 'Xenos' and gaia_rival:                    # X3 / B15-02 (niche_tracks' reading)
         tracks = [t for t in tracks if t != 'gaia']
-    caps = TRACK_CAPS.get(faction, {})
-    steps = [(t, level) for start, t, level in TRACK_STEPS.get(faction, ())
+    caps = _track_caps(player)
+    steps = [(t, level) for start, t, level in _track_steps_table(player)
              if start <= state['round'] and levels.get(t, 0) < level]
     if _guide.get('plan_menu'):
         steps = _menu_track_steps(state, actor, steps)
@@ -4101,6 +4147,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     and RESOLVED parts) plus WEAK_FACTION_PARTS, then plan_menu with one front slot as in ships_menu1."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_res(seed, **kwargs)
     _guide['weak_factions'] = True
+    _guide['mj01'] = True      # E104: the MJ01 Lost Fleet track corrections (MJ_TRACK_CAPS)
     _guide['plan_menu'] = True
     install_plan_menu()
     _guide['menu_first'] = 1

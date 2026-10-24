@@ -356,6 +356,21 @@ class OpeningBudgetTests(unittest.TestCase):
             self.assertEqual(tp._faction_parts(faction), {'track_set'}, faction)
         self.assertNotIn('track_set', tp._faction_parts('Terrans'))
 
+    def test_mj01_corrects_the_track_tables_only_when_on(self):
+        levels = {t: 0 for t in tp.TRACK_KEYS.values()}
+        firaks, terrans = {'faction': 'Firaks', 'research_tracks': levels}, {'faction': 'Terrans', 'research_tracks': levels}
+        self.assertEqual(tp._track_steps_table(firaks), tp.TRACK_STEPS['Firaks'])
+        self.assertEqual(tp._faction_tracks(terrans), tp.FACTION_TRACKS['Terrans'])
+        self.assertNotIn('economy', tp._track_caps(terrans))
+        tp._guide['mj01'] = True                           # restored by setUp's cleanup
+        self.assertEqual(tp._track_steps_table(firaks)[0], (1, 'economy', 2))   # MJ01-21
+        self.assertEqual(tp._track_caps(firaks)['economy'], 2)                  # MJ01-10, every faction
+        self.assertEqual(tp._track_caps(firaks)['navigation'], 2)               # TRACK_CAPS kept
+        self.assertEqual(tp._track_caps(terrans, table=False), {'economy': 2, 'gaia': 1})
+        self.assertNotIn('gaia', tp._faction_tracks(terrans))                    # MJ01-23 replaces T2
+        state = {'round': 1, 'players': [dict(terrans, research_tracks=dict(levels, gaia=1))]}
+        self.assertNotIn('gaia', [t for t, _ in tp._plan_tracks(state, 0)])
+
     def test_track_set_orders_research_onto_the_faction_tracks_unless_a_rule_chose(self):
         tp._guide['byfaction'] = True                      # restored by setUp's cleanup
         player = {'faction': 'Gleens', 'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()}}
