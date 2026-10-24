@@ -238,6 +238,7 @@ ALL_FACTION_PARTS = {
     'Xenos': frozenset({'track_set'}),
     'Moweyds': frozenset({'opening_res'}),   # institute opening only with a tech federation (TECH_FEDERATION_OPENINGS)
     'Nevlas': frozenset({'tile_prefs'}),     # B19-S60 charge-4 tile not under Gaia (TILE_PREFS)
+    'Geodens': frozenset({'opening_res'}),   # E106 institute start (RESOLVED_OPENINGS, SH04/SH09/MJ01-20)
 }
 
 # power_prefs (E103 ④, ships_menu1_all only): the power actions a guide ranks, used when a power action is the best
@@ -795,6 +796,10 @@ RESOLVED_OPENINGS = {
     'Terrans': ('1PI+2M', '1PI+1TS+2M', '1RL+4M', '1AC+1M'),
     'Taklons': ('1AC+2M', '1RL+5M', '1RL+4M', '2RL+2M'),
     'Xenos': ('1RL+5M', '1RL+6M', '1AC+2M', '1RL+2M'),
+    # Geodens, ships_menu1_all only (E106; ALL_FACTION_PARTS opening_res): the Lost Fleet sources start with the institute —
+    # SH04 rank 1 의4광·의교2광, SH09 "의회 빌드가 강제", MJ01-20 — against B14's base-game academy start (UIQOO_OPENINGS,
+    # user 2026-10-16 "기오덴 빼줘" removed the BGG institute-first part then). A label the catalog lacks is not proposed.
+    'Geodens': ('1PI+1TS+2M', '1PI+4M', '1PI+2M', '1RL+1TS+2M', '1AC+2M'),
 }
 # With a round-1 tech federation in reach (LF token 12 "tech tile of choice" on a ship board within
 # SHIP_SETUP_RANGE of our buildings: C004, LF3-10, SH02-S07 "the only reason to design a round-1 opening"):
