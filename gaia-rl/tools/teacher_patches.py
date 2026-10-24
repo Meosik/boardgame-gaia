@@ -3935,6 +3935,8 @@ def _opened_colonies(state, player, track, level):
         former = level in FORMER_LEVELS or _formers_free(player)
         # mj01: the former also opens an Asteroid mine (Lost Fleet; _asteroid_gaia's reason for Gaia 1, debate 1/1).
         types = ('Transdim', 'Asteroid') if _part(player, 'mj01') else ('Transdim',)
+        if player['faction'] in GAIA_RIDERS and state['round'] <= GAIA_ASTEROID_HOLD_LAST_ROUND:
+            types = ('Transdim',)       # gaia_asteroid_hold: a Gaia-track faction does not spend its former on an Asteroid
         opened = reach(after, types) if former else set()
     else:
         return []
@@ -4804,6 +4806,37 @@ def knowledge_to_credit_scores(env, snapshot, scores):
     return result
 
 
+# gaia_asteroid_hold (ships_menu1_all only; user 2026-10-25 "어느 종족이던 가이아 테크를 타고 싶은 종족이면 엥간하면 초반에
+# 소행성에 던지지 말라는거지"): in Lost Fleet a former used for an Asteroid mine is gone, while a former kept for Transdim
+# planets forms again every round. A Gaia-track faction therefore does not build on an Asteroid with a former in rounds 1-3
+# while a Transdim planet is in reach ("엥간하면": with none in reach the former has no other use).
+def gaia_asteroid_hold_scores(env, snapshot, scores):
+    from current_actions.conservation import BLOCKED, PREFIX, blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if (not _part(player, 'mj01') or player['faction'] not in GAIA_RIDERS
+            or state['round'] > GAIA_ASTEROID_HOLD_LAST_ROUND):
+        return scores
+    hexes = state['board']['hexes']
+
+    def asteroid_build(action):
+        if action.get('type') != 'Build':
+            return False
+        planet = (hexes.get(str(action.get('coord'))) or {}).get('planet')
+        return bool(planet) and planet['planet_type'] == 'Asteroid' and not planet['is_gaia_formed']
+
+    held = [i for i, c in enumerate(snapshot['candidates']) if asteroid_build(c['action']) and not blocked(scores[i])]
+    if not held or not _reach_targets(state, player, ('Transdim',)):
+        return scores
+    result = list(scores)
+    for i in held:
+        result[i] = (BLOCKED, PREFIX+'gaia_asteroid_hold: a Gaia-track faction keeps its former for Transdim planets '
+                     'in rounds 1-3', *scores[i][2:])
+    return result
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     """Teacher factory: every faction part the sources gave so far on top of ships_menu1 (user 2026-10-24 "일단
     반영할거 다 반영해봐", E103; integrate first, fix by replays): ..._byfaction_guide_res (CANDIDATE, GUIDE, SOURCE
@@ -4837,6 +4870,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     # byfaction_guide_res already installed '_fed_remember' inside these wrappers and _wrap_rank does not move it, so
     # the federation / token comparisons would read the ranking before track_race, fed_cluster and the rest (debate
     # 1/1). A second recorder as the outermost wrapper stores the final ranking.
+    _wrap_rank('_gaia_asteroid_hold', gaia_asteroid_hold_scores)    # user 10-25
     _wrap_rank('_fed_remember_outer', fed_remember_scores)
     return teacher
 
@@ -4876,5 +4910,8 @@ FACTION_TRACKS = {'Geodens': ('terraforming', 'navigation', 'economy', 'ai'),
                   'Bescods': ('science', 'economy', 'navigation'),
                   'Lantids': ('navigation', 'science', 'ai'),
                   'HadschHallas': ('economy', 'navigation', 'science')}
+# Factions whose guide tracks include Gaia (Xenos, Terrans, Gleens, Itars, Firaks, BalTaks): they keep a former early.
+GAIA_RIDERS = frozenset(f for f, tracks in FACTION_TRACKS.items() if 'gaia' in tracks)
+GAIA_ASTEROID_HOLD_LAST_ROUND = 3
 
 

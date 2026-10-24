@@ -344,10 +344,12 @@ class OpeningBudgetTests(unittest.TestCase):
                 "'opening_only' in tp._faction_parts('HadschHallas'))\n"
                 "import four_factions.preparation as p\n"
                 "outer = p.Policies.rank\n"
-                "print(tp.fed_remember_scores in [c.cell_contents for c in outer.__closure__])")
+                "print(tp.fed_remember_scores in [c.cell_contents for c in outer.__closure__] "
+                "and outer._gaia_asteroid_hold)")
         out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=True,
                              env=env).stdout
-        # The last word: the federation / token comparisons read the final ranking (outermost recorder, debate 1/1).
+        # The last word: the federation / token comparisons read the final ranking (outermost recorder, debate 1/1),
+        # and gaia_asteroid_hold is installed inside it.
         self.assertEqual(out.split(), ['True', '1', 'True', 'True', 'True', 'True', 'True'])
 
     def test_faction_parts_come_from_the_tables(self):
@@ -1374,6 +1376,35 @@ class OpeningBudgetTests(unittest.TestCase):
         player.update(faction='Nevlas', structures=[{'kind': 'PlanetaryInstitute', 'hex': '0,0'}])
         self.assertTrue(tp._tfmars_gaia_ready(state, player))
         self.assertEqual(tp._tfmars_tokens(player), 1)
+
+    def _asteroid_hold(self, faction, rnd=1, mj01=True, transdim=True):
+        from current_actions.conservation import blocked
+        tp._guide['mj01'] = mj01                           # restored by setUp's cleanup
+        hexes = {'0,0': {'planet': {'planet_type': 'Asteroid', 'is_gaia_formed': False}},
+                 '1,0': {'planet': {'planet_type': 'Red', 'is_gaia_formed': False}}}
+        state = {'round': rnd, 'phase': {'ActionPhase': {}}, 'board': {'hexes': hexes},
+                 'players': [{'faction': faction}]}
+        snapshot = {'player': 0, 'state': state, 'candidates': [
+            {'action': {'type': 'Build', 'coord': '0,0'}}, {'action': {'type': 'Build', 'coord': '1,0'}}]}
+        scores = [(5.0, 'asteroid'), (4.0, 'red')]
+        with mock.patch.object(tp, '_reach_targets', return_value=[('2,0', {}, 0, 0)] if transdim else []):
+            out = tp.gaia_asteroid_hold_scores(None, snapshot, scores)
+        return scores, out, blocked
+
+    def test_gaia_asteroid_hold_blocks_the_asteroid_build_while_a_transdim_planet_is_in_reach(self):
+        scores, out, blocked = self._asteroid_hold('Itars')
+        self.assertTrue(blocked(out[0]))
+        self.assertEqual(out[1], scores[1])
+        self.assertEqual(scores[0], (5.0, 'asteroid'))     # input untouched
+
+    def test_gaia_asteroid_hold_leaves_scores_without_transdim_late_rounds_other_factions_and_no_mj01(self):
+        for kwargs in ({'faction': 'Itars', 'transdim': False}, {'faction': 'Itars', 'rnd': 4},
+                       {'faction': 'Geodens'}, {'faction': 'Itars', 'mj01': False}):
+            scores, out, _ = self._asteroid_hold(**kwargs)
+            self.assertEqual(out, scores, kwargs)
+
+    def test_gaia_riders_are_the_factions_with_a_gaia_guide_track(self):
+        self.assertEqual(tp.GAIA_RIDERS, {'Xenos', 'Terrans', 'Gleens', 'Itars', 'Firaks', 'BalTaks'})
 
     def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup (ALL_FACTION_PARTS on)
