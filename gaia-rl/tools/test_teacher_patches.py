@@ -1014,6 +1014,30 @@ class OpeningBudgetTests(unittest.TestCase):
         scores = [(1.0, 'k2'), (6.0, 'tf1'), (9.0, 'pass')]
         self.assertIs(tp.power_prefs_scores(None, snapshot, scores), scores)                              # not a power move
 
+    def test_all_factory_sh11_gaia_vp_tile_not_first_and_gaia1_for_asteroid(self):
+        tp._guide['mj01'] = True                           # restored by setUp's cleanup
+        player = {'faction': 'Gleens', 'research_tracks': {'navigation': 1}, 'tech_tiles': [], 'covered_tech_tiles': []}
+        state = {'round': 2, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        up = lambda tile: {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                           'tech_tile_choice': {'kind': 'Standard', 'tile': tile, 'advance_track': None}}
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': up(8)}, {'action': up(2)}]}
+        scores = [(9.0, 't8'), (4.0, 't2')]
+        self.assertEqual([s[0] for s in tp.range_tile_scores(None, snapshot, scores)], [4.0, 9.0])
+        player['tech_tiles'] = [5]                                              # not the first tile any more
+        self.assertIs(tp.range_tile_scores(None, snapshot, scores), scores)
+        xenos = {'faction': 'Taklons', 'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()}}
+        self.assertEqual(tp._track_caps(xenos, table=False)['gaia'], 1)        # Gaia only for the former
+        giants = {'faction': 'SpaceGiants', 'research_tracks': {t: 0 for t in tp.TRACK_KEYS.values()}}
+        self.assertNotIn('gaia', tp._track_caps(giants, table=False))          # Gaia forming is their track (MJ01-13)
+        original = tp._reach_targets
+        try:
+            tp._reach_targets = lambda state, player, types: [('3,3', {'planet_type': 'Asteroid'}, 0, 0)]
+            lone = dict(xenos, structures=[{'kind': 'Mine', 'hex': '0,0'}], gaiaformers_total=0)
+            self.assertTrue(tp._asteroid_gaia({'players': [lone]}, lone))
+            self.assertFalse(tp._asteroid_gaia({'players': [lone]}, dict(lone, gaiaformers_total=1)))
+        finally:
+            tp._reach_targets = original
+
     def test_all_factory_range_tile_early_only_and_stops_navigation(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup
         player = {'faction': 'Gleens', 'research_tracks': {'navigation': 1}, 'tech_tiles': [], 'covered_tech_tiles': []}

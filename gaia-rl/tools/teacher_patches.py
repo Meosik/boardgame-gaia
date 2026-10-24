@@ -2276,6 +2276,8 @@ def track_set_scores(env, snapshot, scores):
     if player['faction'] == 'Xenos' and _part(player, 'mj01') and \
             state['research_board']['advanced_tech_tiles'][AI_SLOT] in GOOD_ADVANCED:
         tracks += ('ai',)      # X4 (base-factions.md:65): a good advanced tile on AI makes early AI worth it
+    if 'gaia' not in tracks and _asteroid_gaia(state, player):
+        tracks += ('gaia',)
     candidates = snapshot['candidates']
     act = {i: c['action'] for i, c in enumerate(candidates) if not blocked(scores[i])}
 
@@ -2355,6 +2357,18 @@ MJ_FACTION_TRACKS = {'Terrans': ('navigation', 'terraforming', 'ai', 'economy'),
                      'Geodens': ('terraforming', 'navigation', 'economy', 'ai', 'gaia')}
 
 
+def _asteroid_gaia(state, player):
+    """mj01: Gaia 1 joins the faction's tracks while it has no former and an empty Asteroid is in reach now — the
+    Lost Fleet former-on-Asteroid mine makes Gaia 1 an early expansion step (SH11 p.17 "테라포밍 1단계보다 나은 경우가
+    많다", SH03 p.8 "소행성에 건물을 지을 수 있으면 가이아 트랙"). Capped at 1 by _track_caps for the factions whose
+    guide has no Gaia track."""
+    if not _part(player, 'mj01') or (player.get('research_tracks') or {}).get('gaia', 0) > 0:
+        return False
+    if player.get('gaiaformers_total', 0) > 0 or not player.get('structures'):
+        return False
+    return bool(_reach_targets(state, player, ('Asteroid',)))
+
+
 def _faction_tracks(player):
     """The faction's guide tracks (FACTION_TRACKS), with the mj01 corrections when that part is on."""
     if _part(player, 'mj01') and player['faction'] in MJ_FACTION_TRACKS:
@@ -2368,7 +2382,9 @@ def _track_caps(player, table=True):
     if _part(player, 'mj01'):
         caps['economy'] = min(caps.get('economy', 5), MJ_ECONOMY_CAP)
         caps.update(MJ_TRACK_CAPS.get(player['faction'], {}))
-        active = set(player.get('tech_tiles') or ()) - set(player.get('covered_tech_tiles') or ())
+        if 'gaia' not in _faction_tracks(player):
+            caps['gaia'] = min(caps.get('gaia', 5), 1)      # _asteroid_gaia: Gaia 1 only for the former
+        active =set(player.get('tech_tiles') or ()) - set(player.get('covered_tech_tiles') or ())
         if RANGE_TILE in active:      # MJ01-08: with the +1 range tile Navigation is not raised any more
             caps['navigation'] = min(caps.get('navigation', 5), (player.get('research_tracks') or {}).get('navigation', 0))
     return caps
@@ -2379,6 +2395,9 @@ def _track_caps(player, table=True):
 # Among the tile variants of one move: rounds 1-2 the tile-12 variant leads, from round 3 it swaps with the best other.
 RANGE_TILE = 12
 RANGE_TILE_LAST_ROUND = 2
+# SH11 p.40 / SH04 Gleens "첫 타일로 가이아 3점을 먹으면 나중에 자원이 모자람": the VP-per-Gaia tile (8) is not the first
+# standard tile, for every faction; among the variants of one move it swaps with the best other (range_tile_scores).
+GAIA_VP_TILE = 8
 
 
 def range_tile_scores(env, snapshot, scores):
@@ -2396,7 +2415,15 @@ def range_tile_scores(env, snapshot, scores):
             groups.setdefault(key, []).append(i)
     lifted = list(scores)
     early = state['round'] <= RANGE_TILE_LAST_ROUND
+    player = state['players'][actor]
+    first_tile = not (player.get('tech_tiles') or ())
     for members in groups.values():
+        if first_tile:
+            top = max(members, key=lambda i: lifted[i][0])
+            rest = [i for i in members if tiles[i] != GAIA_VP_TILE]
+            if tiles[top] == GAIA_VP_TILE and rest:
+                _swap(lifted, list(lifted), max(rest, key=lambda i: lifted[i][0]), top,
+                      'no Gaia-VP tile as the first tile (SH11, SH04)')
         wanted = [i for i in members if tiles[i] == RANGE_TILE]
         rest = [i for i in members if tiles[i] != RANGE_TILE]
         if not wanted or not rest:
@@ -2804,7 +2831,8 @@ TILE_PREFS = {
     # under Gaia (B19-S46, K2 base-factions.md:83) — then the knowledge + credit income tile (K2).
     'Taklons': {'prefer': (10, 5), 'avoid': (), 'not_under_gaia': (10,)},
     # Nevlas (E103 ④, B19-S60 "타클론처럼 4충전이 가이아 밑이면 안 집는 게 나음"): only the Gaia-column exception.
-    'Nevlas': {'prefer': (), 'avoid': (), 'not_under_gaia': (10,)},
+    # SH11 p.32-33 / SH04 Nevlas "첫 타일은 4파워 회전": power factions take the charge-4 tile first.
+    'Nevlas': {'prefer': (10,), 'avoid': (), 'not_under_gaia': (10,)},
 }
 AI_SLOT = 2        # advanced_tech_tiles / tech_tile_slots index of the AI column
 GAIA_SLOT = 3      # tech_tile_slots: the six track columns in ResearchTrack order (TF, Nav, AI, Gaia, Eco, Sci), then 3
@@ -3598,6 +3626,8 @@ def _plan_tracks(state, actor):
         tracks = [t for t in tracks if t != 'gaia']
     if faction == 'Taklons' and _part(player, 'mj01') and TFMARS_SHIP in (player.get('explored_ships') or ()):
         tracks.append('gaia')      # user 10-24: T F Mars forms at once, no tokens locked — Gaia 1 for the former only
+    if 'gaia' not in tracks and _asteroid_gaia(state, player):
+        tracks.append('gaia')
     caps = _track_caps(player)
     steps = [(t, level) for start, t, level in _track_steps_table(player)
              if start <= state['round'] and levels.get(t, 0) < level]
