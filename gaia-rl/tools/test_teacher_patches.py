@@ -1119,7 +1119,7 @@ class OpeningBudgetTests(unittest.TestCase):
         tp._guide['mj01'] = False                                                       # gate off: unchanged
         self.assertFalse(blocked(tp.knowledge_to_credit_scores(None, snapshot, scores + [(2.0, 'o')])[0]))
 
-    def test_all_factory_gleens_never_take_booster9_before_institute(self):
+    def test_all_factory_gleens_never_take_booster9_before_qic_academy(self):
         from current_actions.conservation import blocked
         pick = lambda b: {'action': {'type': 'SelectStartingBooster', 'booster_id': b}}
         pas = lambda b: {'action': {'type': 'Pass', 'booster_id': b}}
@@ -1131,8 +1131,12 @@ class OpeningBudgetTests(unittest.TestCase):
         flags = lambda: [blocked(s) for s in tp.gleens_qic_booster_scores(None, snapshot, scores)]
         self.assertEqual(flags(), [True, False, True, False])
         player['structures'].append({'kind': 'PlanetaryInstitute', 'hex': '1,0'})
-        self.assertIs(tp.gleens_qic_booster_scores(None, snapshot, scores), scores)   # institute built
-        player['structures'].pop()
+        self.assertEqual(flags(), [True, False, True, False])                         # institute alone: still ore
+        player['structures'].append({'kind': {'Academy': 'Science'}, 'hex': '2,0'})
+        self.assertEqual(flags(), [True, False, True, False])                         # knowledge academy: still ore
+        player['structures'].append({'kind': {'Academy': 'Qic'}, 'hex': '3,0'})
+        self.assertIs(tp.gleens_qic_booster_scores(None, snapshot, scores), scores)   # QIC academy built
+        del player['structures'][1:]
         player['faction'] = 'Terrans'
         self.assertIs(tp.gleens_qic_booster_scores(None, snapshot, scores), scores)   # another faction
         player['faction'] = 'Gleens'

@@ -4622,7 +4622,8 @@ def knowledge_to_credit_scores(env, snapshot, scores):
 
 def gleens_qic_booster_scores(env, snapshot, scores):
     """ships_menu1_all only (user 2026-10-25, lab 106 pair-015 Gleens, known-bad-decisions.md 14): round booster 9 (2 credits +
-    1 QIC) is bad for Gleens before their Planetary Institute, because a Gleens QIC turns into ore. The rollout still preferred
+    1 QIC) is bad for Gleens before their QIC academy, because until then a Gleens QIC turns into ore (rulebook p.20, engine
+    add_resource `Academy(Qic)`; debate 1/1 corrected "institute"). The rollout still preferred
     it (286.86 vs 258.52 for the range booster), so ordering cannot fix it: the setup pick and the Pass that take booster 9 are
     blocked, per action type, unless that would leave no unblocked candidate of that type."""
     from current_actions.conservation import BLOCKED, PREFIX, blocked
@@ -4632,7 +4633,7 @@ def gleens_qic_booster_scores(env, snapshot, scores):
     player = state['players'][actor]
     if not _part(player, 'mj01') or player.get('faction') != 'Gleens':
         return scores
-    if any(s['kind'] == 'PlanetaryInstitute' for s in player.get('structures', [])):
+    if any(s['kind'] == {'Academy': 'Qic'} for s in player.get('structures', [])):
         return scores
     result = list(scores)
     for kind in ('SelectStartingBooster', 'Pass'):
@@ -4642,7 +4643,7 @@ def gleens_qic_booster_scores(env, snapshot, scores):
         if not bad or len(bad) == len(live):
             continue
         for i in bad:
-            result[i] = (BLOCKED, PREFIX+'Gleens: 2 credits + QIC booster before the institute (the QIC becomes ore)')
+            result[i] = (BLOCKED, PREFIX+'Gleens: 2 credits + QIC booster before the QIC academy (the QIC becomes ore)')
     return result
 
 
