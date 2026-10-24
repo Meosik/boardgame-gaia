@@ -118,7 +118,7 @@ def _prefetch(env, snapshot, memory, budget, kwargs):
     import budget_teacher
     import four_factions.preparation as p
     from four_factions.preparation import Policies, PolicyCache
-    phase =snapshot['state']['phase']
+    phase = snapshot['state']['phase']
     phases = ('ActionPhase', 'Setup', 'TinkeroidsTileSelectionPending') if kwargs.get('shared_factions') else ('ActionPhase', 'Setup')
     if not isinstance(phase, dict) or not any(k in phase for k in phases):
         return
