@@ -3985,6 +3985,7 @@ FACTION_MENU = {
 _menu_front = set()      # id() of the goals plan_menu put in front, read by the interleave wrapper
 _menu_slots = []         # the same goals in row order; install_plan_menu hands them to the three task lists
 _menu_pool = []          # every federation / token / track / ability goal generated this decision (front or not)
+_menu_dropped = []       # generated but dropped by plan_affordable (E107 funnel: generated → budget → compared → chosen)
 
 
 def _menu_family(snapshot, goal):
@@ -4159,6 +4160,7 @@ def plan_menu_goals(snapshot, goals):
     _menu_front.clear()
     _menu_slots.clear()
     _menu_pool.clear()
+    _menu_dropped.clear()
     if actor is None or not isinstance(state.get('phase'), dict) or 'ActionPhase' not in state['phase']:
         return goals
     player = state['players'][actor]
@@ -4178,7 +4180,9 @@ def plan_menu_goals(snapshot, goals):
             if (step.family == 'research' and not achieved(snapshot, actor, step) and step.name not in covered
                     and all(g.name != step.name for g in pool)):
                 pool.append(step)
-    pool = [g for g in pool if plan_affordable(snapshot, g)]
+    _menu_dropped.extend(g for g in all_plans if g not in plans)
+    _menu_dropped.extend(g for g in pool if not plan_affordable(snapshot, g))
+    pool = [g for g in pool if g not in _menu_dropped]
     condition = _round_condition(state)
     front = []
     for family in FACTION_MENU.get(player['faction'], MENU_DEFAULT):

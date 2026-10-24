@@ -295,7 +295,7 @@ def worker(args):
                    'completed_comparisons': len(audit.get('plans') or ()),
                    'selected': audit.get('selected'),
                    'compared': compared_plans(audit), 'menu': menu_slots(), 'menu_pool': menu_slots('_menu_pool'),
-                   'menu_forgot': audit.get('menu_forgot')})
+                   'menu_dropped': menu_slots('_menu_dropped'), 'menu_forgot': audit.get('menu_forgot')})
         elif command['op'] == 'step':
             before = snapshot
             env.step(command['decision_id'], command['index'])
@@ -432,6 +432,7 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None):
                                             'compared': reply.get('compared', []),
                                             'menu': reply.get('menu', []),
                                             'menu_pool': reply.get('menu_pool', []),
+                                            'menu_dropped': reply.get('menu_dropped', []),
                                             'menu_forgot': reply.get('menu_forgot')})+'\n')
                     env.step(snapshot['decision_id'], index)
                     snapshot = json.loads(env.snapshot_json())
