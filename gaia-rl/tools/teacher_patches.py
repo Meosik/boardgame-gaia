@@ -1298,20 +1298,40 @@ def far_start_allowed(state, actor, start):
 
 # Expansion-room exception, ships_menu1_all only (user 2026-10-25, lab 106 pair-022 Ambas, known-bad-decisions.md 16): the
 # near-opponent rule left one start and pushed starts into corners. A far start stays allowed when more free planets that
-# are cheap for the faction (_cheap_planet, Transdim and Gaia not counted) lie within this many hexes of it than of the best
-# near start.
-EXPANSION_RADIUS = 3
+# are cheap for the faction (_cheap_planet, Transdim and Gaia not counted) lie within the base reach of it than of the best
+# near start, plus the best single QIC landing (debate 1/1: one QIC pays the range of one mine, rulebook p.11, so it is
+# one landing and its follow-ups from there, not every planet within 3-4). The base reach is the Navigation range after
+# the planned round-1 steps: Ambas Navigation 2 (ambas_nav2), the others their current reach.
+QIC_RANGE = 2
+AMBAS_PLANNED_NAVIGATION = 2
+
+
+def _base_reach(player):
+    if player['faction'] == 'Ambas':
+        tracks = player.get('research_tracks') or {}
+        planned = {**tracks, 'navigation': max(tracks.get('navigation', 0), AMBAS_PLANNED_NAVIGATION)}
+        return _value.navigation({**player, 'research_tracks': planned})
+    return _reach(player)
 
 
 def expansion_room(state, actor, coord):
     from faction_teachers.profiles import profiles
     from strategy_teacher import distance
-    profile = profiles().get(state['players'][actor]['faction'])
+    player = state['players'][actor]
+    profile = profiles().get(player['faction'])
     if not profile:
         return 0
-    return sum(1 for c, cell in state['board']['hexes'].items()
-               if c != coord and _free_planet(cell) and distance(coord, c) <= EXPANSION_RADIUS
-               and _cheap_planet(profile.home, cell['planet']['planet_type']))
+    base = _base_reach(player)
+    cheap = [c for c, cell in state['board']['hexes'].items()
+             if c != coord and _free_planet(cell) and _cheap_planet(profile.home, cell['planet']['planet_type'])]
+    inside = {c for c in cheap if distance(coord, c) <= base}
+    landing = 0
+    if (player.get('resources') or {}).get('qic', 0) >= 1:
+        for land in cheap:
+            if base < distance(coord, land) <= base + QIC_RANGE:
+                landing = max(landing, 1 + sum(1 for c in cheap if c != land and c not in inside
+                                               and distance(land, c) <= base))
+    return len(inside) + landing
 
 
 def guide_r1_scores(snapshot, scores):
@@ -2662,6 +2682,14 @@ def track_steps_scores(env, snapshot, scores):
               if start <= state['round'] and levels.get(t, 0) < level]
     if not wanted:
         return scores
+    return _lead_tracks(snapshot, scores, wanted, f'{player["faction"]} %s to its guide level (track_steps)')
+
+
+def _lead_tracks(snapshot, scores, wanted, why):
+    """Order only: among the research advances (and among the track variants of one tile choice) the first of `wanted`
+    that is offered takes the best score; `why` has one %s for the track."""
+    from current_actions.conservation import blocked
+    state = snapshot['state']
     candidates = snapshot['candidates']
     act = {i: c['action'] for i, c in enumerate(candidates) if not blocked(scores[i])}
 
@@ -2688,9 +2716,43 @@ def track_steps_scores(env, snapshot, scores):
         else:
             continue
         if best not in lead:
-            _swap(lifted, list(lifted), max(lead, key=lambda i: lifted[i][0]), best,
-                  f'{player["faction"]} {track} to its guide level (track_steps)')
+            _swap(lifted, list(lifted), max(lead, key=lambda i: lifted[i][0]), best, why % track)
     return lifted
+
+
+# ambas_nav2 (ships_menu1_all only; user 2026-10-25, lab 106 pair-022, known-bad-decisions.md 16; gaia-strategy-claims.csv
+# B6-03 "Ambas RL+4M and TS+6M openings are Navigation 2"): while Ambas plays the 1RL+4M or 1TS+6M round-1 plan with
+# Navigation below 2, the Navigation advance leads the research moves (order only). The active plan is the `target`
+# planning.select_action receives; the academy routes and every other faction are unchanged.
+AMBAS_NAV2_PLANS = ('1RL+4M', '1TS+6M')
+
+
+def ambas_nav2_scores(snapshot, scores, target):
+    state, actor = snapshot['state'], snapshot['player']
+    player = state['players'][actor]
+    if (player['faction'] != 'Ambas' or not _part(player, 'mj01') or state['round'] != 1
+            or 'ActionPhase' not in state['phase'] or (player.get('research_tracks') or {}).get('navigation', 0) >= 2):
+        return scores
+    from bgg_openings.catalog import parse_buildings
+    if target not in [parse_buildings(label) for label in AMBAS_NAV2_PLANS]:
+        return scores
+    return _lead_tracks(snapshot, scores, [TRACK_NAMES['navigation']], 'Ambas %s in the RL+4M / TS+6M opening (B6-03)')
+
+
+def install_ambas_nav2():
+    import bgg_openings.planning as planning
+    inner = planning.select_action
+    if getattr(inner, '_ambas_nav2', False):
+        return
+
+    def select_action(env, snapshot, scores, target, policies, deadline):
+        return inner(env, snapshot, ambas_nav2_scores(snapshot, scores, target), target, policies, deadline)
+    for name, value in vars(inner).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(select_action, name, value)
+    select_action._ambas_nav2 = True
+    select_action.__wrapped__ = getattr(inner, '__wrapped__', inner)
+    planning.select_action = select_action
 
 
 # building_limits: buildings the guide says a faction does not build, through a round. Firaks never an
@@ -4658,6 +4720,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_res(seed, **kwargs)
     _guide['weak_factions'] = True
     _guide['mj01'] = True      # E104: the MJ01 Lost Fleet track corrections (MJ_TRACK_CAPS)
+    install_ambas_nav2()
     _wrap_rank('_artifact_tokens', artifact_tokens_scores)
     _wrap_rank('_range_tile', range_tile_scores)
     _wrap_rank('_power_prefs', power_prefs_scores)

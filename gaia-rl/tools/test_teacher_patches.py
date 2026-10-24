@@ -1048,7 +1048,7 @@ class OpeningBudgetTests(unittest.TestCase):
         instant['state']['boosters'] = [8]
         self.assertTrue(blocked(tp.guide_r1_scores(instant, scores)[0]))      # booster 5 not in the supply
 
-    def test_all_factory_far_start_allowed_when_more_cheap_planets_within_3_than_near_start(self):
+    def test_all_factory_far_start_allowed_when_more_cheap_planets_within_base_reach_than_near_start(self):
         from current_actions.conservation import blocked
         snapshot = self.far_start_snapshot()
         hexes = snapshot['state']['board']['hexes']
@@ -1056,19 +1056,77 @@ class OpeningBudgetTests(unittest.TestCase):
         planet = lambda kind: {'planet': {'planet_type': kind, 'owner': None}, 'structures': []}
         hexes['5,0'] = planet('Desert')                                     # near start 4,0: room 1
         for coord in ('0,-1', '-1,1', '0,2'):
-            hexes[coord] = planet('Volcanic')                               # far start 0,0: room 3
+            hexes[coord] = planet('Volcanic')                               # far start 0,0: 2 within reach 1, 0,2 is 2 away
         scores = [(5.0, 'far'), (4.0, 'near')]
         self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))   # gate off: as before
         tp._guide['mj01'] = True
-        self.assertEqual(tp.expansion_room(snapshot['state'], 0, '0,0'), 3)
+        self.assertEqual(tp.expansion_room(snapshot['state'], 0, '0,0'), 2)
         self.assertEqual(tp.expansion_room(snapshot['state'], 0, '4,0'), 1)
         self.assertEqual(tp.guide_r1_scores(snapshot, scores), scores)
-        hexes['0,2']['planet']['planet_type'] = 'Transdim'                  # not counted: room 2 vs 1 still wins
-        self.assertEqual(tp.expansion_room(snapshot['state'], 0, '0,0'), 2)
         hexes['-1,1']['planet']['planet_type'] = 'Gaia'                     # not counted: room 1 == near room 1
+        self.assertEqual(tp.expansion_room(snapshot['state'], 0, '0,0'), 1)
         self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))
-        hexes['-1,1']['planet']['planet_type'] = 'Ice'                      # not cheap either
+        hexes['-1,1']['planet']['planet_type'] = 'Transdim'                 # not counted either
         self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))
+        hexes['-1,1']['planet']['planet_type'] = 'Ice'                      # not cheap
+        self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))
+
+    def test_all_factory_expansion_room_counts_one_qic_landing_and_its_follow_ups(self):
+        tp._guide['mj01'] = True
+        snapshot = self.far_start_snapshot()
+        state, hexes = snapshot['state'], snapshot['state']['board']['hexes']
+        hexes['1,0']['planet']['planet_type'] = 'Ice'
+        planet = lambda kind: {'planet': {'planet_type': kind, 'owner': None}, 'structures': []}
+        hexes['0,2'], hexes['0,-2'] = planet('Volcanic'), planet('Volcanic')    # base 1, 2 away: one QIC lands on either
+        self.assertEqual(tp.expansion_room(state, 0, '0,0'), 0)                 # no QIC: out of reach
+        state['players'][0]['resources'] = {'qic': 1}
+        self.assertEqual(tp.expansion_room(state, 0, '0,0'), 1)                 # two separate far planets: one landing, not two
+        hexes['0,3'] = planet('Volcanic')                                       # next to 0,2: landing there, one follow-up
+        self.assertEqual(tp.expansion_room(state, 0, '0,0'), 2)
+        hexes['0,4'] = planet('Ice')                                            # not cheap: not a follow-up
+        self.assertEqual(tp.expansion_room(state, 0, '0,0'), 2)
+        hexes['0,5'] = planet('Volcanic')                                       # 3 from 0,2: not within base of the landing
+        self.assertEqual(tp.expansion_room(state, 0, '0,0'), 2)
+        state['players'][0]['resources'] = {'qic': 0}
+        self.assertEqual(tp.expansion_room(state, 0, '0,0'), 0)
+
+    def test_all_factory_expansion_room_ambas_base_reach_is_navigation_2(self):
+        from faction_teachers.profiles import profiles
+        tp._guide['mj01'] = True
+        snapshot = self.far_start_snapshot()
+        state, hexes = snapshot['state'], snapshot['state']['board']['hexes']
+        state['players'][0]['faction'] = 'Ambas'
+        home = profiles()['Ambas'].home
+        hexes['4,0']['planet']['planet_type'] = 'Transdim'
+        hexes['1,0']['planet']['planet_type'] = home
+        hexes['0,2'] = {'planet': {'planet_type': home, 'owner': None}, 'structures': []}
+        self.assertEqual(tp._base_reach(state['players'][0]), 2)
+        self.assertEqual(tp.expansion_room(state, 0, '0,0'), 2)                 # 0,2 is 2 away: inside the base reach
+        state['players'][0]['faction'] = 'Geodens'
+        self.assertEqual(tp._base_reach(state['players'][0]), 1)                # others keep their current reach
+
+    @staticmethod
+    def ambas_nav2_snapshot(faction='Ambas', navigation=1, rnd=1):
+        player = {'faction': faction, 'structures': [], 'research_tracks': {'navigation': navigation}}
+        state = {'round': rnd, 'phase': {'ActionPhase': {}}, 'players': [player]}
+        research = lambda track: {'action': {'type': 'ResearchAdvance', 'track': track}}
+        return {'player': 0, 'state': state,
+                'candidates': [research('Science'), research('Navigation'), {'action': {'type': 'Pass'}}]}
+
+    def test_all_factory_ambas_navigation_2_leads_research_in_the_rl4m_and_ts6m_plans_only(self):
+        from bgg_openings.catalog import parse_buildings
+        scores = [(9.0, 'science'), (5.0, 'nav'), (1.0, 'pass')]
+        plan = parse_buildings('1RL+4M')
+        snapshot = self.ambas_nav2_snapshot()
+        self.assertIs(tp.ambas_nav2_scores(snapshot, scores, plan), scores)         # gate off
+        tp._guide['mj01'] = True
+        self.assertEqual([s[0] for s in tp.ambas_nav2_scores(snapshot, scores, plan)], [5.0, 9.0, 1.0])
+        self.assertEqual([s[0] for s in tp.ambas_nav2_scores(snapshot, scores, parse_buildings('1TS+6M'))], [5.0, 9.0, 1.0])
+        self.assertIs(tp.ambas_nav2_scores(snapshot, scores, parse_buildings('1AC+2M')), scores)     # academy route
+        self.assertIs(tp.ambas_nav2_scores(snapshot, scores, parse_buildings('1RL+1TS+2M')), scores)
+        self.assertIs(tp.ambas_nav2_scores(self.ambas_nav2_snapshot(navigation=2), scores, plan), scores)
+        self.assertIs(tp.ambas_nav2_scores(self.ambas_nav2_snapshot(rnd=2), scores, plan), scores)
+        self.assertIs(tp.ambas_nav2_scores(self.ambas_nav2_snapshot(faction='Gleens'), scores, plan), scores)
 
     def test_all_factory_booster5_worth_income_only_unless_faction_rides_gaia_track(self):
         import guide_value as gv
