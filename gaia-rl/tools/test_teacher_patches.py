@@ -995,6 +995,25 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(tp.TECH_FEDERATION_OPENINGS['Moweyds'][0], '1PI+1TS')
         self.assertEqual(tp.LOST_FLEET_OPENINGS['Moweyds'][0], '1RL+4M')
 
+    def test_all_factory_b19_nevlas_tile_and_taklons_power_order(self):
+        tp._guide['mj01'] = True                           # restored by setUp's cleanup
+        self.assertIn('tile_prefs', tp._faction_parts('Nevlas'))
+        player = {'faction': 'Nevlas', 'research_tracks': {}}
+        state = {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player],
+                 'research_board': {'tech_tile_slots': [6, 5, 8, 10, 9, 3, 4, 7, 2]}}            # 10 under Gaia
+        up = lambda tile: {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                           'tech_tile_choice': {'kind': 'Standard', 'tile': tile, 'advance_track': None}}
+        snapshot = {'player': 0, 'state': state, 'candidates': [{'action': up(10)}, {'action': up(3)}]}
+        scores = [(9.0, 't10'), (4.0, 't3')]
+        self.assertEqual([s[0] for s in tp.tile_prefs_scores(None, snapshot, scores)], [4.0, 9.0])  # B19-S60
+        player['faction'] = 'Taklons'
+        power = lambda pid, **k: {'action': {'type': 'PowerAction', 'id': pid, **k}}
+        snapshot = {'player': 0, 'state': state, 'candidates': [power(5), power(6, coord='2,0'), {'action': {'type': 'Pass'}}]}
+        scores = [(9.0, 'k2'), (6.0, 'tf1'), (1.0, 'pass')]
+        self.assertEqual([s[0] for s in tp.power_prefs_scores(None, snapshot, scores)], [6.0, 9.0, 1.0])  # 1 TF first
+        scores = [(1.0, 'k2'), (6.0, 'tf1'), (9.0, 'pass')]
+        self.assertIs(tp.power_prefs_scores(None, snapshot, scores), scores)                              # not a power move
+
     def test_all_factory_range_tile_early_only_and_stops_navigation(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup
         player = {'faction': 'Gleens', 'research_tracks': {'navigation': 1}, 'tech_tiles': [], 'covered_tech_tiles': []}

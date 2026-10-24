@@ -237,7 +237,38 @@ ALL_FACTION_PARTS = {
     'Taklons': frozenset({'tile_prefs'}),
     'Xenos': frozenset({'track_set'}),
     'Moweyds': frozenset({'opening_res'}),   # institute opening only with a tech federation (TECH_FEDERATION_OPENINGS)
+    'Nevlas': frozenset({'tile_prefs'}),     # B19-S60 charge-4 tile not under Gaia (TILE_PREFS)
 }
+
+# power_prefs (E103 ④, ships_menu1_all only): the power actions a guide ranks, used when a power action is the best
+# move — another power action the guide ranks higher and still legal takes its place. Taklons B19-S46 "가장 중요한
+# 파워 액션은 1테라, 그다음 2지식" (ids: 6 one terraform step, 5 two knowledge). Order only.
+POWER_PREFS = {'Taklons': (6, 5)}
+
+
+def power_prefs_scores(env, snapshot, scores):
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    order = POWER_PREFS.get(player['faction'])
+    if not order or not _part(player, 'mj01'):
+        return scores
+    act = {i: c['action'] for i, c in enumerate(snapshot['candidates']) if not blocked(scores[i])}
+    if not act:
+        return scores
+    top = max(act, key=lambda i: scores[i][0])
+    if act[top].get('type') != 'PowerAction' or act[top].get('id') not in order:
+        return scores
+    rank = order.index(act[top]['id'])
+    better = [i for i, a in act.items() if a.get('type') == 'PowerAction' and a.get('id') in order[:rank]]
+    if not better:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(scores), max(better, key=lambda i: scores[i][0]), top,
+          f"{player['faction']} power action order {order} (B19-S46, power_prefs)")
+    return lifted
 
 
 def _faction_parts(faction):
@@ -2772,6 +2803,8 @@ TILE_PREFS = {
     # Taklons (E97 (ㄱ), E103 ②b): the charge-4 tile first (paia-timing-rules R3, PG02-S40), but not when it lies
     # under Gaia (B19-S46, K2 base-factions.md:83) — then the knowledge + credit income tile (K2).
     'Taklons': {'prefer': (10, 5), 'avoid': (), 'not_under_gaia': (10,)},
+    # Nevlas (E103 ④, B19-S60 "타클론처럼 4충전이 가이아 밑이면 안 집는 게 나음"): only the Gaia-column exception.
+    'Nevlas': {'prefer': (), 'avoid': (), 'not_under_gaia': (10,)},
 }
 AI_SLOT = 2        # advanced_tech_tiles / tech_tile_slots index of the AI column
 GAIA_SLOT = 3      # tech_tile_slots: the six track columns in ResearchTrack order (TF, Nav, AI, Gaia, Eco, Sci), then 3
@@ -4293,6 +4326,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     _guide['mj01'] = True      # E104: the MJ01 Lost Fleet track corrections (MJ_TRACK_CAPS)
     _wrap_rank('_artifact_tokens', artifact_tokens_scores)
     _wrap_rank('_range_tile', range_tile_scores)
+    _wrap_rank('_power_prefs', power_prefs_scores)
     # User 10-25 "넣을거 다 넣어봐 일단": the measured families not in the stack yet — ship_adjacent_mine in its E61 (ㄱ)
     # form (095), endgame_prices (096; watch round-5 ore→power, Taklons 7→41), federations (089: fed_compare +
     # fed_cluster) and green tokens (090: token_compare + track_race + race_prune); fed_remember stays last.
