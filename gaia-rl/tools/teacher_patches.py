@@ -3482,10 +3482,21 @@ def ship_adjacent_mine_scores(env, snapshot, scores):
     if scores[best][0] >= scores[entry][0]:
         return scores
     lifted = list(scores)
+    if _part(player, 'mj01'):
+        # E61 (ㄱ), ships_menu1_all: 095's swap handed the entry the mine's low score and pushed it out of the four
+        # comparisons (explain: excluded, not reordered). Here the entry keeps its score and the mine is lifted right
+        # under it, so both are compared and the rollout decides.
+        lifted[best] = (scores[entry][0] - SHIP_MINE_EPSILON,
+                        f'{scores[best][1]}; mine next to the {ship} tile compared with the entry (ship_adjacent_mine)',
+                        *scores[best][2:])
+        return lifted
     _swap(lifted, list(scores), best, entry,
           f'mine next to the {ship} tile before the entry that pays {entry_qic} QIC for range; '
           f'the ship is in base range from the mine (ship_adjacent_mine)')
     return lifted
+
+
+SHIP_MINE_EPSILON = 1e-6
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_shipmine(seed, **kwargs):
@@ -4282,6 +4293,19 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     _guide['mj01'] = True      # E104: the MJ01 Lost Fleet track corrections (MJ_TRACK_CAPS)
     _wrap_rank('_artifact_tokens', artifact_tokens_scores)
     _wrap_rank('_range_tile', range_tile_scores)
+    # User 10-25 "넣을거 다 넣어봐 일단": the measured families not in the stack yet — ship_adjacent_mine in its E61 (ㄱ)
+    # form (095), endgame_prices (096; watch round-5 ore→power, Taklons 7→41), federations (089: fed_compare +
+    # fed_cluster) and green tokens (090: token_compare + track_race + race_prune); fed_remember stays last.
+    _guide['ship_adjacent_mine'] = True
+    _wrap_rank('_ship_adjacent_mine', ship_adjacent_mine_scores)
+    _guide['endgame_prices'] = True
+    _guide['fed'] = True
+    _wrap_rank('_fed_cluster', fed_cluster_scores)
+    install_fed_compare()
+    _guide['tokens'] = True
+    _wrap_rank('_track_race', track_race_scores)
+    install_token_goals()
+    _wrap_rank('_fed_remember', fed_remember_scores)
     _guide['plan_menu'] = True
     install_plan_menu()
     _guide['menu_first'] = 1
