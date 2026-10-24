@@ -34,6 +34,18 @@ def count_distinct_firsts(enabled):
     _distinct_firsts = bool(enabled)
 
 
+budget_hooks = []      # f(snapshot, scores, budget) -> budget; a patch may widen one decision's budget
+
+
+def budget_for(snapshot, scores, budget=None):
+    """The comparison budget of this decision: the installed count passed through budget_hooks. `scores` is the root
+    ranking (search publishes it with its first result; parallel_search has it after Policies.rank)."""
+    budget = _installed if budget is None else budget
+    for hook in budget_hooks:
+        budget = hook(snapshot, scores, budget)
+    return budget
+
+
 def _spent(plans):
     return len({p['first'] for p in plans}) if _distinct_firsts else len(plans)
 
@@ -49,8 +61,10 @@ def _choose(self, snapshot):
     state = {'latest': None, 'stopped': False}
 
     def publish(result):
+        nonlocal budget
         # Round-trip exactly like the subprocess worker's JSON hand-off.
         state['latest'] = json.loads(json.dumps(result, allow_nan=False))
+        budget = budget_for(snapshot, result.get('scores'), _installed)
         if not state['stopped'] and _spent(result.get('plans', ())) >= budget:
             state['stopped'] = True
             raise SearchExpired('comparison budget reached')

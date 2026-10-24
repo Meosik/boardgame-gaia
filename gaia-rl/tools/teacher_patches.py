@@ -1334,6 +1334,21 @@ def expansion_room(state, actor, coord):
     return len(inside) + landing
 
 
+def _one_start_is_enough(state, actor):
+    """ships_menu1_all only (user 2026-10-25, lab 106, known-bad-decisions.md 15, 18: "the first placement must keep options
+    open; in round 1 you usually upgrade one building all the way, the other one can sit where it expands well"): the
+    near-opponent rule covers one of the two starting mines. True for the actor's first placement (nothing placed yet) and
+    for a later one once one of the actor's structures is already near an opponent (or a free opponent home planet)."""
+    player = state['players'][actor]
+    if not _part(player, 'mj01'):
+        return False
+    mine = [s['hex'] for s in player['structures'] if s.get('hex')]
+    if not mine:
+        return True
+    sites = _future_opponent_sites(state, actor)
+    return any(_next_to_opponent(state, actor, c) or _near_sites(state, actor, c, sites) for c in mine)
+
+
 def guide_r1_scores(snapshot, scores):
     from current_actions.conservation import BLOCKED, PREFIX, blocked
     state, actor = snapshot['state'], snapshot['player']
@@ -1343,6 +1358,8 @@ def guide_r1_scores(snapshot, scores):
     bottom = min(finite)
     result = list(scores)
     near = _near_places(snapshot, scores)
+    if near and _one_start_is_enough(state, actor):
+        near = set()
     near_room = None
     if near and _part(state['players'][actor], 'mj01'):
         near_room = max(expansion_room(state, actor, snapshot['candidates'][j]['action']['coord']) for j in near)
@@ -4512,6 +4529,36 @@ def install_plan_menu():
     install_task_dedup()
 
 
+SETUP_FIRST_FAMILIES = ('ordered', 'faction-action')     # the only plan families whose first move select_goal may choose in Setup
+
+
+def setup_places(snapshot, scores):
+    """ships_menu1_all only (user 2026-10-25, lab 106, known-bad-decisions.md 15, 18): the number of unblocked places of a
+    PlaceStartingStructure decision, or 0 for any other decision / when the gate is off. In Setup preparation.select_goal
+    returns the ranking's best index for every plan outside SETUP_FIRST_FAMILIES, so those plans all start on the control's
+    place and only repeat its first move."""
+    from current_actions.conservation import blocked
+    try:
+        player = snapshot['state']['players'][snapshot['player']]
+        if not _part(player, 'mj01') or not scores:
+            return 0
+        places = [i for i, c in enumerate(snapshot['candidates']) if c['action']['type'] == 'PlaceStartingStructure']
+    except (KeyError, TypeError, IndexError):
+        return 0
+    return sum(1 for i in places if not blocked(scores[i]))
+
+
+def setup_places_budget(snapshot, scores, budget):
+    """budget_teacher hook: every unblocked start place is rolled out once (control + one root per other place)."""
+    return max(budget, setup_places(snapshot, scores))
+
+
+def install_setup_places():
+    import budget_teacher
+    if setup_places_budget not in budget_teacher.budget_hooks:
+        budget_teacher.budget_hooks.append(setup_places_budget)
+
+
 _task_seen = []     # the goals and scoring pairs of the search being built; the roots list that follows drops them
 _task_exec_key = [False]    # ..._ships_menu1_all: dedup by execution key (set by goals_for, which starts each search)
 
@@ -4579,9 +4626,14 @@ def install_task_dedup():
             for goal in goals:
                 if not _task_in(goal, kept):
                     kept.append(goal)
+            setup = setup_places(snapshot, scores) > 0
+            if setup:
+                # One entry per place: the plans that would repeat the control's first move are dropped, the root-N
+                # alternatives (one per other place) fill the budget setup_places_budget widens to the place count.
+                kept = [g for g in kept if g.family in SETUP_FIRST_FAMILIES]
             goals[:] = kept
             paired = []
-            for goal in inner_pairs(snapshot, scores, goals):
+            for goal in ([] if setup else inner_pairs(snapshot, scores, goals)):
                 if not _task_in(goal, kept) and not _task_in(goal, paired):
                     paired.append(goal)
             _task_seen[:] = kept + paired
@@ -4720,6 +4772,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_byfaction_guide_res(seed, **kwargs)
     _guide['weak_factions'] = True
     _guide['mj01'] = True      # E104: the MJ01 Lost Fleet track corrections (MJ_TRACK_CAPS)
+    install_setup_places()     # lab 106: every open start place is rolled out once
     install_ambas_nav2()
     _wrap_rank('_artifact_tokens', artifact_tokens_scores)
     _wrap_rank('_range_tile', range_tile_scores)

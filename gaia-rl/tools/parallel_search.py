@@ -115,18 +115,24 @@ def _planned_tasks(env, snapshot, memory, scores, policies, kwargs):
 
 def _prefetch(env, snapshot, memory, budget, kwargs):
     from dataclasses import asdict
+    import budget_teacher
     import four_factions.preparation as p
     from four_factions.preparation import Policies, PolicyCache
-    phase = snapshot['state']['phase']
+    phase =snapshot['state']['phase']
     phases = ('ActionPhase', 'Setup', 'TinkeroidsTileSelectionPending') if kwargs.get('shared_factions') else ('ActionPhase', 'Setup')
-    if budget < 2 or not isinstance(phase, dict) or not any(k in phase for k in phases):
+    if not isinstance(phase, dict) or not any(k in phase for k in phases):
         return
+    if budget < 2 and not (budget_teacher.budget_hooks and 'Setup' in phase):
+        return          # a budget hook may widen a setup decision (teacher_patches.setup_places_budget)
     settings = {'shared_factions': kwargs.get('shared_factions', False),
                 'delta_factions': kwargs.get('delta_factions', ()),
                 'fixed_openings': kwargs.get('fixed_openings', False)}
     policies = Policies(memory, cache=PolicyCache(), **settings)
     memory_before = _memory_key(policies.memory)
     scores = p.Policies.rank.__wrapped__(policies, env, snapshot)
+    budget = budget_teacher.budget_for(snapshot, scores, budget)       # the same value search's publish reads
+    if budget < 2:
+        return
     _state['root'] = (_key(snapshot), memory_before, scores, copy.deepcopy(policies.memory))
     tasks, capture = _planned_tasks(env, snapshot, policies.memory, scores, policies, kwargs)
     state_json = json.dumps(snapshot['state'])

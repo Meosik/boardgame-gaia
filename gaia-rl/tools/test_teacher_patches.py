@@ -1021,7 +1021,7 @@ class OpeningBudgetTests(unittest.TestCase):
         hexes = {'0,0': cell('Volcanic'), '1,0': cell('Desert'), '3,0': cell('Terra', structures=[{'owner': 1}]),
                  '4,0': cell('Volcanic'), '0,1': cell('Transdim' if transdim >= 1 else None),
                  '-1,0': cell('Transdim' if transdim >= 2 else None)}
-        me = {'player_id': 0, 'faction': 'Geodens', 'structures': [], 'tech_tiles': [], 'covered_tech_tiles': [],
+        me = {'player_id': 0, 'faction': 'Geodens', 'structures': [{'hex': '-9,0'}], 'tech_tiles': [], 'covered_tech_tiles': [],
               'research_tracks': {'navigation': 0}}
         other = {'player_id': 1, 'faction': 'Terrans', 'structures': [{}]*9}
         state = {'round': 0, 'phase': {'Setup': {}}, 'players': [me, other], 'boosters': list(boosters),
@@ -1803,6 +1803,89 @@ class OpeningBudgetTests(unittest.TestCase):
         goals, paired = self._exec_dedup(False, [a, b], pairs_out=[Goal('three', 'sequence', steps=(step,))])
         self.assertEqual(goals, [a, b])
         self.assertEqual(len(paired), 1)
+
+    def _setup_tasks(self, mj01, kind='PlaceStartingStructure', places=5, plans=3):
+        """The comparison set search builds for a decision with `places` candidates, wrapped as in the all factory."""
+        import four_factions.preparation as p
+        from four_factions.preparation import Goal
+        for name in ('goals_for', 'interleave_families', 'scoring_pairs'):
+            self.addCleanup(setattr, p, name, getattr(p, name))
+        self.addCleanup(tp._guide.__setitem__, 'mj01', tp._guide['mj01'])
+        self.addCleanup(lambda saved=list(budget_teacher.budget_hooks): budget_teacher.budget_hooks.__setitem__(slice(None), saved))
+        tp._guide['mj01'] = mj01
+        tp.install_setup_places()
+        tp.install_setup_places()                                                    # once
+        self.assertEqual(budget_teacher.budget_hooks.count(tp.setup_places_budget), 1)
+        snapshot = {'state': {'players': {0: {'faction': 'Terrans'}}}, 'player': 0,
+                    'candidates': [{'action': {'type': kind, 'coord': f'{i},0'}} for i in range(places)]}
+        scores = [(10.0-i, f's{i}') for i in range(places)]
+        plan_goals = [Goal(f'plan-{n}', 'sequence', steps=(Goal(f'colony@{n},0', 'colony', f'{n},0'),)) for n in range(plans)]
+        p.goals_for = lambda snapshot, **kwargs: list(plan_goals)
+        p.interleave_families = lambda items, family: list(items)
+        p.scoring_pairs = lambda snapshot, scores, goals: []
+        tp.install_task_dedup()
+        goals = p.interleave_families(p.goals_for(snapshot), lambda g: g.family)
+        paired = p.scoring_pairs(snapshot, scores, goals)
+        roots = [Goal(f'root-{i}', 'root', first=i) for i in range(1, places)]
+        tasks = [Goal('current-choice', first=0), *goals, *p.interleave_families(roots, lambda g: g.family), *paired]
+        return snapshot, scores, tasks
+
+    def test_setup_places_every_open_place_is_one_comparison_with_the_gate_on(self):
+        snapshot, scores, tasks = self._setup_tasks(True)
+        budget = budget_teacher.budget_for(snapshot, scores, 4)
+        self.assertEqual(budget, 5)                                                  # max(spec 4, 5 places)
+        self.assertEqual(budget_teacher.budget_for(snapshot, scores, 8), 8)
+        self.assertEqual(len(tasks), 5)
+        self.assertEqual([t.first for t in tasks], [0, 1, 2, 3, 4])                  # control + root-1..4, no repeated place
+        from current_actions.conservation import BLOCKED, PREFIX
+        scores[3] = (BLOCKED, PREFIX+'blocked')
+        self.assertEqual(budget_teacher.budget_for(snapshot, scores, 2), 4)          # blocked places are not counted
+
+    def test_setup_places_other_decisions_and_gate_off_are_unchanged(self):
+        snapshot, scores, tasks = self._setup_tasks(True, kind='Upgrade')
+        self.assertEqual(budget_teacher.budget_for(snapshot, scores, 4), 4)
+        self.assertEqual([t.name for t in tasks][:4], ['current-choice', 'plan-0', 'plan-1', 'plan-2'])
+        snapshot, scores, tasks = self._setup_tasks(False)
+        self.assertEqual(budget_teacher.budget_for(snapshot, scores, 4), 4)
+        self.assertEqual(len(tasks), 1+3+4)                                          # the plans stay with the gate off
+
+    def test_setup_places_keeps_ordered_plans_whose_first_move_is_not_predictable(self):
+        import four_factions.preparation as p
+        from four_factions.preparation import Goal
+        snapshot, scores, tasks = self._setup_tasks(True, plans=0)
+        ordered = Goal('track-plan', 'ordered', steps=(Goal('Economy-2', 'research'),))
+        p.goals_for = lambda snapshot, **kwargs: [ordered, Goal('x', 'sequence', steps=(Goal('c', 'colony', '1,0'),))]
+        goals = p.goals_for(snapshot)
+        p.scoring_pairs(snapshot, scores, goals)
+        self.assertEqual(goals, [ordered])
+
+    def start_snapshot_two_placed(self, mine):
+        """far_start_snapshot where the actor already placed the structures at `mine`."""
+        snapshot = self.far_start_snapshot()
+        snapshot['state']['players'][0]['structures'] = [{'hex': c} for c in mine]
+        return snapshot
+
+    def test_all_factory_first_start_is_never_blocked_for_being_far(self):
+        from current_actions.conservation import blocked
+        scores = [(5.0, 'far'), (4.0, 'near')]
+        snapshot = self.start_snapshot_two_placed([])
+        snapshot['state']['board']['hexes']['1,0']['planet']['planet_type'] = 'Ice'      # no far-start exception
+        self.assertTrue(blocked(tp.guide_r1_scores(snapshot, scores)[0]))                # gate off: blocked as before
+        tp._guide['mj01'] = True
+        self.assertEqual(tp.guide_r1_scores(snapshot, scores), scores)                   # nothing placed yet: free
+
+    def test_all_factory_second_start_is_free_once_the_first_is_near_and_blocked_while_it_is_far(self):
+        from current_actions.conservation import blocked
+        scores = [(5.0, 'far'), (4.0, 'near')]
+        tp._guide['mj01'] = True
+        far_first = self.start_snapshot_two_placed(['-9,0'])
+        far_first['state']['board']['hexes']['1,0']['planet']['planet_type'] = 'Ice'
+        self.assertTrue(blocked(tp.guide_r1_scores(far_first, scores)[0]))               # first start far: second must be near
+        near_first = self.start_snapshot_two_placed(['4,0'])                              # 4,0 is 1 from the opponent at 3,0
+        near_first['state']['board']['hexes']['1,0']['planet']['planet_type'] = 'Ice'
+        self.assertEqual(tp.guide_r1_scores(near_first, scores), scores)                 # one near start is enough
+        tp._guide['mj01'] = False
+        self.assertTrue(blocked(tp.guide_r1_scores(near_first, scores)[0]))              # gate off: unchanged
 
     def test_plan_menu_orders_the_front_by_the_faction_row(self):
         from four_factions.preparation import Goal
