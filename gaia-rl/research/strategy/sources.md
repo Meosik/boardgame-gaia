@@ -49,6 +49,8 @@
 - **IR01** (2026-10-17 사용자 전달): [IRIS의 가이아 프로젝트 공략 [기본 가이드라인]](https://m.blog.naver.com/iristrategy/222698940336), iris, 2022-04-12, 네이버 블로그 저장 페이지
   (`docs/references/discord/1560892963318538381-IRIS`, 본문 추출 `iris-basic-guideline.txt`, git 제외). 기본판 4인 공통 전략, 어잌후와 다른 저자.
   정리: [iris-basic-guideline.md](iris-basic-guideline.md), 주장 IR01-01~. 1R 선아카데미는 아이타·발타크·타클론만 권장(기오덴·테란은 비권장) — 적용 중인 어잌후 순서와 충돌, 사용자 판단 대기.
+- **MJ01** (2026-10-24 사용자 전달): [가이아 확장 변경점 및 종족 평가](https://boardlife.co.kr/bbs_detail.php?bbs_num=2191&tb=board_knowhow), 명준, 2024-07-22(10-17 수정, 200판+), 보드라이프 저장 PDF 14쪽
+  (`docs/references/discord/1563551561748062338--_.pdf`, git 제외). 확장판 4인, 함선 액션·인공물·트랙 가치 변화와 18종족 평가. 정리: [mj01-lf-changes-factions.md](mj01-lf-changes-factions.md), 주장 MJ01-01~28.
 - 채팅으로 제공된 영어 오프닝 분석: 원문 작성자/발행일/표본과의 연결이 미확인. BGG 기오덴 상담 링크의 본문이라고 추정하지 않는다.
 - 앞서 제공된 BGA 득점·선택 횟수 표: 조건부 관측 자료. 표별 동일 표본 여부 및 집계 정의 미확인. 강함의 순위나 확장 환경의 목표값으로 고정하지 않는다.
 
