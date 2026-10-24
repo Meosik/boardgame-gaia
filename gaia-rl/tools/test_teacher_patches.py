@@ -1095,8 +1095,30 @@ class OpeningBudgetTests(unittest.TestCase):
             self.assertTrue(tp.plan_affordable(snapshot, None))
             nevlas['structures'] = [{'kind': 'Mine', 'hex': '0,0'}]
             self.assertFalse(tp.plan_affordable(snapshot, None))                   # no institute: 3 tokens needed
+            # Mixed shortfall with the institute: ore 2 tokens + credit 1 token = 3 > 2 (odd remainders lost).
+            tp._plan_cost = lambda snapshot, goal: {'ore': 1, 'credits': 1}
+            tp._plan_budget = lambda state, player: {}
+            nevlas['structures'] = [{'kind': 'PlanetaryInstitute', 'hex': '0,0'}]
+            self.assertFalse(tp.plan_affordable(snapshot, None))
         finally:
             tp._menu_multi_step, tp._plan_cost, tp._plan_budget = originals
+        # Public check (debate 1/1): Firaks with the lab standing, 'downgrade → lab' is two pending steps and the
+        # rebuild (3 ore, 5 credits) is checked against the budget.
+        firaks = dict(player, faction='Firaks', structures=[{'kind': 'ResearchLab', 'hex': '0,0'}],
+                      resources=dict(player['resources'], ore=1, credits=1))
+        state['players'] = [firaks]
+        rebuild = Goal('Firaks-lab-downgrade-rebuild@0,0', 'ordered', steps=(
+            Goal('FiraksDowngradeResearchLab@0,0', 'faction-action', '0,0', 'FiraksDowngradeResearchLab'), lab))
+        family, budget = tp._menu_family, tp._plan_budget
+        try:
+            tp._menu_family = lambda snapshot, goal: 'ability'
+            tp._plan_budget = lambda state, player: {'ore': 1, 'credits': 1}
+            self.assertEqual(tp._pending_steps(snapshot, rebuild), 2)
+            self.assertFalse(tp.plan_affordable(snapshot, rebuild))
+            tp._plan_budget = lambda state, player: {'ore': 3, 'credits': 5}
+            self.assertTrue(tp.plan_affordable(snapshot, rebuild))
+        finally:
+            tp._menu_family, tp._plan_budget = family, budget
 
     def test_all_factory_range_tile_early_only_and_stops_navigation(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup

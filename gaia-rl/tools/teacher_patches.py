@@ -4101,7 +4101,30 @@ def _menu_multi_step(snapshot, goal):
     if goal.family != 'ordered' or _menu_family(snapshot, goal) not in ('track', 'ability'):
         return False
     from four_factions.preparation import achieved
-    return sum(not achieved(snapshot, snapshot['player'], step) for step in goal.steps) >= 2
+    player = snapshot['state']['players'][snapshot['player']]
+    if not _part(player, 'mj01'):
+        return sum(not achieved(snapshot, snapshot['player'], step) for step in goal.steps) >= 2
+    return _pending_steps(snapshot, goal) >= 2
+
+
+def _pending_steps(snapshot, goal):
+    """mj01: steps still to play, in plan order — an upgrade is pending when the simulated building (after the plan's
+    own earlier upgrades and Firaks downgrades) is not the target yet, as _plan_cost counts (debate 1/1: a Firaks
+    'downgrade → lab' with the lab standing now is two steps, not one)."""
+    from four_factions.preparation import achieved, owned
+    player = snapshot['state']['players'][snapshot['player']]
+    pending = 0
+    for step in goal.steps:
+        if step.family == 'upgrade' and step.coord:
+            cost, player = _upgrade_chain_cost(snapshot, player, step)
+            pending += bool(cost) or owned(player, step.coord) is None
+        elif step.family == 'faction-action' and step.target == 'FiraksDowngradeResearchLab' and step.coord:
+            pending += 1
+            player = {**player, 'structures': [{**s, 'kind': 'TradingStation'} if s['hex'] == step.coord else s
+                                               for s in player['structures']]}
+        else:
+            pending += not achieved(snapshot, snapshot['player'], step)
+    return pending
 
 
 def plan_affordable(snapshot, goal):
@@ -4127,9 +4150,11 @@ def plan_affordable(snapshot, goal):
     if player['faction'] == 'Nevlas':
         # Knowledge: one token to the Gaia area each; the rest is spent as power, two per token with the institute
         # (rulebook p.21) — the two uses counted apart (debate 1/1).
+        # Each free conversion is paid on its own and an odd remainder is lost (engine power_action_token_cost rounds
+        # up per payment, debate 1/1): tokens per unit = ceil(rate / 2) with the institute.
         pi = any(_structure_kind(s) == 'PlanetaryInstitute' for s in player['structures'])
-        spent = sum(POWER_CONVERSION[key]*n for key, n in short.items() if key != 'knowledge')
-        return short.get('knowledge', 0) + -(-spent // (2 if pi else 1)) <= tokens
+        per_unit = {key: -(-POWER_CONVERSION[key] // (2 if pi else 1)) for key in POWER_CONVERSION}
+        return short.get('knowledge', 0) + sum(per_unit[key]*n for key, n in short.items() if key != 'knowledge') <= tokens
     return sum(POWER_CONVERSION[key]*n for key, n in short.items()) <= tokens + brainstone
 
 
