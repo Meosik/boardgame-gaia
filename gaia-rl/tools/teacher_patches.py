@@ -5023,11 +5023,16 @@ def rebellion_ts_scores(env, snapshot, scores):
 # the VP the faction's first round-1 opening earns at pass (VP_CHARGES charges each), plus situation terms:
 #   2 credits + QIC (9): the Rebellion ship within setup reach (its 3-QIC tech action, L3-8), or ore to spare.
 #   1 terraform (12): cheap planets in reach that all need a step (no home-type planet in reach).
-#   2 power tokens + ore (2): LF02 "1R엔 별로" unless round-1 instant Gaia forming (tokens managed early) or the Twilight
+#   2 power tokens + ore (2): with ore + knowledge (L4-18 below), more with round-1 instant Gaia forming (tokens managed early) or the Twilight
 #     ship in reach (3 power + 2 tokens toward its artifact; user).
 #   range +3 (8) without a +3-only target and instant Gaia (5) that does not work keep a fallback ("3·2는 너무 작다").
-BOOSTER_CHARGES = {9: 9.4, 12: 8.4, 8: 9.0, 5: 8.0, 13: 8.0, 2: 6.0, 4: 4.0, 3: 4.0, 7: 4.0, 1: 4.0, 6: 4.0, 10: 4.0,
+#   User (same night): "사거리 3이 안 맞는 경우가 있나? 더 적은 칸에서 쓰거나 QIC까지 써서 더 멀리" — LF04 L4-18 (lf03-lf04-
+#     goals-round1.md:49) puts QIC, range, 1 terraform and instant Gaia in the round-1 top group and 4 power, 2 tokens,
+#     ore + knowledge next: range +3 keeps its full value always (a +3-only target adds RANGE_TARGET), 2 tokens sit
+#     with ore + knowledge.
+BOOSTER_CHARGES = {9: 9.4, 12: 8.4, 8: 9.0, 5: 8.0, 13: 8.0, 2: 8.0, 4: 4.0, 3: 4.0, 7: 4.0, 1: 4.0, 6: 4.0, 10: 4.0,
                    11: 4.8, 14: 3.6}
+RANGE_TARGET = 1.0
 BOOSTER_PASS_COUNTS = {3: ('M', 1), 7: ('TS', 2), 1: ('RL', 3), 4: ('big', 4)}   # pass VP per counted building
 # Debate 1/1: LF02's 1.5 charges a VP is the round 4-5 rate and "1–4R은 충전이 점수보다 좋다" (lf01-lf02-value-table.md
 # :20-26), so a round-1 pass VP is discounted. 1.0 is the bot's reading (the source gives no round-1 number).
@@ -5039,7 +5044,6 @@ RANGE_BOOSTER = 8
 BIG_BUILDING_BOOSTER = 4
 POWER_TOKEN_BOOSTER = 2
 RANGE_BOOSTER_EXTRA = 3
-RANGE_FALLBACK = 6.0               # range +3 with no +3-only target
 INSTANT_GAIA_FALLBACK = 5.0        # instant Gaia that does not work in round 1
 INSTANT_GAIA_ASTEROID = 1.0
 QIC_REBELLION = 2.0
@@ -5184,8 +5188,8 @@ def booster_tier_value(snapshot, booster):
         value += VP_CHARGES * PLANET_TYPES_R1
     elif booster == FORMER_BOOSTER:
         value += VP_CHARGES * 3 * _formers_at_pass(state, player)
-    elif booster == RANGE_BOOSTER and not _range_booster_target(state, player, gaia_ok):
-        value = RANGE_FALLBACK
+    elif booster == RANGE_BOOSTER:
+        value += RANGE_TARGET * _range_booster_target(state, player, gaia_ok)
     elif booster == INSTANT_GAIA_BOOSTER:
         if gaia_ok and _in_reach(state, player, reach, ('Transdim',)):
             value += INSTANT_GAIA_ASTEROID if _in_reach(state, player, reach, ('Asteroid',)) else 0.0
