@@ -64,6 +64,22 @@ class LabTests(unittest.TestCase):
         finally:
             lab.notify, lab.scan_seeds, lab.publish, lab.run_ab = original
 
+    def test_run_pending_runs_one_experiment_per_call_but_skips_held_ones(self):
+        self.queue('a', {'kind': 'command', 'run': ['x']})
+        self.queue('b', {'kind': 'command', 'run': ['x']})
+        original = lab.run_one
+        try:
+            calls = []
+            lab.run_one = lambda name, spec, jobs, push: (calls.append(name), True)[1]
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 1)
+            self.assertEqual(calls, ['a'])
+            calls.clear()
+            lab.run_one = lambda name, spec, jobs, push: (calls.append(name), name == 'b')[1]
+            self.assertEqual(lab.run_pending(jobs=1, push=False), 1)
+            self.assertEqual(calls, ['a', 'b'])
+        finally:
+            lab.run_one = original
+
     def test_command_experiment_writes_a_result_and_leaves_the_queue(self):
         metrics = self.dir/'m.json'
         self.queue('cmd', {'kind': 'command', 'note': 'smoke',

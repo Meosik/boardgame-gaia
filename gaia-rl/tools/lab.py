@@ -763,13 +763,14 @@ def run_one(name, spec, jobs, push):
 
 
 def run_pending(jobs, push):
-    ran = 0
     for name, spec in pending():
         if spec.get('kind') == 'external':
             continue
         if run_one(name, spec, jobs, push):
-            ran += 1
-    return ran
+            # one experiment per call: the watch loop pulls and rebuilds before the next, so queue edits made
+            # during a run are used (112 ran a stale spec)
+            return 1
+    return 0
 
 
 # ── commands ────────────────────────────────────────────────────────────────
