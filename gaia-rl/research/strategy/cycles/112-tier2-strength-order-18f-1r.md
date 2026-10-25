@@ -1,9 +1,13 @@
 # Cycle 112 — all_tier self-play with strength turn order (`@order`), 18 factions — diagnostic, 1R
 
 A = B = `tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json` (same code as 111).
-Part under test: no teacher part — the seed suffix `@order` (engine 1d3fc6c) sets the setup turn order from
-`tools/faction_strength.py` (tier · tech tiles · planet layout, equal weights, neighbour/round terms off; user 10-26
-"예전 자료는 오염"): weakest faction moves 1st, strongest 4th. Queued 2026-10-26 by the user ("한번 테스트 받아보고 싶긴 하네", E117).
+Part under test: no teacher part — the seed suffix `@order` (engine 1d3fc6c) sets the setup turn order:
+weakest faction moves 1st, strongest 4th. **The run used the queue version of 1b65403** (orders from
+`faction_strength.py` e999607, non-negative fitted weights tier 9.7 · neighbour 2.7 · round 2.5 — result page line 3;
+all 12 seeds' `@order` in `result.json` equal 1b65403's list, e.g. geo-1080194 `2,0,3,1`). The later queue edits
+9488c1b → ca96b32 (user 10-26 "예전 자료는 오염": tier · techs · planet layout, no lab-fit weights; geo-1080194
+`3,2,0,1`) were committed before the run started (03:32, lab commit 5eb0d0c) but **not run** — the current strength
+design is untested (why lab kept the old file: not checked). Queued 2026-10-26 by the user ("한번 테스트 받아보고 싶긴 하네", E117).
 Pre-registered verdict: **none** (same teacher both arms; swapped seats are repeat samples). Read: ① placement order with
 faction exceptions + booster reverse order match `@order` ② how the 4th-turn strong faction places and picks boosters
 (replays) ③ 1R charges by turn position (reference).
@@ -54,8 +58,10 @@ against each game's `@order`: **all 22 match**.
 | 4 (strongest) | 22 | 94.6 | 67–117 | Xenos 8 · Ivits 4 · Ambas 4 · Bescods 2 · Taklons 2 · Geodens 2 |
 
 The 4th seat is highest, but turn position and faction are the same variable here (order comes from strength), so this
-does not show that the late turn helps or hurts. Note: `faction_strength.py` put **Terrans weakest in all 8** of their
-games, while Terrans are the 2nd-highest charger in the run (95–99) — the ranking disagrees with in-game 1R charges.
+does not show that the late turn helps or hurts. Note: the **old** formula (e999607) put **Terrans weakest in all 8**
+of their games, while Terrans are the 2nd-highest charger in the run (95–99). The current queue orders (ca96b32) put
+Terrans 1st in 3 of their 6 seeds, 2nd in 2, 4th in 1 (quartet-e-73387) — the "always weakest" finding belongs to the
+old formula only.
 
 ## Reading (HANDOFF 1 order)
 
@@ -74,8 +80,8 @@ Lab after this: queue empty.
 
 ## Proposal (user decision, nothing queued)
 
-- (ㄱ) Publish the 18 per-faction replays (rebuild extension, then publish; 111's removed) — bot turn, lab 0.
-- (ㄴ) Order effect: same seeds, two `@order` variants (strength order vs reversed) → same factions at turn 1 and 4,
-  1R, 24 games ≈ 2.5 h; also re-runs quartet-b-67485 with the d5946bd fix.
-- (ㄷ) Check `faction_strength.py` Terrans ranking (why weakest in 8/8) — bot turn.
-Bot recommendation: (ㄱ) + (ㄷ) first, then (ㄴ).
+- (ㄱ) Re-run 112 with the current queue orders (ca96b32), same 12 seeds, 1R, ≈ 2.5 h — the design the user asked
+  for; also re-runs quartet-b with the d5946bd fix. First check why lab ran the 1b65403 file (bot turn).
+- (ㄴ) Order effect: same seeds, strength order vs reversed → same factions at turn 1 and 4, 1R, 24 games ≈ 2.5 h.
+- (ㄷ) Publish per-faction replays (rebuild extension) — after (ㄱ), from that run.
+Bot recommendation: (ㄱ) → (ㄷ) → (ㄴ). Terrans ranking check only if the current formula still misranks them.
