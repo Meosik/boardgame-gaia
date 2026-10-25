@@ -3,15 +3,15 @@
 "게임 시작 전 잘 풀릴 것 같은 종족부터 4·3·2·1턴": the strongest faction moves last. Features, all from the setup state
 before any placement (a faction's candidate starts are the free planets of its home type):
   tier     SH09 expansion tier table (sources.md:53): A 4, B 3, C 2, D 1, F 0.
-  planets  cheap planets within 3 of the two best candidate starts (home type or one step; Gaia/Transdim for a
-           Gaia-track faction; Asteroid/proto for Lost Fleet factions).
+  planets  1-shovel planets (terraform steps <= 1) within 3 of the two best candidate starts.
   techs    standard tiles under the faction's tracks that it prefers (TILE_PREFS, the charge-4 tile) plus good
            advanced tiles (GOOD_ADVANCED) on those tracks.
   ships    ships within SHIP_SETUP_RANGE of the best start, the tech-federation ship counting double.
+  cluster  minus the distance from the best start to the nearest other free home-type planet (homes not spread).
   power    other factions' home-type planets within 2 of the best start (charges from neighbours).
   rounds   round tiles 1-3 and the two final goals that fit the faction (ROUND_FIT, bot's first reading; to be
            replaced by the faction round-scoring claims).
-Each feature is turned into a z-score over the four seats and summed with WEIGHTS (tier, planets, techs equal; user 2026-10-26: no weights from lab games). The order lists seats weakest first.
+Each feature is turned into a z-score over the four seats and summed with WEIGHTS (tier, planets, techs, ships, cluster equal; user 2026-10-26: no weights from lab games). The order lists seats weakest first.
 
   GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-20260917:gaia-rl/tools \\
     gaia-rl/.venv/bin/python gaia-rl/tools/faction_strength.py quartet-d-113082 geo-quartet-1075607 [--table]
@@ -57,10 +57,11 @@ ROUND_FIT = {
     'MostDeepSpaceSectors': LOST_FLEET,
     'GreatestDistancePiAcademy': {'Ivits', 'Lantids'},
 }
-# user 2026-10-26: old lab games are contaminated, no fitted weights — tier list (SH09), cheap planets near the start
-# and tech tiles on the faction's tracks, equal weight per z; ships, power, rounds off (the earlier strength_fit.py
+# user 2026-10-26: old lab games are contaminated, no fitted weights — tier list (SH09), tech tiles, and planet
+# placement as the user defined it: homes close together, ships near the start, many 1-shovel planets around the
+# homes — equal weight per z; power, rounds off (the earlier strength_fit.py
 # nnls fit on 060+ games, tier 9.7 power 2.7 rounds 2.5, is dropped).
-WEIGHTS = {'tier': 1.0, 'planets': 1.0, 'techs': 1.0, 'ships': 0.0, 'power': 0.0, 'rounds': 0.0}
+WEIGHTS = {'tier': 1.0, 'planets': 1.0, 'techs': 1.0, 'ships': 1.0, 'cluster': 1.0, 'power': 0.0, 'rounds': 0.0}
 NEAR = 3
 NEIGHBOUR = 2
 
@@ -84,20 +85,19 @@ def features(state):
     for p in state['players']:
         seat, faction, home = p['player_id'], p['faction'], homes[p['player_id']]
         tracks = set(tp._faction_tracks(p))
-        kinds = {'Gaia', 'Transdim'} if 'gaia' in tracks else set()
-        if faction in LOST_FLEET:
-            kinds |= {'Asteroid', 'ProtoPlanet'}
 
         def cheap(c, kind, start):
             # debate 1/1: _terraform_steps prices Lost Fleet factions (Darkanians 1, SpaceGiants 2, Moweyds /
             # Tinkeroids 1 or 3) where _cheap_planet needs a home colour on the ring
             steps = tp._terraform_steps(state, p, kind)
-            return c != start and ((steps is not None and steps <= 1) or kind in kinds)
+            return c != start and steps is not None and steps <= 1
         starts = [c for c, kind in free.items() if kind == home] or list(free)
         room = sorted((sum(1 for c, kind in free.items() if cheap(c, kind, s) and distance(s, c) <= NEAR), s)
                       for s in starts)[::-1]
         best = room[0][1] if room else None
         planets = statistics.mean(n for n, _ in room[:2]) if room else 0
+        others_home = [c for c in starts if c != best]
+        cluster = -min(distance(best, c) for c in others_home) if best and others_home else -10
         prefs = tp.TILE_PREFS.get(faction, {})
         good = (tp.GOOD_GAIA_TILES | set(prefs.get('prefer', ()))) - set(prefs.get('avoid', ()))
         techs = sum(1 for i, tile in enumerate(slots[:6]) if TRACKS[i] in tracks and tile in good) \
@@ -108,7 +108,7 @@ def features(state):
         power = sum(1 for c, kind in free.items() if best and kind in others and distance(best, c) <= NEIGHBOUR)
         fit = sum(1 for cond in rounds if faction in ROUND_FIT.get(cond, ()))
         rows[seat] = {'faction': faction, 'tier': TIER.get(faction, 2), 'planets': planets, 'techs': techs,
-                      'ships': ship_score, 'power': power, 'rounds': fit}
+                      'ships': ship_score, 'cluster': cluster, 'power': power, 'rounds': fit}
     return rows
 
 
