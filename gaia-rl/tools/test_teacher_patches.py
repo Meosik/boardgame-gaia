@@ -109,16 +109,25 @@ class GeodensGuideTests(unittest.TestCase):
             checked += 1
         self.assertGreater(checked, 0)
 
-    def test_colony_cost_with_a_non_ring_home_prices_ring_planets_as_three_steps(self):
+    def test_colony_cost_lost_fleet_planet_steps(self):
+        # Lost Fleet: ProtoPlanet fixed 3 steps, Asteroid gaiaformer (0); ring planets use the faction value.
         from unittest import mock
         import economy.teacher as economy
         import four_factions.value as value
-        state = {'board': {'hexes': {'h': {'planet': {'planet_type': 'Terra'}}}}}
-        for faction in ('Moweyds', 'Tinkeroids', 'Darkanians', 'SpaceGiants'):
-            player = {'faction': faction, 'structures': [{'hex': 's'}], 'resources': {'qic': 0}}
+        state = {'board': {'hexes': {'h': {'planet': {'planet_type': 'Terra'}}}}, 'players': []}
+        def cost(faction, kind, **extra):
+            state['board']['hexes']['h']['planet']['planet_type'] = kind
+            player = {'faction': faction, 'structures': [{'hex': 's'}], 'resources': {'qic': 0}, **extra}
             with mock.patch.object(economy, 'path_distance', lambda *a: 0), \
                     mock.patch.object(value, 'navigation', lambda p: 1):
-                self.assertEqual(tp._colony_cost(state, player, 'h'), (False, 3), faction)
+                return tp._colony_cost(state, player, 'h')
+        self.assertEqual(cost('Darkanians', 'Terra'), (False, 1))
+        self.assertEqual(cost('SpaceGiants', 'Terra'), (False, 2))
+        self.assertEqual(cost('Moweyds', 'Terra', expensive_terraforming_planet_types=['Terra']), (False, 3))
+        self.assertEqual(cost('Moweyds', 'Terra', expensive_terraforming_planet_types=['Swamp']), (False, 1))
+        for faction in ('Darkanians', 'Xenos'):
+            self.assertEqual(cost(faction, 'Asteroid'), (False, 0), faction)
+            self.assertEqual(cost(faction, 'ProtoPlanet'), (False, 3), faction)
 
     def test_only_geodens_rollouts_use_the_second_income_boundary(self):
         import four_factions.preparation as preparation
@@ -2472,6 +2481,12 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(steps(state, xenos, xenos_home), 0)
         far = RING[(RING.index(xenos_home)+4) % 7]
         self.assertEqual(steps(state, xenos, far), 3)
+        # ProtoPlanet is always 3 steps of ore; an Asteroid costs no ore.
+        for p in (xenos, moweyds, player('Darkanians')):
+            self.assertEqual(steps(state, p, 'ProtoPlanet'), 3, p['faction'])
+            state['board']['hexes']['1,1']['planet']['planet_type'] = 'Asteroid'
+            with mock.patch('economy.teacher.path_distance', return_value=0), mock.patch('four_factions.value.navigation', return_value=1):
+                self.assertEqual(tp._mine_cost(state, p, '1,1'), {'qic': 0})
 
     def test_install_track_plans_puts_plans_first_and_drops_the_bare_research_goal(self):
         import four_factions.preparation as p

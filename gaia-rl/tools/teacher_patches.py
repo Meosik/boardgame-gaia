@@ -317,16 +317,15 @@ def _colony_cost(state, player, coord):
     starts = [s['hex'] for s in player['structures']]
     qic = max(0, (path_distance(state, starts, coord)-navigation(player)+1)//2)
     kind = planet['planet_type']
-    from faction_teachers.profiles import profiles
-    home = profiles()[player['faction']].home
     if kind == 'Gaia':
         steps, qic = 0, qic+1
-    elif kind in RING and home in RING:
-        gap = abs(RING.index(home)-RING.index(kind))
-        steps = min(gap, 7-gap)
+    elif kind in RING:
+        steps = _terraform_steps(state, player, kind)
+    elif kind == 'Asteroid':
+        # Lost Fleet: ProtoPlanet fixed 3 steps, Asteroid gaiaformer (0 steps)
+        steps = 0
     else:
-        # Asteroid / ProtoPlanet / Lost planet target, or a non-ring home (Lost Fleet
-        # Asteroid/ProtoPlanet factions): no ring distance; examined last
+        # ProtoPlanet (Lost Fleet: fixed 3 steps) / Lost planet target
         steps = 3
     return (qic > player['resources']['qic'], steps+qic)
 
@@ -4220,6 +4219,8 @@ def _mine_cost(state, player, coord):
         cost['qic'] += 1
     elif kind in RING:
         cost['ore'] += _terraform_steps(state, player, kind)*ORE_PER_STEP[player['research_tracks'].get('terraforming', 0)]
+    elif kind == 'ProtoPlanet':     # Lost Fleet: always 3 steps for every faction
+        cost['ore'] += 3*ORE_PER_STEP[player['research_tracks'].get('terraforming', 0)]
     return cost
 
 
