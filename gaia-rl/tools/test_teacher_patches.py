@@ -1984,6 +1984,47 @@ class OpeningBudgetTests(unittest.TestCase):
         p.scoring_pairs(snapshot, scores, goals)
         self.assertEqual(goals, [ordered])
 
+    def test_setup_booster_every_open_booster_is_one_comparison_plus_one_slot(self):
+        snapshot, scores, tasks = self._setup_tasks(True, kind='SelectStartingBooster', places=7)
+        self.assertEqual(budget_teacher.budget_for(snapshot, scores, 4), 8)          # 7 boosters + 1 slot
+        self.assertEqual([t.first for t in tasks], list(range(7)))                   # control + root-1..6, plans dropped
+        snapshot, scores, tasks = self._setup_tasks(False, kind='SelectStartingBooster', places=7)
+        self.assertEqual(budget_teacher.budget_for(snapshot, scores, 4), 4)          # gate off: unchanged
+
+    def test_setup_booster_real_planned_tasks_have_no_bgg_goal_and_compare_every_booster(self):
+        import budget_teacher
+        import four_factions.preparation as p
+        import parallel_search
+        from four_factions.preparation import Policies, PolicyCache
+        from current_actions.conservation import blocked
+        for name in ('goals_for', 'interleave_families', 'scoring_pairs'):
+            self.addCleanup(setattr, p, name, getattr(p, name))
+        self.addCleanup(lambda saved=list(budget_teacher.budget_hooks): budget_teacher.budget_hooks.__setitem__(slice(None), saved))
+        tp._guide['mj01'] = True
+        self.addCleanup(tp._guide.__setitem__, 'mj01', False)
+        import bgg_openings.planning as planning
+        self.addCleanup(setattr, planning, 'goals', planning.goals)
+        self.addCleanup(setattr, planning, 'select_forecast', planning.select_forecast)
+        tp.install_setup_places()
+        tp.install_setup_no_bgg()
+        tp.install_task_dedup()
+        env = Environment(SEED, 2000)
+        snapshot = json.loads(env.snapshot_json())
+        while not any(c['action']['type'] == 'SelectStartingBooster' for c in snapshot['candidates']):
+            env.step(snapshot['decision_id'], 0)
+            snapshot = json.loads(env.snapshot_json())
+        policies = Policies({}, cache=PolicyCache(), shared_factions=True)
+        scores = policies.rank(env, snapshot)
+        tasks, _ = parallel_search._planned_tasks(env, snapshot, {}, scores, policies,
+                                                  {'bgg_openings': True, 'shared_factions': True})
+        budget = budget_teacher.budget_for(snapshot, scores, 4)
+        self.assertFalse([t for t in tasks if t.family == 'bgg-opening'])
+        firsts = {t.first for t in tasks[:budget] if t.first is not None}
+        open_boosters = {i for i, c in enumerate(snapshot['candidates'])
+                         if c['action']['type'] == 'SelectStartingBooster' and not blocked(scores[i])}
+        self.assertGreater(len(open_boosters), 4)
+        self.assertLessEqual(open_boosters, firsts)
+
     def _bgg_wrapped(self, mj01):
         import bgg_openings.planning as planning
         self.addCleanup(setattr, planning, 'goals', planning.goals)

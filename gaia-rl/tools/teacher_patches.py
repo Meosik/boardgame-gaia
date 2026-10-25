@@ -4547,15 +4547,25 @@ def setup_places(snapshot, scores):
     return sum(1 for i in _setup_placement(snapshot) if not blocked(scores[i]))
 
 
+SETUP_CHOICE_TYPES = ('PlaceStartingStructure', 'SelectStartingBooster')
+
+
 def _setup_placement(snapshot):
-    """Candidate indices of a PlaceStartingStructure decision of an mj01 (ships_menu1_all) player, else []."""
+    """Candidate indices of a setup choice — a start place, or (user 2026-10-25, lab 108b, known-bad 11/22: the
+    2 credits + 1 QIC and 4-power boosters never reached the four comparisons) the starting booster — of an mj01
+    (ships_menu1_all) player, else []. Every such candidate gets its own comparison with the same default follow-up."""
     try:
         player = snapshot['state']['players'][snapshot['player']]
         if not _part(player, 'mj01'):
             return []
-        return [i for i, c in enumerate(snapshot['candidates']) if c['action']['type'] == 'PlaceStartingStructure']
+        return [i for i, c in enumerate(snapshot['candidates']) if c['action']['type'] in SETUP_CHOICE_TYPES]
     except (KeyError, TypeError, IndexError):
         return []
+
+
+def _setup_booster(snapshot):
+    """True at the starting-booster pick of an mj01 player."""
+    return any(snapshot['candidates'][i]['action']['type'] == 'SelectStartingBooster' for i in _setup_placement(snapshot))
 
 
 _bgg_setup = [False]    # the last bgg_openings.planning.goals call was for a setup placement
@@ -4590,8 +4600,11 @@ def install_setup_no_bgg():
 
 
 def setup_places_budget(snapshot, scores, budget):
-    """budget_teacher hook: every unblocked start place is rolled out once (control + one root per other place)."""
-    return max(budget, setup_places(snapshot, scores))
+    """budget_teacher hook: every unblocked start place / starting booster is rolled out once (control + one root per
+    other choice); at the booster pick one more slot, so an ordered plan kept in SETUP_FIRST_FAMILIES cannot push the
+    last booster out."""
+    places = setup_places(snapshot, scores)
+    return max(budget, places + (1 if places and _setup_booster(snapshot) else 0))
 
 
 def install_setup_places():
