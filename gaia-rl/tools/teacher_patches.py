@@ -5164,7 +5164,13 @@ def _formers_at_pass(state, player):
     good = (GOOD_GAIA_TILES - set(prefs.get('not_under_gaia', ()))) | set(prefs.get('prefer', ()))
     planned = tracks.get('gaia', 0) >= 1 or 'gaia' in _faction_tracks(player) \
         or (len(slots) > GAIA_SLOT and slots[GAIA_SLOT] in good)
-    return int(planned and bool(_in_reach(state, player, _reach(player), ('Transdim',))))
+    return int(planned and bool(_in_reach(state, player, _gaia_reach(player), ('Transdim',))))
+
+
+def _gaia_reach(player):
+    """Reach for a round-1 Gaia forming: navigation plus one QIC's range when a QIC is held (user: "제노스가 즉시 포밍을
+    가져가는 경우" — 108d p002 g1 Xenos had two Transdim planets at 3 with navigation 1)."""
+    return _reach(player) + (QIC_RANGE if player['resources'].get('qic', 0) >= 1 else 0)
 
 
 def _ship_in_reach(state, player, ship):
@@ -5191,8 +5197,8 @@ def booster_tier_value(snapshot, booster):
     elif booster == RANGE_BOOSTER:
         value += RANGE_TARGET * _range_booster_target(state, player, gaia_ok)
     elif booster == INSTANT_GAIA_BOOSTER:
-        if gaia_ok and _in_reach(state, player, reach, ('Transdim',)):
-            value += INSTANT_GAIA_ASTEROID if _in_reach(state, player, reach, ('Asteroid',)) else 0.0
+        if gaia_ok and _in_reach(state, player, _gaia_reach(player), ('Transdim',)):
+            value += INSTANT_GAIA_ASTEROID if _in_reach(state, player, _gaia_reach(player), ('Asteroid',)) else 0.0
         else:
             value = INSTANT_GAIA_FALLBACK
     elif booster == CREDIT_QIC_BOOSTER:
@@ -5205,7 +5211,7 @@ def booster_tier_value(snapshot, booster):
         if home not in free and any(_cheap_planet(home, k) for k in free):
             value += TERRAFORM_NEEDED
     elif booster == POWER_TOKEN_BOOSTER:
-        if gaia_ok and _in_reach(state, player, reach, ('Transdim',)):
+        if gaia_ok and _in_reach(state, player, _gaia_reach(player), ('Transdim',)):
             value += TOKENS_EARLY_GAIA
         if _ship_in_reach(state, player, 'Twilight'):
             value += TOKENS_TWILIGHT
