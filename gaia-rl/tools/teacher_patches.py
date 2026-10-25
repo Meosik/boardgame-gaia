@@ -5173,6 +5173,26 @@ def _gaia_reach(player):
     return _reach(player) + (QIC_RANGE if player['resources'].get('qic', 0) >= 1 else 0)
 
 
+def _asteroid_after_forming(state, player):
+    """Debate 1/1: the former goes to an Asteroid only after the Gaia mine (Lost Fleet p.14), so the Asteroid must be in
+    reach from our sites or the formed Transdim planet with the QIC left after the forming's own range QIC. The mine's
+    ore and credits are not checked here (the opening's resources)."""
+    from strategy_teacher import distance
+    reach = _reach(player)
+    qic = player['resources'].get('qic', 0)
+    sites = _sites(player)
+    near = _in_reach(state, player, reach, ('Transdim',))
+    targets = near or _in_reach(state, player, _gaia_reach(player), ('Transdim',))
+    left = qic - (0 if near else 1)
+    far = reach + (QIC_RANGE if left >= 1 else 0)
+    for formed in targets:
+        bases = [*sites, formed]
+        if any(_free_planet(cell) and cell['planet']['planet_type'] == 'Asteroid'
+               and any(distance(b, c) <= far for b in bases) for c, cell in state['board']['hexes'].items()):
+            return True
+    return False
+
+
 def _ship_in_reach(state, player, ship):
     from strategy_teacher import distance
     at = (state['board'].get('spaceship_tiles') or {}).get(ship)
@@ -5198,7 +5218,7 @@ def booster_tier_value(snapshot, booster):
         value += RANGE_TARGET * _range_booster_target(state, player, gaia_ok)
     elif booster == INSTANT_GAIA_BOOSTER:
         if gaia_ok and _in_reach(state, player, _gaia_reach(player), ('Transdim',)):
-            value += INSTANT_GAIA_ASTEROID if _in_reach(state, player, _gaia_reach(player), ('Asteroid',)) else 0.0
+            value += INSTANT_GAIA_ASTEROID * _asteroid_after_forming(state, player)
         else:
             value = INSTANT_GAIA_FALLBACK
     elif booster == CREDIT_QIC_BOOSTER:
