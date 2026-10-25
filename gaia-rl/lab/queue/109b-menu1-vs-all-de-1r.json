@@ -1,0 +1,16 @@
+{
+ "kind": "ab",
+ "note": "사용자(2026-10-25 밤 \"확장 종족은 왜 안세지?\"; E101·E102 \"확장 종족까지 다 끼자\" — 1R 진단에선 E87 제외 해제): **109의 확장 종족 보충, 1R 진단판, 판정 없음** — 109(기본 14종족)에 확장 종족을 잘못 뺐던 것을 채운다. 설계는 109와 같음: A = ships_menu1, B = ships_menu1_all, 양팔 cap60-p2, 비교 4, stop_round 1(2R 시작 종료). 쿼텟 d(기오덴·모웨이드·타클론·팅커로이드)·e(다카니안·스페이스자이언트·테란·제노스) × 새 시드 3개 = 6쌍 × 좌석 교대 12판(≈ 1시간). 사전 등록: A/B 판정 없음(1R 충전은 참고). 정리 턴: 건강 + 종족별 1R 충전(참고) + `tools/r1_waste.py` 낭비 검토 후보(ship-unused·gaia-skipped, 후보일 뿐) + **B팔 리플레이 확장 4종족마다 1개(그 종족 좌석 초점, 1R 충전이 B 중앙값에 가장 가까운 판)** 게시 — 109 리플레이와 함께 둔다(109 정리 뒤면 109 것을 지우지 않음).",
+ "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-cap60-p2.json",
+ "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-cap60-p2.json",
+ "seeds": [
+  "quartet-d-24096",
+  "quartet-d-24742",
+  "quartet-d-25549",
+  "quartet-e-61264",
+  "quartet-e-61372",
+  "quartet-e-67798"
+ ],
+ "comparisons": 4,
+ "stop_round": 1
+}
