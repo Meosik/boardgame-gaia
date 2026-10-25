@@ -126,7 +126,8 @@ class GeodensGuideTests(unittest.TestCase):
         self.assertEqual(cost('Moweyds', 'Terra', expensive_terraforming_planet_types=['Terra']), (False, 3))
         self.assertEqual(cost('Moweyds', 'Terra', expensive_terraforming_planet_types=['Swamp']), (False, 1))
         for faction in ('Darkanians', 'Xenos'):
-            self.assertEqual(cost(faction, 'Asteroid'), (False, 0), faction)
+            self.assertEqual(cost(faction, 'Asteroid', gaiaformers_total=1), (False, 0), faction)
+            self.assertEqual(cost(faction, 'Asteroid'), (False, 3), faction)   # no free gaiaformer
             self.assertEqual(cost(faction, 'ProtoPlanet'), (False, 3), faction)
 
     def test_only_geodens_rollouts_use_the_second_income_boundary(self):

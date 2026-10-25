@@ -322,8 +322,8 @@ def _colony_cost(state, player, coord):
     elif kind in RING:
         steps = _terraform_steps(state, player, kind)
     elif kind == 'Asteroid':
-        # Lost Fleet: ProtoPlanet fixed 3 steps, Asteroid gaiaformer (0 steps)
-        steps = 0
+        # Lost Fleet: Asteroid is paid with a gaiaformer (0 steps); without a free one it is examined last
+        steps = 0 if _formers_free(player) else 3
     else:
         # ProtoPlanet (Lost Fleet: fixed 3 steps) / Lost planet target
         steps = 3
