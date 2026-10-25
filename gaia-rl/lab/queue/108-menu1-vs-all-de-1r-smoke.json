@@ -1,0 +1,14 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-25 \"빠뜨리지 말아야 할 건 수정 포함 확인과 실험 순서 — d·e 재스모크 먼저\"; HANDOFF E112 (ㄱ)): **1R 스모크, 판정 없음** — 107에서 셋업 크래시(d218d13 수정)로 빠진 쿼텟 d·e 4시드(107 pair-008–011과 같은 시드, 재사용 = 오류 해결 확인용) × 좌석 교대 = 8판, A = ships_menu1, B = ships_menu1_all(오늘 수정 전부), 양팔 cap60-p2, 비교 4, stop_round 1(2R 시작 종료, ≈ 1시간). 통과 기준: ① 8/8판 오류·타임아웃 0(확장 4종족이 셋업 뒤 1R을 끝까지) ② **실행 커밋이 5bc843a를 포함**(`git merge-base --is-ancestor 5bc843a <manifest 커밋>`) — 그래야 d218d13 크래시 수정·711f7bb 셋업 BGG 제거·508f0ec gaia_asteroid_hold·5f9c7fe/f14ed94 dead_tile·e3672af rebellion_ts·a017db1 매드 안드로이드 연구소 오프닝/1R 아카데미 금지·지식→돈 차단이 B에 들어감 ③ 최대 결정 시간(cap60 기대 ≈ 80초). 이 라인업에 하이브·발타크·매드 안드로이드는 없으므로 rebellion_ts·dead_tile·매드 규칙의 발동은 다음 4R A/B에서 본다; 여기서 볼 발동은 테란·제노스 gaia_asteroid_hold(1R 소행성 광산 A → B)와 셋업 배치 비교(배치 결정의 compared에 bgg-opening 없음, 열린 자리 모두). 1R 충전은 참고만. 통과 뒤(사용자 확인): menu1 vs all 4R, 기본 쿼텟 새 시드, 판정 1–3R 충전(≈ 8–9시간); 시간 상한·계획 중복·후보 누락 점검과 묶음별 분리·6R은 그 뒤.",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-cap60-p2.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-cap60-p2.json",
+  "seeds": [
+    "quartet-d-113082",
+    "quartet-d-113944",
+    "quartet-e-106400",
+    "quartet-e-113676"
+  ],
+  "comparisons": 4,
+  "stop_round": 1
+}
