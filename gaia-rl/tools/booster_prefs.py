@@ -66,6 +66,7 @@ FACTION_BOOSTER_PREFS = {
     'Nevlas': {4: 1.5, 3: -0.5, 7: -1.0},
     # PG15-T18
     'Xenos': {9: 1.5},
-    # B14-S11 PG08-T04 PG08-T07
-    'Geodens': {4: 1.5, 9: 0.5, 8: 0.5, 12: -0.5, 2: -1.0, 3: -1.0, 7: -1.0},
+    # B14-S11 PG08-T04 PG08-T07; PG08-T05 encoded for the institute start (ships_menu1_all Geodens opens 1PI first,
+    # RESOLVED_OPENINGS): the step booster is best (+1.0), PG08-T06's range +3 "without the institute" not applied
+    'Geodens': {4: 1.5, 9: 0.5, 12: 1.0, 2: -1.0, 3: -1.0, 7: -1.0},
 }
