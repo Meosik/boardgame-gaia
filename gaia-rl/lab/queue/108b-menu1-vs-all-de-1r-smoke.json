@@ -1,0 +1,14 @@
+{
+  "kind": "ab",
+  "note": "사용자(2026-10-25 \"진행해\"; HANDOFF E113 (ㄱ)): **108 재실행, 1R 스모크, 판정 없음** — 108은 8/8판이 1R 첫 수 부근 `_mine_cost` RING.index 크래시(확장 종족 고향 Asteroid·ProtoPlanet)로 끝남. 수정 14b4ad7(`_terraform_steps`, 확장 룰북 p.7) + ed5412b·9d8df5c(원시행성 고정 3삽, 소행성은 빈 포머 있으면 0삽, `_colony_cost` 확장 종족 단계값). 설계는 108과 같음: 쿼텟 d·e 같은 4시드 × 좌석 교대 = 8판, A = ships_menu1, B = ships_menu1_all, 양팔 cap60-p2, 비교 4, stop_round 1(2R 시작 종료, ≈ 1시간). 통과 기준: ① 8/8판 오류·타임아웃 0 ② **실행 커밋이 d5ad0de를 포함**(`git merge-base --is-ancestor d5ad0de <manifest 커밋>`) ③ 최대 결정 시간 ≈ 80초 이하. 볼 발동: 테란·제노스 gaia_asteroid_hold(1R 소행성 광산 A → B), 셋업 배치 비교(compared에 bgg-opening 없음). 1R 충전은 참고만. 통과 뒤(사용자 확인): menu1 vs all 4R, 기본 쿼텟 새 시드, 판정 1–3R 충전(≈ 8–9시간) + 105식 예산 유효성(완료 비교/결정 양팔 차 < 2%, 60초 초과 비율 차 < 1%p, 100초 초과 0, 완전 중복 계획 0/0, 후보 누락 양팔 집계 — 위반 시 판정 보류).",
+  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-cap60-p2.json",
+  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-cap60-p2.json",
+  "seeds": [
+    "quartet-d-113082",
+    "quartet-d-113944",
+    "quartet-e-106400",
+    "quartet-e-113676"
+  ],
+  "comparisons": 4,
+  "stop_round": 1
+}
