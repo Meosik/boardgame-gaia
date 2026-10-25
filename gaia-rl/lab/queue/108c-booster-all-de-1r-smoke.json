@@ -1,14 +1,19 @@
 {
-  "kind": "ab",
-  "note": "사용자(2026-10-25 \"한번 해봐\"): **시작 부스터 전부 비교 1R 스모크, 판정 없음** — 13067d5: all 팩토리(B)만 시작 부스터 결정에서 남은 부스터를 모두 한 번씩 비교(예산 = 부스터 수 + 1, 그 결정에선 BGG 오프닝 계획 없음; known-bad 11·22: 2돈+1QIC·4파워 부스터가 비교 4칸에 못 듦). 108b와 같은 쿼텟 d·e 4시드 × 좌석 교대 = 8판, A = ships_menu1, B = ships_menu1_all, 양팔 cap60-p2, 비교 4, stop_round 1(≈ 1시간). 통과 기준: ① 8/8판 오류·타임아웃 0 ② 실행 커밋이 13067d5 포함 ③ B 시작 부스터 결정마다 비교 수 = 열린 부스터 수, 모두 완료(compared complete) ④ 부스터 결정 시간 ≤ 80초, 최대 결정 시간 ≈ 80초 이하. 볼 것: B팔 부스터별 비교 진입·완료·패배 점수 차(채택 부스터 대비), 108b B와 같은 시드에서 고른 부스터가 바뀐 판 수. 1R 충전은 참고만. 결과로 원인 분리: 비교 미진입·미완료 = 순서·시간, 완료했는데 짐 = 값·지평.",
-  "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-cap60-p2.json",
-  "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-cap60-p2.json",
-  "seeds": [
-    "quartet-d-113082",
-    "quartet-d-113944",
-    "quartet-e-106400",
-    "quartet-e-113676"
-  ],
-  "comparisons": 4,
-  "stop_round": 1
+ "kind": "ab",
+ "note": "사용자(2026-10-25 \"한번 해봐\"): **시작 부스터 전부 비교 1R 스모크, 판정 없음** — 13067d5: all 팩토리(B)만 시작 부스터 결정에서 남은 부스터를 모두 한 번씩 비교(예산 = 부스터 수 + 1, 그 결정에선 BGG 오프닝 계획 없음; known-bad 11·22: 2돈+1QIC·4파워 부스터가 비교 4칸에 못 듦). 108b와 같은 쿼텟 d·e 4시드 × 좌석 교대 = 8판, A = ships_menu1, B = ships_menu1_all, 양팔 cap60-p2, 비교 4, stop_round 1(≈ 1시간). 통과 기준: ① 8/8판 오류·타임아웃 0 ② 실행 커밋이 13067d5 포함 ③ B 시작 부스터 결정마다 비교 수 = 열린 부스터 수, 모두 완료(compared complete) ④ 부스터 결정 시간 ≤ 80초, 최대 결정 시간 ≈ 80초 이하. 볼 것: B팔 부스터별 비교 진입·완료·패배 점수 차(채택 부스터 대비), 108b B와 같은 시드에서 고른 부스터가 바뀐 판 수. 1R 충전은 참고만. 결과로 원인 분리: 비교 미진입·미완료 = 순서·시간, 완료했는데 짐 = 값·지평.",
+ "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-cap60-p2.json",
+ "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-cap60-p2.json",
+ "seeds": [
+  "quartet-d-113082",
+  "quartet-d-113944",
+  "quartet-e-106400",
+  "quartet-e-113676"
+ ],
+ "comparisons": 4,
+ "stop_round": 1,
+ "design_review": {
+  "findings": 1,
+  "model": "gpt-6-astra",
+  "at": "2026-10-25T19:18:42+09:00"
+ }
 }
