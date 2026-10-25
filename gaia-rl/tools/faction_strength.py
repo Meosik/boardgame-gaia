@@ -3,11 +3,14 @@
 "게임 시작 전 잘 풀릴 것 같은 종족부터 4·3·2·1턴": the strongest faction moves last. Features, all from the setup state
 before any placement (a faction's candidate starts are the free planets of its home type):
   tier     SH09 expansion tier table (sources.md:53): A 4, B 3, C 2, D 1, F 0.
-  planets  1-shovel planets (terraform steps <= 1, or the faction's cheapest step if higher) within 3 of the two best candidate starts.
+  planets  1-shovel planets (terraform steps <= 1 count 1; a flat-price faction such as SpaceGiants counts its cheapest
+           planets at 1/steps) within 3 of the two best candidate starts (mean).
   techs    standard tiles under the faction's tracks that it prefers (TILE_PREFS, the charge-4 tile) plus good
            advanced tiles (GOOD_ADVANCED) on those tracks.
-  ships    ships within SHIP_SETUP_RANGE of the best start, the tech-federation ship counting double.
-  cluster  minus the distance from the best start to the nearest other free home-type planet (homes not spread).
+  ships    ships within SHIP_SETUP_RANGE of the best start, the tech-federation ship counting double; the best start
+           is chosen by planets + cluster + ships together (debate 1/1).
+  cluster  minus the distance from the best start to the nearest other free home-type planet (homes not spread);
+           at the best start, chosen by planets + cluster + ships together (debate 1/1).
   power    other factions' home-type planets within 2 of the best start (charges from neighbours).
   rounds   round tiles 1-3 and the two final goals that fit the faction (ROUND_FIT, bot's first reading; to be
            replaced by the faction round-scoring claims).
@@ -90,24 +93,32 @@ def features(state):
         limit = max(1, floor)
 
         def cheap(c, kind, start):
-            # 1-shovel = steps <= 1, or the cheapest step for a faction with a flat price (SpaceGiants 2)
+            # 1-shovel = steps <= 1 counts 1; a flat-price faction (SpaceGiants 2) counts its cheapest planets at
+            # 1/steps (debate 1/1: cost difference kept)
             # debate 1/1: _terraform_steps prices Lost Fleet factions (Darkanians 1, SpaceGiants 2, Moweyds /
             # Tinkeroids 1 or 3) where _cheap_planet needs a home colour on the ring
             steps = tp._terraform_steps(state, p, kind)
-            return c != start and steps is not None and steps <= limit
+            if c == start or steps is None or steps > limit:
+                return 0
+            return 1 / steps if steps > 1 else 1
         starts = [c for c, kind in free.items() if kind == home] or list(free)
-        room = sorted((sum(1 for c, kind in free.items() if cheap(c, kind, s) and distance(s, c) <= NEAR), s)
-                      for s in starts)[::-1]
-        best = room[0][1] if room else None
-        planets = statistics.mean(n for n, _ in room[:2]) if room else 0
-        others_home = [c for c in starts if c != best]
-        cluster = -min(distance(best, c) for c in others_home) if best and others_home else -10
+        cands = []
+        for s in starts:
+            near = sum(cheap(c, kind, s) for c, kind in free.items() if distance(s, c) <= NEAR)
+            gaps = [distance(s, c) for c in starts if c != s]
+            close = -min(gaps) if gaps else -10
+            ship_ids = [ship for ship, at in ships.items() if distance(s, at) <= tp.SHIP_SETUP_RANGE]
+            reach = len(ship_ids) + (1 if fed_ship in ship_ids else 0)
+            cands.append((near + close + reach, s, near, close, reach))
+        cands.sort(reverse=True)
+        best = cands[0][1] if cands else None
+        planets = statistics.mean(r[2] for r in cands[:2]) if cands else 0
+        cluster = cands[0][3] if cands else -10
+        ship_score = cands[0][4] if cands else 0
         prefs = tp.TILE_PREFS.get(faction, {})
         good = (tp.GOOD_GAIA_TILES | set(prefs.get('prefer', ()))) - set(prefs.get('avoid', ()))
         techs = sum(1 for i, tile in enumerate(slots[:6]) if TRACKS[i] in tracks and tile in good) \
             + sum(1 for i, tile in enumerate(advanced[:6]) if TRACKS[i] in tracks and tile in tp.GOOD_ADVANCED)
-        near_ships = [ship for ship, at in ships.items() if best and distance(best, at) <= tp.SHIP_SETUP_RANGE]
-        ship_score = len(near_ships) + (1 if fed_ship in near_ships else 0)
         others = {homes[q['player_id']] for q in state['players'] if q['player_id'] != seat}
         power = sum(1 for c, kind in free.items() if best and kind in others and distance(best, c) <= NEIGHBOUR)
         fit = sum(1 for cond in rounds if faction in ROUND_FIT.get(cond, ()))
