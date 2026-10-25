@@ -1,0 +1,14 @@
+{
+ "kind": "ab",
+ "note": "사용자(2026-10-25 \"그렇게 해봐\" → E115 (ㄱ)(ㄴ)): **시작 부스터 전부 비교 재스모크, 판정 없음** — 8aaecde: all 팩토리(B) 설정 선택(시작 위치·부스터)에서 적응 조기 종료(converged) 끔, 부스터 결정에선 계획(Geodens-PI 등) 없이 current + 부스터별 root만, 부스터 결정 안전 상한 ×2(cap60 → 120초). 108c(10/16: 조기 종료 3·기오덴 PI 2·60초 1)와 같은 쿼텟 d·e 4시드 × 좌석 교대 = 8판, A = ships_menu1, B = ships_menu1_all, 양팔 cap60-p2, 비교 4, stop_round 1(≈ 1시간). 통과 기준: ① 8/8판 오류·타임아웃 0 ② 실행 커밋이 8aaecde 포함 ③ B 시작 부스터 결정 16/16에서 complete=true 비교의 첫 수 부스터 집합 = 열린 부스터 집합(108c와 같은 집계: list_decisions로 부스터 단계, compared의 first) ④ B 부스터 결정 ≤ 130초, 그 밖의 결정 최대 ≈ 80초 이하. 볼 것: B 부스터 결정 시간(열림 7·6·5·4별), 108c B와 고른 부스터가 바뀐 결정 수, B 시작 위치 결정 비교 수(조기 종료 끔의 부수 효과). 1R 충전은 참고만.",
+ "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-cap60-p2.json",
+ "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-cap60-p2.json",
+ "seeds": [
+  "quartet-d-113082",
+  "quartet-d-113944",
+  "quartet-e-106400",
+  "quartet-e-113676"
+ ],
+ "comparisons": 4,
+ "stop_round": 1
+}
