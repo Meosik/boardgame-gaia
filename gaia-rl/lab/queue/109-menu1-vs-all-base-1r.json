@@ -1,0 +1,22 @@
+{
+ "kind": "ab",
+ "note": "사용자(2026-10-25 밤 \"일단 1라운드 돌려보고 리플레이 보고 결정하지 뭐\"; HANDOFF E117): **1R 진단판, 판정 없음** — 사용자가 리플레이로 기본 14종족의 1라운드(시작 배치·시작 부스터·1R 행동의 군더더기: 가이아포밍 안 하고 패스, 함선에 무리하게 들어가 행동 안 함 등)를 보고 다음 수정을 정한다. A = ships_menu1, B = ships_menu1_all(108d까지의 all 팩토리 그대로: 8aaecde 시작 부스터 전부 비교 포함, 부스터 티어 방식은 미구현). 라인업 geo(기오덴·타클론·테란·제노스)·a(파이락·아이비츠·란티다·네블라)·b(발타크·매드 안드로이드·글린·아이타)·c(앰바스·하드쉬 할라·테란·제노스) × 새 시드 3개 = 12쌍 × 좌석 교대 24판, 양팔 cap60-p2, 비교 4, stop_round 1(2R 시작 종료, ≈ 2시간). 확장 종족 제외(교사 범위 밖, E87). 사전 등록: A/B 판정 없음(1R 충전은 참고). 정리 턴: 건강(오류·타임아웃·최대 결정 시간) + 종족별 1R 충전(참고) + E117 낭비 검토 후보 집계(`list_decisions.py --rounds 1-1`: 함선 진입 좌석 중 1R 함선 행동 0, 1R GaiaFormation 수 — 후보일 뿐 결함 판정 아님) + **B팔 리플레이 종족마다 1개(14개, 그 종족 좌석 초점, 1R 충전이 B 중앙값에 가장 가까운 판)** 게시, 이전 실험 리플레이는 지움. 사용자가 고르면 최고·최저 판이나 A팔을 더 게시.",
+ "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-cap60-p2.json",
+ "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-cap60-p2.json",
+ "seeds": [
+  "geo-quartet-1071357",
+  "geo-quartet-1074227",
+  "geo-quartet-1074232",
+  "quartet-a-64522",
+  "quartet-a-65354",
+  "quartet-a-66211",
+  "quartet-b-59560",
+  "quartet-b-61243",
+  "quartet-b-62843",
+  "quartet-c-61698",
+  "quartet-c-62577",
+  "quartet-c-62956"
+ ],
+ "comparisons": 4,
+ "stop_round": 1
+}
