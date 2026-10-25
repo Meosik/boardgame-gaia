@@ -2673,22 +2673,34 @@ class BoosterTierTests(unittest.TestCase):
         scores = [(float(i), 'x') for i in range(len(snapshot['candidates']))]
         with self.flags():
             ranked = tp.booster_tier_scores(None, snapshot, scores)
-            tier = {i: tp.booster_tier_value(snapshot, b) for i, b in picks.items()}
-            self.assertEqual(tp.booster_tier_budget(snapshot, scores, 7), 1)
+            key = {i: tp.booster_tier_key(snapshot, b) for i, b in picks.items()}
+            pick = tp.booster_tier_pick(snapshot)
         top = max(picks, key=lambda i: ranked[i][0])
-        self.assertEqual(tier[top], max(tier.values()))
+        self.assertEqual(key[top], max(key.values()))
+        self.assertEqual(pick, top)
         self.assertEqual(sorted(s[0] for s in ranked), sorted(s[0] for s in scores))   # a permutation
-        self.assertEqual(tp.booster_tier_budget(snapshot, scores, 7), 7)                 # part off: unchanged
+        self.assertIsNone(tp.booster_tier_pick(snapshot))                                # part off: no pick
         self.assertIs(tp.booster_tier_scores(None, snapshot, scores), scores)
 
     def test_big_building_booster_tops_with_the_round_one_big_building_tile(self):
         snapshot = json.loads(json.dumps(self.snapshot))
         snapshot['state']['round_tiles'][0] = {'id': 6, 'condition': 'UpgradeLargeBuilding', 'vp_per_unit': 5}
-        with self.flags():
-            self.assertEqual(tp.booster_tier_value(snapshot, tp.BIG_BUILDING_BOOSTER) -
-                             tp.FACTION_BOOSTER_PREFS.get(snapshot['state']['players'][snapshot['player']]['faction'],
-                                                          {}).get(tp.BIG_BUILDING_BOOSTER, 0.0),
-                             tp.BIG_BUILDING_TIER[0])
+        with self.flags(), mock.patch.dict(tp.FACTION_BOOSTER_PREFS, {
+                snapshot['state']['players'][snapshot['player']]['faction']: {tp.CREDIT_QIC_BOOSTER: 1.5}}):
+            # debate 1/1: a faction bonus on the QIC booster (Xenos 10 + 1.5) does not pass the required order
+            self.assertGreater(tp.booster_tier_key(snapshot, tp.BIG_BUILDING_BOOSTER),
+                               tp.booster_tier_key(snapshot, tp.CREDIT_QIC_BOOSTER))
+
+    def test_geodens_opening_the_institute_take_the_step_booster_first(self):
+        snapshot = json.loads(json.dumps(self.snapshot))
+        player = snapshot['state']['players'][snapshot['player']]
+        player['faction'] = 'Geodens'
+        with self.flags(), mock.patch.object(tp, 'guide_opening_labels', return_value=('1PI+1TS+2M',)):
+            self.assertGreater(tp.booster_tier_key(snapshot, tp.TERRAFORM_BOOSTER),
+                               tp.booster_tier_key(snapshot, tp.CREDIT_QIC_BOOSTER))
+        with self.flags(), mock.patch.object(tp, 'guide_opening_labels', return_value=('1AC+2M',)):
+            self.assertLess(tp.booster_tier_key(snapshot, tp.TERRAFORM_BOOSTER),
+                            tp.booster_tier_key(snapshot, tp.CREDIT_QIC_BOOSTER))
 
     def test_instant_gaia_needs_gaia_one_in_round_one_and_a_transdim_planet(self):
         snapshot = json.loads(json.dumps(self.snapshot))

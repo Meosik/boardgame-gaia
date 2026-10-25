@@ -17,6 +17,7 @@ booster's pass VP at the current board, and the best booster still in the pool. 
 are rule facts; no new coefficient is introduced (the income term reuses potential's own).
 """
 import json
+import time
 
 from four_factions import value as _value
 
@@ -5087,6 +5088,31 @@ def _opening_builds_big(snapshot, player):
     return bool(labels) and ('PI' in labels[0] or 'AC' in labels[0])
 
 
+def booster_tier_key(snapshot, booster):
+    """Sort key of `booster` at the starting-booster pick (higher first), debate 1/1: the required orders first —
+    (the big-building booster with the round-1 big-building tile, a faction's guide-fixed first booster), then the tier
+    with the faction preference inside."""
+    state = snapshot['state']
+    player = state['players'][snapshot['player']]
+    tiles = state.get('round_tiles') or []
+    required = int(booster == BIG_BUILDING_BOOSTER and bool(tiles) and tiles[0].get('condition') == BIG_BUILDING_ROUND)
+    first = int(booster in _faction_first_boosters(snapshot, player))
+    return (required, first, booster_tier_value(snapshot, booster))
+
+
+def _faction_first_boosters(snapshot, player):
+    """Boosters a faction source names as the best at this start (PG08-T05: Geodens opening the institute in round 1
+    take the step booster)."""
+    if player['faction'] == 'Geodens' and _opening_builds_pi(snapshot, player):
+        return (TERRAFORM_BOOSTER,)
+    return ()
+
+
+def _opening_builds_pi(snapshot, player):
+    labels = guide_opening_labels(player['faction'], snapshot)
+    return bool(labels) and 'PI' in labels[0]
+
+
 def booster_tier_value(snapshot, booster):
     """Tier of `booster` for the seat to move at the starting-booster pick (higher first)."""
     state = snapshot['state']
@@ -5123,30 +5149,59 @@ def booster_tier_scores(env, snapshot, scores):
              if c['action'].get('type') == 'SelectStartingBooster' and not blocked(scores[i])}
     if not picks:
         return scores
-    tier = {i: booster_tier_value(snapshot, b) for i, b in picks.items()}
-    order = sorted(picks, key=lambda i: (-tier[i], -scores[i][0]))
+    key = {i: booster_tier_key(snapshot, b) for i, b in picks.items()}
+    order = sorted(picks, key=lambda i: (key[i], scores[i][0]), reverse=True)
     slots = sorted(picks, key=lambda i: -scores[i][0])
     lifted = list(scores)
     for i, j in zip(order, slots):
-        lifted[i] = (scores[j][0], f'{scores[i][1]}; booster tier {tier[i]:.1f}', *scores[i][2:])
+        lifted[i] = (scores[j][0], f'{scores[i][1]}; booster tier {key[i]}', *scores[i][2:])
     return lifted
 
 
-def booster_tier_budget(snapshot, scores, budget):
-    """budget_teacher hook, installed after setup_places_budget: one comparison (the ranking's top) at the pick."""
-    if _guide['booster_tier'] and _setup_booster(snapshot):
-        return 1
-    return budget
+def booster_tier_pick(snapshot):
+    """Candidate index of the starting booster booster_tier takes, None when this is not an mj01 booster pick."""
+    if not _guide['booster_tier'] or snapshot.get('player') is None or not _setup_booster(snapshot):
+        return None
+    picks = {i: c['action']['booster_id'] for i, c in enumerate(snapshot['candidates'])
+             if c['action'].get('type') == 'SelectStartingBooster'}
+    return max(picks, key=lambda i: (booster_tier_key(snapshot, picks[i]), -i)) if picks else None
+
+
+def install_booster_tier_choose():
+    """Debate 1/1: budget 1 still played the first rollout (budget_teacher publish stops after it). At the pick the
+    teacher returns the tier choice at once — no search, no rollout; elsewhere the installed choose."""
+    from four_factions.timed import TimedPreparationTeacher
+    inner = TimedPreparationTeacher.choose
+    if getattr(inner, '_booster_tier', False):
+        return
+
+    def choose(self, snapshot):
+        index = booster_tier_pick(snapshot)
+        if index is None:
+            return inner(self, snapshot)
+        started = time.monotonic()
+        booster = snapshot['candidates'][index]['action']['booster_id']
+        self.last_scores = [(0.0, 'booster tier pick' if i == index else 'booster tier')
+                            for i in range(len(snapshot['candidates']))]
+        elapsed = time.monotonic() - started
+        self.times[str(snapshot['player'])].append(elapsed)
+        self.last_audit = {'decision_id': snapshot['decision_id'], 'index': index, 'selected_index': index,
+                           'selected': f'booster-tier-{booster}', 'plans': [], 'ranking_mode': 'booster_tier',
+                           'value_model': 'control', 'comparison_budget': 0, 'completed_comparisons': 0,
+                           'budget_stopped': False, 'time_capped': False,
+                           'timing': {'seconds': elapsed, 'quick_fallback_used': False}}
+        return snapshot['decision_id'], index
+    choose._booster_tier = True
+    choose.__wrapped__ = inner
+    TimedPreparationTeacher.choose = choose
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier(seed, **kwargs):
     """Teacher factory: ships_menu1_all + booster_tier (user 2026-10-25 night, E117; lab 110 all four seats)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs)
-    import budget_teacher
     _guide['booster_tier'] = True
-    _wrap_rank('_booster_tier', booster_tier_scores)
-    if booster_tier_budget not in budget_teacher.budget_hooks:
-        budget_teacher.budget_hooks.append(booster_tier_budget)
+    _wrap_rank('_booster_tier', booster_tier_scores)     # explain_decision's ranking shows the same order
+    install_booster_tier_choose()
     return teacher
 
 
