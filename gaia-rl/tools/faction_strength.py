@@ -59,11 +59,12 @@ ROUND_FIT = {
     'GreatestDistancePiAcademy': {'Ivits', 'Lantids'},
 }
 # strength_fit.py --from 060 --target vp (2026-10-26): 225 complete 6-round lab games, 900 seats, final VP centred per
-# game on per-game z-scores — corr tier +0.43, rounds +0.25, planets +0.20, power +0.03, ships -0.01, techs -0.25; least
-# squares tier +12.0, rounds +3.1, power +1.9 VP per z, the negative terms (planets -4.5, techs -2.3, ships -0.1) set to
-# 0; R2 0.235. Mostly the geo quartet, and the teacher's own faction skill is inside the tier term. Rounds 1-3
-# charges as the target fit nothing (540 games, R2 0.019).
-WEIGHTS = {'tier': 12.0, 'planets': 0.0, 'techs': 0.0, 'ships': 0.0, 'power': 1.9, 'rounds': 3.1}
+# game on per-game z-scores — corr tier +0.43, rounds +0.25, planets +0.20, power +0.03, ships -0.01, techs -0.25.
+# Debate 1/1: a non-negative fit (scipy nnls) tier 9.7, power 2.7, rounds 2.5 VP per z, R2 0.204; seed-split halves
+# (57 seeds each) held-out R2 0.197 / 0.198 against tier alone 0.189 / 0.174 — the map terms add about 0.01-0.02.
+# Mostly the geo quartet, and the teacher's own faction skill is inside the tier term. Rounds 1-3 charges (runs that
+# reached round 4, 710 games) are not explained by these features (held-out R2 <= 0.007).
+WEIGHTS = {'tier': 9.7, 'planets': 0.0, 'techs': 0.0, 'ships': 0.0, 'power': 2.7, 'rounds': 2.5}
 NEAR = 3
 NEIGHBOUR = 2
 
