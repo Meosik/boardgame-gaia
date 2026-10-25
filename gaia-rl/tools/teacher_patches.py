@@ -4219,8 +4219,7 @@ def _mine_cost(state, player, coord):
     if kind == 'Gaia':
         cost['qic'] += 1
     elif kind in RING:
-        gap = abs(RING.index(_home_type(player))-RING.index(kind))
-        cost['ore'] += min(gap, 7-gap)*ORE_PER_STEP[player['research_tracks'].get('terraforming', 0)]
+        cost['ore'] += _terraform_steps(state, player, kind)*ORE_PER_STEP[player['research_tracks'].get('terraforming', 0)]
     return cost
 
 
@@ -4965,6 +4964,27 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
 def _home_type(player):
     from faction_teachers.profiles import profiles
     return _value.HOME.get(player['faction']) or profiles()[player['faction']].home
+
+
+def _terraform_steps(state, player, kind):
+    """Terraforming steps from the player's home to the ring planet `kind`, None off the ring. Lost Fleet p.7:
+    Darkanians 1, SpaceGiants 2, Tinkeroids/Moweyds 3 on the expensive colours (engine field; else the colours
+    another seat calls home) and 1 elsewhere; base factions the ring distance."""
+    from economy.teacher import RING
+    if kind not in RING:
+        return None
+    faction = player['faction']
+    if faction == 'Darkanians':
+        return 1
+    if faction == 'SpaceGiants':
+        return 2
+    if faction in ('Tinkeroids', 'Moweyds'):
+        expensive = player.get('expensive_terraforming_planet_types')
+        if not expensive:
+            expensive = {_home_type(other) for other in state['players'] if other is not player}
+        return 3 if kind in expensive else 1
+    gap = abs(RING.index(_home_type(player))-RING.index(kind))
+    return min(gap, 7-gap)
 
 
 def _swap(lifted, scores, mine, top, why):

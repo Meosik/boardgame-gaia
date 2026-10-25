@@ -2441,6 +2441,38 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual((result['index'], result['selected']), (3, 'current-choice'))
         self.assertNotIn('menu_tie', result)
 
+    def test_mine_cost_lost_fleet_terraforming_steps(self):
+        # Lost Fleet p.7: Darkanians 1, SpaceGiants 2, Tinkeroids/Moweyds 3 on expensive colours else 1 (108 crash: x not in tuple).
+        from economy.teacher import RING, ORE_PER_STEP
+        ore = ORE_PER_STEP[0]
+        def player(faction, **extra):
+            return {'faction': faction, 'player_id': 0, 'research_tracks': {'terraforming': 0}, 'structures': [], **extra}
+        def steps(state, p, kind):
+            state['board']['hexes']['1,1']['planet']['planet_type'] = kind
+            with mock.patch('economy.teacher.path_distance', return_value=0), mock.patch('four_factions.value.navigation', return_value=1):
+                return (tp._mine_cost(state, p, '1,1')['ore'] - tp.MINE_COST['ore']) // ore
+        state = {'board': {'hexes': {'1,1': {'planet': {'planet_type': RING[0]}}}}, 'players': []}
+        expensive = RING[2]
+        moweyds = player('Moweyds', expensive_terraforming_planet_types=[expensive])
+        state['players'] = [moweyds]
+        self.assertEqual(steps(state, moweyds, expensive), 3)
+        self.assertEqual(steps(state, moweyds, RING[4]), 1)
+        tinkeroids = player('Tinkeroids', expensive_terraforming_planet_types=[expensive])
+        self.assertEqual((steps(state, tinkeroids, expensive), steps(state, tinkeroids, RING[4])), (3, 1))
+        self.assertEqual(steps(state, player('SpaceGiants'), RING[3]), 2)
+        self.assertEqual(steps(state, player('Darkanians'), RING[3]), 1)
+        # No engine field: the colours another seat calls home are the expensive ones.
+        bare = player('Moweyds')
+        state['players'] = [bare, player('Xenos')]
+        xenos_home = tp._home_type(state['players'][1])
+        self.assertEqual(steps(state, bare, xenos_home), 3)
+        self.assertEqual(steps(state, bare, next(k for k in RING if k != xenos_home)), 1)
+        # A base faction keeps the ring distance.
+        xenos = state['players'][1]
+        self.assertEqual(steps(state, xenos, xenos_home), 0)
+        far = RING[(RING.index(xenos_home)+4) % 7]
+        self.assertEqual(steps(state, xenos, far), 3)
+
     def test_install_track_plans_puts_plans_first_and_drops_the_bare_research_goal(self):
         import four_factions.preparation as p
         from four_factions.preparation import Goal
