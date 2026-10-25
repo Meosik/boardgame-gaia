@@ -11,8 +11,7 @@ before any placement (a faction's candidate starts are the free planets of its h
   power    other factions' home-type planets within 2 of the best start (charges from neighbours).
   rounds   round tiles 1-3 and the two final goals that fit the faction (ROUND_FIT, bot's first reading; to be
            replaced by the faction round-scoring claims).
-Each feature is turned into a z-score over the four seats and summed with WEIGHTS (equal at first; a later
-regression on lab games is meant to set them). The order lists seats weakest first.
+Each feature is turned into a z-score over the four seats and summed with WEIGHTS (tier, planets, techs equal; user 2026-10-26: no weights from lab games). The order lists seats weakest first.
 
   GAIA_ENGINE_FIXES_2=1 PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-20260917:gaia-rl/tools \\
     gaia-rl/.venv/bin/python gaia-rl/tools/faction_strength.py quartet-d-113082 geo-quartet-1075607 [--table]
@@ -58,13 +57,10 @@ ROUND_FIT = {
     'MostDeepSpaceSectors': LOST_FLEET,
     'GreatestDistancePiAcademy': {'Ivits', 'Lantids'},
 }
-# strength_fit.py --from 060 --target vp (2026-10-26): 225 complete 6-round lab games, 900 seats, final VP centred per
-# game on per-game z-scores — corr tier +0.43, rounds +0.25, planets +0.20, power +0.03, ships -0.01, techs -0.25.
-# Debate 1/1: a non-negative fit (scipy nnls) tier 9.7, power 2.7, rounds 2.5 VP per z, R2 0.204; seed-split halves
-# (57 seeds each) held-out R2 0.197 / 0.198 against tier alone 0.189 / 0.174 — the map terms add about 0.01-0.02.
-# Mostly the geo quartet, and the teacher's own faction skill is inside the tier term. Rounds 1-3 charges (runs that
-# reached round 4, 710 games) are not explained by these features (held-out R2 <= 0.007).
-WEIGHTS = {'tier': 9.7, 'planets': 0.0, 'techs': 0.0, 'ships': 0.0, 'power': 2.7, 'rounds': 2.5}
+# user 2026-10-26: old lab games are contaminated, no fitted weights — tier list (SH09), cheap planets near the start
+# and tech tiles on the faction's tracks, equal weight per z; ships, power, rounds off (the earlier strength_fit.py
+# nnls fit on 060+ games, tier 9.7 power 2.7 rounds 2.5, is dropped).
+WEIGHTS = {'tier': 1.0, 'planets': 1.0, 'techs': 1.0, 'ships': 0.0, 'power': 0.0, 'rounds': 0.0}
 NEAR = 3
 NEIGHBOUR = 2
 
