@@ -76,12 +76,16 @@ old formula only.
 
 No code or deployment changes. The 18 per-faction replays in the design are **not posted yet** (bot tools need the
 work-tree extension rebuilt with `maturin develop` to read `@order` seeds); only the lab auto replay is on the site.
-Lab after this: queue empty.
+Lab after this (user 10-26 "리플레이는 일단 12번으로 교체하고 오류있는거 해결해야지"; queue runs in name order):
+1. `112a-faction-replays` — this run's 22 games (**old-strength-formula orders**, 1b65403) published now, one
+   median-charge replay per faction, 111's removed. Not waiting for any re-run.
+2. `112a2-crash-regression-1r` — the failed pair-005 exactly as it ran (`quartet-b-67485@order=1,2,3,0`, same
+   teacher, 1R): does d5946bd/61edf20 stop the step-1 `No eligible continuation`? Separate from (3), whose new
+   order could avoid the failing path (debate 1/1).
+3. `112b-strength-order-current-1r` — the current orders (ca96b32), same 12 seeds, ≈ 2.5 h.
+Cause of the stale run: `lab.py` `run_pending` ran the whole pending list read before 111 → fixed in 55ba6ae.
 
-## Proposal (user decision, nothing queued)
+## Proposal (user decision, nothing queued beyond the above)
 
-- (ㄱ) Re-run 112 with the current queue orders (ca96b32), same 12 seeds, 1R, ≈ 2.5 h — the design the user asked
-  for; also re-runs quartet-b with the d5946bd fix. First check why lab ran the 1b65403 file (bot turn).
 - (ㄴ) Order effect: same seeds, strength order vs reversed → same factions at turn 1 and 4, 1R, 24 games ≈ 2.5 h.
-- (ㄷ) Publish per-faction replays (rebuild extension) — after (ㄱ), from that run.
-Bot recommendation: (ㄱ) → (ㄷ) → (ㄴ). Terrans ranking check only if the current formula still misranks them.
+Bot recommendation: after 112b. Terrans ranking check only if the current formula still misranks them.

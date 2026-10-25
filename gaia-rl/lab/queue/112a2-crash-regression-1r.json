@@ -1,0 +1,11 @@
+{
+ "kind": "ab",
+ "note": "토론 1/1(코덱스: 새 순서 재실행은 실패 경로를 피할 수 있어 크래시 수정 검증이 아님): **112 pair-005 크래시 회귀 확인, 판정 없음** — 실패 당시 그대로 quartet-b-67485@order=1,2,3,0(112 result.json의 순서), 4좌석 같은 교사 ships_menu1_all_tier, 1R 종료, cap60-p2, 비교 4, 1쌍 × 좌석 교대 2판(≈ 15분). 통과 = 2/2판 완료, `No eligible continuation`(preparation.py:555) 없음 = d5946bd·61edf20 gaia_asteroid_hold 수정 확인. 실패하면 workers.log step·종족으로 재현 봇 턴.",
+ "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+ "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+ "seeds": [
+  "quartet-b-67485@order=1,2,3,0"
+ ],
+ "comparisons": 4,
+ "stop_round": 1
+}
