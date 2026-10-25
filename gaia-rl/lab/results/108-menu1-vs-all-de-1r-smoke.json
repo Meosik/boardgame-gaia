@@ -1,0 +1,242 @@
+{
+ "name": "108-menu1-vs-all-de-1r-smoke",
+ "kind": "ab",
+ "status": "done",
+ "note": "사용자(2026-10-25 \"빠뜨리지 말아야 할 건 수정 포함 확인과 실험 순서 — d·e 재스모크 먼저\"; HANDOFF E112 (ㄱ)): **1R 스모크, 판정 없음** — 107에서 셋업 크래시(d218d13 수정)로 빠진 쿼텟 d·e 4시드(107 pair-008–011과 같은 시드, 재사용 = 오류 해결 확인용) × 좌석 교대 = 8판, A = ships_menu1, B = ships_menu1_all(오늘 수정 전부), 양팔 cap60-p2, 비교 4, stop_round 1(2R 시작 종료, ≈ 1시간). 통과 기준: ① 8/8판 오류·타임아웃 0(확장 4종족이 셋업 뒤 1R을 끝까지) ② **실행 커밋이 5bc843a를 포함**(`git merge-base --is-ancestor 5bc843a <manifest 커밋>`) — 그래야 d218d13 크래시 수정·711f7bb 셋업 BGG 제거·508f0ec gaia_asteroid_hold·5f9c7fe/f14ed94 dead_tile·e3672af rebellion_ts·a017db1 매드 안드로이드 연구소 오프닝/1R 아카데미 금지·지식→돈 차단이 B에 들어감 ③ 최대 결정 시간(cap60 기대 ≈ 80초). 이 라인업에 하이브·발타크·매드 안드로이드는 없으므로 rebellion_ts·dead_tile·매드 규칙의 발동은 다음 4R A/B에서 본다; 여기서 볼 발동은 테란·제노스 gaia_asteroid_hold(1R 소행성 광산 A → B)와 셋업 배치 비교(배치 결정의 compared에 bgg-opening 없음, 열린 자리 모두). 1R 충전은 참고만. 통과 뒤(사용자 확인): menu1 vs all 4R, 기본 쿼텟 새 시드, 판정 1–3R 충전(≈ 8–9시간); 시간 상한·계획 중복·후보 누락 점검과 묶음별 분리·6R은 그 뒤.",
+ "host": "agentmaco",
+ "commit": "9020fa0",
+ "started_at": "2026-10-25T14:23:17+09:00",
+ "finished_at": "2026-10-25T14:36:26+09:00",
+ "seeds": [
+  "quartet-d-113082",
+  "quartet-d-113944",
+  "quartet-e-106400",
+  "quartet-e-113676"
+ ],
+ "command": [
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-cap60-p2.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-cap60-p2.json",
+  "--games",
+  "8",
+  "--seeds",
+  "quartet-d-113082",
+  "quartet-d-113944",
+  "quartet-e-106400",
+  "quartet-e-113676",
+  "--comparisons",
+  "4",
+  "--jobs",
+  "4",
+  "--fast-copy",
+  "--stop-round",
+  "1",
+  "--output",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-108-menu1-vs-all-de-1r-smoke"
+ ],
+ "exit_code": 0,
+ "summary": {
+  "factions": {
+   "Darkanians": {
+    "pairs": 0,
+    "mean_B_minus_A": null,
+    "ci95": null,
+    "error_games": 4,
+    "timeout_games": 0,
+    "A_decisions": 4,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 3,
+    "A_unsearched_comparisons": 303,
+    "B_decisions": 4,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 4,
+    "B_unsearched_comparisons": 220
+   },
+   "Geodens": {
+    "pairs": 0,
+    "mean_B_minus_A": null,
+    "ci95": null,
+    "error_games": 4,
+    "timeout_games": 0,
+    "A_decisions": 8,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 7,
+    "A_unsearched_comparisons": 1260,
+    "B_decisions": 8,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 6,
+    "B_unsearched_comparisons": 963
+   },
+   "Moweyds": {
+    "pairs": 0,
+    "mean_B_minus_A": null,
+    "ci95": null,
+    "error_games": 4,
+    "timeout_games": 0,
+    "A_decisions": 6,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 3,
+    "A_unsearched_comparisons": 303,
+    "B_decisions": 4,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 4,
+    "B_unsearched_comparisons": 211
+   },
+   "SpaceGiants": {
+    "pairs": 0,
+    "mean_B_minus_A": null,
+    "ci95": null,
+    "error_games": 4,
+    "timeout_games": 0,
+    "A_decisions": 4,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 2,
+    "A_unsearched_comparisons": 201,
+    "B_decisions": 4,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 3,
+    "B_unsearched_comparisons": 204
+   },
+   "Taklons": {
+    "pairs": 0,
+    "mean_B_minus_A": null,
+    "ci95": null,
+    "error_games": 4,
+    "timeout_games": 0,
+    "A_decisions": 7,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 5,
+    "A_unsearched_comparisons": 661,
+    "B_decisions": 6,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 2,
+    "B_unsearched_comparisons": 310
+   },
+   "Terrans": {
+    "pairs": 0,
+    "mean_B_minus_A": null,
+    "ci95": null,
+    "error_games": 4,
+    "timeout_games": 0,
+    "A_decisions": 6,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 4,
+    "A_unsearched_comparisons": 563,
+    "B_decisions": 6,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 2,
+    "B_unsearched_comparisons": 319
+   },
+   "Tinkeroids": {
+    "pairs": 0,
+    "mean_B_minus_A": null,
+    "ci95": null,
+    "error_games": 4,
+    "timeout_games": 0,
+    "A_decisions": 8,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 5,
+    "A_unsearched_comparisons": 483,
+    "B_decisions": 8,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 6,
+    "B_unsearched_comparisons": 396
+   },
+   "Xenos": {
+    "pairs": 0,
+    "mean_B_minus_A": null,
+    "ci95": null,
+    "error_games": 4,
+    "timeout_games": 0,
+    "A_decisions": 8,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 5,
+    "A_unsearched_comparisons": 685,
+    "B_decisions": 8,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 2,
+    "B_unsearched_comparisons": 331
+   },
+   "ALL": {
+    "pairs": 0,
+    "mean_B_minus_A": null,
+    "ci95": null,
+    "error_games": 8,
+    "timeout_games": 0,
+    "A_decisions": 51,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 34,
+    "A_unsearched_comparisons": 4459,
+    "B_decisions": 48,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 29,
+    "B_unsearched_comparisons": 2954
+   }
+  },
+  "failures": {
+   "error": 8
+  },
+  "games_planned": 8,
+  "games_complete": 0,
+  "pairs_complete": 0,
+  "seeds_repeated": 0
+ },
+ "timing": {
+  "A": {
+   "n": 51,
+   "mean": 19.672745098039215,
+   "median": 19.975,
+   "p90": 42.561,
+   "max": 60.039
+  },
+  "B": {
+   "n": 48,
+   "mean": 32.200270833333335,
+   "median": 30.685000000000002,
+   "p90": 51.482,
+   "max": 60.044
+  }
+ },
+ "final_scores": {},
+ "charges": {
+  "factions": {
+   "ALL": {
+    "pairs": 0,
+    "mean_B_minus_A": NaN,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   }
+  },
+  "games": [],
+  "seats": {},
+  "games_incomplete": 0
+ },
+ "basics": {
+  "factions": {},
+  "games_incomplete": 0
+ },
+ "watch_replay": "다시보기: 고를 판 없음"
+}
