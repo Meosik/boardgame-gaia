@@ -14,8 +14,8 @@
   "quartet-c-68570@order=0,3,1,2",
   "quartet-d-61287@order=2,1,3,0",
   "quartet-d-64530@order=2,3,1,0",
-  "quartet-e-73387@order=3,0,2,1",
-  "quartet-e-73826@order=0,1,3,2"
+  "quartet-e-73387@order=0,2,3,1",
+  "quartet-e-73826@order=1,2,0,3"
  ],
  "comparisons": 4,
  "stop_round": 1,

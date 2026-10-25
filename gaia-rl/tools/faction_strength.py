@@ -3,7 +3,7 @@
 "게임 시작 전 잘 풀릴 것 같은 종족부터 4·3·2·1턴": the strongest faction moves last. Features, all from the setup state
 before any placement (a faction's candidate starts are the free planets of its home type):
   tier     SH09 expansion tier table (sources.md:53): A 4, B 3, C 2, D 1, F 0.
-  planets  1-shovel planets (terraform steps <= 1) within 3 of the two best candidate starts.
+  planets  1-shovel planets (terraform steps <= 1, or the faction's cheapest step if higher) within 3 of the two best candidate starts.
   techs    standard tiles under the faction's tracks that it prefers (TILE_PREFS, the charge-4 tile) plus good
            advanced tiles (GOOD_ADVANCED) on those tracks.
   ships    ships within SHIP_SETUP_RANGE of the best start, the tech-federation ship counting double.
@@ -85,12 +85,16 @@ def features(state):
     for p in state['players']:
         seat, faction, home = p['player_id'], p['faction'], homes[p['player_id']]
         tracks = set(tp._faction_tracks(p))
+        floor = min((s for kind in set(free.values()) if kind != home
+                     and (s := tp._terraform_steps(state, p, kind)) is not None), default=1)
+        limit = max(1, floor)
 
         def cheap(c, kind, start):
+            # 1-shovel = steps <= 1, or the cheapest step for a faction with a flat price (SpaceGiants 2)
             # debate 1/1: _terraform_steps prices Lost Fleet factions (Darkanians 1, SpaceGiants 2, Moweyds /
             # Tinkeroids 1 or 3) where _cheap_planet needs a home colour on the ring
             steps = tp._terraform_steps(state, p, kind)
-            return c != start and steps is not None and steps <= 1
+            return c != start and steps is not None and steps <= limit
         starts = [c for c, kind in free.items() if kind == home] or list(free)
         room = sorted((sum(1 for c, kind in free.items() if cheap(c, kind, s) and distance(s, c) <= NEAR), s)
                       for s in starts)[::-1]
