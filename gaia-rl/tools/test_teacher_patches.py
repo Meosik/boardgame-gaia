@@ -1991,6 +1991,52 @@ class OpeningBudgetTests(unittest.TestCase):
         snapshot, scores, tasks = self._setup_tasks(False, kind='SelectStartingBooster', places=7)
         self.assertEqual(budget_teacher.budget_for(snapshot, scores, 4), 4)          # gate off: unchanged
 
+    def test_setup_no_converge_false_at_a_setup_choice_and_delegates_elsewhere(self):
+        """lab 108c: the adaptive early stop never ends a setup choice; other decisions get the inner result."""
+        import faction_teachers.clock as clock
+        self.addCleanup(setattr, clock, 'converged', clock.converged)
+        self.addCleanup(tp._guide.__setitem__, 'mj01', tp._guide['mj01'])
+        clock.converged = lambda snapshot, result, history: True
+        tp._guide['mj01'] = True
+        tp.install_setup_no_converge()
+        tp.install_setup_no_converge()                                               # once
+        self.assertFalse(hasattr(clock.converged.__wrapped__, '_setup_no_converge'))
+        booster = {'state': {'players': {0: {'faction': 'Terrans'}}}, 'player': 0,
+                   'candidates': [{'action': {'type': 'SelectStartingBooster', 'booster_id': b}} for b in (1, 2)]}
+        other = {**booster, 'candidates': [{'action': {'type': 'Upgrade'}}]}
+        self.assertFalse(clock.converged(booster, {}, []))
+        self.assertTrue(clock.converged(other, {}, []))
+        tp._guide['mj01'] = False
+        self.assertTrue(clock.converged(booster, {}, []))                            # gate off: inner
+
+    def test_setup_booster_pick_keeps_no_plans_but_a_start_place_keeps_faction_action(self):
+        import four_factions.preparation as p
+        from four_factions.preparation import Goal
+        action = Goal('Geodens-PI@1,0', 'faction-action', '1,0')
+        snapshot, scores, _ = self._setup_tasks(True, kind='SelectStartingBooster', places=7, plans=0)
+        goals = [action]
+        p.scoring_pairs(snapshot, scores, goals)
+        self.assertEqual(goals, [])
+        snapshot, scores, _ = self._setup_tasks(True, plans=0)
+        goals = [action]
+        p.scoring_pairs(snapshot, scores, goals)
+        self.assertEqual(goals, [action])
+
+    def test_setup_booster_seconds_doubles_the_cap_only_at_the_booster_pick(self):
+        self.addCleanup(lambda saved=list(budget_teacher.max_seconds_hooks): budget_teacher.max_seconds_hooks.__setitem__(slice(None), saved))
+        self.addCleanup(tp._guide.__setitem__, 'mj01', tp._guide['mj01'])
+        tp._guide['mj01'] = True
+        tp.install_setup_places()
+        tp.install_setup_places()
+        self.assertEqual(budget_teacher.max_seconds_hooks.count(tp.setup_booster_seconds), 1)
+        player = {0: {'faction': 'Terrans'}}
+        booster = {'state': {'players': player}, 'player': 0,
+                   'candidates': [{'action': {'type': 'SelectStartingBooster', 'booster_id': b}} for b in (1, 2)]}
+        place = {**booster, 'candidates': [{'action': {'type': 'PlaceStartingStructure', 'coord': '0,0'}}]}
+        self.assertEqual(tp.setup_booster_seconds(booster, 60), 60*tp.SETUP_BOOSTER_CAP_FACTOR)
+        self.assertEqual(tp.setup_booster_seconds(place, 60), 60)
+        self.assertIsNone(tp.setup_booster_seconds(booster, None))
+
     def test_setup_booster_real_planned_tasks_have_no_bgg_goal_and_compare_every_booster(self):
         import budget_teacher
         import four_factions.preparation as p

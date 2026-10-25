@@ -4607,10 +4607,40 @@ def setup_places_budget(snapshot, scores, budget):
     return max(budget, places + (1 if places and _setup_booster(snapshot) else 0))
 
 
+SETUP_BOOSTER_CAP_FACTOR = 2
+
+
+def setup_booster_seconds(snapshot, seconds):
+    """budget_teacher max_seconds hook: lab 108c, 7 booster rollouts need about 40-60 s at cap60-p2 and one pick was cut
+    at 5/6, so the safety cap is doubled at the starting-booster pick of an mj01 player."""
+    if seconds is not None and _setup_booster(snapshot):
+        return seconds * SETUP_BOOSTER_CAP_FACTOR
+    return seconds
+
+
 def install_setup_places():
     import budget_teacher
     if setup_places_budget not in budget_teacher.budget_hooks:
         budget_teacher.budget_hooks.append(setup_places_budget)
+    if setup_booster_seconds not in budget_teacher.max_seconds_hooks:
+        budget_teacher.max_seconds_hooks.append(setup_booster_seconds)
+
+
+def install_setup_no_converge():
+    """User 2026-10-25, lab 108c: the adaptive early stop (faction_teachers.clock.converged: the same pick won 3 times
+    with a 3% margin) cut booster picks after 3-4 comparisons with time left. At a setup choice of an mj01 player
+    converged is False, so every open start place / booster is compared; elsewhere it is the inner function."""
+    import faction_teachers.clock as clock
+    inner = clock.converged
+    if getattr(inner, '_setup_no_converge', False):
+        return
+    def converged(snapshot, *args, **kwargs):
+        if _setup_placement(snapshot):
+            return False
+        return inner(snapshot, *args, **kwargs)
+    converged._setup_no_converge = True
+    converged.__wrapped__ = inner
+    clock.converged = converged
 
 
 _task_seen = []     # the goals and scoring pairs of the search being built; the roots list that follows drops them
@@ -4685,6 +4715,10 @@ def install_task_dedup():
                 # One entry per place: the plans that would repeat the control's first move are dropped, the root-N
                 # alternatives (one per other place) fill the budget setup_places_budget widens to the place count.
                 kept = [g for g in kept if g.family in SETUP_FIRST_FAMILIES]
+                if _setup_booster(snapshot):
+                    # lab 108c: Geodens PI faction-action plans took two booster slots and only repeated a booster;
+                    # the control plus one root per other booster already cover every booster, so no plans here.
+                    kept = []
             goals[:] = kept
             paired = []
             for goal in ([] if setup else inner_pairs(snapshot, scores, goals)):
@@ -4943,6 +4977,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     _guide['mj01'] = True      # E104: the MJ01 Lost Fleet track corrections (MJ_TRACK_CAPS)
     install_setup_places()     # lab 106: every open start place is rolled out once
     install_setup_no_bgg()     # ... and the BGG opening path no longer fills setup slots
+    install_setup_no_converge()    # lab 108c: no adaptive early stop at a setup choice
     install_ambas_nav2()
     _wrap_rank('_artifact_tokens', artifact_tokens_scores)
     _wrap_rank('_range_tile', range_tile_scores)

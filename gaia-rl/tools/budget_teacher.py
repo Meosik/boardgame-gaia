@@ -35,6 +35,7 @@ def count_distinct_firsts(enabled):
 
 
 budget_hooks = []      # f(snapshot, scores, budget) -> budget; a patch may widen one decision's budget
+max_seconds_hooks = []  # f(snapshot, seconds) -> seconds; a patch may widen one decision's safety cap
 
 
 def budget_for(snapshot, scores, budget=None):
@@ -71,7 +72,10 @@ def _choose(self, snapshot):
 
     # Optional wall-clock safety cap: the root ranking always completes, then an unfinished
     # comparison is abandoned at the cap and the best completed result is kept.
-    hard_deadline = math.inf if _max_seconds is None else started+_max_seconds
+    cap = _max_seconds
+    for hook in max_seconds_hooks:
+        cap = hook(snapshot, cap)
+    hard_deadline = math.inf if cap is None else started+cap
     kwargs = dict(soft_deadline=math.inf, hard_deadline=hard_deadline, bgg_openings=self.bgg_openings,
                   shared_factions=self.shared_factions, adaptive=True, allocation=None,
                   delta_factions=self.delta_factions, fixed_openings=self.fixed_openings,
@@ -101,7 +105,7 @@ def _choose(self, snapshot):
                        'comparison_budget': budget,
                        'completed_comparisons': len(latest.get('plans', ())),
                        'budget_stopped': state['stopped'],
-                       'time_capped': (_max_seconds is not None and not state['stopped']
+                       'time_capped': (cap is not None and not state['stopped']
                                        and time.monotonic() >= hard_deadline),
                        'timing': {'seconds': elapsed, 'quick_fallback_used': False}}
     return snapshot['decision_id'], index
