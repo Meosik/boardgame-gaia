@@ -2701,6 +2701,13 @@ class BoosterTierTests(unittest.TestCase):
                                    tokens + tp.TOKENS_TWILIGHT)
         self.assertEqual(tp._opening_counts({'state': {}}, {'faction': 'SpaceGiants'}),
                          {'PI': 1, 'TS': 1, 'M': 2, 'big': 1})
+        # debate 1/1: Moweyds follow the teacher's own opening choice (the tech-federation branch puts 1PI+1TS first)
+        with mock.patch.object(tp, '_part', return_value=True), \
+                mock.patch.object(tp, 'tech_federation_reachable', return_value=True):
+            self.assertEqual(tp._opening_counts({'state': {}}, {'faction': 'Moweyds'}), {'PI': 1, 'TS': 1, 'big': 1})
+        with mock.patch.object(tp, '_part', return_value=True), \
+                mock.patch.object(tp, 'tech_federation_reachable', return_value=False):
+            self.assertEqual(tp._opening_counts({'state': {}}, {'faction': 'Moweyds'}), {'RL': 1, 'M': 4, 'big': 0})
 
     def test_geodens_opening_the_institute_take_the_step_booster_first(self):
         snapshot = json.loads(json.dumps(self.snapshot))

@@ -5029,7 +5029,9 @@ def rebellion_ts_scores(env, snapshot, scores):
 BOOSTER_CHARGES = {9: 9.4, 12: 8.4, 8: 9.0, 5: 8.0, 13: 8.0, 2: 6.0, 4: 4.0, 3: 4.0, 7: 4.0, 1: 4.0, 6: 4.0, 10: 4.0,
                    11: 4.8, 14: 3.6}
 BOOSTER_PASS_COUNTS = {3: ('M', 1), 7: ('TS', 2), 1: ('RL', 3), 4: ('big', 4)}   # pass VP per counted building
-VP_CHARGES = 1.5
+# Debate 1/1: LF02's 1.5 charges a VP is the round 4-5 rate and "1–4R은 충전이 점수보다 좋다" (lf01-lf02-value-table.md
+# :20-26), so a round-1 pass VP is discounted. 1.0 is the bot's reading (the source gives no round-1 number).
+VP_CHARGES = 1.0
 PLANET_TYPES_BOOSTER = 10
 PLANET_TYPES_R1 = 2                # planet types held after a round-1 opening (home + one expansion type)
 FORMER_BOOSTER = 6
@@ -5120,17 +5122,22 @@ def _faction_first_boosters(snapshot, player):
     return ()
 
 
+def _first_opening_labels(snapshot, player):
+    """The opening order the teacher's own opening goals use (debate 1/1): guide_opening_labels (Darkanian supply,
+    the tech-federation branch of Terrans / Xenos / Moweyds, RESOLVED_OPENINGS), else the Lost Fleet table."""
+    faction = player['faction']
+    return guide_opening_labels(faction, snapshot) or LOST_FLEET_OPENINGS.get(faction, ())
+
+
 def _opening_builds_pi(snapshot, player):
-    labels = guide_opening_labels(player['faction'], snapshot)
+    labels = _first_opening_labels(snapshot, player)
     return bool(labels) and 'PI' in labels[0]
 
 
 def _opening_counts(snapshot, player):
     """Buildings at the end of round 1 by the faction's first opening label ('1PI+1TS+2M' -> {'PI': 1, 'TS': 1, 'M': 2,
     'big': 1}); {} without a label."""
-    faction = player['faction']
-    labels = LOST_FLEET_OPENINGS.get(faction, ()) if faction in LOST_FLEET_OPENINGS and faction != 'Darkanians' \
-        else guide_opening_labels(faction, snapshot)
+    labels = _first_opening_labels(snapshot, player)
     counts = {}
     for part in (labels[0].split('+') if labels else ()):
         digits = ''.join(ch for ch in part if ch.isdigit())
@@ -5139,6 +5146,21 @@ def _opening_counts(snapshot, player):
     if counts:
         counts['big'] = counts.get('PI', 0) + counts.get('AC', 0)
     return counts
+
+
+def _formers_at_pass(state, player):
+    """Gaiaformers expected at the round-1 pass (debate 1/1: not from 4 knowledge alone): held now, or Gaia 1 planned —
+    a Gaia-track faction or a good tech tile under the Gaia track — with a Transdim planet in reach to form."""
+    held = max(0, player.get('gaiaformers_total', 0) - player['resources'].get('spent_gaia_formers', 0))
+    if held:
+        return held
+    tracks = player.get('research_tracks') or {}
+    slots = (state.get('research_board') or {}).get('tech_tile_slots') or []
+    prefs = TILE_PREFS.get(player['faction'], {})
+    good = (GOOD_GAIA_TILES - set(prefs.get('not_under_gaia', ()))) | set(prefs.get('prefer', ()))
+    planned = tracks.get('gaia', 0) >= 1 or 'gaia' in _faction_tracks(player) \
+        or (len(slots) > GAIA_SLOT and slots[GAIA_SLOT] in good)
+    return int(planned and bool(_in_reach(state, player, _reach(player), ('Transdim',))))
 
 
 def _ship_in_reach(state, player, ship):
@@ -5160,8 +5182,8 @@ def booster_tier_value(snapshot, booster):
         value += VP_CHARGES * vp * counts.get(kind, 0)
     elif booster == PLANET_TYPES_BOOSTER:
         value += VP_CHARGES * PLANET_TYPES_R1
-    elif booster == FORMER_BOOSTER and gaia_ok:
-        value += VP_CHARGES * 3
+    elif booster == FORMER_BOOSTER:
+        value += VP_CHARGES * 3 * _formers_at_pass(state, player)
     elif booster == RANGE_BOOSTER and not _range_booster_target(state, player, gaia_ok):
         value = RANGE_FALLBACK
     elif booster == INSTANT_GAIA_BOOSTER:
