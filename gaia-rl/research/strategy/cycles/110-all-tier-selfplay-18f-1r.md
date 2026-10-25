@@ -19,7 +19,7 @@ was not in it. 111 (queued later) has 1fdb8f1.
 **Health: not clean — 22/24 games.** Both games of `pair-004` (seed quartet-b-63893, Itars·Bescods·BalTaks·Gleens)
 crashed at **step 0** (first placement, 3 s after start): `ValueError: No eligible continuation; do not silently pass`
 (`preparation.py:555`, `select_goal` returned None inside a placement rollout; `pair-004/game-*/workers.log`).
-Same teacher in all seats → deterministic, both games identical. So quartet b has 1 pair. Timeouts 0, fallback-timeout 0,
+Same error in both games; not reproduced yet, so determinism is unconfirmed (other pairs drifted under the same code). So quartet b has 1 pair. Timeouts 0, fallback-timeout 0,
 federation-limit 0. Decisions A 624 · B 616; mean 21.4 / 21.0 s, median 22.1 / 21.5, p90 42.2 / 40.6, max 60.2 / 60.1 s.
 **Booster decisions** (88, decision log + `list_decisions.py --rounds 0-0`): all `completed_comparisons` = 1, selected
 `current-choice`; mean 10.1 s, max 15.8 s (108d full comparison: up to 61.9 s).
@@ -46,8 +46,8 @@ From the result table (R1 start → R2 start; B−A is same-code drift):
 | **Nevlas** | 4 | **23 · 32 · 41** | 0.0 |
 | **Firaks** | 4 | **20 · 29 · 39** | 0.0 |
 
-(`charges.json` seats, recomputed median.) Drift: 13 of 18 factions exactly 0.0 (seat swap reproduces the game),
-the rest within the ±30 / ±50 line except Itars −39.4 in its one pair (both seats same code: search timing). Lowest
+(`charges.json` seats, recomputed median.) Drift: 8 of 18 factions exactly 0.0 (BalTaks +0.1, Geodens −0.4, Terrans −1.1 near it); Itars −39.4 in its
+one pair is outside the ±30 line, Gleens −24.1 and HadschHallas −13.8 inside (same code: search timing; debate 1/1 fix). Lowest
 round 1: Firaks and Nevlas (≈ 30 against a 60–80 field) — the first explain targets. 1R-end VP mean 7.9.
 
 ## Activation — booster picks (`list_decisions.py --rounds 0-0`, 22 games; both games of a pair give the same pick)
@@ -86,10 +86,10 @@ charges), Geodens pair-009 s3 `pass_ship` 11 after 2 entries.
 
 ## Reading (HANDOFF 1 order)
 
-- No verdict (pre-registered). Same-teacher drift: ① noise only; 13/18 factions reproduce exactly on seat swap.
+- No verdict (pre-registered). Same-teacher drift: ① noise only; 8/18 factions reproduce exactly on seat swap, Itars −39.4 outside ±30.
 - **Crash pair-004**: ③ implementation — a placement rollout reached a state where `select_goal` found no eligible
-  candidate. Not yet reproduced; 111 uses the **same 12 seeds** and will meet quartet-b-63893 again (likely the same
-  crash, unless the 1fdb8f1 / 6b0bc65 changes avoid that rollout path).
+  candidate. Not yet reproduced; 111 uses the **same 12 seeds** and will meet quartet-b-63893 again (the same crash
+  may recur, unless the 1fdb8f1 / 6b0bc65 changes avoid that rollout path).
 - Booster part ② fired in its first form (1 comparison, ≤ 16 s); the required-order rule is ③ absent from this run, so
   the Geodens QIC first picks are not a judgement on the current code.
 - Firaks / Nevlas ≈ 30 charges: candidates for explain (Firaks pair-002 also skipped 5 gaia options).
