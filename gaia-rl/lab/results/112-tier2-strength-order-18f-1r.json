@@ -1,0 +1,1358 @@
+{
+ "name": "112-tier2-strength-order-18f-1r",
+ "kind": "ab",
+ "status": "done",
+ "note": "사용자(2026-10-26 「한번 테스트 받아보고 싶긴 하네」; HANDOFF E117 턴 순서): **강도 순 턴 순서 시험, 1R 진단판, 4좌석 같은 교사, 판정 없음** — 시드 끝 @order(1d3fc6c 엔진, lab이 엔진 소스 변경으로 자동 재빌드)로 tools/faction_strength.py(e999607, 비음수 가중치 티어 9.7·이웃 2.7·라운드 2.5)가 정한 순서: 약한 종족 1턴 → 강한 종족 4턴. teacher_a = teacher_b = ships_menu1_all_tier(111과 같은 코드). 쿼텟 geo·a·b·c·d·e × 새 시드 2개 = 12쌍 × 좌석 교대 24판(같은 교사라 교대는 반복 표본), 18종족, cap60-p2, 비교 4, stop_round 1(≈ 2시간). 볼 것: ① 실행 확인 — 종족 예외를 적용한 배치 순서 일치(시작 건물 1개인 확장 종족은 첫 순회를 건너뛰고 두 번째 단계에서 배치, engine.rs starting_placement_queue) + 부스터 역순 일치(list_decisions --rounds 0-0, 종족별 배치 단계와 @order 대조) ② 4턴 강한 종족이 늦은 순서에서 배치·부스터를 어떻게 고르는지(리플레이) ③ 1R 충전(참고)의 순서별 평균. 리플레이 종족마다 1개(18개, 111 것은 지움). 봇 쪽 도구(list_decisions 등)는 @order 시드를 읽으려면 작업 트리 확장 재빌드(maturin develop)가 필요.",
+ "host": "agentmaco",
+ "commit": "5eb0d0c",
+ "started_at": "2026-10-26T03:32:42+09:00",
+ "finished_at": "2026-10-26T06:00:07+09:00",
+ "seeds": [
+  "geo-quartet-1080194@order=2,0,3,1",
+  "geo-quartet-1080336@order=3,1,2,0",
+  "quartet-a-72220@order=2,0,1,3",
+  "quartet-a-72577@order=3,0,2,1",
+  "quartet-b-64488@order=1,3,2,0",
+  "quartet-b-67485@order=1,2,3,0",
+  "quartet-c-67629@order=0,1,3,2",
+  "quartet-c-68570@order=0,2,3,1",
+  "quartet-d-61287@order=2,0,1,3",
+  "quartet-d-64530@order=3,2,0,1",
+  "quartet-e-73387@order=1,2,3,0",
+  "quartet-e-73826@order=3,0,1,2"
+ ],
+ "command": [
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+  "--games",
+  "24",
+  "--seeds",
+  "geo-quartet-1080194@order=2,0,3,1",
+  "geo-quartet-1080336@order=3,1,2,0",
+  "quartet-a-72220@order=2,0,1,3",
+  "quartet-a-72577@order=3,0,2,1",
+  "quartet-b-64488@order=1,3,2,0",
+  "quartet-b-67485@order=1,2,3,0",
+  "quartet-c-67629@order=0,1,3,2",
+  "quartet-c-68570@order=0,2,3,1",
+  "quartet-d-61287@order=2,0,1,3",
+  "quartet-d-64530@order=3,2,0,1",
+  "quartet-e-73387@order=1,2,3,0",
+  "quartet-e-73826@order=3,0,1,2",
+  "--comparisons",
+  "4",
+  "--jobs",
+  "4",
+  "--fast-copy",
+  "--stop-round",
+  "1",
+  "--output",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-112-tier2-strength-order-18f-1r"
+ ],
+ "exit_code": 0,
+ "summary": {
+  "factions": {
+   "Ambas": {
+    "pairs": 2,
+    "mean_B_minus_A": -1,
+    "ci95": [
+     -13.706204736174694,
+     11.706204736174694
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 42,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 26,
+    "A_unsearched_comparisons": 3698,
+    "B_decisions": 42,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 25,
+    "B_unsearched_comparisons": 3598
+   },
+   "BalTaks": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 2,
+    "timeout_games": 0,
+    "A_decisions": 15,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 9,
+    "A_unsearched_comparisons": 741,
+    "B_decisions": 15,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 9,
+    "B_unsearched_comparisons": 741
+   },
+   "Bescods": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 2,
+    "timeout_games": 0,
+    "A_decisions": 10,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 7,
+    "A_unsearched_comparisons": 744,
+    "B_decisions": 10,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 7,
+    "B_unsearched_comparisons": 744
+   },
+   "Darkanians": {
+    "pairs": 2,
+    "mean_B_minus_A": 0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 21,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 16,
+    "A_unsearched_comparisons": 2185,
+    "B_decisions": 21,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 16,
+    "B_unsearched_comparisons": 2185
+   },
+   "Firaks": {
+    "pairs": 2,
+    "mean_B_minus_A": -0.5,
+    "ci95": [
+     -6.853102368087347,
+     5.853102368087347
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 24,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 15,
+    "A_unsearched_comparisons": 2247,
+    "B_decisions": 25,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 15,
+    "B_unsearched_comparisons": 2257
+   },
+   "Geodens": {
+    "pairs": 4,
+    "mean_B_minus_A": 0.5,
+    "ci95": [
+     -1.0912231526418539,
+     2.091223152641854
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 51,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 37,
+    "A_unsearched_comparisons": 5870,
+    "B_decisions": 56,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 42,
+    "B_unsearched_comparisons": 6716
+   },
+   "Gleens": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 2,
+    "timeout_games": 0,
+    "A_decisions": 14,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 10,
+    "A_unsearched_comparisons": 1236,
+    "B_decisions": 14,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 10,
+    "B_unsearched_comparisons": 1233
+   },
+   "HadschHallas": {
+    "pairs": 2,
+    "mean_B_minus_A": 1.5,
+    "ci95": [
+     -17.55930710426204,
+     20.55930710426204
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 34,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 18,
+    "A_unsearched_comparisons": 4753,
+    "B_decisions": 34,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 18,
+    "B_unsearched_comparisons": 4809
+   },
+   "Itars": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 2,
+    "timeout_games": 0,
+    "A_decisions": 13,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 8,
+    "A_unsearched_comparisons": 1047,
+    "B_decisions": 13,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 8,
+    "B_unsearched_comparisons": 1047
+   },
+   "Ivits": {
+    "pairs": 2,
+    "mean_B_minus_A": 2.5,
+    "ci95": [
+     -29.265511840436734,
+     34.26551184043673
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 29,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 19,
+    "A_unsearched_comparisons": 4062,
+    "B_decisions": 28,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 18,
+    "B_unsearched_comparisons": 3890
+   },
+   "Lantids": {
+    "pairs": 2,
+    "mean_B_minus_A": 1.5,
+    "ci95": [
+     -17.55930710426204,
+     20.55930710426204
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 26,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 14,
+    "A_unsearched_comparisons": 2018,
+    "B_decisions": 27,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 16,
+    "B_unsearched_comparisons": 3113
+   },
+   "Moweyds": {
+    "pairs": 2,
+    "mean_B_minus_A": 0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 21,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 18,
+    "A_unsearched_comparisons": 2739,
+    "B_decisions": 21,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 18,
+    "B_unsearched_comparisons": 2739
+   },
+   "Nevlas": {
+    "pairs": 2,
+    "mean_B_minus_A": -1,
+    "ci95": [
+     -13.706204736174694,
+     11.706204736174694
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 32,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 20,
+    "A_unsearched_comparisons": 2572,
+    "B_decisions": 37,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 22,
+    "B_unsearched_comparisons": 2818
+   },
+   "SpaceGiants": {
+    "pairs": 2,
+    "mean_B_minus_A": 0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 29,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 16,
+    "A_unsearched_comparisons": 3039,
+    "B_decisions": 29,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 16,
+    "B_unsearched_comparisons": 3039
+   },
+   "Taklons": {
+    "pairs": 4,
+    "mean_B_minus_A": -1.25,
+    "ci95": [
+     -5.228057881604634,
+     2.728057881604635
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 74,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 45,
+    "A_unsearched_comparisons": 9523,
+    "B_decisions": 77,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 49,
+    "B_unsearched_comparisons": 10418
+   },
+   "Terrans": {
+    "pairs": 6,
+    "mean_B_minus_A": -2.1666666666666665,
+    "ci95": [
+     -6.060435886087391,
+     1.727102552754058
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 89,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 49,
+    "A_unsearched_comparisons": 10919,
+    "B_decisions": 89,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 50,
+    "B_unsearched_comparisons": 11125
+   },
+   "Tinkeroids": {
+    "pairs": 2,
+    "mean_B_minus_A": 0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 33,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 19,
+    "A_unsearched_comparisons": 2460,
+    "B_decisions": 33,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 19,
+    "B_unsearched_comparisons": 2460
+   },
+   "Xenos": {
+    "pairs": 6,
+    "mean_B_minus_A": -1.5,
+    "ci95": [
+     -3.9611447321442554,
+     0.9611447321442554
+    ],
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 110,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 66,
+    "A_unsearched_comparisons": 22335,
+    "B_decisions": 108,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 66,
+    "B_unsearched_comparisons": 20411
+   },
+   "ALL": {
+    "pairs": 11,
+    "mean_B_minus_A": -0.4318181818181818,
+    "ci95": [
+     -1.3208266384481568,
+     0.45719027481179314
+    ],
+    "error_games": 2,
+    "timeout_games": 0,
+    "A_decisions": 667,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 412,
+    "A_unsearched_comparisons": 82188,
+    "B_decisions": 679,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 424,
+    "B_unsearched_comparisons": 83343
+   }
+  },
+  "failures": {
+   "error": 2
+  },
+  "games_planned": 24,
+  "games_complete": 22,
+  "pairs_complete": 11,
+  "seeds_repeated": 0
+ },
+ "timing": {
+  "A": {
+   "n": 667,
+   "mean": 24.127179910044976,
+   "median": 25.198,
+   "p90": 52.665,
+   "max": 64.759
+  },
+  "B": {
+   "n": 679,
+   "mean": 24.650829160530193,
+   "median": 25.652,
+   "p90": 51.612,
+   "max": 62.448
+  }
+ },
+ "final_scores": {
+  "Moweyds": {
+   "A": [
+    16,
+    4
+   ],
+   "B": [
+    16,
+    4
+   ]
+  },
+  "Geodens": {
+   "A": [
+    3,
+    3,
+    3,
+    6
+   ],
+   "B": [
+    3,
+    3,
+    3,
+    8
+   ]
+  },
+  "Tinkeroids": {
+   "A": [
+    13,
+    8
+   ],
+   "B": [
+    13,
+    8
+   ]
+  },
+  "Taklons": {
+   "A": [
+    13,
+    8,
+    13,
+    14
+   ],
+   "B": [
+    13,
+    8,
+    13,
+    9
+   ]
+  },
+  "Firaks": {
+   "A": [
+    3,
+    7
+   ],
+   "B": [
+    2,
+    7
+   ]
+  },
+  "Nevlas": {
+   "A": [
+    12,
+    17
+   ],
+   "B": [
+    10,
+    17
+   ]
+  },
+  "Lantids": {
+   "A": [
+    2,
+    16
+   ],
+   "B": [
+    5,
+    16
+   ]
+  },
+  "Ivits": {
+   "A": [
+    0,
+    9
+   ],
+   "B": [
+    5,
+    9
+   ]
+  },
+  "Terrans": {
+   "A": [
+    10,
+    4,
+    12,
+    5,
+    3,
+    14
+   ],
+   "B": [
+    1,
+    4,
+    12,
+    5,
+    3,
+    10
+   ]
+  },
+  "Ambas": {
+   "A": [
+    6,
+    1
+   ],
+   "B": [
+    4,
+    1
+   ]
+  },
+  "HadschHallas": {
+   "A": [
+    0,
+    13
+   ],
+   "B": [
+    3,
+    13
+   ]
+  },
+  "Xenos": {
+   "A": [
+    4,
+    6,
+    7,
+    2,
+    5,
+    10
+   ],
+   "B": [
+    0,
+    6,
+    7,
+    2,
+    5,
+    5
+   ]
+  },
+  "Bescods": {
+   "A": [
+    13
+   ],
+   "B": [
+    13
+   ]
+  },
+  "BalTaks": {
+   "A": [
+    7
+   ],
+   "B": [
+    7
+   ]
+  },
+  "Gleens": {
+   "A": [
+    13
+   ],
+   "B": [
+    13
+   ]
+  },
+  "Itars": {
+   "A": [
+    11
+   ],
+   "B": [
+    11
+   ]
+  },
+  "SpaceGiants": {
+   "A": [
+    16,
+    15
+   ],
+   "B": [
+    16,
+    15
+   ]
+  },
+  "Darkanians": {
+   "A": [
+    12,
+    14
+   ],
+   "B": [
+    12,
+    14
+   ]
+  }
+ },
+ "charges": {
+  "factions": {
+   "Ambas": {
+    "pairs": 2,
+    "A": 85.00000000000009,
+    "B": 81.77272727272737,
+    "mean_B_minus_A": -3.2272727272727195,
+    "ci95": [
+     -44.233660739472775,
+     37.779115284927336
+    ]
+   },
+   "BalTaks": {
+    "pairs": 1,
+    "A": 78.90000000000003,
+    "B": 78.90000000000003,
+    "mean_B_minus_A": 0.0,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   },
+   "Bescods": {
+    "pairs": 1,
+    "A": 77.55454545454552,
+    "B": 77.55454545454552,
+    "mean_B_minus_A": 0.0,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   },
+   "Darkanians": {
+    "pairs": 2,
+    "A": 56.17500000000008,
+    "B": 56.17500000000008,
+    "mean_B_minus_A": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ]
+   },
+   "Firaks": {
+    "pairs": 2,
+    "A": 75.92500000000001,
+    "B": 67.775,
+    "mean_B_minus_A": -8.150000000000006,
+    "ci95": [
+     -111.70556859982383,
+     95.40556859982382
+    ]
+   },
+   "Geodens": {
+    "pairs": 4,
+    "A": 72.43863636363642,
+    "B": 71.7386363636364,
+    "mean_B_minus_A": -0.7000000000000028,
+    "ci95": [
+     -2.9277124136986075,
+     1.5277124136986018
+    ]
+   },
+   "Gleens": {
+    "pairs": 1,
+    "A": 45.55454545454552,
+    "B": 45.55454545454552,
+    "mean_B_minus_A": 0.0,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   },
+   "HadschHallas": {
+    "pairs": 2,
+    "A": 52.82727272727274,
+    "B": 45.752272727272754,
+    "mean_B_minus_A": -7.074999999999989,
+    "ci95": [
+     -96.9713985084358,
+     82.82139850843582
+    ]
+   },
+   "Itars": {
+    "pairs": 1,
+    "A": 61.90000000000006,
+    "B": 61.90000000000006,
+    "mean_B_minus_A": 0.0,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   },
+   "Ivits": {
+    "pairs": 2,
+    "A": 78.95000000000005,
+    "B": 89.2000000000001,
+    "mean_B_minus_A": 10.250000000000057,
+    "ci95": [
+     -119.98859854579126,
+     140.48859854579138
+    ]
+   },
+   "Lantids": {
+    "pairs": 2,
+    "A": 53.97500000000002,
+    "B": 58.15227272727279,
+    "mean_B_minus_A": 4.177272727272765,
+    "ci95": [
+     -48.90000978429382,
+     57.25455523883935
+    ]
+   },
+   "Moweyds": {
+    "pairs": 2,
+    "A": 68.30000000000001,
+    "B": 68.30000000000001,
+    "mean_B_minus_A": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ]
+   },
+   "Nevlas": {
+    "pairs": 2,
+    "A": 42.77727272727276,
+    "B": 55.47727272727272,
+    "mean_B_minus_A": 12.69999999999996,
+    "ci95": [
+     -148.66880014941813,
+     174.06880014941805
+    ]
+   },
+   "SpaceGiants": {
+    "pairs": 2,
+    "A": 100.65000000000006,
+    "B": 100.65000000000006,
+    "mean_B_minus_A": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ]
+   },
+   "Taklons": {
+    "pairs": 4,
+    "A": 82.45227272727276,
+    "B": 87.40227272727276,
+    "mean_B_minus_A": 4.950000000000003,
+    "ci95": [
+     -10.803109211154359,
+     20.703109211154363
+    ]
+   },
+   "Terrans": {
+    "pairs": 6,
+    "A": 95.32575757575766,
+    "B": 98.609090909091,
+    "mean_B_minus_A": 3.2833333333333408,
+    "ci95": [
+     -2.3369472984120745,
+     8.903613965078756
+    ]
+   },
+   "Tinkeroids": {
+    "pairs": 2,
+    "A": 48.550000000000026,
+    "B": 48.550000000000026,
+    "mean_B_minus_A": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ]
+   },
+   "Xenos": {
+    "pairs": 6,
+    "A": 86.27803030303035,
+    "B": 90.32803030303035,
+    "mean_B_minus_A": 4.050000000000002,
+    "ci95": [
+     -4.8626067292375685,
+     12.96260672923757
+    ]
+   },
+   "ALL": {
+    "pairs": 11,
+    "mean_B_minus_A": 1.7806818181818225,
+    "ci95": [
+     -0.4721730471223571,
+     4.033536683486002
+    ]
+   }
+  },
+  "games": [
+   "pair-000/game-0-A02  Geodens(A) 57, Xenos(B) 117, Terrans(A) 73, Taklons(B) 95",
+   "pair-000/game-1-A13  Geodens(B) 54, Xenos(A) 114, Terrans(B) 80, Taklons(A) 75",
+   "pair-001/game-0-A23  Xenos(B) 100, Taklons(B) 79, Geodens(A) 83, Terrans(A) 113",
+   "pair-001/game-1-A01  Xenos(A) 100, Taklons(A) 79, Geodens(B) 83, Terrans(B) 113",
+   "pair-002/game-0-A03  Firaks(A) 72, Nevlas(B) 58, Lantids(B) 70, Ivits(A) 91",
+   "pair-002/game-1-A12  Firaks(B) 56, Nevlas(A) 33, Lantids(A) 62, Ivits(B) 111",
+   "pair-003/game-0-A13  Firaks(B) 80, Ivits(A) 67, Nevlas(B) 53, Lantids(A) 46",
+   "pair-003/game-1-A02  Firaks(A) 80, Ivits(B) 67, Nevlas(A) 53, Lantids(B) 46",
+   "pair-004/game-0-A01  Bescods(A) 78, BalTaks(A) 79, Gleens(B) 46, Itars(B) 62",
+   "pair-004/game-1-A23  Bescods(B) 78, BalTaks(B) 79, Gleens(A) 46, Itars(A) 62",
+   "pair-006/game-0-A02  Terrans(A) 114, HadschHallas(B) 37, Ambas(A) 90, Xenos(B) 54",
+   "pair-006/game-1-A13  Terrans(B) 114, HadschHallas(A) 37, Ambas(B) 90, Xenos(A) 54",
+   "pair-007/game-0-A23  Terrans(B) 97, Ambas(B) 74, HadschHallas(A) 69, Xenos(A) 40",
+   "pair-007/game-1-A01  Terrans(A) 85, Ambas(A) 80, HadschHallas(B) 54, Xenos(B) 62",
+   "pair-008/game-0-A03  Moweyds(A) 67, Geodens(B) 52, Tinkeroids(B) 36, Taklons(A) 105",
+   "pair-008/game-1-A12  Moweyds(B) 67, Geodens(A) 52, Tinkeroids(A) 36, Taklons(B) 105",
+   "pair-009/game-0-A13  Taklons(B) 71, Geodens(A) 98, Moweyds(B) 70, Tinkeroids(A) 61",
+   "pair-009/game-1-A02  Taklons(A) 71, Geodens(B) 98, Moweyds(A) 70, Tinkeroids(B) 61",
+   "pair-010/game-0-A01  Xenos(A) 103, Darkanians(A) 59, Terrans(B) 109, SpaceGiants(B) 105",
+   "pair-010/game-1-A23  Xenos(B) 103, Darkanians(B) 59, Terrans(A) 109, SpaceGiants(A) 105",
+   "pair-011/game-0-A12  SpaceGiants(B) 96, Terrans(A) 79, Xenos(A) 106, Darkanians(B) 54",
+   "pair-011/game-1-A03  SpaceGiants(A) 96, Terrans(B) 79, Xenos(B) 106, Darkanians(A) 54"
+  ],
+  "seats": {
+   "pair-000/game-0-A02": [
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 56.65454545454554
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 117.09999999999997
+    },
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 72.65000000000006
+    },
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 94.75454545454551
+    }
+   ],
+   "pair-000/game-1-A13": [
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 53.85454545454553
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 114.0
+    },
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 79.85000000000011
+    },
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 74.9545454545455
+    }
+   ],
+   "pair-001/game-0-A23": [
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 100.25454545454548
+    },
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 78.84545454545452
+    },
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 83.10000000000002
+    },
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 112.60000000000008
+    }
+   ],
+   "pair-001/game-1-A01": [
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 100.25454545454548
+    },
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 78.84545454545452
+    },
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 83.10000000000002
+    },
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 112.60000000000008
+    }
+   ],
+   "pair-002/game-0-A03": [
+    {
+     "faction": "Firaks",
+     "arm": "A",
+     "charges": 72.30000000000007
+    },
+    {
+     "faction": "Nevlas",
+     "arm": "B",
+     "charges": 58.29999999999998
+    },
+    {
+     "faction": "Lantids",
+     "arm": "B",
+     "charges": 69.9545454545455
+    },
+    {
+     "faction": "Ivits",
+     "arm": "A",
+     "charges": 90.60000000000002
+    }
+   ],
+   "pair-002/game-1-A12": [
+    {
+     "faction": "Firaks",
+     "arm": "B",
+     "charges": 56.00000000000006
+    },
+    {
+     "faction": "Nevlas",
+     "arm": "A",
+     "charges": 32.90000000000006
+    },
+    {
+     "faction": "Lantids",
+     "arm": "A",
+     "charges": 61.599999999999966
+    },
+    {
+     "faction": "Ivits",
+     "arm": "B",
+     "charges": 111.10000000000014
+    }
+   ],
+   "pair-003/game-0-A13": [
+    {
+     "faction": "Firaks",
+     "arm": "B",
+     "charges": 79.54999999999995
+    },
+    {
+     "faction": "Ivits",
+     "arm": "A",
+     "charges": 67.30000000000007
+    },
+    {
+     "faction": "Nevlas",
+     "arm": "B",
+     "charges": 52.654545454545456
+    },
+    {
+     "faction": "Lantids",
+     "arm": "A",
+     "charges": 46.35000000000008
+    }
+   ],
+   "pair-003/game-1-A02": [
+    {
+     "faction": "Firaks",
+     "arm": "A",
+     "charges": 79.54999999999995
+    },
+    {
+     "faction": "Ivits",
+     "arm": "B",
+     "charges": 67.30000000000007
+    },
+    {
+     "faction": "Nevlas",
+     "arm": "A",
+     "charges": 52.654545454545456
+    },
+    {
+     "faction": "Lantids",
+     "arm": "B",
+     "charges": 46.35000000000008
+    }
+   ],
+   "pair-004/game-0-A01": [
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 77.55454545454552
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 78.90000000000003
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 45.55454545454552
+    },
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 61.90000000000006
+    }
+   ],
+   "pair-004/game-1-A23": [
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 77.55454545454552
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 78.90000000000003
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 45.55454545454552
+    },
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 61.90000000000006
+    }
+   ],
+   "pair-006/game-0-A02": [
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 114.39545454545464
+    },
+    {
+     "faction": "HadschHallas",
+     "arm": "B",
+     "charges": 37.10454545454547
+    },
+    {
+     "faction": "Ambas",
+     "arm": "A",
+     "charges": 89.74545454545463
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 53.700000000000045
+    }
+   ],
+   "pair-006/game-1-A13": [
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 114.39545454545464
+    },
+    {
+     "faction": "HadschHallas",
+     "arm": "A",
+     "charges": 37.10454545454547
+    },
+    {
+     "faction": "Ambas",
+     "arm": "B",
+     "charges": 89.74545454545463
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 53.700000000000045
+    }
+   ],
+   "pair-007/game-0-A23": [
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 97.35000000000008
+    },
+    {
+     "faction": "Ambas",
+     "arm": "B",
+     "charges": 73.8000000000001
+    },
+    {
+     "faction": "HadschHallas",
+     "arm": "A",
+     "charges": 68.55000000000001
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 40.454545454545496
+    }
+   ],
+   "pair-007/game-1-A01": [
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 84.85000000000008
+    },
+    {
+     "faction": "Ambas",
+     "arm": "A",
+     "charges": 80.25454545454554
+    },
+    {
+     "faction": "HadschHallas",
+     "arm": "B",
+     "charges": 54.400000000000034
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 61.65454545454554
+    }
+   ],
+   "pair-008/game-0-A03": [
+    {
+     "faction": "Moweyds",
+     "arm": "A",
+     "charges": 67.0
+    },
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 52.30000000000007
+    },
+    {
+     "faction": "Tinkeroids",
+     "arm": "B",
+     "charges": 36.20000000000002
+    },
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 105.2045454545455
+    }
+   ],
+   "pair-008/game-1-A12": [
+    {
+     "faction": "Moweyds",
+     "arm": "B",
+     "charges": 67.0
+    },
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 52.30000000000007
+    },
+    {
+     "faction": "Tinkeroids",
+     "arm": "A",
+     "charges": 36.20000000000002
+    },
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 105.2045454545455
+    }
+   ],
+   "pair-009/game-0-A13": [
+    {
+     "faction": "Taklons",
+     "arm": "B",
+     "charges": 70.80454545454552
+    },
+    {
+     "faction": "Geodens",
+     "arm": "A",
+     "charges": 97.70000000000002
+    },
+    {
+     "faction": "Moweyds",
+     "arm": "B",
+     "charges": 69.60000000000002
+    },
+    {
+     "faction": "Tinkeroids",
+     "arm": "A",
+     "charges": 60.900000000000034
+    }
+   ],
+   "pair-009/game-1-A02": [
+    {
+     "faction": "Taklons",
+     "arm": "A",
+     "charges": 70.80454545454552
+    },
+    {
+     "faction": "Geodens",
+     "arm": "B",
+     "charges": 97.70000000000002
+    },
+    {
+     "faction": "Moweyds",
+     "arm": "A",
+     "charges": 69.60000000000002
+    },
+    {
+     "faction": "Tinkeroids",
+     "arm": "B",
+     "charges": 60.900000000000034
+    }
+   ],
+   "pair-010/game-0-A01": [
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 103.05454545454555
+    },
+    {
+     "faction": "Darkanians",
+     "arm": "A",
+     "charges": 58.60000000000008
+    },
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 108.95454545454555
+    },
+    {
+     "faction": "SpaceGiants",
+     "arm": "B",
+     "charges": 104.90000000000006
+    }
+   ],
+   "pair-010/game-1-A23": [
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 103.05454545454555
+    },
+    {
+     "faction": "Darkanians",
+     "arm": "B",
+     "charges": 58.60000000000008
+    },
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 108.95454545454555
+    },
+    {
+     "faction": "SpaceGiants",
+     "arm": "A",
+     "charges": 104.90000000000006
+    }
+   ],
+   "pair-011/game-0-A12": [
+    {
+     "faction": "SpaceGiants",
+     "arm": "B",
+     "charges": 96.40000000000006
+    },
+    {
+     "faction": "Terrans",
+     "arm": "A",
+     "charges": 78.50454545454548
+    },
+    {
+     "faction": "Xenos",
+     "arm": "A",
+     "charges": 106.2045454545455
+    },
+    {
+     "faction": "Darkanians",
+     "arm": "B",
+     "charges": 53.750000000000085
+    }
+   ],
+   "pair-011/game-1-A03": [
+    {
+     "faction": "SpaceGiants",
+     "arm": "A",
+     "charges": 96.40000000000006
+    },
+    {
+     "faction": "Terrans",
+     "arm": "B",
+     "charges": 78.50454545454548
+    },
+    {
+     "faction": "Xenos",
+     "arm": "B",
+     "charges": 106.2045454545455
+    },
+    {
+     "faction": "Darkanians",
+     "arm": "A",
+     "charges": 53.750000000000085
+    }
+   ]
+  },
+  "games_incomplete": 0
+ },
+ "basics": {
+  "factions": {},
+  "games_incomplete": 0
+ },
+ "watch_replay": "다시보기 게시: pair-002/game-0-A03 좌석 1 — Nevlas B팔 충전 58 (A팔 33)"
+}
