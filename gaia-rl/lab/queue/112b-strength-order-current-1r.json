@@ -1,0 +1,22 @@
+{
+ "kind": "ab",
+ "note": "사용자 2026-10-26 「오류있는거 해결해야지」: 112 재실행 — 112는 lab이 1b65403 시점 큐 판(옛 강도식 e999607 티어 9.7·이웃 2.7·라운드 2.5)을 돌림(lab.py가 실행 중 수정된 큐를 다시 안 읽음, 이번에 고침). 이번은 현재 큐 순서(ca96b32: 티어·기술 타일·행성 배치 강도식, 이웃·라운드 끔), 같은 12시드, 4좌석 같은 교사 ships_menu1_all_tier, 1R 종료, cap60-p2, 비교 4, 판정 없음(≈ 2.5시간). 볼 것: ① 24/24판 — 쿼텟 b(quartet-b-67485·64488) `No eligible continuation` 없음 = d5946bd·61edf20 gaia_asteroid_hold 수정 확인 ② 배치·부스터 순서가 @order와 일치(결정 로그 step 0–12 좌석) ③ 1R 충전 턴 자리별 평균(참고, 종족과 분리 안 됨) ④ 112(옛 순서)와 같은 시드·종족 충전 차이(참고). 리플레이는 종족별 1개를 publish_faction_replays.py로(112 것 교체).",
+ "teacher_a": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+ "teacher_b": "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+ "seeds": [
+  "geo-quartet-1080194@order=3,2,0,1",
+  "geo-quartet-1080336@order=2,3,0,1",
+  "quartet-a-72220@order=1,2,0,3",
+  "quartet-a-72577@order=3,1,2,0",
+  "quartet-b-64488@order=2,3,1,0",
+  "quartet-b-67485@order=1,3,2,0",
+  "quartet-c-67629@order=0,1,2,3",
+  "quartet-c-68570@order=0,3,1,2",
+  "quartet-d-61287@order=2,3,0,1",
+  "quartet-d-64530@order=2,3,1,0",
+  "quartet-e-73387@order=0,3,1,2",
+  "quartet-e-73826@order=1,0,2,3"
+ ],
+ "comparisons": 4,
+ "stop_round": 1
+}
