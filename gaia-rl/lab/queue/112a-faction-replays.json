@@ -1,0 +1,1 @@
+{"kind": "command", "note": "사용자 2026-10-26 「리플레이는 일단 12번으로 교체」: 112 종족별 1R 충전 중앙값 판 리플레이 18개 게시(111 것은 publish_replays가 지움). 봇 작업 트리 확장이 @order 시드를 못 읽어 lab에서 실행. 112b보다 먼저 돌도록 이름 112a.", "run": ["{python}", "tools/publish_faction_replays.py", "runs/lab-112-tier2-strength-order-18f-1r", "--destination", "/home/sohegi/gaia-media/ai-replays"], "timeout_hours": 1}
