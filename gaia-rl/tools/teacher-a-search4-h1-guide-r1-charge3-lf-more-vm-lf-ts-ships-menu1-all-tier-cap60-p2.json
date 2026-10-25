@@ -1,0 +1,14 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier (ships_menu1_all + starting booster by tier, user 2026-10-25 night, E117) with the lab measurement budget: 4 comparisons, 60 s cap, comparisons in 2 processes (HANDOFF E52).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 60,
+  "parallel": 2
+}

@@ -2651,3 +2651,58 @@ class ColonyOptionsStepTests(unittest.TestCase):
             self.assertLess(charge, 0)
             self.assertGreater(three + 2*charge, 0)
             self.assertAlmostEqual(tp.colony_options(state, player), three + 2*charge)
+
+
+class BoosterTierTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        env = Environment('quartet-e-113676', 2000)
+        snapshot = json.loads(env.snapshot_json())
+        while not any(c['action']['type'] == 'SelectStartingBooster' for c in snapshot['candidates']):
+            env.step(snapshot['decision_id'], 0)
+            snapshot = json.loads(env.snapshot_json())
+        cls.snapshot = snapshot
+
+    def flags(self):
+        return mock.patch.dict(tp._guide, {'mj01': True, 'booster_tier': True})
+
+    def test_the_top_open_booster_by_tier_goes_first_and_the_budget_is_one(self):
+        snapshot = self.snapshot
+        picks = {i: c['action']['booster_id'] for i, c in enumerate(snapshot['candidates'])
+                 if c['action']['type'] == 'SelectStartingBooster'}
+        scores = [(float(i), 'x') for i in range(len(snapshot['candidates']))]
+        with self.flags():
+            ranked = tp.booster_tier_scores(None, snapshot, scores)
+            tier = {i: tp.booster_tier_value(snapshot, b) for i, b in picks.items()}
+            self.assertEqual(tp.booster_tier_budget(snapshot, scores, 7), 1)
+        top = max(picks, key=lambda i: ranked[i][0])
+        self.assertEqual(tier[top], max(tier.values()))
+        self.assertEqual(sorted(s[0] for s in ranked), sorted(s[0] for s in scores))   # a permutation
+        self.assertEqual(tp.booster_tier_budget(snapshot, scores, 7), 7)                 # part off: unchanged
+        self.assertIs(tp.booster_tier_scores(None, snapshot, scores), scores)
+
+    def test_big_building_booster_tops_with_the_round_one_big_building_tile(self):
+        snapshot = json.loads(json.dumps(self.snapshot))
+        snapshot['state']['round_tiles'][0] = {'id': 6, 'condition': 'UpgradeLargeBuilding', 'vp_per_unit': 5}
+        with self.flags():
+            self.assertEqual(tp.booster_tier_value(snapshot, tp.BIG_BUILDING_BOOSTER) -
+                             tp.FACTION_BOOSTER_PREFS.get(snapshot['state']['players'][snapshot['player']]['faction'],
+                                                          {}).get(tp.BIG_BUILDING_BOOSTER, 0.0),
+                             tp.BIG_BUILDING_TIER[0])
+
+    def test_instant_gaia_needs_gaia_one_in_round_one_and_a_transdim_planet(self):
+        snapshot = json.loads(json.dumps(self.snapshot))
+        player = snapshot['state']['players'][snapshot['player']]
+        with self.flags(), mock.patch.object(tp, '_faction_tracks', return_value=()):
+            player['research_tracks'] = {**(player.get('research_tracks') or {}), 'gaia': 0}
+            player['resources'] = {**player['resources'], 'knowledge': 0}
+            snapshot['state']['research_board']['tech_tile_slots'][tp.GAIA_SLOT] = 2
+            with mock.patch.object(tp, 'TILE_PREFS', {}):
+                self.assertFalse(tp._gaia_one_in_round_one(snapshot['state'], player))
+                snapshot['state']['research_board']['tech_tile_slots'][tp.GAIA_SLOT] = 10
+                self.assertTrue(tp._gaia_one_in_round_one(snapshot['state'], player))
+                with mock.patch.object(tp, '_in_reach', return_value=[]):
+                    low = tp.booster_tier_value(snapshot, tp.INSTANT_GAIA_BOOSTER)
+                with mock.patch.object(tp, '_in_reach', return_value=['0,0']):
+                    high = tp.booster_tier_value(snapshot, tp.INSTANT_GAIA_BOOSTER)
+        self.assertLess(low, high)

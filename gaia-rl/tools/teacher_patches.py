@@ -440,6 +440,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'plan_menu': False,           # True: ..._ships_menu (one plan menu: tile, federation, token, track, ability)
           'menu_first': 3,              # plan_menu front slots (MENU_FIRST); ..._ships_menu1 sets 1 (E89 (ㄷ) B')
           'mj01': False,                # True: ..._ships_menu1_all (MJ01 Lost Fleet track corrections, see MJ_TRACK_CAPS)
+          'booster_tier': False,        # True: ..._ships_menu1_all_tier (starting booster by tier, see booster_tier_scores)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -5001,6 +5002,152 @@ def rebellion_ts_scores(env, snapshot, scores):
             lift(i, coords[0], f'burn {count} then Rebellion free trading station at {coords[0]}')
             break
     return lifted if lifted != scores else scores
+
+
+# ── booster_tier (user 2026-10-25 night, HANDOFF E117) ──────────────────────────────────────────────────────────────
+# "부스터 티어리스트로, 내 순서에 기반해 먹을 법한 걸 계산하다가 더 좋은 게 남으면 그냥 가져가고 그 뒤에 고민": at the
+# starting-booster pick the best open booster by the LF02 tier (lf01-lf02-value-table.md §5) is taken without rollouts
+# (budget 1 = the ranking's top, as current-choice), the conditional boosters scored by their conditions:
+#   range +3 (8): a valuable target only +3 reaches — a cheap or Gaia planet (mine, or the defence of planets next to
+#     home), a Transdim planet when instant Gaia works, a ship (engine RoundBoosterRange Build/GaiaFormation/
+#     ExploreSpaceship, actions.rs:172-178; user "가이아 행성을 먹을 수도, 모행성 수비할 수도").
+#   instant Gaia (5): Gaia >= 1, a Gaia-track faction, or Gaia 1 in round 1 (a good tech tile under the Gaia track, or
+#     4 knowledge), and a Transdim planet in reach; an Asteroid in reach adds (the former goes there after; user).
+#   4 power + big building (4): top with the round-1 big-building round tile; else ranked just below the 1-terraform
+#     booster when the faction's first opening builds an institute or academy, so it wins only when the better usable
+#     ones are gone (user "다른 게 먹을 게 없고 어차피 1R 의회나 아카데미 가는 종족이라면"; debate 1/1: never above a
+#     booster the expansion needs just because a big building is possible).
+# Faction preferences (faction-claims-status.md booster claims) add FACTION_BOOSTER_PREFS[faction][booster].
+BOOSTER_TIER = {9: 10.0, 12: 9.0, 13: 7.0, 3: 6.0, 10: 5.0, 1: 4.5, 6: 4.5, 2: 4.0, 11: 4.0, 7: 3.0, 14: 3.0}
+RANGE_BOOSTER = 8
+BIG_BUILDING_BOOSTER = 4
+RANGE_BOOSTER_EXTRA = 3
+RANGE_TIER = (9.5, 3.0)            # (a target only +3 reaches, none)
+INSTANT_GAIA_TIER = (9.5, 2.0)     # (instant Gaia works with a Transdim planet in reach, it does not)
+INSTANT_GAIA_ASTEROID = 0.5
+BIG_BUILDING_TIER = (11.0, 8.5, 4.0)   # (big-building round tile in round 1, opening builds PI/AC, neither)
+BIG_BUILDING_ROUND = 'UpgradeLargeBuilding'
+GOOD_GAIA_TILES = frozenset({10})  # the charge-4 tile; faction TILE_PREFS 'prefer' add theirs
+try:
+    from booster_prefs import FACTION_BOOSTER_PREFS
+except ImportError:
+    FACTION_BOOSTER_PREFS = {}
+
+
+def _sites(player):
+    return [s['hex'] for s in player['structures'] if s.get('hex')]
+
+
+def _gaia_one_in_round_one(state, player):
+    """Gaia >= 1 now, a Gaia-track faction, or a good tech tile under the Gaia track / 4 knowledge for a step in round 1."""
+    tracks = player.get('research_tracks') or {}
+    if tracks.get('gaia', 0) >= 1 or 'gaia' in _faction_tracks(player):
+        return True
+    slots = (state.get('research_board') or {}).get('tech_tile_slots') or []
+    prefs = TILE_PREFS.get(player['faction'], {})
+    good = (GOOD_GAIA_TILES - set(prefs.get('not_under_gaia', ()))) | set(prefs.get('prefer', ()))
+    if len(slots) > GAIA_SLOT and slots[GAIA_SLOT] in good:
+        return True
+    return player['resources'].get('knowledge', 0) >= 4
+
+
+def _in_reach(state, player, reach, kinds):
+    from strategy_teacher import distance
+    sites = _sites(player)
+    return [c for c, cell in state['board']['hexes'].items()
+            if _free_planet(cell) and cell['planet']['planet_type'] in kinds
+            and any(distance(s, c) <= reach for s in sites)]
+
+
+def _range_booster_target(state, player, gaia_ok):
+    """A valuable target that only the range +3 booster reaches."""
+    from strategy_teacher import distance
+    sites = _sites(player)
+    if not sites:
+        return False
+    base = _reach(player)
+    home = _home_type(player)
+
+    def only_plus3(c):
+        d = min(distance(s, c) for s in sites)
+        return base < d <= base + RANGE_BOOSTER_EXTRA
+    for c, cell in state['board']['hexes'].items():
+        if not _free_planet(cell) or not only_plus3(c):
+            continue
+        kind = cell['planet']['planet_type']
+        if kind == 'Gaia' or _cheap_planet(home, kind) or (kind == 'Transdim' and gaia_ok):
+            return True
+    return any(only_plus3(c) for c in (state['board'].get('spaceship_tiles') or {}).values())
+
+
+def _opening_builds_big(snapshot, player):
+    faction = player['faction']
+    labels = LOST_FLEET_OPENINGS.get(faction, ()) if faction in LOST_FLEET_OPENINGS and faction != 'Darkanians' \
+        else guide_opening_labels(faction, snapshot)
+    return bool(labels) and ('PI' in labels[0] or 'AC' in labels[0])
+
+
+def booster_tier_value(snapshot, booster):
+    """Tier of `booster` for the seat to move at the starting-booster pick (higher first)."""
+    state = snapshot['state']
+    player = state['players'][snapshot['player']]
+    gaia_ok = _gaia_one_in_round_one(state, player)
+    if booster == RANGE_BOOSTER:
+        value = RANGE_TIER[0] if _range_booster_target(state, player, gaia_ok) else RANGE_TIER[1]
+    elif booster == INSTANT_GAIA_BOOSTER:
+        reach = _reach(player)
+        works = gaia_ok and bool(_in_reach(state, player, reach, ('Transdim',)))
+        value = INSTANT_GAIA_TIER[0] if works else INSTANT_GAIA_TIER[1]
+        if works and _in_reach(state, player, reach, ('Asteroid',)):
+            value += INSTANT_GAIA_ASTEROID
+    elif booster == BIG_BUILDING_BOOSTER:
+        tiles = state.get('round_tiles') or []
+        if tiles and tiles[0].get('condition') == BIG_BUILDING_ROUND:
+            value = BIG_BUILDING_TIER[0]
+        elif _opening_builds_big(snapshot, player):
+            value = BIG_BUILDING_TIER[1]
+        else:
+            value = BIG_BUILDING_TIER[2]
+    else:
+        value = BOOSTER_TIER.get(booster, 0.0)
+    return value + FACTION_BOOSTER_PREFS.get(player['faction'], {}).get(booster, 0.0)
+
+
+def booster_tier_scores(env, snapshot, scores):
+    """ships_menu1_all_tier: order the open starting boosters by booster_tier_value (scores permuted, as
+    start_booster5_scores); booster_tier_budget then stops after the first comparison, so the top is taken."""
+    from current_actions.conservation import blocked
+    if not _guide['booster_tier'] or snapshot.get('player') is None or not _setup_booster(snapshot):
+        return scores
+    picks = {i: c['action']['booster_id'] for i, c in enumerate(snapshot['candidates'])
+             if c['action'].get('type') == 'SelectStartingBooster' and not blocked(scores[i])}
+    if not picks:
+        return scores
+    tier = {i: booster_tier_value(snapshot, b) for i, b in picks.items()}
+    order = sorted(picks, key=lambda i: (-tier[i], -scores[i][0]))
+    slots = sorted(picks, key=lambda i: -scores[i][0])
+    lifted = list(scores)
+    for i, j in zip(order, slots):
+        lifted[i] = (scores[j][0], f'{scores[i][1]}; booster tier {tier[i]:.1f}', *scores[i][2:])
+    return lifted
+
+
+def booster_tier_budget(snapshot, scores, budget):
+    """budget_teacher hook, installed after setup_places_budget: one comparison (the ranking's top) at the pick."""
+    if _guide['booster_tier'] and _setup_booster(snapshot):
+        return 1
+    return budget
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier(seed, **kwargs):
+    """Teacher factory: ships_menu1_all + booster_tier (user 2026-10-25 night, E117; lab 110 all four seats)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs)
+    import budget_teacher
+    _guide['booster_tier'] = True
+    _wrap_rank('_booster_tier', booster_tier_scores)
+    if booster_tier_budget not in budget_teacher.budget_hooks:
+        budget_teacher.budget_hooks.append(booster_tier_budget)
+    return teacher
 
 
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
