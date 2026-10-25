@@ -4894,6 +4894,8 @@ def knowledge_to_credit_scores(env, snapshot, scores):
 # 소행성에 던지지 말라는거지"): in Lost Fleet a former used for an Asteroid mine is gone, while a former kept for Transdim
 # planets forms again every round. A Gaia-track faction therefore does not build on an Asteroid with a former in rounds 1-3
 # while a Transdim planet is in reach ("엥간하면": with none in reach the former has no other use).
+# Flexible (user 10-26 "유동적으로", debate 1/1): few usable rounds lower the hold to a penalty, not an automatic allow;
+# a fixed opening that left the asteroid build allowed is respected; never every candidate blocked (lab 111 pair-004 crash).
 def gaia_asteroid_hold_scores(env, snapshot, scores):
     from current_actions.conservation import BLOCKED, PREFIX, blocked
     state, actor = snapshot['state'], snapshot.get('player')
@@ -4914,10 +4916,25 @@ def gaia_asteroid_hold_scores(env, snapshot, scores):
     held = [i for i, c in enumerate(snapshot['candidates']) if asteroid_build(c['action']) and not blocked(scores[i])]
     if not held or not _reach_targets(state, player, ('Transdim',)):
         return scores
+    if any(blocked(s) and 'fixed opening takes priority' in str(s[1]) for s in scores):
+        return scores                                  # (ㄱ) the opening restriction left the asteroid build allowed
+    level = (player.get('research_tracks') or {}).get('gaia', 0) or 0
+    power = (player.get('resources') or {}).get('power') or {}
+    tokens = sum(power.get(b, 0) or 0 for b in ('bowl1', 'bowl2', 'bowl3'))
+    usable = ((level >= 1 and tokens >= GAIA_TOKENS[min(level, len(GAIA_TOKENS) - 1)])
+              or TFMARS_SHIP in (player.get('explored_ships') or ()))
+    rounds_left = GAIA_ASTEROID_HOLD_LAST_ROUND - state['round'] + 1
+    unblocked = [s[0] for i, s in enumerate(scores) if not blocked(s)]
+    others = [s[0] for i, s in enumerate(scores) if not blocked(s) and i not in held]
     result = list(scores)
+    if usable and rounds_left >= 2 and others:         # (ㄴ') hard block; (ㄹ) never block every candidate
+        for i in held:
+            result[i] = (BLOCKED, PREFIX+'gaia_asteroid_hold: a Gaia-track faction keeps its former for Transdim planets '
+                         'in rounds 1-3', *scores[i][2:])
+        return result
+    bottom = min(unblocked)
     for i in held:
-        result[i] = (BLOCKED, PREFIX+'gaia_asteroid_hold: a Gaia-track faction keeps its former for Transdim planets '
-                     'in rounds 1-3', *scores[i][2:])
+        result[i] = (scores[i][0]-abs(bottom)-1000, *scores[i][1:])
     return result
 
 

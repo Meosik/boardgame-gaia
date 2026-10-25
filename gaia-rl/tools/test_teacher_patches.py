@@ -1387,16 +1387,17 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertTrue(tp._tfmars_gaia_ready(state, player))
         self.assertEqual(tp._tfmars_tokens(player), 1)
 
-    def _asteroid_hold(self, faction, rnd=1, mj01=True, transdim=True):
+    def _asteroid_hold(self, faction, rnd=1, mj01=True, transdim=True, gaia=1, tokens=6, ships=(), red=(4.0, 'red')):
         from current_actions.conservation import blocked
         tp._guide['mj01'] = mj01                           # restored by setUp's cleanup
         hexes = {'0,0': {'planet': {'planet_type': 'Asteroid', 'is_gaia_formed': False}},
                  '1,0': {'planet': {'planet_type': 'Red', 'is_gaia_formed': False}}}
-        state = {'round': rnd, 'phase': {'ActionPhase': {}}, 'board': {'hexes': hexes},
-                 'players': [{'faction': faction}]}
+        player = {'faction': faction, 'research_tracks': {'gaia': gaia}, 'explored_ships': list(ships),
+                  'resources': {'power': {'bowl1': tokens, 'bowl2': 0, 'bowl3': 0}}}
+        state = {'round': rnd, 'phase': {'ActionPhase': {}}, 'board': {'hexes': hexes}, 'players': [player]}
         snapshot = {'player': 0, 'state': state, 'candidates': [
             {'action': {'type': 'Build', 'coord': '0,0'}}, {'action': {'type': 'Build', 'coord': '1,0'}}]}
-        scores = [(5.0, 'asteroid'), (4.0, 'red')]
+        scores = [(5.0, 'asteroid'), red]
         with mock.patch.object(tp, '_reach_targets', return_value=[('2,0', {}, 0, 0)] if transdim else []):
             out = tp.gaia_asteroid_hold_scores(None, snapshot, scores)
         return scores, out, blocked
@@ -1406,6 +1407,27 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertTrue(blocked(out[0]))
         self.assertEqual(out[1], scores[1])
         self.assertEqual(scores[0], (5.0, 'asteroid'))     # input untouched
+
+    def test_gaia_asteroid_hold_few_tokens_or_late_round_is_a_penalty_not_a_block(self):
+        for kwargs in ({'tokens': 3}, {'rnd': 3}):
+            scores, out, blocked = self._asteroid_hold('Itars', **kwargs)
+            self.assertFalse(blocked(out[0]), kwargs)
+            self.assertLess(out[0][0], out[1][0], kwargs)
+            self.assertEqual(out[1], scores[1])
+
+    def test_gaia_asteroid_hold_tfmars_explored_is_usable_without_tokens(self):
+        _, out, blocked = self._asteroid_hold('Itars', tokens=0, ships=[2])
+        self.assertTrue(blocked(out[0]))
+
+    def test_gaia_asteroid_hold_respects_the_fixed_opening(self):
+        scores, out, _ = self._asteroid_hold(
+            'BalTaks', red=(-1e12, 'conservation blocked: fixed opening takes priority'))
+        self.assertEqual(out, scores)
+
+    def test_gaia_asteroid_hold_never_blocks_every_candidate(self):
+        scores, out, blocked = self._asteroid_hold('BalTaks', red=(-1e12, 'conservation blocked: other'))
+        self.assertFalse(blocked(out[0]))
+        self.assertTrue(blocked(out[1]))
 
     def test_gaia_asteroid_hold_leaves_scores_without_transdim_late_rounds_other_factions_and_no_mj01(self):
         for kwargs in ({'faction': 'Itars', 'transdim': False}, {'faction': 'Itars', 'rnd': 4},
