@@ -156,6 +156,34 @@ impl RuleEngine {
         faction_structure_power_value(state, player_id, coord, kind)
     }
 
+    /// Offline experiments only (gaia-rl `Environment` seeds with `@order=`): replace the turn order after
+    /// faction selection, before the first starting structure is placed, and restart the placement queue so
+    /// starting placements and starting boosters follow the new order. `order` must be a permutation of the
+    /// current turn order; any other phase is refused.
+    pub fn reorder_turns_before_placement(
+        state: &mut GameState,
+        order: &[PlayerId],
+    ) -> Result<(), RuleError> {
+        if !matches!(
+            state.phase,
+            GamePhase::Setup(SetupPhase::StartingStructures { placement_index: 0, .. })
+        ) {
+            return Err(RuleError::WrongPhase);
+        }
+        let mut wanted = order.to_vec();
+        let mut current = state.turn_order.clone();
+        wanted.sort_unstable();
+        current.sort_unstable();
+        if wanted != current {
+            return Err(RuleError::ActionNotAllowed(
+                "turn order must be a permutation of the players".to_string(),
+            ));
+        }
+        state.turn_order = order.to_vec();
+        state.current_player = 0;
+        begin_starting_structure_placement(state)
+    }
+
     // ── Public API ─────────────────────────────────────────────────────────
 
     /// Full validation of `action` for `player_id` in the current state.

@@ -13,6 +13,38 @@ fn reset_is_seeded_and_preserves_physical_faction_pairs() {
 }
 
 #[test]
+fn order_suffix_keeps_map_and_factions_and_reorders_setup() {
+    let plain = Environment::new("quartet-d-113082", 10000).unwrap();
+    let mut ordered = Environment::new("quartet-d-113082@order=2,0,3,1", 10000).unwrap();
+    let factions = |env: &Environment| env.state().players.iter().map(|p| p.faction).collect::<Vec<_>>();
+    assert_eq!(factions(&plain), factions(&ordered));
+    assert_same_json(
+        &serde_json::to_value(&plain.state().board).unwrap(),
+        &serde_json::to_value(&ordered.state().board).unwrap(),
+        "board",
+    );
+    assert_eq!(plain.state().turn_order, vec![0, 1, 2, 3]);
+    assert_eq!(ordered.state().turn_order, vec![2, 0, 3, 1]);
+    // Advanced setup: first mines in turn order, then the second stage backwards, then boosters backwards.
+    let mut placers = Vec::new();
+    let mut pickers = Vec::new();
+    loop {
+        let player = ordered.current_decision_player().unwrap().unwrap();
+        match &ordered.legal_actions()[0] {
+            AiDecision::Setup(gaia_engine::SetupAction::PlaceStartingStructure { .. }) => placers.push(player),
+            AiDecision::Setup(gaia_engine::SetupAction::SelectStartingBooster { .. }) => pickers.push(player),
+            _ => break,
+        }
+        ordered.step(ordered.decision_id(), 0).unwrap();
+    }
+    // Some placements are forced and applied automatically, so only the first placer is fixed here.
+    assert_eq!(placers[0], 2);
+    assert_eq!(pickers, vec![1, 3, 0, 2]);
+    assert!(Environment::new("quartet-d-113082@order=2,0,3", 10000).is_err());
+    assert!(Environment::new("quartet-d-113082@order=2,0,3,3", 10000).is_err());
+}
+
+#[test]
 fn stale_indices_and_failed_steps_do_not_mutate() {
     let mut env = Environment::new("rl-stale", 10000).unwrap();
     let old = env.state().serialize();

@@ -25,6 +25,18 @@ pub enum EnvError {
     Configuration(&'static str),
 }
 
+/// Split `<seed>@order=a,b,c,d` into the map seed and the turn order (seat ids, first to last).
+fn split_order(full_seed: &str) -> Result<(&str, Option<Vec<PlayerId>>), EnvError> {
+    let Some((seed, order)) = full_seed.split_once("@order=") else {
+        return Ok((full_seed, None));
+    };
+    let seats: Result<Vec<PlayerId>, _> = order.split(',').map(|s| s.trim().parse::<PlayerId>()).collect();
+    match seats {
+        Ok(seats) if seats.len() == 4 => Ok((seed, Some(seats))),
+        _ => Err(EnvError::Configuration("@order= needs four seat ids, e.g. @order=2,0,3,1")),
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecisionSnapshot {
     pub schema_version: u32,
@@ -81,7 +93,11 @@ impl Environment {
         })
     }
 
-    fn initial(seed: &str) -> Result<(GameState, Vec<AiDecision>, AiCandidateDiagnostics), EnvError> {
+    fn initial(full_seed: &str) -> Result<(GameState, Vec<AiDecision>, AiCandidateDiagnostics), EnvError> {
+        // `<seed>@order=2,0,3,1`: the same map and factions as `<seed>` (the suffix is stripped before any
+        // randomness), then the turn order is the listed seats, first to last — starting placements and
+        // starting boosters follow it (lab turn order by expected faction strength, HANDOFF E117).
+        let (seed, order) = split_order(full_seed)?;
         // Runs recorded before the same-type adjacency fix (engine 7d012a0) replay only on the
         // drawn sector rotations; GAIA_DRAWN_ROTATIONS=1 rebuilds those maps.
         let setup = if std::env::var_os("GAIA_DRAWN_ROTATIONS").is_some_and(|value| value == "1") {
@@ -106,6 +122,9 @@ impl Environment {
                 return Err(EnvError::Configuration("expected faction-selection setup"));
             };
             RuleEngine::apply_setup_action(&mut state, player, action.clone())?;
+        }
+        if let Some(order) = order {
+            RuleEngine::reorder_turns_before_placement(&mut state, &order)?;
         }
         RuleEngine::advance_automatic(&mut state)?;
         let (candidates, diagnostics) = RuleEngine::ai_decisions_with_diagnostics(&state)?;
