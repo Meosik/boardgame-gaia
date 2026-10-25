@@ -1932,9 +1932,21 @@ def colony_options(state, player, *, home=None):
             priced.append((net, cost, nav))
     room = max(0, MINE_LIMIT - sum(v.kind(s['kind']) == 'Mine' for s in player['structures']))
     total, nav_paid = 0.0, False
+    # ships_menu1_all only (user 2026-10-25, codex check 1, E117): the mine-track income step is not uniform (the 3rd mine
+    # adds no ore), so the k-th mine taken here is priced with its own income step, from the state with k-1 extra mines.
+    stepwise = _part(player, 'mj01')
+    taken, previous = player['structures'], current
     for net, cost, nav in sorted(priced, key=lambda item: -item[0]):
         if not room:
             break
+        if stepwise:
+            more = [*taken, {'kind': 'Mine', 'hex': None}]
+            after = v.production(state, {**player, 'structures': more}, include_booster=False)
+            step_gain = gv.planet_value(state) + gv.incomes_value(
+                dict(state, round=state['round']+1), [b-a for a, b in zip(previous, after)])
+            net += step_gain - gain
+            if net <= 0:
+                continue
         # reach_plus: the Navigation levels are paid once, in knowledge (rulebook: 4 a level);
         # each level is worth the same 16 charges (LF01), so they add no price here.
         need = {**cost, 'knowledge': nav} if nav and not nav_paid else cost
@@ -1944,6 +1956,8 @@ def colony_options(state, player, *, home=None):
             total += net
             room -= 1
             nav_paid = nav_paid or nav
+            if stepwise:
+                taken, previous = more, after
     return total
 
 

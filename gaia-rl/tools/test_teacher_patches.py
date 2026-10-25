@@ -2599,3 +2599,33 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual([g.name for g in order[:2]], [plans[0].name, plans[1].name])
         self.assertEqual({g.name for g in order[2:]}, {'a', 'b', second.name, plans[2].name})
         self.assertFalse(getattr(p.rollout, '_track_plans', False))                  # the horizon is untouched
+
+
+class ColonyOptionsStepTests(unittest.TestCase):
+    def test_each_extra_mine_is_priced_with_its_own_income_step(self):
+        """E117 codex check 1: with mj01 the k-th mine taken by colony_options gets the income step from k-1 extra mines."""
+        import guide_value as gv
+        env = Environment(SEED, 2000)
+        snapshot = json.loads(env.snapshot_json())
+        while snapshot['state']['round'] < 1 or 'ActionPhase' not in str(snapshot['state']['phase']):
+            env.step(snapshot['decision_id'], 0)
+            snapshot = json.loads(env.snapshot_json())
+        state = snapshot['state']
+        player = dict(state['players'][snapshot['player']])
+        player['resources'] = {**player['resources'], 'ore': 20, 'credits': 20, 'qic': 5, 'knowledge': 10}
+        options = [({'ore': 1}, 0, 0)]*3
+        v = tp._value
+        def step(k):
+            mines = [*player['structures'], *[{'kind': 'Mine', 'hex': None}]*k]
+            a = v.production(state, {**player, 'structures': mines}, include_booster=False)
+            b = v.production(state, {**player, 'structures': [*mines, {'kind': 'Mine', 'hex': None}]}, include_booster=False)
+            return gv.planet_value(state) + gv.incomes_value(dict(state, round=state['round']+1), [y-x for x, y in zip(a, b)])
+        charge = gv.to_vp(state, -gv.CHARGE['ore'])
+        with mock.patch.object(tp, '_colony_costs', return_value=options):
+            with mock.patch.object(tp, '_part', return_value=False):
+                uniform = tp.colony_options(state, player)
+            with mock.patch.object(tp, '_part', return_value=True):
+                stepwise = tp.colony_options(state, player)
+        self.assertAlmostEqual(uniform, 3*(step(0)+charge))
+        self.assertAlmostEqual(stepwise, sum(max(0, step(k)+charge) for k in range(3)))
+        self.assertNotEqual([round(step(k), 6) for k in range(3)], [round(step(0), 6)]*3)   # the steps really differ
