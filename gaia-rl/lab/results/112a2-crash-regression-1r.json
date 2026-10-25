@@ -1,0 +1,287 @@
+{
+ "name": "112a2-crash-regression-1r",
+ "kind": "ab",
+ "status": "done",
+ "note": "토론 1/1(코덱스: 새 순서 재실행은 실패 경로를 피할 수 있어 크래시 수정 검증이 아님): **112 pair-005 크래시 회귀 확인, 판정 없음** — 실패 당시 그대로 quartet-b-67485@order=1,2,3,0(112 result.json의 순서), 4좌석 같은 교사 ships_menu1_all_tier, 1R 종료, cap60-p2, 비교 4, 1쌍 × 좌석 교대 2판(≈ 15분). 통과 = 2/2판 완료, `No eligible continuation`(preparation.py:555) 없음 = d5946bd·61edf20 gaia_asteroid_hold 수정 확인. 실패하면 workers.log step·종족으로 재현 봇 턴.",
+ "host": "agentmaco",
+ "commit": "d615532",
+ "started_at": "2026-10-26T06:15:59+09:00",
+ "finished_at": "2026-10-26T06:51:48+09:00",
+ "seeds": [
+  "quartet-b-67485@order=1,2,3,0"
+ ],
+ "command": [
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+  "--games",
+  "2",
+  "--seeds",
+  "quartet-b-67485@order=1,2,3,0",
+  "--comparisons",
+  "4",
+  "--jobs",
+  "4",
+  "--fast-copy",
+  "--stop-round",
+  "1",
+  "--output",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-112a2-crash-regression-1r"
+ ],
+ "exit_code": 0,
+ "summary": {
+  "factions": {
+   "BalTaks": {
+    "pairs": 1,
+    "mean_B_minus_A": 0,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 20,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 11,
+    "A_unsearched_comparisons": 1003,
+    "B_decisions": 19,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 12,
+    "B_unsearched_comparisons": 1099
+   },
+   "Bescods": {
+    "pairs": 1,
+    "mean_B_minus_A": -2,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 21,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 14,
+    "A_unsearched_comparisons": 1694,
+    "B_decisions": 16,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 11,
+    "B_unsearched_comparisons": 1315
+   },
+   "Gleens": {
+    "pairs": 1,
+    "mean_B_minus_A": -5,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 13,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 9,
+    "A_unsearched_comparisons": 927,
+    "B_decisions": 12,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 8,
+    "B_unsearched_comparisons": 879
+   },
+   "Itars": {
+    "pairs": 1,
+    "mean_B_minus_A": 1,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 16,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 7,
+    "A_unsearched_comparisons": 981,
+    "B_decisions": 20,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 14,
+    "B_unsearched_comparisons": 1884
+   },
+   "ALL": {
+    "pairs": 1,
+    "mean_B_minus_A": -1.5,
+    "ci95": null,
+    "error_games": 0,
+    "timeout_games": 0,
+    "A_decisions": 70,
+    "A_fallback_timeouts": 0,
+    "A_federation_limit_hits": 0,
+    "A_unsearched_decisions": 41,
+    "A_unsearched_comparisons": 4605,
+    "B_decisions": 67,
+    "B_fallback_timeouts": 0,
+    "B_federation_limit_hits": 0,
+    "B_unsearched_decisions": 45,
+    "B_unsearched_comparisons": 5177
+   }
+  },
+  "failures": {},
+  "games_planned": 2,
+  "games_complete": 2,
+  "pairs_complete": 1,
+  "seeds_repeated": 0
+ },
+ "timing": {
+  "A": {
+   "n": 70,
+   "mean": 23.104814285714287,
+   "median": 26.0915,
+   "p90": 56.711,
+   "max": 60.037
+  },
+  "B": {
+   "n": 67,
+   "mean": 28.547940298507463,
+   "median": 29.767,
+   "p90": 60.027,
+   "max": 60.034
+  }
+ },
+ "final_scores": {
+  "Bescods": {
+   "A": [
+    4
+   ],
+   "B": [
+    2
+   ]
+  },
+  "BalTaks": {
+   "A": [
+    0
+   ],
+   "B": [
+    0
+   ]
+  },
+  "Itars": {
+   "A": [
+    3
+   ],
+   "B": [
+    4
+   ]
+  },
+  "Gleens": {
+   "A": [
+    12
+   ],
+   "B": [
+    7
+   ]
+  }
+ },
+ "charges": {
+  "factions": {
+   "BalTaks": {
+    "pairs": 1,
+    "A": 64.60000000000002,
+    "B": 68.60000000000008,
+    "mean_B_minus_A": 4.000000000000057,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   },
+   "Bescods": {
+    "pairs": 1,
+    "A": 101.05454545454546,
+    "B": 99.45454545454544,
+    "mean_B_minus_A": -1.6000000000000227,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   },
+   "Gleens": {
+    "pairs": 1,
+    "A": 83.25454545454551,
+    "B": 89.94999999999999,
+    "mean_B_minus_A": 6.695454545454481,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   },
+   "Itars": {
+    "pairs": 1,
+    "A": 54.90000000000006,
+    "B": 80.65454545454551,
+    "mean_B_minus_A": 25.75454545454545,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   },
+   "ALL": {
+    "pairs": 1,
+    "mean_B_minus_A": 8.712499999999991,
+    "ci95": [
+     NaN,
+     NaN
+    ]
+   }
+  },
+  "games": [
+   "pair-000/game-0-A02  Bescods(A) 101, BalTaks(B) 69, Itars(A) 55, Gleens(B) 90",
+   "pair-000/game-1-A13  Bescods(B) 99, BalTaks(A) 65, Itars(B) 81, Gleens(A) 83"
+  ],
+  "seats": {
+   "pair-000/game-0-A02": [
+    {
+     "faction": "Bescods",
+     "arm": "A",
+     "charges": 101.05454545454546
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "B",
+     "charges": 68.60000000000008
+    },
+    {
+     "faction": "Itars",
+     "arm": "A",
+     "charges": 54.90000000000006
+    },
+    {
+     "faction": "Gleens",
+     "arm": "B",
+     "charges": 89.94999999999999
+    }
+   ],
+   "pair-000/game-1-A13": [
+    {
+     "faction": "Bescods",
+     "arm": "B",
+     "charges": 99.45454545454544
+    },
+    {
+     "faction": "BalTaks",
+     "arm": "A",
+     "charges": 64.60000000000002
+    },
+    {
+     "faction": "Itars",
+     "arm": "B",
+     "charges": 80.65454545454551
+    },
+    {
+     "faction": "Gleens",
+     "arm": "A",
+     "charges": 83.25454545454551
+    }
+   ]
+  },
+  "games_incomplete": 0
+ },
+ "basics": {
+  "factions": {},
+  "games_incomplete": 0
+ },
+ "watch_replay": "다시보기 게시: pair-000/game-1-A13 좌석 2 — Itars B팔 충전 81 (A팔 55)"
+}
