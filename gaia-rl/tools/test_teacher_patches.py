@@ -2627,5 +2627,27 @@ class ColonyOptionsStepTests(unittest.TestCase):
             with mock.patch.object(tp, '_part', return_value=True):
                 stepwise = tp.colony_options(state, player)
         self.assertAlmostEqual(uniform, 3*(step(0)+charge))
-        self.assertAlmostEqual(stepwise, sum(max(0, step(k)+charge) for k in range(3)))
+        running = [sum(step(j)+charge for j in range(k+1)) for k in range(3)]
+        self.assertAlmostEqual(stepwise, max(0, *running))
         self.assertNotEqual([round(step(k), 6) for k in range(3)], [round(step(0), 6)]*3)   # the steps really differ
+
+    def test_a_mine_losing_alone_still_counts_when_the_next_step_pays(self):
+        """Codex debate 1/1: the first extra mine adds nothing, the second adds 3 ore — together they pay."""
+        import guide_value as gv
+        base = 2
+        player = {'faction': 'Terrans', 'passed': False, 'structures': [{'kind': 'Mine', 'hex': 'x'}]*base,
+                  'resources': {'ore': 9, 'credits': 9, 'qic': 0, 'knowledge': 0}}
+        ore = {0: 0, 1: 0, 2: 3}
+        def production(state, p, include_booster=False):
+            return [ore.get(len(p['structures'])-base, 3), 0, 0, 0, 0, 0, 0]
+        state = {'round': 1}
+        with mock.patch.object(tp._value, 'production', side_effect=production), \
+                mock.patch.object(tp._value, 'HOME', {'Terrans': 'Terra'}), \
+                mock.patch.object(gv, 'planet_value', return_value=0.0), \
+                mock.patch.object(tp, '_colony_costs', return_value=[({'ore': 1}, 0, 0)]*2), \
+                mock.patch.object(tp, '_part', return_value=True):
+            charge = gv.to_vp(state, -gv.CHARGE['ore'])
+            three = gv.incomes_value(dict(state, round=2), [3, 0, 0, 0, 0, 0, 0])
+            self.assertLess(charge, 0)
+            self.assertGreater(three + 2*charge, 0)
+            self.assertAlmostEqual(tp.colony_options(state, player), three + 2*charge)

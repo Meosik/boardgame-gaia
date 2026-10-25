@@ -1925,28 +1925,18 @@ def colony_options(state, player, *, home=None):
     resources = player['resources']
     budget = {'ore': resources['ore']+recurring[0], 'credits': resources['credits']+recurring[1],
               'qic': resources['qic']+recurring[3], 'knowledge': resources['knowledge']+recurring[2]}
+    room = max(0, MINE_LIMIT - sum(v.kind(s['kind']) == 'Mine' for s in player['structures']))
+    if _part(player, 'mj01'):
+        return _colony_options_stepwise(state, player, home, budget, room)
     priced = []
     for cost, charges, nav in _colony_costs(state, player, home):
         net = gain + gv.to_vp(state, charges - sum(gv.CHARGE[k]*n for k, n in cost.items()))
         if net > 0:
             priced.append((net, cost, nav))
-    room = max(0, MINE_LIMIT - sum(v.kind(s['kind']) == 'Mine' for s in player['structures']))
     total, nav_paid = 0.0, False
-    # ships_menu1_all only (user 2026-10-25, codex check 1, E117): the mine-track income step is not uniform (the 3rd mine
-    # adds no ore), so the k-th mine taken here is priced with its own income step, from the state with k-1 extra mines.
-    stepwise = _part(player, 'mj01')
-    taken, previous = player['structures'], current
     for net, cost, nav in sorted(priced, key=lambda item: -item[0]):
         if not room:
             break
-        if stepwise:
-            more = [*taken, {'kind': 'Mine', 'hex': None}]
-            after = v.production(state, {**player, 'structures': more}, include_booster=False)
-            step_gain = gv.planet_value(state) + gv.incomes_value(
-                dict(state, round=state['round']+1), [b-a for a, b in zip(previous, after)])
-            net += step_gain - gain
-            if net <= 0:
-                continue
         # reach_plus: the Navigation levels are paid once, in knowledge (rulebook: 4 a level);
         # each level is worth the same 16 charges (LF01), so they add no price here.
         need = {**cost, 'knowledge': nav} if nav and not nav_paid else cost
@@ -1956,9 +1946,40 @@ def colony_options(state, player, *, home=None):
             total += net
             room -= 1
             nav_paid = nav_paid or nav
-            if stepwise:
-                taken, previous = more, after
     return total
+
+
+def _colony_options_stepwise(state, player, home, budget, room):
+    """ships_menu1_all colony_options (user 2026-10-25, codex checks, E117): the mine-track income step is not uniform (the
+    3rd mine adds no ore), so the k-th mine is priced with its own income step from the state with k-1 extra mines, and a
+    mine that loses alone can still pay as part of more mines. Options go cheapest-first (the step does not depend on which
+    planet); the value is the best running total over the affordable prefix, never below 0."""
+    import guide_value as gv
+    v = _value
+    options = sorted(((gv.to_vp(state, charges - sum(gv.CHARGE[k]*n for k, n in cost.items())), cost, nav)
+                      for cost, charges, nav in _colony_costs(state, player, home)), key=lambda item: -item[0])
+    taken = player['structures']
+    previous = v.production(state, player, include_booster=False)
+    total = best = 0.0
+    nav_paid = False
+    for local, cost, nav in options:
+        if not room:
+            break
+        need = {**cost, 'knowledge': nav} if nav and not nav_paid else cost
+        if not all(budget[k] >= n for k, n in need.items()):
+            continue
+        more = [*taken, {'kind': 'Mine', 'hex': None}]
+        after = v.production(state, {**player, 'structures': more}, include_booster=False)
+        step = gv.planet_value(state) + gv.incomes_value(dict(state, round=state['round']+1),
+                                                         [b-a for a, b in zip(previous, after)])
+        for k, n in need.items():
+            budget[k] -= n
+        total += step + local
+        best = max(best, total)
+        room -= 1
+        nav_paid = nav_paid or nav
+        taken, previous = more, after
+    return best
 
 
 def lf_leech_value(state, player):
