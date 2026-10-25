@@ -5014,19 +5014,38 @@ def rebellion_ts_scores(env, snapshot, scores):
 #     ExploreSpaceship, actions.rs:172-178; user "가이아 행성을 먹을 수도, 모행성 수비할 수도").
 #   instant Gaia (5): Gaia >= 1, a Gaia-track faction, or Gaia 1 in round 1 (a good tech tile under the Gaia track, or
 #     4 knowledge), and a Transdim planet in reach; an Asteroid in reach adds (the former goes there after; user).
-#   4 power + big building (4): top with the round-1 big-building round tile; else ranked just below the 1-terraform
-#     booster when the faction's first opening builds an institute or academy, so it wins only when the better usable
-#     ones are gone (user "다른 게 먹을 게 없고 어차피 1R 의회나 아카데미 가는 종족이라면"; debate 1/1: never above a
-#     booster the expansion needs just because a big building is possible).
+#   4 power + big building (4): top with the round-1 big-building round tile; else 4 charges + the pass VP of the big
+#     buildings in the faction's first round-1 opening (user "어차피 1R 의회나 아카데미 가는 종족이라면"; debate 1/1:
+#     priced by the planned opening's pass points, not ranked first because a big building is possible).
 # Faction preferences (faction-claims-status.md booster claims) add FACTION_BOOSTER_PREFS[faction][booster].
-BOOSTER_TIER = {9: 10.0, 12: 9.0, 13: 7.0, 3: 6.0, 10: 5.0, 1: 4.5, 6: 4.5, 2: 4.0, 11: 4.0, 7: 3.0, 14: 3.0}
+# User 2026-10-25 night, second pass: "맨 윗 순서는 다 비슷비슷 할 거라 종족에 맞춰서 … 어잌후 자료 중에 충전 관련된 자료":
+# the value is in charges — LF02's charge value of each booster (lf01-lf02-value-table.md §5), plus for a pass-VP booster
+# the VP the faction's first round-1 opening earns at pass (VP_CHARGES charges each), plus situation terms:
+#   2 credits + QIC (9): the Rebellion ship within setup reach (its 3-QIC tech action, L3-8), or ore to spare.
+#   1 terraform (12): cheap planets in reach that all need a step (no home-type planet in reach).
+#   2 power tokens + ore (2): LF02 "1R엔 별로" unless round-1 instant Gaia forming (tokens managed early) or the Twilight
+#     ship in reach (3 power + 2 tokens toward its artifact; user).
+#   range +3 (8) without a +3-only target and instant Gaia (5) that does not work keep a fallback ("3·2는 너무 작다").
+BOOSTER_CHARGES = {9: 9.4, 12: 8.4, 8: 9.0, 5: 8.0, 13: 8.0, 2: 6.0, 4: 4.0, 3: 4.0, 7: 4.0, 1: 4.0, 6: 4.0, 10: 4.0,
+                   11: 4.8, 14: 3.6}
+BOOSTER_PASS_COUNTS = {3: ('M', 1), 7: ('TS', 2), 1: ('RL', 3), 4: ('big', 4)}   # pass VP per counted building
+VP_CHARGES = 1.5
+PLANET_TYPES_BOOSTER = 10
+PLANET_TYPES_R1 = 2                # planet types held after a round-1 opening (home + one expansion type)
+FORMER_BOOSTER = 6
 RANGE_BOOSTER = 8
 BIG_BUILDING_BOOSTER = 4
+POWER_TOKEN_BOOSTER = 2
 RANGE_BOOSTER_EXTRA = 3
-RANGE_TIER = (9.5, 3.0)            # (a target only +3 reaches, none)
-INSTANT_GAIA_TIER = (9.5, 2.0)     # (instant Gaia works with a Transdim planet in reach, it does not)
-INSTANT_GAIA_ASTEROID = 0.5
-BIG_BUILDING_TIER = (11.0, 8.5, 4.0)   # (big-building round tile in round 1, opening builds PI/AC, neither)
+RANGE_FALLBACK = 6.0               # range +3 with no +3-only target
+INSTANT_GAIA_FALLBACK = 5.0        # instant Gaia that does not work in round 1
+INSTANT_GAIA_ASTEROID = 1.0
+QIC_REBELLION = 2.0
+QIC_ORE = 1.0
+QIC_ORE_FROM = 5                   # ore held at the pick
+TERRAFORM_NEEDED = 2.0
+TOKENS_EARLY_GAIA = 2.0
+TOKENS_TWILIGHT = 2.0
 BIG_BUILDING_ROUND = 'UpgradeLargeBuilding'
 GOOD_GAIA_TILES = frozenset({10})  # the charge-4 tile; faction TILE_PREFS 'prefer' add theirs
 try:
@@ -5081,13 +5100,6 @@ def _range_booster_target(state, player, gaia_ok):
     return any(only_plus3(c) for c in (state['board'].get('spaceship_tiles') or {}).values())
 
 
-def _opening_builds_big(snapshot, player):
-    faction = player['faction']
-    labels = LOST_FLEET_OPENINGS.get(faction, ()) if faction in LOST_FLEET_OPENINGS and faction != 'Darkanians' \
-        else guide_opening_labels(faction, snapshot)
-    return bool(labels) and ('PI' in labels[0] or 'AC' in labels[0])
-
-
 def booster_tier_key(snapshot, booster):
     """Sort key of `booster` at the starting-booster pick (higher first), debate 1/1: the required orders first —
     (the big-building booster with the round-1 big-building tile, a faction's guide-fixed first booster), then the tier
@@ -5113,29 +5125,64 @@ def _opening_builds_pi(snapshot, player):
     return bool(labels) and 'PI' in labels[0]
 
 
+def _opening_counts(snapshot, player):
+    """Buildings at the end of round 1 by the faction's first opening label ('1PI+1TS+2M' -> {'PI': 1, 'TS': 1, 'M': 2,
+    'big': 1}); {} without a label."""
+    faction = player['faction']
+    labels = LOST_FLEET_OPENINGS.get(faction, ()) if faction in LOST_FLEET_OPENINGS and faction != 'Darkanians' \
+        else guide_opening_labels(faction, snapshot)
+    counts = {}
+    for part in (labels[0].split('+') if labels else ()):
+        digits = ''.join(ch for ch in part if ch.isdigit())
+        kind = part[len(digits):]
+        counts[kind] = counts.get(kind, 0) + int(digits or 1)
+    if counts:
+        counts['big'] = counts.get('PI', 0) + counts.get('AC', 0)
+    return counts
+
+
+def _ship_in_reach(state, player, ship):
+    from strategy_teacher import distance
+    at = (state['board'].get('spaceship_tiles') or {}).get(ship)
+    return at is not None and any(distance(s, at) <= SHIP_SETUP_RANGE for s in _sites(player))
+
+
 def booster_tier_value(snapshot, booster):
-    """Tier of `booster` for the seat to move at the starting-booster pick (higher first)."""
+    """Value of `booster` in charges for the seat to move at the starting-booster pick (higher first)."""
     state = snapshot['state']
     player = state['players'][snapshot['player']]
     gaia_ok = _gaia_one_in_round_one(state, player)
-    if booster == RANGE_BOOSTER:
-        value = RANGE_TIER[0] if _range_booster_target(state, player, gaia_ok) else RANGE_TIER[1]
+    reach = _reach(player)
+    value = BOOSTER_CHARGES.get(booster, 0.0)
+    counts = _opening_counts(snapshot, player)
+    if booster in BOOSTER_PASS_COUNTS:
+        kind, vp = BOOSTER_PASS_COUNTS[booster]
+        value += VP_CHARGES * vp * counts.get(kind, 0)
+    elif booster == PLANET_TYPES_BOOSTER:
+        value += VP_CHARGES * PLANET_TYPES_R1
+    elif booster == FORMER_BOOSTER and gaia_ok:
+        value += VP_CHARGES * 3
+    elif booster == RANGE_BOOSTER and not _range_booster_target(state, player, gaia_ok):
+        value = RANGE_FALLBACK
     elif booster == INSTANT_GAIA_BOOSTER:
-        reach = _reach(player)
-        works = gaia_ok and bool(_in_reach(state, player, reach, ('Transdim',)))
-        value = INSTANT_GAIA_TIER[0] if works else INSTANT_GAIA_TIER[1]
-        if works and _in_reach(state, player, reach, ('Asteroid',)):
-            value += INSTANT_GAIA_ASTEROID
-    elif booster == BIG_BUILDING_BOOSTER:
-        tiles = state.get('round_tiles') or []
-        if tiles and tiles[0].get('condition') == BIG_BUILDING_ROUND:
-            value = BIG_BUILDING_TIER[0]
-        elif _opening_builds_big(snapshot, player):
-            value = BIG_BUILDING_TIER[1]
+        if gaia_ok and _in_reach(state, player, reach, ('Transdim',)):
+            value += INSTANT_GAIA_ASTEROID if _in_reach(state, player, reach, ('Asteroid',)) else 0.0
         else:
-            value = BIG_BUILDING_TIER[2]
-    else:
-        value = BOOSTER_TIER.get(booster, 0.0)
+            value = INSTANT_GAIA_FALLBACK
+    elif booster == CREDIT_QIC_BOOSTER:
+        value += QIC_REBELLION * _ship_in_reach(state, player, 'Rebellion')
+        value += QIC_ORE * (player['resources'].get('ore', 0) >= QIC_ORE_FROM)
+    elif booster == TERRAFORM_BOOSTER:
+        from economy.teacher import RING
+        home = _home_type(player)
+        free = [state['board']['hexes'][c]['planet']['planet_type'] for c in _in_reach(state, player, reach, tuple(RING))]
+        if home not in free and any(_cheap_planet(home, k) for k in free):
+            value += TERRAFORM_NEEDED
+    elif booster == POWER_TOKEN_BOOSTER:
+        if gaia_ok and _in_reach(state, player, reach, ('Transdim',)):
+            value += TOKENS_EARLY_GAIA
+        if _ship_in_reach(state, player, 'Twilight'):
+            value += TOKENS_TWILIGHT
     return value + FACTION_BOOSTER_PREFS.get(player['faction'], {}).get(booster, 0.0)
 
 

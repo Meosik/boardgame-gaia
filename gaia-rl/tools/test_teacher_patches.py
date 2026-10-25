@@ -2691,6 +2691,17 @@ class BoosterTierTests(unittest.TestCase):
             self.assertGreater(tp.booster_tier_key(snapshot, tp.BIG_BUILDING_BOOSTER),
                                tp.booster_tier_key(snapshot, tp.CREDIT_QIC_BOOSTER))
 
+    def test_situations_raise_the_qic_and_power_token_boosters(self):
+        """User second pass: Rebellion in reach lifts 2 credits + QIC, the Twilight ship lifts 2 power tokens + ore."""
+        with self.flags(), mock.patch.object(tp, '_ship_in_reach', return_value=False):
+            qic, tokens = (tp.booster_tier_value(self.snapshot, b) for b in (tp.CREDIT_QIC_BOOSTER, tp.POWER_TOKEN_BOOSTER))
+        with self.flags(), mock.patch.object(tp, '_ship_in_reach', return_value=True):
+            self.assertAlmostEqual(tp.booster_tier_value(self.snapshot, tp.CREDIT_QIC_BOOSTER), qic + tp.QIC_REBELLION)
+            self.assertAlmostEqual(tp.booster_tier_value(self.snapshot, tp.POWER_TOKEN_BOOSTER),
+                                   tokens + tp.TOKENS_TWILIGHT)
+        self.assertEqual(tp._opening_counts({'state': {}}, {'faction': 'SpaceGiants'}),
+                         {'PI': 1, 'TS': 1, 'M': 2, 'big': 1})
+
     def test_geodens_opening_the_institute_take_the_step_booster_first(self):
         snapshot = json.loads(json.dumps(self.snapshot))
         player = snapshot['state']['players'][snapshot['player']]
