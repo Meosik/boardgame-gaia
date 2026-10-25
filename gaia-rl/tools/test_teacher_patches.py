@@ -1387,7 +1387,7 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertTrue(tp._tfmars_gaia_ready(state, player))
         self.assertEqual(tp._tfmars_tokens(player), 1)
 
-    def _asteroid_hold(self, faction, rnd=1, mj01=True, transdim=True, gaia=1, tokens=6, ships=(), red=(4.0, 'red')):
+    def _asteroid_hold(self, faction, rnd=1, mj01=True, transdim=True, gaia=1, tokens=6, ships=(), red=(4.0, 'red'), asteroid=5.0):
         from current_actions.conservation import blocked
         tp._guide['mj01'] = mj01                           # restored by setUp's cleanup
         hexes = {'0,0': {'planet': {'planet_type': 'Asteroid', 'is_gaia_formed': False}},
@@ -1397,7 +1397,7 @@ class OpeningBudgetTests(unittest.TestCase):
         state = {'round': rnd, 'phase': {'ActionPhase': {}}, 'board': {'hexes': hexes}, 'players': [player]}
         snapshot = {'player': 0, 'state': state, 'candidates': [
             {'action': {'type': 'Build', 'coord': '0,0'}}, {'action': {'type': 'Build', 'coord': '1,0'}}]}
-        scores = [(5.0, 'asteroid'), red]
+        scores = [(asteroid, 'asteroid'), red]
         with mock.patch.object(tp, '_reach_targets', return_value=[('2,0', {}, 0, 0)] if transdim else []):
             out = tp.gaia_asteroid_hold_scores(None, snapshot, scores)
         return scores, out, blocked
@@ -1414,6 +1414,11 @@ class OpeningBudgetTests(unittest.TestCase):
             self.assertFalse(blocked(out[0]), kwargs)
             self.assertLess(out[0][0], out[1][0], kwargs)
             self.assertEqual(out[1], scores[1])
+
+    def test_gaia_asteroid_hold_penalty_ranks_below_the_lowest_other_candidate_even_for_a_high_score(self):
+        _, out, blocked = self._asteroid_hold('Itars', tokens=3, asteroid=2000.0)
+        self.assertFalse(blocked(out[0]))
+        self.assertLess(out[0][0], out[1][0])
 
     def test_gaia_asteroid_hold_tfmars_explored_is_usable_without_tokens(self):
         _, out, blocked = self._asteroid_hold('Itars', tokens=0, ships=[2])

@@ -4924,7 +4924,6 @@ def gaia_asteroid_hold_scores(env, snapshot, scores):
     usable = ((level >= 1 and tokens >= GAIA_TOKENS[min(level, len(GAIA_TOKENS) - 1)])
               or TFMARS_SHIP in (player.get('explored_ships') or ()))
     rounds_left = GAIA_ASTEROID_HOLD_LAST_ROUND - state['round'] + 1
-    unblocked = [s[0] for i, s in enumerate(scores) if not blocked(s)]
     others = [s[0] for i, s in enumerate(scores) if not blocked(s) and i not in held]
     result = list(scores)
     if usable and rounds_left >= 2 and others:         # (ㄴ') hard block; (ㄹ) never block every candidate
@@ -4932,9 +4931,12 @@ def gaia_asteroid_hold_scores(env, snapshot, scores):
             result[i] = (BLOCKED, PREFIX+'gaia_asteroid_hold: a Gaia-track faction keeps its former for Transdim planets '
                          'in rounds 1-3', *scores[i][2:])
         return result
-    bottom = min(unblocked)
-    for i in held:
-        result[i] = (scores[i][0]-abs(bottom)-1000, *scores[i][1:])
+    if not others:
+        return scores                                  # only held builds remain: nothing to rank below
+    floor = min(others)
+    top = max(scores[i][0] for i in held)
+    for i in held:                                     # strictly below every other candidate, relative order kept
+        result[i] = (floor-1000-(top-scores[i][0]), *scores[i][1:])
     return result
 
 
