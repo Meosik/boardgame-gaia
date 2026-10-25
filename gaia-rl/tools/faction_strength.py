@@ -53,7 +53,10 @@ ROUND_FIT = {
     'MostGaiaPlanets': {'Terrans', 'Gleens', 'Itars', 'Nevlas'},
     'MostPlanetTypes': {'Geodens', 'Moweyds', 'Gleens'},
     'MostSectors': {'Ivits', 'Lantids', 'Darkanians'},
-    'MostStructures': {'Xenos', 'Ambas', 'Gleens'},
+    'MostBuildings': {'Xenos', 'Ambas', 'Gleens'},           # engine FinalScoringCondition names (game_state.rs:259-269)
+    'MostStructuresInFederation': {'Ivits', 'Taklons', 'Xenos'},
+    'MostDeepSpaceSectors': LOST_FLEET,
+    'GreatestDistancePiAcademy': {'Ivits', 'Lantids'},
 }
 WEIGHTS = {'tier': 1.0, 'planets': 1.0, 'techs': 1.0, 'ships': 1.0, 'power': 1.0, 'rounds': 1.0}
 NEAR = 3
@@ -63,6 +66,7 @@ NEIGHBOUR = 2
 def features(state):
     import teacher_patches as tp
     from strategy_teacher import distance
+    tp._guide['mj01'] = True       # debate 1/1: the all teacher's track table (MJ_FACTION_TRACKS) and Lost Fleet costs
     hexes = state['board']['hexes']
     homes = {}
     for p in state['players']:
@@ -83,7 +87,10 @@ def features(state):
             kinds |= {'Asteroid', 'ProtoPlanet'}
 
         def cheap(c, kind, start):
-            return c != start and (tp._cheap_planet(home, kind) or kind in kinds)
+            # debate 1/1: _terraform_steps prices Lost Fleet factions (Darkanians 1, SpaceGiants 2, Moweyds /
+            # Tinkeroids 1 or 3) where _cheap_planet needs a home colour on the ring
+            steps = tp._terraform_steps(state, p, kind)
+            return c != start and ((steps is not None and steps <= 1) or kind in kinds)
         starts = [c for c, kind in free.items() if kind == home] or list(free)
         room = sorted((sum(1 for c, kind in free.items() if cheap(c, kind, s) and distance(s, c) <= NEAR), s)
                       for s in starts)[::-1]
