@@ -1,0 +1,18 @@
+{
+ "name": "112c-faction-replays",
+ "kind": "command",
+ "status": "done",
+ "note": "사용자 2026-10-26 「진행해」(E124 (ㄴ)): 112b(현재 강도식 @order) 종족별 1R 충전 중앙값 판 리플레이 18개 게시, 112 것 교체(publish_replays가 옛 것 지움). 봇 작업 트리 엔진이 @order 이전 빌드라 lab에서 실행.",
+ "host": "agentmaco",
+ "commit": "4c0345d",
+ "started_at": "2026-10-26T13:37:08+09:00",
+ "finished_at": "2026-10-26T13:37:13+09:00",
+ "command": [
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "tools/publish_faction_replays.py",
+  "runs/lab-112b-strength-order-current-1r",
+  "--destination",
+  "/home/sohegi/gaia-media/ai-replays"
+ ],
+ "exit_code": 0
+}
