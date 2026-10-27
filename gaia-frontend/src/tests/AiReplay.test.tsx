@@ -87,6 +87,15 @@ describe('AI replay controls', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('titles a one-replay-per-game entry with every faction and the rounds played', async () => {
+    const game = { ...catalog.games[0], id: 'game-004-0', file: 'game-004-0.json.gz', policy: '004-0번 판',
+      factions: ['BalTaks', 'Bescods', 'Gleens', 'Itars'], rounds: 1 };
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ schema_version: 1, games: [game] }) })));
+    render(<AiReplay />);
+    await screen.findByRole('button', { name: '기록 시점 이동' });
+    expect(screen.getByRole('option', { name: '004-0번 판 · 발 타크·매드 안드로이드·글린·아이타 · 1R까지' })).toBeInTheDocument();
+  });
+
   it('does not present a legacy retention-clock start as a new registration date', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, json: async () =>
       url.endsWith('publication-times.json') ? { one: Date.parse('2026-09-12T08:51:00Z') / 1000 } : catalog })));

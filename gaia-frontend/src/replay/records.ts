@@ -9,6 +9,8 @@ export interface ReplayGame {
   seed: string;
   vp: number;
   steps: number;
+  factions?: string[];
+  rounds?: number;
 }
 export interface ReplayFrame {
   decision_id: number;
@@ -40,7 +42,10 @@ export function parseCatalog(value: unknown): ReplayGame[] {
     if (!record(game) || typeof game.id !== 'string' || ids.has(game.id) || typeof game.file !== 'string'
       || !/^[a-z0-9_-]+\.json\.gz$/.test(game.file) || typeof game.policy !== 'string'
       || typeof game.faction !== 'string' || typeof game.seed !== 'string' || !integer(game.steps)
-      || typeof game.vp !== 'number' || !Number.isFinite(game.vp)) throw new Error('잘못된 리플레이 목록입니다.');
+      || typeof game.vp !== 'number' || !Number.isFinite(game.vp)
+      || ('factions' in game && !(Array.isArray(game.factions) && game.factions.length === 4
+        && game.factions.every((id: unknown) => typeof id === 'string')))
+      || ('rounds' in game && !(integer(game.rounds) && game.rounds >= 1 && game.rounds <= 6))) throw new Error('잘못된 리플레이 목록입니다.');
     ids.add(game.id);
   }
   return value.games as ReplayGame[];

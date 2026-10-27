@@ -49,9 +49,10 @@ function publicationLabels(value: unknown): Map<string, string> {
 
 function gameLabel(game: ReplayGame, registeredAt?: string): string {
   const policy = SHORT_POLICY_NAMES[game.policy] ?? POLICY_NAMES[game.policy] ?? game.policy;
-  const faction = FACTION_DISPLAY_NAMES[game.faction as FactionId] ?? game.faction;
-  // "초점": every game has all its factions; this one is only the seat the replay was picked for.
-  const name = `${policy} · 초점 ${faction} ${game.vp}점`;
+  const display = (id: string) => FACTION_DISPLAY_NAMES[id as FactionId] ?? id;
+  const outcome = game.rounds !== undefined ? `${game.rounds}R까지` : `${game.vp}점`;
+  // Catalogs with `factions` list every seat (one replay per game); older ones name only the focus seat.
+  const name = game.factions ? `${policy} · ${game.factions.map(display).join('·')} · ${outcome}` : `${policy} · 초점 ${display(game.faction)} ${game.vp}점`;
   return registeredAt ? `${name} · ${registeredAt}` : name;
 }
 
