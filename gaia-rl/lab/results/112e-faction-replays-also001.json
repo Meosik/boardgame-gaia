@@ -1,0 +1,20 @@
+{
+ "name": "112e-faction-replays-also001",
+ "kind": "command",
+ "status": "failed",
+ "note": "코덱스 토론 2026-10-27(사용자 「중복 판은 내려」 범위): 112d가 중복 아닌 자동 게시 001판까지 내렸음 → 112b 판 7개는 같은 내용(같은 id)이라 그대로, 001을 --also로 새 제목 형식으로 재게시(e60b2ec). 사이트 8판.",
+ "host": "agentmaco",
+ "commit": "249a924",
+ "started_at": "2026-10-27T13:35:19+09:00",
+ "finished_at": "2026-10-27T13:35:20+09:00",
+ "command": [
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "tools/publish_faction_replays.py",
+  "runs/lab-112b-strength-order-current-1r",
+  "--destination",
+  "/home/sohegi/gaia-media/ai-replays",
+  "--also",
+  "pair-001/game-0-A23"
+ ],
+ "exit_code": 1
+}
