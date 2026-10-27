@@ -1,6 +1,6 @@
 """Export and publish one replay per distinct game from a lab run; games are chosen as the seat per faction whose 1-3 round charges are closest to that faction's median.
 
-Usage (cwd gaia-rl/): python tools/publish_faction_replays.py runs/<lab run> --destination <dir> [--output <work dir>]
+Usage (cwd gaia-rl/): python tools/publish_faction_replays.py runs/<lab run> --destination <dir> [--output <work dir>] [--also PAIR/GAME ...]
 """
 import argparse
 import os
@@ -47,6 +47,8 @@ def main():
     parser.add_argument('run_dir', type=Path)
     parser.add_argument('--destination', type=Path, required=True)
     parser.add_argument('--output', type=Path)
+    parser.add_argument('--also', action='append', default=[], metavar='PAIR/GAME',
+                        help='extra game (e.g. pair-001/game-0-A23) to republish with --focus best, so a game that is not a median pick is kept when old files of the run are taken down')
     args = parser.parse_args()
     run_dir = args.run_dir.resolve()
     destination = args.destination.resolve()
@@ -63,20 +65,31 @@ def main():
     merged.mkdir(parents=True, exist_ok=True)
     catalog = []
     from publish_replays import read_catalog, write_catalog
-    for game, reps in sorted(group_by_game(picks).items()):
+    def export_game(game, focus):
+        part = parts/game.replace('/', '-')
+        if run([sys.executable, 'tools/ab_replays.py', 'export', str(run_dir/game),
+                '--output', str(part), '--focus', str(focus)], env) != 0:
+            return False
+        for item in read_catalog(part/'index.json'):
+            shutil.copy2(part/item['file'], merged/item['file'])
+            catalog.append(item)
+        return True
+
+    grouped = group_by_game(picks)
+    for game, reps in sorted(grouped.items()):
         # min is stable, so ties go to the first faction in the sorted list.
         focus = min(reps, key=lambda row: abs(row[2] - row[3]))[1]
         listed = ', '.join(f'{faction} seat {seat} (charges {charges:.1f}, median {median:.1f})'
                            for faction, seat, charges, median in reps)
         print(f'{game}: focus seat {focus}; representatives {listed}', flush=True)
-        part = parts/game.replace('/', '-')
-        if run([sys.executable, 'tools/ab_replays.py', 'export', str(run_dir/game),
-                '--output', str(part), '--focus', str(focus)], env) != 0:
+        if not export_game(game, focus):
             failed = True
+    for game in args.also:
+        if game in grouped:
             continue
-        for item in read_catalog(part/'index.json'):
-            shutil.copy2(part/item['file'], merged/item['file'])
-            catalog.append(item)
+        print(f'{game}: focus best; extra (--also)', flush=True)
+        if not export_game(game, 'best'):
+            failed = True
     if failed:
         print('export failed; nothing published', file=sys.stderr)
         return 1
