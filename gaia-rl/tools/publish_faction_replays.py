@@ -10,6 +10,7 @@ import statistics
 import subprocess
 import sys
 import json
+import tempfile
 
 GAIA_RL = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -60,13 +61,13 @@ def main():
     failed = False
     # ab_replays export refuses an existing output directory and writes its own index.json, so each pick
     # exports into its own part directory and the parts are merged into one source for a single publish.
-    # A previous run leaves parts/merged under the same output path, so both are cleared first (only the tool's
-    # own subdirectories, never `output` itself since --output may be user-supplied).
-    parts = output/'parts'
-    merged = output/'merged'
-    shutil.rmtree(parts, ignore_errors=True)
-    shutil.rmtree(merged, ignore_errors=True)
-    merged.mkdir(parents=True, exist_ok=True)
+    # Each run works in its own fresh folder under output (a previous run's parts would make the export refuse),
+    # so nothing already under a user-supplied --output is ever deleted.
+    output.mkdir(parents=True, exist_ok=True)
+    work = Path(tempfile.mkdtemp(prefix='run-', dir=output))
+    parts = work/'parts'
+    merged = work/'merged'
+    merged.mkdir(parents=True)
     catalog = []
     from publish_replays import read_catalog, write_catalog
     def export_game(game, focus):
