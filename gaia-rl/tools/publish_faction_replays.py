@@ -1,4 +1,4 @@
-"""Export and publish one replay per faction from a lab run: the seat whose 1-3 round charges are closest to that faction's median.
+"""Export and publish one replay per distinct game from a lab run; games are chosen as the seat per faction whose 1-3 round charges are closest to that faction's median.
 
 Usage (cwd gaia-rl/): python tools/publish_faction_replays.py runs/<lab run> --destination <dir> [--output <work dir>]
 """
@@ -30,6 +30,14 @@ def pick_median_seats(seats):
     return picks
 
 
+def group_by_game(picks):
+    """picks: pick_median_seats output. Returns {game: [(faction, seat, charges, median), ...]}, each list sorted by faction."""
+    games = {}
+    for faction, (game, seat, charges, median) in picks.items():
+        games.setdefault(game, []).append((faction, seat, charges, median))
+    return {game: sorted(rows, key=lambda row: row[0]) for game, rows in games.items()}
+
+
 def run(command, env):
     return subprocess.run(command, cwd=GAIA_RL, env=env).returncode
 
@@ -55,11 +63,15 @@ def main():
     merged.mkdir(parents=True, exist_ok=True)
     catalog = []
     from publish_replays import read_catalog, write_catalog
-    for faction, (game, seat, charges, median) in sorted(picks.items()):
-        print(f'{faction}: {game} seat {seat} charges {charges} median {median}', flush=True)
-        part = parts/faction.lower().replace(' ', '-')
+    for game, reps in sorted(group_by_game(picks).items()):
+        # min is stable, so ties go to the first faction in the sorted list.
+        focus = min(reps, key=lambda row: abs(row[2] - row[3]))[1]
+        listed = ', '.join(f'{faction} seat {seat} (charges {charges:.1f}, median {median:.1f})'
+                           for faction, seat, charges, median in reps)
+        print(f'{game}: focus seat {focus}; representatives {listed}', flush=True)
+        part = parts/game.replace('/', '-')
         if run([sys.executable, 'tools/ab_replays.py', 'export', str(run_dir/game),
-                '--output', str(part), '--focus', str(seat)], env) != 0:
+                '--output', str(part), '--focus', str(focus)], env) != 0:
             failed = True
             continue
         for item in read_catalog(part/'index.json'):
@@ -70,7 +82,7 @@ def main():
         return 1
     write_catalog(merged/'index.json', catalog)
     if run([sys.executable, 'tools/publish_replays.py', '--source', str(merged),
-            '--destination', str(destination)], env) != 0:
+            '--destination', str(destination), '--replace-same-experiment'], env) != 0:
         return 1
     return 0
 

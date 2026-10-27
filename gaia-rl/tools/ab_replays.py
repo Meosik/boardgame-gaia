@@ -3,7 +3,7 @@
 A teacher_ab game directory holds result.json (seed, factions, A seats, final scores) and
 decisions.jsonl.gz (every decision id and chosen index). The game is replayed in the engine,
 each state recorded, and the final scores checked against result.json; a mismatch exports
-nothing. The policy label is the pair and game, e.g. "000 / game-0-A02" (user, 2026-10-15); the
+nothing. The policy label is the pair and game, e.g. "000-0번 판"; the
 site adds "· 초점 <faction> <VP>점".
 
   # list the games of a run with seats, factions, arms and scores
@@ -100,10 +100,14 @@ def replay_game(game_dir, focus):
         from gaia_rl.versions import runtime_versions
         versions = runtime_versions()
     pair = game_dir.parent.name.removeprefix('pair-')
+    index = re.match(r'game-(\d+)', game_dir.name)
+    if not index:
+        raise ValueError(f'{game_dir.name}: game folder name is not game-<n>')
     replay = {'schema_version': 1, 'metadata': {
         'seed': result['seed'], 'focus_player': seat,
         'faction': result['factions'][seat],
-        'policy': f'{pair} / {game_dir.name}',
+        'factions': list(result['factions']),
+        'policy': f'{pair}-{index.group(1)}번 판',
         'versions': versions, 'scores': scores, 'steps': snapshot['steps'], 'reproduced_original': True,
         'source': str(game_dir)}, 'frames': frames, 'events': []}
     if result.get('stopped_at_round'):
@@ -132,7 +136,10 @@ def cmd_export(args):
         (output/f'{name}.json.gz').write_bytes(gzip.compress(payload, mtime=0))
         catalog.append({'id': name, 'file': f'{name}.json.gz', 'policy': meta['policy'],
                         'faction': meta['faction'], 'seed': meta['seed'],
-                        'vp': meta['scores'][str(meta['focus_player'])], 'steps': meta['steps']})
+                        'vp': meta['scores'][str(meta['focus_player'])], 'steps': meta['steps'],
+                        'factions': meta['factions']})
+        if meta.get('stopped_at_round'):
+            catalog[-1]['rounds'] = meta['stopped_at_round'] - 1
         print(f"{name}: {meta['faction']} seat {meta['focus_player']}, {catalog[-1]['vp']} VP, "
               f"{meta['steps']} decisions")
     write_catalog(output/'index.json', catalog)

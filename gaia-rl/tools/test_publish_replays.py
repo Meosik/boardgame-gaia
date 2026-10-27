@@ -146,6 +146,17 @@ class PublishReplayTests(unittest.TestCase):
         self.assertEqual(len(self.catalog('archive-index.json')), 4)
         self.assertEqual(len(list(self.dest.glob('*107-x*.gz'))), 4)
 
+    def test_replace_same_experiment_takes_down_older_files_of_the_run(self):
+        publish(self.lab_batch('x1', '112b-x', 2), self.dest)
+        old_files = [p.name for p in self.dest.glob('*112b-x*.gz')]
+        self.assertEqual(len(old_files), 2)
+        publish(self.lab_batch('x2', '112b-x', 1, start=5), self.dest, replace_same_experiment=True)
+        for name in ('index.json', 'archive-index.json'):
+            self.assertEqual([g['id'] for g in self.catalog(name)], ['112b-x-5'])
+        for name in old_files:
+            self.assertFalse((self.dest/name).exists())
+        self.assertEqual(len(list(self.dest.glob('*.gz'))), 1)
+
     def test_experiment_order(self):
         self.assertEqual(experiment_order('106-ships-vs-menu1-allbase-1r'), (106, '-ships-vs-menu1-allbase-1r'))
         self.assertLess(experiment_order('104a-dedup-smoke'), experiment_order('105-x'))

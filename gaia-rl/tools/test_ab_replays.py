@@ -37,7 +37,9 @@ class AbReplayTests(unittest.TestCase):
         game = fake_game(root)
         replay = ab_replays.replay_game(game, 'B')
         self.assertIn(replay['metadata']['focus_player'], (1, 3))
-        self.assertEqual(replay['metadata']['policy'], '000 / game-0-A02')
+        self.assertEqual(replay['metadata']['policy'], '000-0번 판')
+        self.assertEqual(len(replay['metadata']['factions']), 4)
+        self.assertTrue(all(isinstance(f, str) for f in replay['metadata']['factions']))
         self.assertIsInstance(replay['metadata']['versions'], dict)  # the browser viewer requires it
         out = root/'out'
 
@@ -46,6 +48,8 @@ class AbReplayTests(unittest.TestCase):
         ab_replays.cmd_export(Args)
         catalog = json.loads((out/'index.json').read_text())['games']
         self.assertEqual(len(catalog), 1)
+        self.assertEqual(catalog[0]['factions'], replay['metadata']['factions'])
+        self.assertNotIn('rounds', catalog[0])
         self.assertTrue((out/catalog[0]['file']).exists())
 
     def test_a_changed_trace_is_refused(self):

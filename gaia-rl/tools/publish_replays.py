@@ -54,7 +54,7 @@ def experiment_order(key):
     return (int(match.group(1)), match.group(2)) if match else None
 
 
-def publish(source, destination, *, now=None):
+def publish(source, destination, *, now=None, replace_same_experiment=False):
     now = time.time() if now is None else now
     if not isinstance(now, (int, float)) or not math.isfinite(now) or now < 0:
         raise ValueError('Invalid publication time')
@@ -107,8 +107,8 @@ def publish(source, destination, *, now=None):
             current is None or experiment_order(current) is None
             or experiment_order(newest) >= experiment_order(current))
         incoming_ids = {g['id'] for g in incoming}
-        replaced = [g for g in history if replace and experiment_key(g) != newest
-                    and g['id'] not in incoming_ids]
+        replaced = [g for g in history if replace and g['id'] not in incoming_ids
+                    and (experiment_key(g) != newest or replace_same_experiment)]
         replaced_ids = {g['id'] for g in replaced}
         for game in history:
             if game['id'] in replaced_ids:
@@ -151,8 +151,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--destination', type=Path, required=True)
+    parser.add_argument('--replace-same-experiment', action='store_true',
+                        help='also unlist and delete older files of the same lab experiment')
     args = parser.parse_args()
-    visible, total = publish(args.source, args.destination)
+    visible, total = publish(args.source, args.destination,
+                             replace_same_experiment=args.replace_same_experiment)
     print(f'{visible} visible; {total} retained. Viewing retention: 30 days, newest 24 protected.')
 
 
