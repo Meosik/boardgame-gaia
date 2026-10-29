@@ -1153,6 +1153,42 @@ def install_academy_first():
     planning.select_action = select_action
 
 
+# institute_first (known-bad 24, lab 112b pair-002 step 22: Lantids with 9 credits 5 ore built a mine first on the 1PI+3M
+# plan, then dropped the institute; B16/L2: the institute first, cohabiting mines after it earn the knowledge).
+INSTITUTE_FIRST = frozenset({'Lantids'})
+
+
+def institute_first_select(original, env, snapshot, scores, target, policies, deadline):
+    from bgg_openings.inventory import building_counts
+    from current_actions.conservation import BLOCKED, PREFIX
+    from research_plans.teacher import best_index
+    state = snapshot['state']
+    player = state['players'][snapshot['player']]
+    if (state['round'] == 1 and 'ActionPhase' in state['phase'] and player['faction'] in INSTITUTE_FIRST
+            and target.planetary_institute > building_counts(player).planetary_institute):
+        masked = [(BLOCKED, PREFIX+'institute first: mines after the institute')
+                  if _new_mine(c['action']) else score
+                  for c, score in zip(snapshot['candidates'], scores)]
+        i = original(env, snapshot, masked, target, policies, deadline)
+        if i is not None and (i != best_index(masked, range(len(masked)))
+                              or snapshot['candidates'][i]['action']['type'] == 'Upgrade'):
+            return i
+    return original(env, snapshot, scores, target, policies, deadline)
+
+
+def install_institute_first():
+    import bgg_openings.planning as planning
+    if getattr(planning.select_action, '_institute_first', False):
+        return
+    inner = planning.select_action
+
+    def select_action(env, snapshot, scores, target, policies, deadline):
+        return institute_first_select(inner, env, snapshot, scores, target, policies, deadline)
+    select_action._institute_first = True
+    select_action.__wrapped__ = getattr(inner, '__wrapped__', inner)
+    planning.select_action = select_action
+
+
 def guide_values_openings_free(seed, **kwargs):
     """Teacher factory: guide_values_openings without the hand-written conversion bans,
     and round-1 academy openings built before new mines."""
@@ -3161,6 +3197,42 @@ def tile_prefs_scores(env, snapshot, scores):
     return lifted if lifted != scores else scores
 
 
+def booster_gaia_tile_scores(env, snapshot, scores):
+    """known-bad 24 (lab 112b pair-002, Lantids): the instant-Gaia booster (5) was taken on the premise that a good tile
+    under the Gaia column gives Gaia 1 in round 1, then the tile rules took another tile and the booster went unused.
+    While that booster is held with Gaia 0, the Gaia-column tile leads the standard tile choices (order only)."""
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    player = state['players'][actor]
+    if not _part(player, 'mj01') or player.get('booster') != INSTANT_GAIA_BOOSTER:
+        return scores
+    if (player.get('research_tracks') or {}).get('gaia', 0) != 0:
+        return scores
+    slots = (state.get('research_board') or {}).get('tech_tile_slots') or ()
+    if len(slots) <= GAIA_SLOT or slots[GAIA_SLOT] not in _good_gaia_tiles(TILE_PREFS.get(player['faction'], {})):
+        return scores
+    gaia_tile = slots[GAIA_SLOT]
+    groups, tiles = {}, {}
+    for i, c in enumerate(snapshot['candidates']):
+        found = None if blocked(scores[i]) else _tile_choice(c['action'])
+        if found is None:
+            continue
+        key, tiles[i] = found
+        groups.setdefault(key, []).append(i)
+    lifted = list(scores)
+    for members in groups.values():
+        if len({tiles[i] for i in members}) < 2:
+            continue
+        top = max(members, key=lambda i: lifted[i][0])
+        wanted = [i for i in members if tiles[i] == gaia_tile]
+        if wanted and tiles[top] != gaia_tile:
+            _swap(lifted, list(lifted), max(wanted, key=lambda i: lifted[i][0]), top,
+                  f'{player["faction"]} Gaia-column tile {gaia_tile} for the held instant-Gaia booster (booster_gaia_tile)')
+    return lifted if lifted != scores else scores
+
+
 # niche_tracks: a track the others leave alone (user 2026-10-20 "하드쉬나 제노스 자료중에 남들이 안가는 테크 가라는
 # 내용"). HadschHallas (B19-03 "남들이 안 가는 테크(가이아·테라포밍·QIC 액션)를 찾음"): once Economy 2 or Navigation 2
 # is reached, among the research moves the one on Gaia, Terraforming or AI with the lowest sum of the
@@ -5024,6 +5096,36 @@ def rebellion_ts_scores(env, snapshot, scores):
     return lifted if lifted != scores else scores
 
 
+# burn_follow_up (known-bad 24, lab 112b pair-002 step 54: Firaks burned 1 power right before passing, the burn scored
+# +2 over passing inside the value noise). A BurnPower free action stays only when the position after it offers a
+# candidate that was not there before, other than passing, another burn or a power-to-credit conversion.
+BURN_IDLE_KINDS = frozenset({'BurnPower', 'PowerToCredit'})
+
+
+def burn_follow_up_scores(env, snapshot, scores):
+    from current_actions.conservation import BLOCKED, PREFIX, blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or not _part(state['players'][actor], 'mj01'):
+        return scores
+    candidates = snapshot['candidates']
+    before = {json.dumps(c['action'], sort_keys=True) for c in candidates}
+    lifted = list(scores)
+    for i, c in enumerate(candidates):
+        a = c['action']
+        if a['type'] != 'FreeAction' or a.get('kind') != 'BurnPower' or blocked(scores[i]):
+            continue
+        after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
+        if after.get('player') != actor:
+            continue
+        new = [d for d in after['candidates']
+               if json.dumps(d['action'], sort_keys=True) not in before and d['action']['type'] != 'Pass'
+               and not (d['action']['type'] == 'FreeAction' and d['action'].get('kind') in BURN_IDLE_KINDS)]
+        if not new:
+            lifted[i] = (BLOCKED, PREFIX+f'burn {a.get("count")}: nothing unlocked before passing (burn_follow_up)',
+                         *scores[i][2:])
+    return lifted if lifted != scores else scores
+
+
 # ── booster_tier (user 2026-10-25 night, HANDOFF E117) ──────────────────────────────────────────────────────────────
 # "부스터 티어리스트로, 내 순서에 기반해 먹을 법한 걸 계산하다가 더 좋은 게 남으면 그냥 가져가고 그 뒤에 고민": at the
 # starting-booster pick the best open booster by the LF02 tier (lf01-lf02-value-table.md §5) is taken without rollouts
@@ -5083,14 +5185,18 @@ def _sites(player):
     return [s['hex'] for s in player['structures'] if s.get('hex')]
 
 
+def _good_gaia_tiles(prefs):
+    # known-bad 24 (lab 112b pair-002): a tile the faction avoids is no round-1 Gaia premise.
+    return (GOOD_GAIA_TILES - set(prefs.get('not_under_gaia', ())) - set(prefs.get('avoid', ()))) | set(prefs.get('prefer', ()))
+
+
 def _gaia_one_in_round_one(state, player):
     """Gaia >= 1 now, a Gaia-track faction, or a good tech tile under the Gaia track / 4 knowledge for a step in round 1."""
     tracks = player.get('research_tracks') or {}
     if tracks.get('gaia', 0) >= 1 or 'gaia' in _faction_tracks(player):
         return True
     slots = (state.get('research_board') or {}).get('tech_tile_slots') or []
-    prefs = TILE_PREFS.get(player['faction'], {})
-    good = (GOOD_GAIA_TILES - set(prefs.get('not_under_gaia', ()))) | set(prefs.get('prefer', ()))
+    good = _good_gaia_tiles(TILE_PREFS.get(player['faction'], {}))
     if len(slots) > GAIA_SLOT and slots[GAIA_SLOT] in good:
         return True
     return player['resources'].get('knowledge', 0) >= 4
@@ -5179,8 +5285,7 @@ def _formers_at_pass(state, player):
         return held
     tracks = player.get('research_tracks') or {}
     slots = (state.get('research_board') or {}).get('tech_tile_slots') or []
-    prefs = TILE_PREFS.get(player['faction'], {})
-    good = (GOOD_GAIA_TILES - set(prefs.get('not_under_gaia', ()))) | set(prefs.get('prefer', ()))
+    good = _good_gaia_tiles(TILE_PREFS.get(player['faction'], {}))
     planned = tracks.get('gaia', 0) >= 1 or 'gaia' in _faction_tracks(player) \
         or (len(slots) > GAIA_SLOT and slots[GAIA_SLOT] in good)
     return int(planned and bool(_in_reach(state, player, _gaia_reach(player), ('Transdim',))))
@@ -5334,6 +5439,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     install_setup_no_bgg()     # ... and the BGG opening path no longer fills setup slots
     install_setup_no_converge()    # lab 108c: no adaptive early stop at a setup choice
     install_ambas_nav2()
+    install_institute_first()
     _wrap_rank('_artifact_tokens', artifact_tokens_scores)
     _wrap_rank('_range_tile', range_tile_scores)
     _wrap_rank('_power_prefs', power_prefs_scores)
@@ -5359,7 +5465,9 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all(seed, **kwargs):
     # 1/1). A second recorder as the outermost wrapper stores the final ranking.
     _wrap_rank('_gaia_asteroid_hold', gaia_asteroid_hold_scores)    # user 10-25
     _wrap_rank('_dead_tile', dead_tile_scores)                      # lab 107 pair-005 step 24
+    _wrap_rank('_booster_gaia_tile', booster_gaia_tile_scores)   # known-bad 24
     _wrap_rank('_rebellion_ts', rebellion_ts_scores)                # lab 106 pair-006 step 46
+    _wrap_rank('_burn_follow_up', burn_follow_up_scores)   # known-bad 24
     _wrap_rank('_fed_remember_outer', fed_remember_scores)
     return teacher
 

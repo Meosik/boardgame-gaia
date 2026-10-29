@@ -1516,6 +1516,92 @@ class OpeningBudgetTests(unittest.TestCase):
             scores, out = self._rebellion(**kwargs)
             self.assertEqual(out, scores, kwargs)
 
+    def _burn(self, after_cands, mj01=True, same_player=True):
+        tp._guide['mj01'] = mj01
+        state = {'phase': {'ActionPhase': {}}, 'players': [{'faction': 'Ivits'}]}
+        free = lambda kind, count: {'action': {'type': 'FreeAction', 'kind': kind, 'count': count}}
+        cands = [free('BurnPower', 1), free('PowerToCredit', 1), {'action': {'type': 'Pass'}}]
+        snapshot = {'player': 0, 'decision_id': 7, 'state': state, 'candidates': cands}
+        scores = [(1.0, 'burn'), (0.5, 'credit'), (-1.0, 'pass')]
+        after = {'player': 0 if same_player else 1, 'candidates': after_cands}
+
+        class Fork:
+            def snapshot_json(self):
+                return json.dumps(after)
+
+        class Env:
+            def fork(self, decision_id, i):
+                assert (decision_id, i) == (7, 0)
+                return Fork()
+        return cands, scores, tp.burn_follow_up_scores(Env(), snapshot, scores)
+
+    def test_burn_follow_up_blocks_a_burn_that_unlocks_nothing(self):
+        from current_actions.conservation import blocked
+        base = self._burn([])[0]
+        extra = {'action': {'type': 'FreeAction', 'kind': 'PowerToCredit', 'count': 2}}
+        _, scores, out = self._burn(base + [extra])
+        self.assertTrue(blocked(out[0]))
+        self.assertIn('burn_follow_up', out[0][1])
+        self.assertEqual(out[1:], scores[1:])
+
+    def test_burn_follow_up_keeps_a_burn_that_unlocks_something_and_other_cases(self):
+        base = self._burn([])[0]
+        for kwargs in ({'after_cands': base + [{'action': {'type': 'PowerAction', 'kind': 'Gain2Ore'}}]},
+                       {'after_cands': base + [{'action': {'type': 'FreeAction', 'kind': 'PowerToQic', 'count': 1}}]},
+                       {'after_cands': base, 'mj01': False}, {'after_cands': base, 'same_player': False}):
+            _, scores, out = self._burn(**kwargs)
+            self.assertEqual(out, scores, kwargs)
+
+    def test_booster_gaia_tile_leads_while_booster5_held_with_gaia_zero(self):
+        tp._guide['mj01'] = True
+        up = lambda tile: {'type': 'Upgrade', 'coord': '0,0', 'to': 'ResearchLab',
+                           'tech_tile_choice': {'kind': 'Standard', 'tile': tile, 'advance_track': None}}
+        scores = [(5.0, 'a'), (3.0, 'b'), (-1.0, 'p')]
+
+        def run(booster, gaia):
+            player = {'faction': 'Lantids', 'research_tracks': {'gaia': gaia}, 'booster': booster}
+            slots = [6, 10, 8, 2, 9, 3, 4, 7, 5]
+            slots[tp.GAIA_SLOT] = 3
+            state = {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player],
+                     'research_board': {'tech_tile_slots': slots}}
+            snapshot = {'player': 0, 'state': state,
+                        'candidates': [{'action': up(5)}, {'action': up(3)}, {'action': {'type': 'Pass'}}]}
+            return tp.booster_gaia_tile_scores(None, snapshot, scores)
+        self.assertIn(3, tp._good_gaia_tiles(tp.TILE_PREFS['Lantids']))
+        out = run(tp.INSTANT_GAIA_BOOSTER, 0)
+        self.assertEqual(out[1][0], 5.0)
+        self.assertIn('booster_gaia_tile', out[1][1])
+        self.assertEqual(out[0][0], 3.0)
+        self.assertEqual(run(9, 0), scores)
+        self.assertEqual(run(tp.INSTANT_GAIA_BOOSTER, 1), scores)
+
+    def test_institute_first_masks_new_mines_while_lantids_owe_the_institute(self):
+        from bgg_openings.catalog import parse_buildings
+        from bgg_openings.inventory import building_counts
+        from current_actions.conservation import blocked
+        from research_plans.teacher import best_index
+        target = parse_buildings('1PI+3M')
+        scores = [(9.0, 'mine'), (7.0, 'pi'), (-1.0, 'pass')]
+        received = []
+
+        def original(env, snapshot, sc, tgt, policies, deadline):
+            received.append(list(sc))
+            return best_index(sc, range(len(sc)))
+
+        def run(faction):
+            player = {'faction': faction, 'structures': [{'kind': 'Mine', 'hex': '0,0'}]}
+            snapshot = {'player': 0, 'state': {'round': 1, 'phase': {'ActionPhase': {}}, 'players': [player]},
+                        'candidates': [{'action': {'type': 'Build', 'coord': '1,1'}},
+                                       {'action': {'type': 'Upgrade', 'coord': '0,0', 'to': 'PlanetaryInstitute'}},
+                                       {'action': {'type': 'Pass'}}]}
+            return tp.institute_first_select(original, None, snapshot, scores, target, None, None)
+        building_counts({'faction': 'Lantids', 'structures': [{'kind': 'Mine', 'hex': '0,0'}]})
+        self.assertEqual(run('Lantids'), 1)
+        self.assertTrue(blocked(received[0][0]))
+        received.clear()
+        self.assertEqual(run('Terrans'), 0)
+        self.assertEqual(received, [scores])
+
     def test_all_factory_taklons_charge4_tile_unless_under_gaia_and_xenos_ai_late(self):
         tp._guide['mj01'] = True                           # restored by setUp's cleanup (ALL_FACTION_PARTS on)
         player = {'faction': 'Taklons', 'research_tracks': {}}
@@ -2763,3 +2849,18 @@ class BoosterTierTests(unittest.TestCase):
                 with mock.patch.object(tp, '_in_reach', return_value=['0,0']):
                     high = tp.booster_tier_value(snapshot, tp.INSTANT_GAIA_BOOSTER)
         self.assertLess(low, high)
+
+    def test_gaia_premise_skips_a_tile_the_faction_avoids(self):
+        snapshot = json.loads(json.dumps(self.snapshot))
+        state = snapshot['state']
+        player = state['players'][snapshot['player']]
+        with self.flags(), mock.patch.object(tp, '_faction_tracks', return_value=()):
+            player['research_tracks'] = {**(player.get('research_tracks') or {}), 'gaia': 0}
+            player['gaiaformers_total'] = 0
+            player['resources'] = {**player['resources'], 'knowledge': 0, 'spent_gaia_formers': 0}
+            state['research_board']['tech_tile_slots'][tp.GAIA_SLOT] = 10
+            with mock.patch.object(tp, 'TILE_PREFS', {player['faction']: {'prefer': (), 'avoid': (10,)}}):
+                self.assertFalse(tp._gaia_one_in_round_one(state, player))
+                self.assertEqual(tp._formers_at_pass(state, player), 0)
+            with mock.patch.object(tp, 'TILE_PREFS', {player['faction']: {'prefer': (10,), 'avoid': ()}}):
+                self.assertTrue(tp._gaia_one_in_round_one(state, player))
