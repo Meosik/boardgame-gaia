@@ -5099,6 +5099,7 @@ def rebellion_ts_scores(env, snapshot, scores):
 # burn_follow_up (known-bad 24, lab 112b pair-002 step 54: Firaks burned 1 power right before passing, the burn scored
 # +2 over passing inside the value noise). A BurnPower free action stays only when the position after it offers a
 # candidate that was not there before, other than passing, another burn or a power-to-credit conversion.
+# A burn whose power-to-credit conversion then opens a build or upgrade (1 credit short) is kept (Codex debate 10-29).
 BURN_IDLE_KINDS = frozenset({'BurnPower', 'PowerToCredit'})
 
 
@@ -5114,13 +5115,26 @@ def burn_follow_up_scores(env, snapshot, scores):
         a = c['action']
         if a['type'] != 'FreeAction' or a.get('kind') != 'BurnPower' or blocked(scores[i]):
             continue
-        after = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
+        branch = env.fork(snapshot['decision_id'], i)
+        after = json.loads(branch.snapshot_json())
         if after.get('player') != actor:
             continue
         new = [d for d in after['candidates']
                if json.dumps(d['action'], sort_keys=True) not in before and d['action']['type'] != 'Pass'
                and not (d['action']['type'] == 'FreeAction' and d['action'].get('kind') in BURN_IDLE_KINDS)]
+        funded = False
         if not new:
+            for j, d in enumerate(after['candidates']):
+                if (d['action']['type'] != 'FreeAction' or d['action'].get('kind') != 'PowerToCredit'
+                        or json.dumps(d['action'], sort_keys=True) in before):
+                    continue
+                last = json.loads(branch.fork(after['decision_id'], j).snapshot_json())
+                if last.get('player') == actor and any(
+                        json.dumps(e['action'], sort_keys=True) not in before
+                        and e['action']['type'] not in ('Pass', 'FreeAction') for e in last['candidates']):
+                    funded = True
+                    break
+        if not new and not funded:
             lifted[i] = (BLOCKED, PREFIX+f'burn {a.get("count")}: nothing unlocked before passing (burn_follow_up)',
                          *scores[i][2:])
     return lifted if lifted != scores else scores

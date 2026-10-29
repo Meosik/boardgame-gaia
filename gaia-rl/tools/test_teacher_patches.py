@@ -1516,24 +1516,46 @@ class OpeningBudgetTests(unittest.TestCase):
             scores, out = self._rebellion(**kwargs)
             self.assertEqual(out, scores, kwargs)
 
-    def _burn(self, after_cands, mj01=True, same_player=True):
+    def _burn(self, after_cands, mj01=True, same_player=True, last=None):
         tp._guide['mj01'] = mj01
         state = {'phase': {'ActionPhase': {}}, 'players': [{'faction': 'Ivits'}]}
         free = lambda kind, count: {'action': {'type': 'FreeAction', 'kind': kind, 'count': count}}
         cands = [free('BurnPower', 1), free('PowerToCredit', 1), {'action': {'type': 'Pass'}}]
         snapshot = {'player': 0, 'decision_id': 7, 'state': state, 'candidates': cands}
         scores = [(1.0, 'burn'), (0.5, 'credit'), (-1.0, 'pass')]
-        after = {'player': 0 if same_player else 1, 'candidates': after_cands}
+        after = {'player': 0 if same_player else 1, 'decision_id': 8, 'candidates': after_cands}
+        last = {'player': 0, 'candidates': []} if last is None else last
 
-        class Fork:
+        class Last:
+            def snapshot_json(self):
+                return json.dumps(last)
+
+        class Branch:
             def snapshot_json(self):
                 return json.dumps(after)
+
+            def fork(self, decision_id, j):
+                assert decision_id == after.get('decision_id', 8)
+                return Last()
 
         class Env:
             def fork(self, decision_id, i):
                 assert (decision_id, i) == (7, 0)
-                return Fork()
+                return Branch()
         return cands, scores, tp.burn_follow_up_scores(Env(), snapshot, scores)
+
+    def test_burn_follow_up_keeps_a_burn_whose_credit_then_opens_a_build(self):
+        from current_actions.conservation import blocked
+        base = self._burn([])[0]
+        extra = {'action': {'type': 'FreeAction', 'kind': 'PowerToCredit', 'count': 2}}
+        last = {'player': 0, 'candidates': [{'action': {'type': 'Build', 'coord': '2,2'}},
+                                            {'action': {'type': 'Pass'}}]}
+        _, scores, out = self._burn(base + [extra], last=last)
+        self.assertEqual(out, scores)
+        last = {'player': 0, 'candidates': [{'action': {'type': 'Pass'}},
+                                            {'action': {'type': 'FreeAction', 'kind': 'PowerToCredit', 'count': 1}}]}
+        _, scores, out = self._burn(base + [extra], last=last)
+        self.assertTrue(blocked(out[0]))
 
     def test_burn_follow_up_blocks_a_burn_that_unlocks_nothing(self):
         from current_actions.conservation import blocked
