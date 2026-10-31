@@ -1,0 +1,16 @@
+# systemd user service for the agentmaco (multi-ai) Discord bot: the gaia bot code with its own env
+# (see gaia-rl/lab/agentmaco/README.md). Install: cp to ~/.config/systemd/user/, daemon-reload, enable --now.
+[Unit]
+Description=Discord bot that runs Claude Code on demand for multi-ai (agentmaco)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/projects/gaia-work/gaia-rl/lab
+EnvironmentFile=%h/.config/gaia/discord-agentmaco.env
+Environment=PATH=%h/.local/bin:%h/.npm-global/bin:%h/.bun/bin:%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.venvs/gaia-claude-bot/bin/python discord_claude.py
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target
