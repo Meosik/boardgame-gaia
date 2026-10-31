@@ -213,6 +213,9 @@ class ConfigurableByEnvTests(unittest.TestCase):
         self.assertTrue(bot.FRESH_MARK.name.endswith('.fresh-sessions'))
         self.assertEqual(bot.FRESH_MARK.parent, bot.STATE_PATH.parent)
 
+    def test_quick_note_points_at_fresh_context(self):
+        self.assertIn(bot.FRESH_CONTEXT, bot.QUICK_NOTE)
+
     @unittest.skipIf(os.environ.get('CLAUDE_BOT_FRESH_CONTEXT'), 'custom fresh context set')
     def test_default_fresh_context_is_handoff(self):
         self.assertIn('HANDOFF.md', bot.FRESH_PREFIX)

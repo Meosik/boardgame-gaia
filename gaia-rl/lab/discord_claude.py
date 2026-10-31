@@ -154,9 +154,11 @@ def primary_model():
 
 # User 2026-10-21 "가벼운 턴은 sonnet" (token saving): `!q <text>` runs one turn on a cheaper model outside
 # the channel conversation. A session stays on the model it started on, so quick turns never join it.
+# Where a session reads its context (a fresh one, a `!q` answer): the gaia HANDOFF by default, another file for a second service.
+FRESH_CONTEXT = os.environ.get('CLAUDE_BOT_FRESH_CONTEXT') or 'gaia-rl/lab/HANDOFF.md "진행 중"'
 QUICK_PREFIXES = ('!q ', '!quick ')
 QUICK_NOTE = ('(일회성 빠른 질문: 이 채널의 본 대화와 별개이며 대화에 남지 않는다. 답만 하고 파일 수정·커밋·큐 추가는 하지 '
-              '않는다(필요하면 "본 대화에서 하라"고 답한다). 맥락이 필요하면 gaia-rl/lab/HANDOFF.md의 5장만 읽는다.)\n\n')
+              f'않는다(필요하면 "본 대화에서 하라"고 답한다). 맥락이 필요하면 {FRESH_CONTEXT}만 읽는다.)\n\n')
 
 
 def quick_model():
@@ -350,7 +352,6 @@ def model_unavailable(stdout, stderr):
 # code folder: two services sharing this file must not consume each other's mark (Codex debate 2026-10-31).
 STATE_PATH = Path(os.path.expanduser(os.environ.get('GAIA_BOT_STATE', '~/.gaia-claude-bot.json')))
 FRESH_MARK = STATE_PATH.with_name(STATE_PATH.name + '.fresh-sessions')
-FRESH_CONTEXT = os.environ.get('CLAUDE_BOT_FRESH_CONTEXT') or 'gaia-rl/lab/HANDOFF.md "진행 중"'
 FRESH_PREFIX = f'(이전 디스코드 대화를 이어 붙이지 못해 새 대화로 시작한다. 맥락은 {FRESH_CONTEXT}에서 읽어라.)\n\n'
 
 
@@ -673,7 +674,7 @@ def main():
                     print(f'{model} failed on resume: {failure_text(out, err)}', flush=True)
                     fresh = await claude_run(command(claude, None, model, fallback=False), FRESH_PREFIX + prompt)
                     if not model_unavailable(*fresh[:2]):
-                        note = f'🔄 이전 대화를 {model_label(model)}로 이을 수 없어 새 대화로 실행 (맥락은 HANDOFF에서)\n'
+                        note = f'🔄 이전 대화를 {model_label(model)}로 이을 수 없어 새 대화로 실행 (맥락은 {FRESH_CONTEXT}에서)\n'
                         out, err, code = fresh
                 if model != FALLBACK_MODEL and (model_unavailable(out, err) or failed_early(out, code)):
                     # The original error text too (user 2026-10-20: "한도 초과라는데 웹에서는 0% 썻다는데 버근가?").
@@ -694,11 +695,11 @@ def main():
                 turns = count_turn(state, key, bool(session_id))
                 if session_id and model != FALLBACK_MODEL and used and not any(model in m for m in used):
                     forget(state, key)
-                    tag += f'\n🔄 다음 메시지부터 새 대화로 {model_label(model)} 시작 (맥락은 HANDOFF에서)'
+                    tag += f'\n🔄 다음 메시지부터 새 대화로 {model_label(model)} 시작 (맥락은 {FRESH_CONTEXT}에서)'
                     pending_fresh.add(key)
                 elif turns >= session_turn_limit():
                     forget(state, key)
-                    tag += f'\n🔄 대화가 {turns}턴이라 다음 메시지부터 새 대화 (맥락은 HANDOFF에서; 토큰 절약)'
+                    tag += f'\n🔄 대화가 {turns}턴이라 다음 메시지부터 새 대화 (맥락은 {FRESH_CONTEXT}에서; 토큰 절약)'
                     pending_fresh.add(key)
                 save()
             outcome = await deliver(channel, '\n'.join(p for p in (note + reply, tag) if p))
