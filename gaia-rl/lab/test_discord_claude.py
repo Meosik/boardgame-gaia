@@ -208,6 +208,20 @@ class SecretEnvTests(unittest.TestCase):
         self.assertNotIn('DISCORD_BOT_TOKEN', bot.clean_env({**os.environ, 'DISCORD_BOT_TOKEN': 'x'}))
 
 
+class ConfigurableByEnvTests(unittest.TestCase):
+    def test_fresh_mark_sits_next_to_state_file(self):
+        self.assertTrue(bot.FRESH_MARK.name.endswith('.fresh-sessions'))
+        self.assertEqual(bot.FRESH_MARK.parent, bot.STATE_PATH.parent)
+
+    @unittest.skipIf(os.environ.get('CLAUDE_BOT_FRESH_CONTEXT'), 'custom fresh context set')
+    def test_default_fresh_context_is_handoff(self):
+        self.assertIn('HANDOFF.md', bot.FRESH_PREFIX)
+
+    @unittest.skipIf(os.environ.get('CLAUDE_BOT_SYSTEM_FILE'), 'custom system file set')
+    def test_default_system_prompt(self):
+        self.assertEqual(bot.SYSTEM, bot.DEFAULT_SYSTEM)
+
+
 class TurnLimitTests(unittest.TestCase):
     def test_turns_count_per_conversation_and_reset_on_a_new_one(self):
         state = {}

@@ -25,7 +25,8 @@ see lab/discord_claude.env.example):
   only the experiment name is read from the notice),
   DISCORD_LAB_WEBHOOK_ID (optional: accept only this webhook), DISCORD_ALLOW_DM (default 1; 0 ignores DMs),
   GAIA_WORKDIR (default ~/projects/gaia-work), CLAUDE_BIN (default: claude on PATH),
-  CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json),
+  CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json; the one-shot fresh-sessions mark is <that file>.fresh-sessions),
+  CLAUDE_BOT_SETTINGS (allow-list JSON, default lab/claude-bot-settings.json), CLAUDE_BOT_SYSTEM_FILE (system prompt file, default: the built-in gaia prompt), CLAUDE_BOT_FRESH_CONTEXT (where a fresh session reads its context, default gaia-rl/lab/HANDOFF.md "진행 중"), CLAUDE_BOT_INBOX (attachment folder, default <workdir>/docs/references/discord).
   CLAUDE_SESSION_TURNS (default 10), CLAUDE_QUICK_MODEL (default claude-sonnet-5-5, for `!q`),
   DEBATE_ROUNDS (default 1; 0 = watch only, both bots read it), DEBATE_DELAY (seconds to wait for the
   rest of a multi-part Codex round, default 3), CODEX_BOT_ID (optional but recommended: only this bot's
@@ -45,8 +46,8 @@ import time
 
 SELF = Path(__file__).resolve()
 HERE = SELF.parent
-SETTINGS = HERE/'claude-bot-settings.json'
-SYSTEM = (
+SETTINGS = Path(os.path.expanduser(os.environ.get('CLAUDE_BOT_SETTINGS') or HERE/'claude-bot-settings.json'))
+DEFAULT_SYSTEM = (
     'You are reached from Discord through an on-demand bot (one `claude -p` turn per message). '
     'Answer in Korean, briefly: replies are read on a phone. Before substantive work read '
     'gaia-rl/lab/HANDOFF.md and follow its rules (section 6 above all). You cannot ask for '
@@ -122,6 +123,9 @@ SYSTEM = (
     'independently ("💭 코덱스 … 독립 답"; you do not see it while answering, your debate turn quotes it so you take '
     'or rebut it too) and there are DEBATE_ROUNDS rounds (default 2: your rebuttal, its re-rebuttal, your answer). '
     'The owner reads both sides and decides.')
+# A second service for another project (agentmaco, 2026-10-31) keeps the same code and gives its own system prompt file.
+SYSTEM_FILE = os.environ.get('CLAUDE_BOT_SYSTEM_FILE')
+SYSTEM = Path(os.path.expanduser(SYSTEM_FILE)).read_text(encoding='utf-8').strip() if SYSTEM_FILE else DEFAULT_SYSTEM
 
 
 def chunks(text, size=1900):
@@ -342,9 +346,12 @@ def model_unavailable(stdout, stderr):
             and bool(UNAVAILABLE.search(result.get('result') or '')))
 
 
-FRESH_MARK = Path(__file__).resolve().parent/'fresh-sessions'
-FRESH_PREFIX = ('(이전 디스코드 대화를 이어 붙이지 못해 새 대화로 시작한다. 맥락은 gaia-rl/lab/HANDOFF.md "진행 중"에서 '
-                '읽어라.)\n\n')
+# The one-shot "every channel starts a new session" mark sits next to the state file (GAIA_BOT_STATE), not in the
+# code folder: two services sharing this file must not consume each other's mark (Codex debate 2026-10-31).
+STATE_PATH = Path(os.path.expanduser(os.environ.get('GAIA_BOT_STATE', '~/.gaia-claude-bot.json')))
+FRESH_MARK = STATE_PATH.with_name(STATE_PATH.name + '.fresh-sessions')
+FRESH_CONTEXT = os.environ.get('CLAUDE_BOT_FRESH_CONTEXT') or 'gaia-rl/lab/HANDOFF.md "진행 중"'
+FRESH_PREFIX = f'(이전 디스코드 대화를 이어 붙이지 못해 새 대화로 시작한다. 맥락은 {FRESH_CONTEXT}에서 읽어라.)\n\n'
 
 
 def failure_text(stdout, stderr, size=300):
@@ -550,9 +557,9 @@ def main():
     codex_bot = int(os.environ.get('CODEX_BOT_ID') or 0)   # optional: only this bot's 🔍 messages open debate turns
     claude = os.environ.get('CLAUDE_BIN') or shutil.which('claude') or 'claude'
     turn_seconds = float(os.environ.get('CLAUDE_TURN_MINUTES', '30'))*60
-    state_path = Path(os.path.expanduser(os.environ.get('GAIA_BOT_STATE', '~/.gaia-claude-bot.json')))
+    state_path = STATE_PATH
     # Git-ignored (/docs/references/): attachments are often copyrighted articles kept locally only.
-    inbox = workdir/'docs'/'references'/'discord'
+    inbox = Path(os.path.expanduser(os.environ.get('CLAUDE_BOT_INBOX') or workdir/'docs'/'references'/'discord'))
     state = load_state(state_path)  # {channel id: session id}
     lock = asyncio.Lock()
     running = {}
