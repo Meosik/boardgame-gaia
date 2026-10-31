@@ -22,10 +22,10 @@ gaia 파일까지 보호하려면 별도 계정이나 파일시스템 격리가 
 
 ```sh
 cd ~/projects/gaia-work && git pull --rebase origin claude/epic-goodall-0ot55w
-# env 파일: multi-ai .env의 토큰 줄 + 예시 파일의 나머지 줄(봇은 .env를 못 읽으므로 사용자가 친다; 값은 화면에 안 나옴)
-umask 077 && grep '^DISCORD_BOT_TOKEN=' ~/projects/multi-ai/.env > ~/.config/gaia/discord-agentmaco.env
-grep -v '^DISCORD_BOT_TOKEN=' gaia-rl/lab/agentmaco/discord-agentmaco.env.example >> ~/.config/gaia/discord-agentmaco.env
-grep -c '^DISCORD_BOT_TOKEN=.' ~/.config/gaia/discord-agentmaco.env    # 1 이면 토큰이 들어감
+# env 파일: 임시 파일에 multi-ai .env의 토큰 줄 + 예시 파일의 나머지 줄을 모으고, 토큰 줄이 정확히 1개일 때만 설치(봇은 .env를 못 읽으므로 사용자가 친다; 값은 화면에 안 나옴)
+T=$(mktemp) && grep '^DISCORD_BOT_TOKEN=.' ~/projects/multi-ai/.env > "$T" && grep -v '^DISCORD_BOT_TOKEN=' gaia-rl/lab/agentmaco/discord-agentmaco.env.example >> "$T"
+[ "$(grep -c '^DISCORD_BOT_TOKEN=.' "$T")" = 1 ] && install -m 600 "$T" ~/.config/gaia/discord-agentmaco.env && rm -f "$T" && echo OK
+# OK 가 안 나오면 여기서 멈춘다(토큰 줄이 0개 또는 2개 이상; 기존 봇을 아직 중단하지 않는다). install -m 600 은 파일이 이미 있어도 권한을 600으로 맞춘다.
 mkdir -p ~/projects/multi-ai/.workflow/inbox && printf '.workflow/inbox/\n' >> ~/projects/multi-ai/.gitignore
 cd ~/projects/multi-ai && python3 scripts/agent.py stop          # Node 봇 중단(같은 토큰이라 둘이 같이 뜨면 두 번 답함)
 cp ~/projects/gaia-work/gaia-rl/lab/agentmaco/discord-agentmaco.service ~/.config/systemd/user/
