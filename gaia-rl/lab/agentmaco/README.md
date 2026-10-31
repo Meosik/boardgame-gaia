@@ -45,4 +45,5 @@ Codex 리뷰는 기본 `~/.codex` 로그인(gaia Codex 봇과 같은 것)을 쓴
 ## 검증한 것 / 안 한 것
 
 - 봇 코드의 env 분리(36674f5·d584932)는 gaia 봇 테스트 23+10으로 확인. 이 폴더의 JSON은 파싱 확인.
-- 실제로 두 번째 서비스를 띄워 보지는 못함(토큰·env 파일은 사용자 몫). 첫 메시지 뒤 `journalctl --user -u discord-agentmaco -n 10`으로 확인.
+- 서비스 가동 확인(10-31 23:46, 사용자 설치 뒤): `journalctl --user -u discord-agentmaco`에 `connected as Agentmaco#4330; channels [1554144240127442945]; workdir ~/projects/multi-ai` — env 파일이 읽혔다는 뜻(토큰 줄 1개 확인, 값은 읽지 않음).
+- 아직 확인 안 한 것(코덱스 토론 10-31): 토큰 절약 설정은 env·system.md에 준비만 됨 — `.workflow/STATUS.md`는 첫 TODO ①에서 만들어지기 전까지 없고(새 대화가 색인 없이 시작), 10턴 자르기·Sonnet 작업자·`!q`는 이 봇에서 한 번도 돌지 않았다. 첫 메시지 뒤 `journalctl --user -u discord-agentmaco -n 10`과 채널 답으로 확인. Node 봇 중단 여부도 미확인(답이 두 번 오면 `python3 scripts/agent.py stop`).
