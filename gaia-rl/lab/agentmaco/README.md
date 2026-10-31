@@ -38,9 +38,13 @@ Codex 리뷰는 기본 `~/.codex` 로그인(gaia Codex 봇과 같은 것)을 쓴
 
 1. `.workflow/MASTER.md` 역할을 바꾼다(마스터 Fable, 작업자 Sonnet 서브에이전트, 리뷰어 Codex gpt-6-astra 읽기 전용; Sol·Codex 스레드 관련 문장 삭제)
    + `.workflow/STATUS.md` 색인 생성(30줄 이하: 열린 TODO 한 줄씩, 마지막 결정, 이어가는 법).
+   **리뷰 없음(설계상)**: `scripts/workflow.py:80–81`이 `.workflow/` 파일을 리뷰 diff에 넣지 못하게 막는다(리뷰 관리 파일의 자기 수정 방지).
+   관리 문서 변경은 지금까지처럼 `review.sh` 없이 하되, 봇이 `git diff`를 디스코드에 보여 사용자가 승인한 뒤 커밋한다(코덱스 토론 10-31).
 2. `scripts/workflow.py:170–177`의 Claude 리뷰 명령을 `codex exec --model gpt-6-astra --sandbox read-only -c approval_policy="never" --cd <inputs> --color never --output-last-message <파일> -`
    (프롬프트는 stdin)로 바꾸고 판정은 그 파일의 첫 줄에서 읽는다. VERDICT 검사·REJECT 횟수·반복 지적 중단(:185–208)은 그대로. `tests/test_workflow.py`의 가짜 CLI를 codex 인자에 맞춘다.
-   이 TODO의 리뷰는 아직 옛 Claude 리뷰어가 한다(바꾸기 전이므로) — 그다음부터 Astra.
+   **검수 순서**: `review.sh`는 바뀐 `workflow.py`를 실행하므로 그대로 두면 새 Codex 실행기가 자기 변경을 검수한다. 편집 **전에** `cp scripts/workflow.py scripts/workflow_prev.py`
+   (같은 폴더라 `ROOT`가 같음, `workflow.py:16`; 커밋하지 않음)로 옛 실행기를 보존하고, 이 TODO만 `python3 scripts/workflow_prev.py review T-nnn`으로 옛 Claude 리뷰어가 검수한다.
+   APPROVE 뒤 복사본은 사용자가 지운다(`rm`은 봇 거부 목록) — 그다음 TODO부터 Astra.
 3. `bot/`·`scripts/agent.py`·`docs/DISCORD.md`를 "옛 Node 봇, 중단됨"으로 표시하고 이 폴더의 파일을 `multi-ai/bot/claude/`로 옮긴다(서비스·env 경로도 함께).
 
 ## 검증한 것 / 안 한 것
