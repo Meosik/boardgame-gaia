@@ -14,6 +14,7 @@ agentmaco 봇이 뜬 뒤 자기 저장소(`multi-ai/bot/`)로 옮기는 것은 �
 | `claude-bot-settings.json` | 허용 목록(`CLAUDE_BOT_SETTINGS`): 수정은 `~/projects/multi-ai/**`만, 푸시는 `git push origin HEAD:master`만, `rm`·`sudo`·force push·`scripts/agent.py`·`docker compose`·서비스 stop/restart 거부 |
 | `discord-agentmaco.service` | systemd user 서비스(코드는 gaia-work의 `discord_claude.py`, env는 `~/.config/gaia/discord-agentmaco.env`) |
 | `discord-agentmaco.env.example` | env 키(토큰만 비어 있음) |
+| `install.sh` | 설치 스크립트(`set -e`): env 파일을 임시 파일에 모아 토큰 줄 1개를 확인하고 600으로 설치 → Node 봇 중단 → 서비스 등록·시작 → 로그 3줄. 한 단계라도 실패하면 거기서 멈춘다(코덱스 토론 10-31: 줄별 붙여넣기는 실패해도 다음 줄이 실행됨) |
 
 허용 목록은 **직접 호출 제한**이다: `python3`·`node`·`scripts/*.sh` 안에서는 어떤 파일이든 읽고 지울 수 있다(코덱스 토론 10-31).
 gaia 파일까지 보호하려면 별도 계정이나 파일시스템 격리가 필요하고, 그것은 사용자 결정.
@@ -22,15 +23,7 @@ gaia 파일까지 보호하려면 별도 계정이나 파일시스템 격리가 
 
 ```sh
 cd ~/projects/gaia-work && git pull --rebase origin claude/epic-goodall-0ot55w
-# env 파일: 임시 파일에 multi-ai .env의 토큰 줄 + 예시 파일의 나머지 줄을 모으고, 토큰 줄이 정확히 1개일 때만 설치(봇은 .env를 못 읽으므로 사용자가 친다; 값은 화면에 안 나옴)
-T=$(mktemp) && grep '^DISCORD_BOT_TOKEN=.' ~/projects/multi-ai/.env > "$T" && grep -v '^DISCORD_BOT_TOKEN=' gaia-rl/lab/agentmaco/discord-agentmaco.env.example >> "$T"
-[ "$(grep -c '^DISCORD_BOT_TOKEN=.' "$T")" = 1 ] && install -m 600 "$T" ~/.config/gaia/discord-agentmaco.env && rm -f "$T" && echo OK
-# OK 가 안 나오면 여기서 멈춘다(토큰 줄이 0개 또는 2개 이상; 기존 봇을 아직 중단하지 않는다). install -m 600 은 파일이 이미 있어도 권한을 600으로 맞춘다.
-mkdir -p ~/projects/multi-ai/.workflow/inbox && printf '.workflow/inbox/\n' >> ~/projects/multi-ai/.gitignore
-cd ~/projects/multi-ai && python3 scripts/agent.py stop          # Node 봇 중단(같은 토큰이라 둘이 같이 뜨면 두 번 답함)
-cp ~/projects/gaia-work/gaia-rl/lab/agentmaco/discord-agentmaco.service ~/.config/systemd/user/
-systemctl --user daemon-reload && systemctl --user enable --now discord-agentmaco
-journalctl --user -u discord-agentmaco -n 3                        # "connected as …; channels [1554144240127442945]"
+bash gaia-rl/lab/agentmaco/install.sh    # 마지막에 OK 가 나와야 한다; 중간에 멈추면 그 줄의 오류를 보고 다시 실행
 ```
 
 Codex 리뷰는 기본 `~/.codex` 로그인(gaia Codex 봇과 같은 것)을 쓴다. 되돌리기: `systemctl --user disable --now discord-agentmaco`
