@@ -24,7 +24,7 @@ Icons and commands follow the table in lab/README.md ("두 봇의 명령·아이
 running task, `🧠 <model> · <note>` as the last line of every model answer, ⚠️ a failure, 🔍 a review.
 
 Environment (~/.config/gaia/discord-bots.env, shared with the Claude bot): CODEX_BOT_TOKEN, DISCORD_OWNER_ID,
-DISCORD_CHANNEL_IDS, GAIA_WORKDIR, CODEX_BIN (default: codex on PATH), CODEX_MODEL (default gpt-6-astra),
+DISCORD_CHANNEL_IDS, DISCORD_ALLOW_DM (default 1; 0 ignores DMs), GAIA_WORKDIR, CODEX_BIN (default: codex on PATH), CODEX_MODEL (default gpt-6-astra),
 CODEX_WATCH (0 turns the watch and the debate rounds off), CODEX_WATCH_MINUTES (default 5, one round or watch),
 CODEX_WATCH_DELAY (seconds of silence after Claude's reply, default 20), CODEX_TURN_MINUTES (default 10, direct
 questions and independent answers), CODEX_CONTEXT (default 12 messages), DEBATE_ROUNDS (default 1, shared with the
@@ -219,6 +219,12 @@ def turn_minutes():
 
 def context_size():
     return int(os.environ.get('CODEX_CONTEXT') or 12)
+
+
+def dm_allowed():
+    """DISCORD_ALLOW_DM (default 1): 0 makes the bot ignore DMs — a second bot pair on the same token for another
+    channel must not also answer the owner's DMs (Codex debate 2026-10-31)."""
+    return os.environ.get('DISCORD_ALLOW_DM', '1').strip() not in ('0', 'false', 'no')
 
 
 def digest():
@@ -462,6 +468,8 @@ def main():
     @client.event
     async def on_message(message):
         is_dm = isinstance(message.channel, discord.DMChannel)
+        if is_dm and not dm_allowed():
+            return
         if message.webhook_id is not None or (not is_dm and message.channel.id not in channels):
             return
         key = str(message.channel.id)

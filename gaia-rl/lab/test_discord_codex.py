@@ -133,6 +133,17 @@ class WatchTests(unittest.TestCase):
             os.environ.pop('CODEX_WATCH')
             os.environ.pop('CODEX_WATCH_DELAY')
 
+    def test_dm_switch_defaults_on_and_zero_turns_it_off(self):
+        os.environ.pop('DISCORD_ALLOW_DM', None)
+        self.assertTrue(bot.dm_allowed())
+        try:
+            os.environ['DISCORD_ALLOW_DM'] = '0'
+            self.assertFalse(bot.dm_allowed())
+            os.environ['DISCORD_ALLOW_DM'] = '1'
+            self.assertTrue(bot.dm_allowed())
+        finally:
+            os.environ.pop('DISCORD_ALLOW_DM', None)
+
 
 if __name__ == '__main__':
     unittest.main()

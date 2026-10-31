@@ -23,7 +23,7 @@ see lab/discord_claude.env.example):
   DISCORD_LAB_CHANNEL_ID (lab's webhook channel: each '✅' result notice there starts an automatic
   review in the first channel, each '🔍' code-review notice with findings starts a response turn;
   only the experiment name is read from the notice),
-  DISCORD_LAB_WEBHOOK_ID (optional: accept only this webhook),
+  DISCORD_LAB_WEBHOOK_ID (optional: accept only this webhook), DISCORD_ALLOW_DM (default 1; 0 ignores DMs),
   GAIA_WORKDIR (default ~/projects/gaia-work), CLAUDE_BIN (default: claude on PATH),
   CLAUDE_TURN_MINUTES (default 30), GAIA_BOT_STATE (default ~/.gaia-claude-bot.json),
   CLAUDE_SESSION_TURNS (default 10), CLAUDE_QUICK_MODEL (default claude-sonnet-5-5, for `!q`),
@@ -287,6 +287,12 @@ def debate_reply_prompt(findings, round_no, rounds, own=''):
 # new one that reads its context from HANDOFF.
 def session_turn_limit():
     return int(os.environ.get('CLAUDE_SESSION_TURNS') or 10)
+
+
+def dm_allowed():
+    """DISCORD_ALLOW_DM (default 1): 0 makes the bot ignore DMs — a second bot pair on the same token for another
+    channel must not also answer the owner's DMs (Codex debate 2026-10-31)."""
+    return os.environ.get('DISCORD_ALLOW_DM', '1').strip() not in ('0', 'false', 'no')
 
 
 def count_turn(state, key, resumed):
@@ -768,6 +774,8 @@ def main():
         if message.webhook_id is not None:
             return
         is_dm = isinstance(message.channel, discord.DMChannel)
+        if is_dm and not dm_allowed():
+            return
         if not is_dm and message.channel.id not in channels:
             return
         if message.author.bot:
