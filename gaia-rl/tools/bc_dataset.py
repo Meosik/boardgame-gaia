@@ -17,7 +17,9 @@ game is replayed instead of stored state by state. Three commands:
 
 Training code can also call iter_samples(manifest) directly (one replay at a time, nothing written).
 Caution: the log holds indices only, so a game must be replayed on an engine whose legal candidates match
-the one that played it. 'replays' only proves the indices stay in range; after an engine change that
+the one that played it. 'replays' used to prove only that the indices stay in range; since 2026-11-12 it
+also requires the replayed step count and per-seat scores to equal the recorded result.json (an engine that
+reorders candidates fails this), and export keeps only games with replays=True. After an engine change that
 alters legality (2026-10-19/20: Lost Fleet Advanced Tech side and order), filter on engine_build_id or
 re-index on the engine the games were played with. 2026-10-20 index of all lab runs: 927 games, 781 replay,
 341 six-round, 151 233 decisions — almost all Xenos/Terrans/Taklons/Geodens (683–733 seat-games each),
@@ -48,15 +50,24 @@ def _rows(game_dir):
         return [json.loads(line) for line in f]
 
 
-def _replays(seed, rows):
+def _replays(seed, rows, result):
     from gaia_rl import Environment
     env = Environment(seed, 2000)
     try:
         for row in rows:
             env.step(row['decision_id'], row['index'])
+        snapshot = json.loads(env.snapshot_json())
+        if result.get('steps') is not None and snapshot['steps'] != result['steps']:
+            return False, f"steps differ: replay {snapshot['steps']} vs recorded {result['steps']}", None
+        if env.is_terminal():
+            scores = {str(k): v for k, v in dict(env.final_scores()).items()}
+        else:
+            scores = {str(seat): p['vp'] for seat, p in enumerate(snapshot['state']['players'])}
+        if result.get('scores') and result['scores'] != scores:
+            return False, f"scores differ: replay {scores} vs recorded {result['scores']}"[:200], None
     except Exception as error:
         return False, str(error)[:200], None
-    return True, '', json.loads(env.snapshot_json())['state']['round']
+    return True, '', snapshot['state']['round']
 
 
 def cmd_index(args):
@@ -78,7 +89,7 @@ def cmd_index(args):
                 if not result.get('complete'):
                     continue
                 rows = _rows(game_dir)
-                ok, why, last_round = _replays(result['seed'], rows)
+                ok, why, last_round = _replays(result['seed'], rows, result)
                 a_seats = result.get('a_seats', [])
                 record = {
                     'run': run.name, 'game': str(game_dir), 'seed': result['seed'], 'factions': result['factions'],
