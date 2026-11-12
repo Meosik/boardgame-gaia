@@ -1,0 +1,11 @@
+# 113a-bc-reindex-engine-id — 완료
+
+E130 (ㄱ') - 작업 트리 엔진 재빌드(36d2e007, lab 빌드와 같음) 뒤 BC 재색인: 0705be8 색인이 replay_engine_build_id를 manifest에 기록해 export가 통과하도록 함(113 manifest는 이 필드가 없음). 113과 같은 명령·같은 출력 경로(덮어씀). 판정 없음; 완료 뒤 봇 턴에서 bc_dataset.py stats로 replay_engine_build_id = 36d2e007 확인 후 E128 ② bc_train 파이프라인 시험
+
+종료 코드 0
+
+```
+1502 games indexed -> runs/bc-1112/manifest.jsonl
+```
+
+<sub>agentmaco · 커밋 2b911bb · 2026-11-12T14:27:39+09:00 → 2026-11-12T14:31:22+09:00</sub>
