@@ -50,6 +50,19 @@ class ReplayTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             list(bc_dataset.iter_samples([row], allow_engine_mismatch=True))
 
+    def test_iter_samples_builds_filter_precedes_engine_check(self):
+        row = {'game': 'nowhere', 'replays': True, 'full_game': False, 'replay_engine_build_id': 'other'}
+        old, new = dict(row, engine_build_id='aaa111'), dict(row, engine_build_id='bbb222')
+        # no prefix matches: every game is skipped before the engine check, so nothing raises
+        self.assertEqual(list(bc_dataset.iter_samples([old, new], builds=['ccc'])), [])
+        # only the matching game reaches the engine check; builds=None keeps all games
+        with self.assertRaisesRegex(RuntimeError, 'nowhere'):
+            list(bc_dataset.iter_samples([old], builds=['aaa']))
+        with self.assertRaises(RuntimeError):
+            list(bc_dataset.iter_samples([old, new]))
+        # games without engine_build_id never match a given prefix
+        self.assertEqual(list(bc_dataset.iter_samples([row], builds=['aaa'])), [])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -9,7 +9,7 @@ game is replayed instead of stored state by state. Three commands:
           current engine (a quick replay without snapshots).
   stats   MANIFEST
           games / decisions per faction and teacher, 6-round games, games that no longer replay.
-  export  MANIFEST --out DIR [--shard 2000] [--max N] [--only-6r] [--teacher SUBSTRING]
+  export  MANIFEST --out DIR [--shard 2000] [--max N] [--only-6r] [--teacher SUBSTRING] [--build ID_PREFIX]...
           replays the games and writes compressed npz shards of encoded samples: observation (float16),
           the legal candidates' features (ragged: cand + cand_offsets), chosen index, seat, faction id,
           round, and the seat's final score minus the table mean (value target; NaN for games that stopped
@@ -153,8 +153,9 @@ def cmd_stats(args):
         print('no longer replay: ' + ', '.join(f'{k} {v}' for k, v in broken.most_common()))
 
 
-def iter_samples(manifest, only_6r=False, teacher=None, encoder=None, allow_engine_mismatch=False):
-    """Yield one dict per decision of the indexed games (see the module docstring)."""
+def iter_samples(manifest, only_6r=False, teacher=None, encoder=None, allow_engine_mismatch=False, builds=None):
+    """Yield one dict per decision of the indexed games (see the module docstring).
+    builds: keep only games recorded on an engine build whose id starts with one of these prefixes."""
     import numpy as np
     from gaia_rl import Environment
     from gaia_rl.encoding import FeatureEncoder
@@ -162,6 +163,8 @@ def iter_samples(manifest, only_6r=False, teacher=None, encoder=None, allow_engi
     encoder = encoder or FeatureEncoder()
     for game in (_load(manifest) if isinstance(manifest, (str, Path)) else manifest):
         if not game['replays'] or (only_6r and not game['full_game']):
+            continue
+        if builds and not (game.get('engine_build_id') or '').startswith(tuple(builds)):
             continue
         if game.get('replay_engine_build_id') != ENGINE_BUILD_ID and not allow_engine_mismatch:
             raise RuntimeError(f"game {game['game']} was replay-checked on engine {game.get('replay_engine_build_id')}, "
@@ -209,7 +212,7 @@ def cmd_export(args):
         shard += 1
         buffer = []
     for sample in iter_samples(args.manifest, only_6r=args.only_6r, teacher=args.teacher,
-                                allow_engine_mismatch=args.allow_engine_mismatch):
+                                allow_engine_mismatch=args.allow_engine_mismatch, builds=args.build):
         buffer.append(sample)
         total += 1
         if len(buffer) >= args.shard:
@@ -237,6 +240,7 @@ def main():
     p.add_argument('--only-6r', action='store_true')
     p.add_argument('--teacher')
     p.add_argument('--allow-engine-mismatch', action='store_true')
+    p.add_argument('--build', action='append', help='keep only games recorded on this engine build id prefix (repeatable)')
     args = parser.parse_args()
     {'index': cmd_index, 'stats': cmd_stats, 'export': cmd_export}[args.cmd](args)
 
