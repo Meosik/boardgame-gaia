@@ -30,5 +30,6 @@
   "quartet-e-87506@order=3,2,0,1"
  ],
  "comparisons": 4,
- "stop_round": 0
+ "stop_round": 0,
+ "design_review": {"findings": 1, "by": "debate 1/1 2026-11-12", "summary": "A = B seat swap replays the same 24 starts twice (teacher_ab.py:138-153, :387); held until a one-game-per-seed option exists or the owner accepts"}
 }
