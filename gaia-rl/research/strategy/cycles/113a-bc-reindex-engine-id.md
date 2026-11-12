@@ -36,7 +36,11 @@ Not applicable — no games were played, no verdict was pre-registered.
   (045232fa → c3e525be → 36d2e007, 395 games, 6R 57) assumed from reading the diffs. It is evidence for that
   assumption at the level the check measures (step counts and final seat scores), not a per-decision comparison
   of legal action lists.
-- Replay on the current engine says the recorded moves are still legal and score the same. It says nothing about
+- What the check establishes (Codex debate 1/1, accepted): for 1126 games the recorded indices replay in range on
+  36d2e007 and the step count and per-seat scores equal result.json. Games without `chosen` (all older logs) would
+  also pass if an index pointed at a different action with the same step count and scores
+  (`tools/bc_dataset.py:19–25, 64–77`), so this is not proof that the replayed actions are the recorded ones.
+  It also says nothing about
   teacher quality: the 1126 games span seven engine builds and many teacher versions, so which builds or
   experiments go into training is a separate choice.
 - Health and timing: 3 min 43 s, same as 113.
