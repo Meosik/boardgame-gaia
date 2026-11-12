@@ -57,6 +57,9 @@ bfb65 128판(6R 24)은 ReachMemoScope가 후보 집합을 안 바꾸는 성능 �
 
 - (ㄱ) **작업 트리 엔진 재빌드**(사용자 명령, 수 분; E124 (ㄱ)과 같음): `cd ~/projects/gaia-work/gaia-rl && .venv/bin/maturin develop --release`
   → stats가 36d2를 현재로 표시하고 봇의 재생 도구가 `@order` 48판을 읽을 수 있음.
+- (ㄱ') **재빌드 뒤 새 엔진으로 재색인·검증**(토론 1/1 수용, 0705be8): manifest의 `replays`는 검사를 돌린 엔진에서만 유효한데 이번 manifest는
+  검사 엔진을 기록하지 않았다 → 색인이 `replay_engine_build_id`를 적고 export/iter_samples는 실행 엔진과 다르면 거부(`--allow-engine-mismatch`로만
+  통과). 따라서 (ㄴ) 전에 `bc_dataset.py index`를 다시 돌린다(봇 작업 트리에서 수 분, 또는 lab command).
 - (ㄴ) **② bc_train 파이프라인 시험**(봇 턴, Sonnet): `bc_dataset.py export`에 `--build <id,…>` 필터를 넣고 합법성 동등 395판(정책) +
   6R 57판(가치, geo만)으로 shards → `tools/bc_train.py` 첫 판. 목적은 도구 검증, 모델 성능 기대 없음.
 - (ㄷ) **현재 엔진 자기대국 수집**(lab command): 4좌석 같은 교사(all_tier), 18종족 쿼텟, 6R 끝까지, `chosen` 기록(dc807f2) — 비용 기준

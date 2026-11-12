@@ -82,7 +82,7 @@ def _replays(seed, rows, result):
 
 def cmd_index(args):
     from gaia_rl.versions import ENGINE_BUILD_ID
-    out =Path(args.out)
+    out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     n = 0
     with out.open('w') as f:
