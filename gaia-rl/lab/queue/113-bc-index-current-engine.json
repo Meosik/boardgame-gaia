@@ -1,0 +1,1 @@
+{"kind": "command", "note": "E128 모델 업그레이드 1단계 - BC 데이터 재색인(현재 엔진 재생 여부, 종족·교사별 판·결정 수); 판정 없음", "run": ["{python}", "tools/bc_dataset.py", "index", "runs", "--out", "runs/bc-1112/manifest.jsonl"], "timeout_hours": 6}
