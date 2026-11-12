@@ -425,6 +425,7 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None):
                     counts['search_milliseconds'] += round((time.monotonic()-tick)*1000)
                     trace.write(json.dumps({'step': snapshot['steps'], 'seat': seat, 'arm': arm,
                                             'decision_id': snapshot['decision_id'], 'index': index,
+                                            'chosen': snapshot['candidates'][index],
                                             'seconds': round(time.monotonic()-tick, 3),
                                             'federation_limit_hits': limits.get('federation_limit_hits', 0),
                                             **{k: reply[k] for k in ('fallback_timeout', 'unsearched_comparisons',

@@ -25,6 +25,21 @@ class ReplayTests(unittest.TestCase):
         self.assertTrue(why.startswith('scores differ'))
         self.assertTrue(bc_dataset._replays(seed, rows, {})[0])
 
+    def test_replay_compares_chosen_candidate_content(self):
+        from gaia_rl import Environment
+        seed = 'geo-quartet-1080194'
+        env = Environment(seed, 2000)
+        rows = []
+        for _ in range(3):
+            snapshot = json.loads(env.snapshot_json())
+            rows.append({'decision_id': snapshot['decision_id'], 'index': 0, 'chosen': snapshot['candidates'][0]})
+            env.step(rows[-1]['decision_id'], 0)
+        self.assertTrue(bc_dataset._replays(seed, rows, {})[0])
+        wrong = [dict(rows[0], chosen={'phase': 'Setup', 'action': {'type': 'PlaceStartingStructure', 'coord': '99,99'}})] + rows[1:]
+        ok, why, _ = bc_dataset._replays(seed, wrong, {})
+        self.assertFalse(ok)
+        self.assertTrue(why.startswith('chosen differs at step 0'))
+
 
 if __name__ == '__main__':
     unittest.main()
