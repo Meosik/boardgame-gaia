@@ -135,7 +135,16 @@ def fingerprint(teacher):
 
 # ── Schedule and statistics (pure) ──────────────────────────────────────────
 
-def schedule(seeds, games):
+def schedule(seeds, games, single=False):
+    """single: one game per seed (data collection with A = B; no pair differences)."""
+    if single:
+        if not seeds or len(set(seeds)) != len(seeds) or not all(isinstance(s, str) and s for s in seeds):
+            raise ValueError('Nonempty distinct seed strings required')
+        if games != len(seeds):
+            raise ValueError('--single plays one game per seed: N must equal the number of seeds')
+        return [{'pair': i, 'seed': seed,
+                 'games': [{'a_seats': list(half), 'b_seats': [s for s in range(4) if s not in half]}]}
+                for i, seed in enumerate(seeds) for half in [HALVES[i % len(HALVES)]]]
     if games < 2 or games % 2:
         raise ValueError('N must be an even number of games (two per seat-swapped pair)')
     if not seeds or len(set(seeds)) != len(seeds) or not all(isinstance(s, str) and s for s in seeds):
@@ -476,13 +485,14 @@ def run(args):
     clock = budget_clock(args.comparisons) if args.comparisons is not None else dict(CLOCKS[args.clock])
     if args.fast_copy:
         clock['fast_copy'] = True
-    plan = schedule(args.seeds, args.games)
+    plan = schedule(args.seeds, args.games, args.single)
     output.mkdir(parents=True)
     from gaia_rl.versions import runtime_versions
     write_json(output/'manifest.json', {
         'created_at': now(), 'teachers': {arm: {**t, 'fingerprint': fingerprint(t)} for arm, t in teachers.items()},
         'clock': {'preset': 'comparisons' if args.comparisons is not None else args.clock, **clock},
         'jobs': args.jobs, 'games': args.games, 'seeds': args.seeds, 'schedule': plan,
+        'single': args.single,
         'versions': runtime_versions(), 'training_performed': False})
     jobs = [(pair, g, game) for pair in plan for g, game in enumerate(pair['games'])]
     lock = threading.Lock()
@@ -510,12 +520,13 @@ def run(args):
     games, pairs_rows = results, []
     for p in range(len(plan)):
         completed = [r for (pair, _, _), r in zip(jobs, results) if pair['pair'] == plan[p]['pair']]
-        if all(r['complete'] for r in completed):
+        if len(completed) == 2 and all(r['complete'] for r in completed):
             pairs_rows.append(pair_differences(*completed))
     summary = summarize(pairs_rows, games)
     # review-000 finding 4: repeats of a seed share map and factions, so the t interval (one
     # sample per pair) is too narrow; lab.py always runs each seed once (games = 2 × seeds).
-    summary['seeds_repeated'] = max(0, args.games//2 - len(args.seeds))
+    summary['seeds_repeated'] = 0 if args.single else max(0, args.games//2 - len(args.seeds))
+    summary['single'] = args.single
     write_json(output/'results.json', {**summary, 'pairs': pairs_rows})
     (output/'report.md').write_text(report_table(summary))
     write_json(output/'progress.json', {'state': 'complete', 'updated_at': now(), 'games_done': len(games)})
@@ -538,6 +549,8 @@ def main():
                        help='Decision-preserving teacher speedups in workers (tools/fast_teacher.py)')
     match.add_argument('--stop-round', type=int,
                        help='End each game when this round is over; scores are then the VP held')
+    match.add_argument('--single', action='store_true',
+                       help='One game per seed (N = number of seeds): self-play data collection with A = B, no pair differences')
     match.add_argument('--output', required=True)
     plan =commands.add_parser('plan', help='Resolve teachers and print the schedule; plays nothing')
     for name in ('--teacher-a', '--teacher-b'):

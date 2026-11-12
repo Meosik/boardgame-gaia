@@ -36,6 +36,25 @@ class ScheduleTests(unittest.TestCase):
             with self.subTest(seeds=seeds, games=games), self.assertRaises(ValueError):
                 ab.schedule(seeds, games)
 
+    def test_single_schedule_has_one_game_per_seed(self):
+        plan = ab.schedule(['x', 'y', 'z'], 3, single=True)
+        self.assertEqual([p['seed'] for p in plan], ['x', 'y', 'z'])
+        for pair in plan:
+            self.assertEqual(len(pair['games']), 1)
+            g = pair['games'][0]
+            self.assertFalse(set(g['a_seats']) & set(g['b_seats']))
+            self.assertEqual(sorted(g['a_seats'] + g['b_seats']), [0, 1, 2, 3])
+
+    def test_single_schedule_rejects_bad_inputs(self):
+        for seeds, games in ((['x', 'y'], 4), (['x', 'x'], 2)):
+            with self.subTest(seeds=seeds, games=games), self.assertRaises(ValueError):
+                ab.schedule(seeds, games, single=True)
+
+    def test_empty_pairs_summary_and_report_do_not_raise(self):
+        summary = ab.summarize([], [])
+        self.assertEqual(summary['factions']['ALL']['pairs'], 0)
+        self.assertIsInstance(ab.report_table(summary), str)
+
 
 class StatisticsTests(unittest.TestCase):
     def test_pair_difference_uses_the_game_where_each_teacher_held_the_seat(self):
