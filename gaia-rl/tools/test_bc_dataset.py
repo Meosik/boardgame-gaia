@@ -40,6 +40,16 @@ class ReplayTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(why.startswith('chosen differs at step 0'))
 
+    def test_iter_samples_refuses_other_engine(self):
+        row = {'game': 'nowhere', 'replays': True, 'full_game': False, 'replay_engine_build_id': 'other'}
+        with self.assertRaises(RuntimeError):
+            list(bc_dataset.iter_samples([row]))
+        with self.assertRaises(RuntimeError):
+            list(bc_dataset.iter_samples([{k: v for k, v in row.items() if k != 'replay_engine_build_id'}]))
+        # with the override the engine check passes and it proceeds to the (missing) game
+        with self.assertRaises(KeyError):
+            list(bc_dataset.iter_samples([row], allow_engine_mismatch=True))
+
 
 if __name__ == '__main__':
     unittest.main()

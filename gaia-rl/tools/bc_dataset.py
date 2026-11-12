@@ -22,7 +22,10 @@ also requires the replayed step count and per-seat scores to equal the recorded 
 check, not proof: another candidate order can still produce the same step count and scores (Codex debate
 2026-11-12). Games recorded from 2026-11-12 on also carry the chosen candidate's content per row ('chosen',
 written by teacher_ab) and replay compares it; for older games only an equal engine_build_id (see stats)
-is evidence that the candidate order matched. export keeps only games with replays=True. After an engine change that
+is evidence that the candidate order matched. The index also records the engine that ran the replay check
+(replay_engine_build_id); export/iter_samples refuse a manifest checked on another engine unless
+--allow-engine-mismatch (2026-11-12 Codex debate: the manifest's replays flag is only valid on the engine that
+computed it). export keeps only games with replays=True. After an engine change that
 alters legality (2026-10-19/20: Lost Fleet Advanced Tech side and order), filter on engine_build_id or
 re-index on the engine the games were played with. 2026-10-20 index of all lab runs: 927 games, 781 replay,
 341 six-round, 151 233 decisions — almost all Xenos/Terrans/Taklons/Geodens (683–733 seat-games each),
@@ -78,7 +81,8 @@ def _replays(seed, rows, result):
 
 
 def cmd_index(args):
-    out = Path(args.out)
+    from gaia_rl.versions import ENGINE_BUILD_ID
+    out =Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     n = 0
     with out.open('w') as f:
@@ -107,7 +111,7 @@ def cmd_index(args):
                     'decisions': len(rows), 'last_round': last_round,
                     'full_game': bool(ok and last_round == LAST_ROUND),
                     'engine_build_id': (meta.get('versions') or {}).get('engine_build_id'),
-                    'replays': ok, 'replay_error': why,
+                    'replays': ok, 'replay_error': why, 'replay_engine_build_id': ENGINE_BUILD_ID,
                 }
                 f.write(json.dumps(record, ensure_ascii=False)+'\n')
                 n += 1
@@ -142,20 +146,27 @@ def cmd_stats(args):
         tag = ' (current engine)' if build == ENGINE_BUILD_ID else ''
         print(f"engine {build[:12]}{tag}: games {b['games']}, replay {b['replay']}, 6-round {b['six_round']}, decisions {b['decisions']}")
     print(f'current engine build {ENGINE_BUILD_ID[:12]}')
+    checked = Counter((g.get('replay_engine_build_id') or '(none)')[:12] for g in games)
+    print('replay-checked on engine(s): ' + ', '.join(f'{k} {v}' for k, v in checked.most_common()))
     broken = Counter(g['run'] for g in games if not g['replays'])
     if broken:
         print('no longer replay: ' + ', '.join(f'{k} {v}' for k, v in broken.most_common()))
 
 
-def iter_samples(manifest, only_6r=False, teacher=None, encoder=None):
+def iter_samples(manifest, only_6r=False, teacher=None, encoder=None, allow_engine_mismatch=False):
     """Yield one dict per decision of the indexed games (see the module docstring)."""
     import numpy as np
     from gaia_rl import Environment
     from gaia_rl.encoding import FeatureEncoder
+    from gaia_rl.versions import ENGINE_BUILD_ID
     encoder = encoder or FeatureEncoder()
     for game in (_load(manifest) if isinstance(manifest, (str, Path)) else manifest):
         if not game['replays'] or (only_6r and not game['full_game']):
             continue
+        if game.get('replay_engine_build_id') != ENGINE_BUILD_ID and not allow_engine_mismatch:
+            raise RuntimeError(f"game {game['game']} was replay-checked on engine {game.get('replay_engine_build_id')}, "
+                               f'this engine is {ENGINE_BUILD_ID}; re-index on this engine (bc_dataset.py index) '
+                               'or pass --allow-engine-mismatch')
         scores = game['scores']
         full = game['full_game'] and all(s is not None for s in scores)
         mean = sum(scores)/len(scores) if full else math.nan
@@ -197,7 +208,8 @@ def cmd_export(args):
             value=np.array([s['value'] for s in buffer], dtype=np.float32))
         shard += 1
         buffer = []
-    for sample in iter_samples(args.manifest, only_6r=args.only_6r, teacher=args.teacher):
+    for sample in iter_samples(args.manifest, only_6r=args.only_6r, teacher=args.teacher,
+                                allow_engine_mismatch=args.allow_engine_mismatch):
         buffer.append(sample)
         total += 1
         if len(buffer) >= args.shard:
@@ -224,6 +236,7 @@ def main():
     p.add_argument('--max', type=int, default=0)
     p.add_argument('--only-6r', action='store_true')
     p.add_argument('--teacher')
+    p.add_argument('--allow-engine-mismatch', action='store_true')
     args = parser.parse_args()
     {'index': cmd_index, 'stats': cmd_stats, 'export': cmd_export}[args.cmd](args)
 
