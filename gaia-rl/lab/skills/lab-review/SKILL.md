@@ -75,6 +75,6 @@ each (`불일치 — ` first when you rebut any; the user decides) → next expe
 (design, seeds, hours). Never add a queue file in this turn. User 2026-11-13 ("codex 이상 없으면 추천대로 진행해. 내가 수치
 조절할게 있을 때만"): when you can carry the recommendation out yourself (a queue file, a bot-turn analysis or fix), end the
 reply with one line `⏩ 코덱스 이상 없으면 진행: <what, hours>` — a clean Codex round then opens a turn that does it; with
-objections you fix what is right in the debate turn and, when you rebut nothing, do it there. No `⏩` line (ask instead) when
+objections you fix what is right in the debate turn but carry nothing out there: when you rebut nothing, write the corrected recommendation as a `⏩` line again and Codex checks it once more (one extra round; if it still objects, the user decides). No `⏩` line (ask instead) when
 a number only the user sets is needed (threshold, weight, budget, seed count), when you rebut a finding (`불일치 — `), or for
 config or deployment changes, user commands and items the user put on hold — those stay proposals. If the result is `failed`, report the log tail and the likely cause instead.

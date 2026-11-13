@@ -59,6 +59,18 @@ class WatchTests(unittest.TestCase):
         self.assertEqual(bot.watch_findings(''), '')
         self.assertEqual(bot.watch_findings('1. charge_rounds.py:49 경계가 비대칭\n'), '1. charge_rounds.py:49 경계가 비대칭')
 
+    def test_a_corrected_proceed_line_gets_one_more_round(self):
+        """Debate 2026-11-13: a recommendation corrected after objections is carried out only after a clean round."""
+        first = ('Claude', '판정 …\n⏩ 코덱스 이상 없으면 진행: 116 큐')
+        codex = ('Codex', '1. 시드 수가 틀렸다')
+        self.assertTrue(bot.proceed_pending([first]))
+        self.assertFalse(bot.proceed_pending([first, codex]))
+        self.assertFalse(bot.proceed_pending([first, codex, ('Claude', '🗣️ 토론 1/1: 수정 1건, 반박 0건')]))
+        self.assertTrue(bot.proceed_pending([first, codex, ('Claude', '🗣️ 토론 1/1: 수정 1건, 반박 0건'),
+                                             ('Claude', '고친 설계 …\n  ⏩ 코덱스 이상 없으면 진행: 116 큐 (시드 12)')]))
+        self.assertFalse(bot.proceed_pending([]))
+        self.assertFalse(bot.proceed_pending(None))
+
     def test_findings_are_posted_as_marked_messages_the_claude_bot_can_collect(self):
         parts = bot.findings_messages('1. 첫 지적\n2. 둘째', 'gpt-6-astra')
         self.assertEqual(len(parts), 1)

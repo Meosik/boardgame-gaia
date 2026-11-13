@@ -169,6 +169,20 @@ def watch_findings(text):
     return '' if not text or shared.CLEAN in text else text
 
 
+def proceed_pending(exchange):
+    """True when Claude's answer to the last Codex round (the Claude parts after it) holds a `⏩` line.
+
+    Owner 2026-11-13 "앞으로 codex 이상 없으면 추천대로 진행해": a recommendation Claude corrected after objections is carried
+    out only after a clean round, so such an answer gets one more round (see `review`).
+    exchange: [(speaker, text)] oldest first, speakers 'Claude' and 'Codex'."""
+    parts = []
+    for speaker, text in reversed(exchange or ()):
+        if speaker != 'Claude':
+            break
+        parts.append(text or '')
+    return any(line.strip().startswith(shared.PROCEED) for part in parts for line in part.split('\n'))
+
+
 def findings_messages(findings, model):
     """The watch's objections as channel messages: every part starts with 🔍 so the Claude bot can collect them."""
     parts = shared.chunks(findings.strip(), size=1800)
@@ -398,7 +412,8 @@ def main():
 
     async def review(channel, key):
         """The next review round (one for an ordinary message or an automatic turn, DEBATE_ROUNDS for a `!debate`
-        message), started when Claude's reply went quiet."""
+        message), started when Claude's reply went quiet. One extra round follows when Claude's answer to the last
+        round holds a `⏩` line (a corrected recommendation is carried out only after a clean round)."""
         turn = turns.get(key)
         if not turn or turn.get('skip') or not turn.get('claude'):
             turns.pop(key, None)
@@ -406,8 +421,14 @@ def main():
         rounds = turn.get('rounds') or 1
         round_no = turn.get('round', 0) + 1
         if rounds and round_no > rounds:
-            turns.pop(key, None)   # the debate is over: Claude's answer to the last round stands
-            return
+            # A corrected recommendation (`⏩` line in Claude's answer to the last round) is checked once more before
+            # the Claude bot carries it out: one extra round, once per turn (debate 2026-11-13). Otherwise the debate
+            # is over and Claude's answer to the last round stands.
+            if turn.get('extended') or not proceed_pending(turn.get('exchange')):
+                turns.pop(key, None)
+                return
+            turn['extended'] = True
+            rounds = turn['rounds'] = round_no
         if not rounds:
             turns.pop(key, None)   # the plain watch reviews a turn once
         reply = '\n'.join(turn['claude'])

@@ -127,8 +127,10 @@ DEFAULT_SYSTEM = (
     'Standing order (owner 2026-11-13): when your answer ends with a recommendation you can carry out yourself (a lab '
     'queue file, a bot-turn analysis or fix), put it on the last line as "⏩ 코덱스 이상 없으면 진행: <what, with its '
     'cost>". If the second model\'s round is clean the bot opens a turn "(코덱스 검수: 이상 없음 …)" and you carry it '
-    'out; if it objects you get the debate turn: fix what is right and, when you rebut nothing, carry out the '
-    '(corrected) recommendation in that same turn. Do not write the ⏩ line, and ask the owner instead, when the next '
+    'out; if it objects you get the debate turn: fix what is right and carry nothing out there — when you rebut '
+    'nothing, write the corrected recommendation as a ⏩ line again and the second model checks it once more (one '
+    'extra round; if it still objects, the owner decides). Do not write the ⏩ line, and ask the owner instead, when '
+    'the next '
     'step needs a number only the owner sets (threshold, weight, budget, seed count), when you rebut a finding '
     '("불일치 — "), or for deployment, configuration changes, owner commands and items the owner put on hold. A result '
     'review turn itself still queues nothing: the ⏩ line waits for the second model.')
