@@ -15,10 +15,12 @@ forked with the flag off and on to time the free-action enumeration.
 
   GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:baseline-teacher-20260917:tools \\
     .venv/bin/python tools/federation_one_route_check.py GAME [GAME ...] \\
-    --out runs/x/metrics.json [--free-action-limit 150]
+    --out runs/x/metrics.json [--free-action-limit 150] [--max-final-free-seconds-on 10]
 
 GAME is a game directory or a pair directory (its single game-* subdirectory is used).
-Exit code 1 when a check fails (violation, fork error, or the flag not reducing candidates).
+Exit code 1 when a check fails (violation, fork error, the flag not reducing candidates, the
+crash-state free-action fork total with the flag on not under --max-final-free-seconds-on, or a
+free-action loop truncated).
 """
 import argparse
 import gzip
@@ -170,6 +172,7 @@ def main():
     ap.add_argument('games', nargs='+')
     ap.add_argument('--out', required=True)
     ap.add_argument('--free-action-limit', type=float, default=150.0)
+    ap.add_argument('--max-final-free-seconds-on', type=float, default=None)
     args = ap.parse_args()
 
     state = {'violations': {k: 0 for k in 'abcd'}, 'violation_examples': {},
@@ -194,15 +197,27 @@ def main():
     total_off = sum(g['total_fed_off'] for g in games.values())
     total_on = sum(g['total_fed_on'] for g in games.values())
     effective = total_on < total_off
-    passed = (not any(state['violations'].values()) and not state['fork_errors'] and effective)
+    limit = args.max_final_free_seconds_on
+    speed_failures = []
+    if limit is not None:
+        for name, g in games.items():
+            if g['final_free_fork_seconds_on'] >= limit or g['final_free_truncated']:
+                speed_failures.append({'game': name,
+                                       'final_free_fork_seconds_on': g['final_free_fork_seconds_on'],
+                                       'final_free_truncated': g['final_free_truncated']})
+    passed = (not any(state['violations'].values()) and not state['fork_errors'] and effective
+              and not speed_failures)
     metrics = {'games': games, 'violations': state['violations'],
                'violation_examples': state['violation_examples'],
-               'fork_errors': state['fork_errors'], 'flag_effective': effective, 'passed': passed}
+               'fork_errors': state['fork_errors'], 'flag_effective': effective,
+               'max_final_free_seconds_on': limit, 'speed_failures': speed_failures,
+               'passed': passed}
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(metrics, indent=1, ensure_ascii=False))
     print('violations: ' + ' '.join(f'{k}={v}' for k, v in state['violations'].items())
-          + f' fork_errors={len(state["fork_errors"])} flag_effective={effective}')
+          + f' fork_errors={len(state["fork_errors"])} flag_effective={effective}'
+          + f' speed_failures={len(speed_failures)}')
     print('PASS' if passed else 'FAIL')
     return 0 if passed else 1
 

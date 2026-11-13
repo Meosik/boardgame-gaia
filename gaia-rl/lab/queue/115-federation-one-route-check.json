@@ -1,7 +1,7 @@
 {
  "kind": "command",
  "note": "사용자 2026-11-13 「가 진행하고」(HANDOFF E134 (가), E135): 엔진 연방 후보 줄이기 GAIA_FEDERATION_ONE_ROUTE=1(기본 꺼짐; 건물 묶음마다 최소 위성 길 하나만) 검증 — 판정 없음, 대국 없음. lab이 엔진을 재빌드한 뒤 tools/federation_one_route_check.py가 114 pair-012(크래시 판, 224결정)·pair-001(324결정) 전 결정에서 기록된 수를 플래그 끔/켬으로 fork해 다음 결정 후보를 비교. 사전 등록 통과 기준: ① 엔진 재빌드 성공(실패면 컴파일 오류 — 봇 턴에서 수정) ② 불변식 위반 0: (a) 켬 후보는 모두 끔 후보에 있음 (b) 연방 아닌 후보는 순서까지 같음 (c) (건물 묶음, 토큰, 보너스) 키 집합이 같음 (d) 켬에서는 키당 후보 1개 ③ fork 오류 0, flag_effective 참 ④ pair-012 마지막 상태(크래시 결정)의 자유 행동 fork 합: 끔 약 66초 → 켬 10초 미만(final_free_fork_seconds_on). 볼 것: 판별 FormFederation 최대 개수 끔/켬, fork 시간 합 끔/켬. 예상 20–40분.",
- "run": ["env", "GAIA_ENGINE_FIXES_2=1", "PYTHONPATH=python:baseline-teacher-20260917:tools", "{python}", "tools/federation_one_route_check.py", "runs/lab-114-all-tier-selfplay-18f-full/pair-012", "runs/lab-114-all-tier-selfplay-18f-full/pair-001", "--out", "runs/lab-115-federation-one-route-check/metrics.json"],
+ "run": ["env", "GAIA_ENGINE_FIXES_2=1", "PYTHONPATH=python:baseline-teacher-20260917:tools", "{python}", "tools/federation_one_route_check.py", "runs/lab-114-all-tier-selfplay-18f-full/pair-012", "runs/lab-114-all-tier-selfplay-18f-full/pair-001", "--out", "runs/lab-115-federation-one-route-check/metrics.json", "--max-final-free-seconds-on", "10", "--free-action-limit", "300"],
  "metrics": "runs/lab-115-federation-one-route-check/metrics.json",
  "timeout_hours": 3
 }
