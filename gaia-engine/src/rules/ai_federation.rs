@@ -81,6 +81,14 @@ impl Graph {
     fn routes(&self, terminals: &[usize], max_satellites: usize, budget: &mut usize,
         cache: &mut BTreeMap<Vec<usize>, Vec<usize>>,
     ) -> Result<BTreeSet<Vec<usize>>, AiActionError> {
+        self.routes_with(terminals, max_satellites, budget, cache, false)
+    }
+
+    /// `first_only`: stop the reconstruction at the first minimum route instead of collecting all
+    /// of them (at most one route is returned; empty exactly when `routes` is empty).
+    fn routes_with(&self, terminals: &[usize], max_satellites: usize, budget: &mut usize,
+        cache: &mut BTreeMap<Vec<usize>, Vec<usize>>, first_only: bool,
+    ) -> Result<BTreeSet<Vec<usize>>, AiActionError> {
         let Some(count) = 1usize.checked_shl(terminals.len() as u32) else {
             return Err(AiActionError::SearchLimit("terminal count"));
         };
@@ -138,14 +146,17 @@ impl Graph {
         // A cluster's representative has all its entrances in the quotient graph.
         let root = self.components[terminals[0]][0];
         if dp[count - 1][root] == INF || dp[count - 1][root] > max_satellites { return Ok(BTreeSet::new()); }
-        let trees = self.trace(&dp, terminals, (count - 1, root), &mut BTreeSet::new(), budget, &mut BTreeMap::new())?;
+        let trees = self.trace(&dp, terminals, (count - 1, root), &mut BTreeSet::new(), budget, &mut BTreeMap::new(), first_only)?;
         Ok(trees.into_iter().map(|tree| tree.into_iter().filter(|&v| self.weight[v] != 0).collect()).collect())
     }
 
     fn trace(&self, dp: &[&[usize]], terminals: &[usize], position: (usize, usize),
         stack: &mut BTreeSet<(usize, usize)>, budget: &mut usize,
-        memo: &mut BTreeMap<(usize, usize), BTreeSet<Vec<usize>>>,
+        memo: &mut BTreeMap<(usize, usize), BTreeSet<Vec<usize>>>, first_only: bool,
     ) -> Result<BTreeSet<Vec<usize>>, AiActionError> {
+        // `first_only` leaves each position as soon as it has one tree. A position is empty in
+        // this mode exactly when it is empty in the full mode (branches are skipped only after a
+        // tree was found), so the single tree returned is one of the full mode's trees.
         let (mask, node) = position;
         let unconstrained = !stack.iter().any(|(ancestor_mask, _)| *ancestor_mask == mask);
         if unconstrained {
@@ -158,8 +169,9 @@ impl Graph {
             trees.insert(vec![node]);
         }
         for &prev in &self.route_edges[node] {
+            if first_only && !trees.is_empty() { break; }
             if dp[mask][prev].saturating_add(self.weight[node]) == dp[mask][node] {
-                for mut tree in self.trace(dp, terminals, (mask, prev), stack, budget, memo)? {
+                for mut tree in self.trace(dp, terminals, (mask, prev), stack, budget, memo, first_only)? {
                     tree.push(node); tree.sort_unstable(); tree.dedup();
                     trees.insert(tree);
                 }
@@ -167,11 +179,12 @@ impl Graph {
         }
         let mut sub = (mask - 1) & mask;
         while sub > 0 {
+            if first_only && !trees.is_empty() { break; }
             let other = mask ^ sub;
             if sub < other && dp[sub][node] < INF && dp[other][node] < INF
                 && dp[sub][node] + dp[other][node] - self.weight[node] == dp[mask][node] {
-                let left = self.trace(dp, terminals, (sub, node), stack, budget, memo)?;
-                let right = self.trace(dp, terminals, (other, node), stack, budget, memo)?;
+                let left = self.trace(dp, terminals, (sub, node), stack, budget, memo, first_only)?;
+                let right = self.trace(dp, terminals, (other, node), stack, budget, memo, first_only)?;
                 for a in &left {
                     for b in &right {
                         spend(budget, 1)?;
@@ -211,6 +224,12 @@ pub(super) fn federation_candidates(state: &GameState, player_id: PlayerId) -> R
 /// validate at every decision. The routes of one building set use the same number of satellites
 /// and differ only in which empty hexes hold them; legality is unchanged (same validator), the
 /// AI just cannot choose among those hexes.
+/// Lab 115: skipping only the validation of the extra routes cut the list 36x (17,318 -> 476) but
+/// the time 4.5x (66.8 -> 15.0 s over the 44 free-action forks). So in this mode the route
+/// reconstruction also stops at the first route when its shape is legal, and in both modes a
+/// shape is tested once with a plain token before its tokens and bonuses are tried (an illegal
+/// shape cost one validation per token and board hex). With the flag off the candidate list and
+/// the search budget are the same as before.
 fn federation_candidates_with(state: &GameState, player_id: PlayerId, one_route: bool) -> Result<Vec<GameAction>, AiActionError> {
     let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
     let growth = player.faction == Some(FactionId::Ivits) && !player.federated_hexes.is_empty();
@@ -226,6 +245,18 @@ fn federation_candidates_with(state: &GameState, player_id: PlayerId, one_route:
         .chain(SpaceshipId::all().into_iter().map(|ship| FederationTokenChoice::Spaceship { ship }))
         .filter(|token| resolve_federation_token_choice(state, player_id, *token).is_ok()).collect();
     if tokens.is_empty() { return Ok(Vec::new()); }
+    // A token whose validation has no bonus part. `validate_action` checks the shape (buildings
+    // and satellites) before the token, so an action with this token is legal exactly when the
+    // shape is: one validation with it decides every token and bonus of an illegal shape.
+    let plain = tokens.iter().copied().find(|token| resolve_federation_token_choice(state, player_id, *token)
+        .map(|kind| !matches!(federation_token_kind(kind), FederationTokenKind::LostFleetFreeBuildUnlimitedRange
+            | FederationTokenKind::LostFleetFreeBuild3Steps | FederationTokenKind::LostFleetTechTileOfChoice))
+        .unwrap_or(false));
+    let shape_is_legal = |hexes: &[HexCoord], satellite_hexes: &[HexCoord], token: FederationTokenChoice| {
+        let action = GameAction::FormFederation { hexes: hexes.to_vec(), satellite_hexes: satellite_hexes.to_vec(),
+            token, bonus_build_coord: None, bonus_tech_tile: None, bonus_research_track: None };
+        RuleEngine::validate_action(state, player_id, &action).is_ok()
+    };
     let Some(subsets) = 1usize.checked_shl(owned.len() as u32) else {
         return Err(AiActionError::SearchLimit("owned structures"));
     };
@@ -268,7 +299,23 @@ fn federation_candidates_with(state: &GameState, player_id: PlayerId, one_route:
         if growth { connected.extend(&player.federated_hexes); }
         let trees = if MapEngine::is_connected(&connected) {
             BTreeSet::from([Vec::new()])
-        } else { graph.routes(&terminals, max_satellites, &mut budget, &mut route_cache)? };
+        } else {
+            // One-route mode: reconstruct a single minimum route and keep it when its shape is
+            // legal. Every route is enumerated only for a building set whose first route is not
+            // (or when no plain token is left to test the shape with).
+            let first = match plain {
+                Some(token) if one_route => graph.routes_with(&terminals, max_satellites, &mut budget, &mut route_cache, true)?
+                    .into_iter().next().filter(|tree| {
+                        let satellites: Vec<HexCoord> = tree.iter().map(|&v| graph.coords[v]).collect();
+                        shape_is_legal(required.as_slice(), satellites.as_slice(), token)
+                    }),
+                _ => None,
+            };
+            match first {
+                Some(tree) => BTreeSet::from([tree]),
+                None => graph.routes(&terminals, max_satellites, &mut budget, &mut route_cache)?,
+            }
+        };
         for tree in trees {
             // Do not auto-include a whole cluster: extra buildings may make a federation
             // redundant. Every owned-building subset is considered by the outer loop;
@@ -279,36 +326,54 @@ fn federation_candidates_with(state: &GameState, player_id: PlayerId, one_route:
             shapes.insert(key, (hexes, satellites));
         }
     }
-    let mut actions = BTreeMap::new();
+    if shapes.is_empty() { return Ok(Vec::new()); }
+    // The bonus choices of a token do not depend on the shape: build them once. `attempts` is
+    // the number of validations one shape costs (every bonus of every token).
     let mut tile_choices_with_token: Option<Vec<TechTileChoice>> = None;
+    let mut token_bonuses = Vec::new();
+    let mut attempts = 0usize;
+    for token in &tokens {
+        let kind = resolve_federation_token_choice(state, player_id, *token)?;
+        let mut bonuses = vec![(None, None, None)];
+        match federation_token_kind(kind) {
+            FederationTokenKind::LostFleetFreeBuildUnlimitedRange | FederationTokenKind::LostFleetFreeBuild3Steps => {
+                bonuses = state.board.hexes.keys().map(|&c| (Some(c), None, None)).collect();
+            }
+            FederationTokenKind::LostFleetTechTileOfChoice => {
+                // The token is held by the time its tile resolves (a level-5 step may flip it).
+                let choices = tile_choices_with_token.get_or_insert_with(|| {
+                    let after = state_with_new_federation_token(state, player_id, kind);
+                    valid_standard_tech_tile_choices(&after, player_id)
+                });
+                for choice in choices.iter().cloned() {
+                    if let TechTileChoice::Standard { tile, advance_track, bonus_build_coord } = choice {
+                        bonuses.push((bonus_build_coord, Some(tile), advance_track));
+                    }
+                }
+            }
+            _ => {}
+        }
+        attempts += bonuses.len();
+        token_bonuses.push((*token, bonuses));
+    }
+    let mut actions = BTreeMap::new();
     // `shapes` is ordered by the JSON of (buildings, satellites), so the routes of one building
     // set are adjacent; `routed` is the last building set that already produced a legal action.
     let mut routed: Option<Vec<HexCoord>> = None;
     for (_, (hexes, satellite_hexes)) in shapes {
         if one_route && routed.as_ref() == Some(&hexes) { continue; }
-        let mut legal = false;
-        for token in &tokens {
-            let kind = resolve_federation_token_choice(state, player_id, *token)?;
-            let mut bonuses = vec![(None, None, None)];
-            match federation_token_kind(kind) {
-                FederationTokenKind::LostFleetFreeBuildUnlimitedRange | FederationTokenKind::LostFleetFreeBuild3Steps => {
-                    bonuses = state.board.hexes.keys().map(|&c| (Some(c), None, None)).collect();
-                }
-                FederationTokenKind::LostFleetTechTileOfChoice => {
-                    // The token is held by the time its tile resolves (a level-5 step may flip it).
-                    let choices = tile_choices_with_token.get_or_insert_with(|| {
-                        let after = state_with_new_federation_token(state, player_id, kind);
-                        valid_standard_tech_tile_choices(&after, player_id)
-                    });
-                    for choice in choices.iter().cloned() {
-                        if let TechTileChoice::Standard { tile, advance_track, bonus_build_coord } = choice {
-                            bonuses.push((bonus_build_coord, Some(tile), advance_track));
-                        }
-                    }
-                }
-                _ => {}
+        // An illegal shape fails with every token and bonus, so one validation with the plain
+        // token replaces all of them. The budget is charged as if they had run: the search limit
+        // trips at the same shape as before and the candidate list is unchanged.
+        if let Some(token) = plain {
+            if !shape_is_legal(hexes.as_slice(), satellite_hexes.as_slice(), token) {
+                spend(&mut budget, attempts)?;
+                continue;
             }
-            for (bonus_build_coord, bonus_tech_tile, bonus_research_track) in bonuses {
+        }
+        let mut legal = false;
+        for (token, bonuses) in &token_bonuses {
+            for (bonus_build_coord, bonus_tech_tile, bonus_research_track) in bonuses.iter().cloned() {
                 spend(&mut budget, 1)?;
                 let action = GameAction::FormFederation { hexes: hexes.clone(), satellite_hexes: satellite_hexes.clone(),
                     token: *token, bonus_build_coord, bonus_tech_tile, bonus_research_track };
@@ -336,6 +401,25 @@ mod tests {
         );
         let routes = graph.routes(&graph.terminals(&[0, 3]), usize::MAX, &mut MAX_WORK.clone(), &mut BTreeMap::new()).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(routes, BTreeSet::from([vec![1], vec![2]]));
+    }
+
+    #[test]
+    fn first_only_route_is_one_of_the_minimum_routes() {
+        let pairs = [(0, 1), (0, 2), (0, 3), (0, 4), (1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4)];
+        for edge_mask in 0..1usize << pairs.len() {
+            let mut edges = vec![Vec::new(); 5];
+            for (bit, &(a, b)) in pairs.iter().enumerate() {
+                if edge_mask & (1 << bit) != 0 { edges[a].push(b); edges[b].push(a); }
+            }
+            let graph = Graph::from_nodes((0..5).map(|q| HexCoord::new(q, 0)).collect(), vec![0, 1, 1, 1, 0], edges);
+            let terminals = graph.terminals(&[0, 4]);
+            let all = graph.routes(&terminals, usize::MAX, &mut MAX_WORK.clone(), &mut BTreeMap::new())
+                .unwrap_or_else(|e| panic!("{e}"));
+            let first = graph.routes_with(&terminals, usize::MAX, &mut MAX_WORK.clone(), &mut BTreeMap::new(), true)
+                .unwrap_or_else(|e| panic!("{e}"));
+            assert_eq!(first.len(), usize::from(!all.is_empty()), "edge mask {edge_mask}");
+            assert!(first.is_subset(&all), "edge mask {edge_mask}");
+        }
     }
 
     #[test]
