@@ -1,0 +1,271 @@
+{
+ "name": "115c-fed-off-golden-114",
+ "kind": "command",
+ "status": "done",
+ "note": "사용자 2026-11-13 「진행해」(HANDOFF E137, 토론 1/1 수용): 엔진 966e9ea의 \"플래그 끔이면 후보 목록 불변\"을 전체 목록으로 확인 — 수정 전 빌드 36d2e007b6f9(봇 작업 트리)로 뜬 골든(114 48판 14176결정의 후보 목록 전체 + 각 판 마지막 상태의 자유 행동 fork 뒤 목록 56개의 해시·개수, pair-012 크래시 상태 포함)과 lab 새 빌드의 목록을 바이트 단위로 비교(golden_candidates.py compare, 플래그 끔). 판정 없음, 대국 없음. 사전 등록 통과 기준: identical 참 = 불일치 판 0, 비교 결정 수 14176, final_free_checked 56, 엔진 빌드 id가 골든과 다름(새 빌드). 불일치가 하나라도 있으면 끔 후보 목록이 바뀐 것 → 엔진 수정을 고치거나 되돌림. 115b(선택된 행동만 대조)는 재생 호환성 확인이고 목록 불변의 근거는 이 실험. 예상 5분 이내.",
+ "host": "agentmaco",
+ "commit": "00dca67",
+ "started_at": "2026-11-13T13:23:32+09:00",
+ "finished_at": "2026-11-13T13:24:47+09:00",
+ "command": [
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "tools/golden_candidates.py",
+  "compare",
+  "--golden",
+  "/home/sohegi/projects/gaia-work/gaia-rl/runs/golden-115c",
+  "--metrics",
+  "runs/lab-115c-fed-off-golden-114/metrics.json"
+ ],
+ "exit_code": 0,
+ "metrics": {
+  "golden_engine_build_id": "36d2e007b6f95ebacfe9e7d3033e6ec1f6674e62b1516fc93765a2732f149a1f",
+  "engine_build_id": "fc19671c4278246becaa0710511b6d1a37b4049d58290aa8450c1c9f2c9041db",
+  "games": {
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-000/game-0-A02": {
+    "decisions": 254,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01": {
+    "decisions": 324,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-002/game-0-A03": {
+    "decisions": 324,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-003/game-0-A02": {
+    "decisions": 290,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-004/game-0-A01": {
+    "decisions": 304,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-005/game-0-A03": {
+    "decisions": 324,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-006/game-0-A02": {
+    "decisions": 297,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-007/game-0-A01": {
+    "decisions": 343,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-008/game-0-A03": {
+    "decisions": 279,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-009/game-0-A02": {
+    "decisions": 320,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-010/game-0-A01": {
+    "decisions": 312,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-011/game-0-A03": {
+    "decisions": 268,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-012/game-0-A02": {
+    "decisions": 224,
+    "final_free": 44,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-013/game-0-A01": {
+    "decisions": 285,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-014/game-0-A03": {
+    "decisions": 304,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-015/game-0-A02": {
+    "decisions": 284,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-016/game-0-A01": {
+    "decisions": 229,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-017/game-0-A03": {
+    "decisions": 320,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-018/game-0-A02": {
+    "decisions": 250,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-019/game-0-A01": {
+    "decisions": 262,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-020/game-0-A03": {
+    "decisions": 299,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-021/game-0-A02": {
+    "decisions": 267,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-022/game-0-A01": {
+    "decisions": 387,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-023/game-0-A03": {
+    "decisions": 333,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-024/game-0-A02": {
+    "decisions": 296,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-025/game-0-A01": {
+    "decisions": 308,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-026/game-0-A03": {
+    "decisions": 307,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-027/game-0-A02": {
+    "decisions": 288,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-028/game-0-A01": {
+    "decisions": 288,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-029/game-0-A03": {
+    "decisions": 369,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-030/game-0-A02": {
+    "decisions": 309,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-031/game-0-A01": {
+    "decisions": 278,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-032/game-0-A03": {
+    "decisions": 301,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-033/game-0-A02": {
+    "decisions": 272,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-034/game-0-A01": {
+    "decisions": 271,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-035/game-0-A03": {
+    "decisions": 294,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-036/game-0-A02": {
+    "decisions": 255,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-037/game-0-A01": {
+    "decisions": 111,
+    "final_free": 12,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-038/game-0-A03": {
+    "decisions": 300,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-039/game-0-A02": {
+    "decisions": 334,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-040/game-0-A01": {
+    "decisions": 262,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-041/game-0-A03": {
+    "decisions": 380,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-042/game-0-A02": {
+    "decisions": 324,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-043/game-0-A01": {
+    "decisions": 282,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-044/game-0-A03": {
+    "decisions": 265,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-045/game-0-A02": {
+    "decisions": 316,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-046/game-0-A01": {
+    "decisions": 348,
+    "final_free": 0,
+    "mismatch": null
+   },
+   "/home/sohegi/projects/gaia-lab/gaia-rl/runs/lab-114-all-tier-selfplay-18f-full/pair-047/game-0-A03": {
+    "decisions": 335,
+    "final_free": 0,
+    "mismatch": null
+   }
+  },
+  "mismatched_games": 0,
+  "decisions": 14176,
+  "final_free_checked": 56,
+  "seconds": 74.0,
+  "identical": true
+ }
+}
