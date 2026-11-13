@@ -23,7 +23,7 @@ Not applicable (no games). The pre-registered criteria instead:
 | Criterion | Number | Result |
 |---|---|---|
 | ① rebuild | flag changes the candidate list (`flag_effective` true) | pass |
-| ② (a)(b)(c)(d) | 0 / 0 / 0 / 0 over 548 decisions (224 + 324) | pass |
+| ② (a)(b)(c)(d) | 0 / 0 / 0 / 0 over 548 recorded decisions (224 + 324); the 44 crash-state forks were timed and counted only, not compared | pass on the recorded line |
 | ③ fork errors | 0 | pass |
 | ④ crash-state free-action forks (44 free actions) | off 66.8 s → on **15.0 s** (limit: under 10 s), not truncated | **fail** |
 
@@ -33,7 +33,8 @@ Not applicable (no games). The pre-registered criteria instead:
 ## Activation (tool output, metrics in the result page)
 
 - Crash state (pair-012 after step 224), largest federation list behind one free action: **17,318 → 476**
-  (the 34 building sets × 14 token choices predicted in E135).
+  (the 34 building sets × 14 token choices predicted in E135). This is a count: the tool did not run the
+  invariant comparison on these lists (`federation_one_route_check.py:148–166` records time and count only).
 - Recorded line of play: pair-012 has 8 decisions with federation candidates, largest list 204 → 34 (step 160),
   total 340 → 114; pair-001 has 5, largest 12 → 8, total 46 → 34. Fork time summed over the whole recorded line is
   0.22 / 0.20 s and 0.18 / 0.18 s (off / on): on the played line the enumeration costs nothing; the cost is in the
@@ -42,9 +43,12 @@ Not applicable (no games). The pre-registered criteria instead:
 
 ## Reading (HANDOFF 1 order)
 
-- Correctness (②③): the flag does what was written. It removes only extra routes of a building set, leaves every
-  other candidate in place and in order, and loses no (building set, token, bonus) choice. Two games, 13 decisions
-  with federation candidates plus 44 crash-state forks; no Ivits game (growth federations) in the sample.
+- Correctness (②③): on the recorded line of play the flag does what was written — it removes only extra routes
+  of a building set, leaves every other candidate in place and in order, and loses no (building set, token, bonus)
+  choice. The evidence is small: two games, 13 decisions with federation candidates, lists of at most 204; no Ivits
+  game (growth federations). **The large case is not verified** (debate 1/1, accepted): the 44 crash-state forks
+  (17,318 → 476) were only timed and counted, so "no choice lost" is not shown there; 476 = 34 × 14 agrees with the
+  prediction but is not the comparison. The tool now compares those forks too (follow-up commit), for 115a.
 - Speed (④): ③ scope/implementation. The list shrank 36× (17,318 → 476) but the time only 4.5× (66.8 → 15.0 s).
   If time followed the list size, on would be ≈ 1.8 s; about 13 s does not depend on how many candidates are
   kept. Code reading: with the flag on, `graph.routes` (ai_federation.rs:271) still enumerates every minimum route
@@ -64,7 +68,8 @@ No code or deployment change in this cycle. The flag stays default off; no spec 
 
 - (ㄱ) Finish the speed part in the engine: under the flag stop the route enumeration at the first route per
   building set (fall back to the full enumeration when that route fails validation, so criterion (c) holds), then
-  re-run this check as 115a with the limit enforced (queue file already carries it). One bot turn + lab ≈ 2 min.
+  re-run this check as 115a with the limit enforced (queue file already carries it) and the 44 crash-state forks
+  compared with invariants (a)–(d). One bot turn + lab ≈ 2 min.
   The bot cannot run cargo, so a compile error comes back as a failed 115a.
 - (ㄴ) Accept 15 s: add an all_tier spec with the flag in `env` for new collections now, leave the engine as is.
   The pre-registered ④ stays recorded as missed.
