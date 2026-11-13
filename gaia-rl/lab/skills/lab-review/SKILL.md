@@ -1,6 +1,6 @@
 ---
 name: lab-review
-description: Record a finished lab experiment (gaia-rl/lab/results/<name>.md) - cycle document, HANDOFF table row and E-entry, commit, push, then a proposal only. Use for "<name> 결과가 나왔다", a ✅ lab notice, or "결과 정리해".
+description: Record a finished lab experiment (gaia-rl/lab/results/<name>.md) - cycle document, HANDOFF table row and E-entry, commit, push, then a recommendation (carried out after a clean Codex round). Use for "<name> 결과가 나왔다", a ✅ lab notice, or "결과 정리해".
 ---
 
 # lab-review <experiment name>
@@ -71,6 +71,10 @@ No model name in the subject line (HANDOFF 7).
 
 ## 6. Reply (Korean, phone-short)
 Verdict with numbers → what it means (one line per faction that matters) → the reviewer's findings and your answer to
-each (`불일치 — ` first when you rebut any; the user decides) → next experiment **as a proposal
-only** (design, seeds, hours) and what the user must decide. Never add a queue file in this turn; config or
-deployment changes are proposals. If the result is `failed`, report the log tail and the likely cause instead.
+each (`불일치 — ` first when you rebut any; the user decides) → next experiment as a recommendation
+(design, seeds, hours). Never add a queue file in this turn. User 2026-11-13 ("codex 이상 없으면 추천대로 진행해. 내가 수치
+조절할게 있을 때만"): when you can carry the recommendation out yourself (a queue file, a bot-turn analysis or fix), end the
+reply with one line `⏩ 코덱스 이상 없으면 진행: <what, hours>` — a clean Codex round then opens a turn that does it; with
+objections you fix what is right in the debate turn and, when you rebut nothing, do it there. No `⏩` line (ask instead) when
+a number only the user sets is needed (threshold, weight, budget, seed count), when you rebut a finding (`불일치 — `), or for
+config or deployment changes, user commands and items the user put on hold — those stay proposals. If the result is `failed`, report the log tail and the likely cause instead.

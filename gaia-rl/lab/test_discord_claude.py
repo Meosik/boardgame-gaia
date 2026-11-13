@@ -124,6 +124,35 @@ class DebateTests(unittest.TestCase):
             finally:
                 os.environ.pop('DEBATE_ROUNDS')
 
+    def test_a_clean_codex_round_carries_out_the_proceed_line_of_the_last_reply(self):
+        """User 2026-11-13 "앞으로 codex 이상 없으면 추천대로 진행해. 내가 수치 조절할게 있을 때만."."""
+        self.assertTrue(bot.clean_round('🔍 코덱스(gpt-6-astra) 토론 1/1: 이상 없음'))
+        self.assertTrue(bot.clean_round('🔍 코덱스(gpt-6-astra): 이상 없음'))
+        self.assertFalse(bot.clean_round('🔍 코덱스(gpt-6-astra) 토론 1/1 — Claude가 바로 답한다\n1. 근거가 없다'))
+        self.assertFalse(bot.clean_round('이상 없음'))
+        self.assertIsNone(bot.debate_round_of('🔍 코덱스(gpt-6-astra) 토론 1/1: 이상 없음'))
+        clean = (False, True, '🔍 코덱스(gpt-6-astra) 토론 1/1: 이상 없음', 9, False)
+        # newest first: the Codex round, the reply's second part (with the line), its first part, the owner message
+        rows = [clean, (True, False, '다음 제안\n⏩ 코덱스 이상 없으면 진행: 116 큐 (lab 2시간)', 8, False),
+                (True, False, '판정 …', 7, False), (False, False, '결과 정리해', 6, True)]
+        self.assertEqual(bot.proceed_line(rows), ('⏩ 코덱스 이상 없으면 진행: 116 큐 (lab 2시간)', 8))
+        # a reply without the line: nothing, even when an earlier reply had one (it was carried out already)
+        rows = [clean, (True, False, '큐에 넣었습니다', 12, False), (False, True, '🔍 코덱스(m) 토론 1/1: 이상 없음', 11, False),
+                (True, False, '⏩ 코덱스 이상 없으면 진행: 116 큐', 10, False)]
+        self.assertEqual(bot.proceed_line(rows), ('', None))
+        # the owner wrote after the reply: the owner has taken over
+        rows = [clean, (False, False, '잠깐', 14, True), (True, False, '⏩ 코덱스 이상 없으면 진행: 116 큐', 13, False)]
+        self.assertEqual(bot.proceed_line(rows), ('', None))
+        # this bot's 🤖 notice is not a reply and ends the walk
+        rows = [clean, (True, False, '🤖 **115d** 결과 자동 정리 시작', 16, False),
+                (True, False, '⏩ 코덱스 이상 없으면 진행: 116 큐', 15, False)]
+        self.assertEqual(bot.proceed_line(rows), ('', None))
+        prompt = bot.proceed_prompt('⏩ 코덱스 이상 없으면 진행: 116 큐')
+        self.assertIn('⏩ 코덱스 이상 없으면 진행: 116 큐', prompt)
+        self.assertIn('수치', prompt)
+        self.assertIn('⏩', bot.review_prompt('116-x'))
+        self.assertIn('이 턴에서는 큐에 넣지 않는다', bot.review_prompt('116-x'))
+
     def test_an_ordinary_message_gets_one_review_round_and_a_debate_request_gets_debate_rounds(self):
         """User 2026-10-22 evening: "일반 나 > 클로드 > 클로드 반박 + 자기주장하는 코덱스 > 클로드가 수용 > 나; 토론은 나 > 클로드,
         코덱스 > 클로드 반박 > 코덱스 재반박"."""

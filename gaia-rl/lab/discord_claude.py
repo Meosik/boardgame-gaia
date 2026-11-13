@@ -122,7 +122,16 @@ DEFAULT_SYSTEM = (
     'the owner asked for a debate ("!debate"/"!토론" message) the second model also answered the question '
     'independently ("💭 코덱스 … 독립 답"; you do not see it while answering, your debate turn quotes it so you take '
     'or rebut it too) and there are DEBATE_ROUNDS rounds (default 2: your rebuttal, its re-rebuttal, your answer). '
-    'The owner reads both sides and decides.')
+    'The owner reads both sides and decides. '
+    # User 2026-11-13 "앞으로 codex 이상 없으면 추천대로 진행해. 내가 수치 조절할게 있을 때만.": the ⏩ line below.
+    'Standing order (owner 2026-11-13): when your answer ends with a recommendation you can carry out yourself (a lab '
+    'queue file, a bot-turn analysis or fix), put it on the last line as "⏩ 코덱스 이상 없으면 진행: <what, with its '
+    'cost>". If the second model\'s round is clean the bot opens a turn "(코덱스 검수: 이상 없음 …)" and you carry it '
+    'out; if it objects you get the debate turn: fix what is right and, when you rebut nothing, carry out the '
+    '(corrected) recommendation in that same turn. Do not write the ⏩ line, and ask the owner instead, when the next '
+    'step needs a number only the owner sets (threshold, weight, budget, seed count), when you rebut a finding '
+    '("불일치 — "), or for deployment, configuration changes, owner commands and items the owner put on hold. A result '
+    'review turn itself still queues nothing: the ⏩ line waits for the second model.')
 # A second service for another project (agentmaco, 2026-10-31) keeps the same code and gives its own system prompt file.
 SYSTEM_FILE = os.environ.get('CLAUDE_BOT_SYSTEM_FILE')
 SYSTEM = Path(os.path.expanduser(SYSTEM_FILE)).read_text(encoding='utf-8').strip() if SYSTEM_FILE else DEFAULT_SYSTEM
@@ -273,6 +282,53 @@ def debate_round_of(text):
     if not match or not body.strip() or CLEAN in text:
         return None
     return int(match.group(1)), int(match.group(2))
+
+
+# User 2026-11-13 "앞으로 codex 이상 없으면 추천대로 진행해. 내가 수치 조절할게 있을 때만.": a reply whose last lines hold a
+# `⏩ …` line names the recommendation Claude carries out by itself once Codex has looked. A clean Codex round
+# (`이상 없음`, one line) opens one turn that carries it out; a round with objections opens the usual debate turn.
+PROCEED = '⏩'
+
+
+def clean_round(text):
+    """True for the Codex bot's one-line clean round (`🔍 코덱스(모델) 토론 1/1: 이상 없음`, or the watch's
+    `🔍 코덱스(모델): 이상 없음`)."""
+    text = (text or '').strip()
+    return text.startswith('🔍') and '\n' not in text and '이상 없음' in text
+
+
+def proceed_line(rows):
+    """(the `⏩ …` line of this bot's last reply, id of the message holding it), or ('', None).
+
+    rows: (is_self, is_other_bot, content, message_id, is_owner) newest first. Only the newest unbroken run of this
+    bot's own messages is the last reply (a long reply is several messages): messages of others before it (the Codex
+    round itself) are skipped, the run ends at the first message that is not this bot's, at an owner message, or at
+    this bot's `🤖` notice. An earlier reply's `⏩` is never used, so a carried-out recommendation cannot fire twice."""
+    seen_self = False
+    for is_self, _, content, message_id, is_owner in rows:
+        if is_owner:
+            break
+        if not is_self:
+            if seen_self:
+                break
+            continue
+        content = (content or '').strip()
+        if content.startswith('🤖'):
+            break
+        seen_self = True
+        for line in content.split('\n'):
+            if line.strip().startswith(PROCEED):
+                return line.strip(), message_id
+    return '', None
+
+
+def proceed_prompt(line):
+    """What Claude gets in the turn a clean Codex round opens: carry out the `⏩` recommendation of its last reply."""
+    return ('(코덱스 검수: 이상 없음. 네 직전 답의 아래 추천을 그대로 진행한다 — 사용자 2026-11-13 "앞으로 codex 이상 없으면 '
+            '추천대로 진행해. 내가 수치 조절할게 있을 때만." 큐 파일은 lab-queue 스킬대로(사전 등록 note, 커밋, 푸시), HANDOFF '
+            '5장·5a에 기록. 배포·설정 변경·사용자 명령·사용자가 대기시킨 항목은 진행하지 않고 제안으로 남긴다. 사용자가 정할 '
+            '수치(기준값·가중치·예산·시드 수)가 있으면 진행하지 말고 그 수치만 묻는다. 이 답에는 ⏩ 줄을 쓰지 않는다. 짧게.)\n'
+            f'{line}\n')
 
 
 def debate_reply_prompt(findings, round_no, rounds, own=''):
@@ -427,7 +483,9 @@ def review_prompt(name):
     # the fallback sentence covers a checkout where the link is missing.
     return (f'/lab-review {name}\n\n(lab 실험 {name} 결과가 나왔다. 위 스킬이 없으면: gaia-rl/lab/results/{name}.md만 읽고 '
             'HANDOFF.md 규칙대로 사이클 문서(형식 cycles/TEMPLATE.md)·HANDOFF 결과표·"진행 중"을 갱신해 커밋·푸시한 뒤, '
-            '의미를 짧게 정리하고 다음 실험을 제안만 한다 — 큐에 넣지 않고 사용자 확인을 기다린다. 설정 변경·배포는 제안만.)')
+            '의미를 짧게 정리하고 다음 실험을 추천한다 — 이 턴에서는 큐에 넣지 않는다. 직접 진행할 수 있는 추천은 답 마지막 줄에 '
+            '"⏩ 코덱스 이상 없으면 진행: …"으로 적고(코덱스가 이상 없다고 하면 봇이 진행 턴을 연다), 사용자가 정할 수치가 있으면 '
+            '⏩ 없이 그 수치를 묻는다. 설정 변경·배포는 제안만.)')
 
 
 REVIEW_NAME = re.compile(r'^🔍\s*#\s*([0-9A-Za-z._-]{1,80})\s*—\s*검수', re.M)
@@ -736,7 +794,7 @@ def main():
             await target.send(f'🤖 **{name}** 검수 지적에 대응 시작 (수정은 커밋, 반박은 "불일치"로 표시)')
             await run_turn(target, str(target.id), respond_prompt(name), resume=False)
             return
-        await target.send(f'🤖 **{name}** 결과 자동 정리 시작 (기록·커밋까지, 다음 실험은 제안만)')
+        await target.send(f'🤖 **{name}** 결과 자동 정리 시작 (기록·커밋까지, 다음 실험은 코덱스 이상 없으면 추천대로 진행)')
         # A fresh conversation, kept as the channel's conversation so the owner can answer the proposal.
         await run_turn(target, str(target.id), review_prompt(name), resume=False)
 
@@ -755,12 +813,34 @@ def main():
             waiting[0] -= 1
             restart_if_changed()
 
+    async def proceed_turn(channel, key):
+        """A clean Codex round: carry out the `⏩` recommendation of this bot's last reply (one resumed turn)."""
+        rows = []
+        try:
+            async for m in channel.history(limit=20):
+                is_self = bool(client.user) and m.author.id == client.user.id
+                rows.append((is_self, is_codex(m), m.content, m.id, m.author.id == owner))
+        except discord.DiscordException as error:
+            print(f'history failed: {error!r}', flush=True)
+            return
+        line, message_id = proceed_line(rows)
+        if not line or message_id in set(state.get(f'{key}:handled') or []):
+            return
+        mark_handled(key, [message_id])
+        # The 🤖 notice makes the Codex bot review the turn that follows as an automatic turn (one round).
+        await channel.send('🤖 코덱스 이상 없음 → 추천대로 진행 시작')
+        await run_turn(channel, key, proceed_prompt(line))
+
     async def other_bot_message(message):
-        """A Codex `🔍 … 토론 r/N` round with objections opens a debate turn (debate mode only, r within the rounds)."""
+        """A Codex `🔍 … 토론 r/N` round with objections opens a debate turn (debate mode only, r within the rounds).
+        A clean round (`이상 없음`) opens a turn that carries out the `⏩` line of this bot's last reply, when there is one."""
         key = str(message.channel.id)
         pending = debates.get(key)   # (task, (round, rounds)) while the rest of a round is awaited
         round_of = debate_round_of(message.content)
         if round_of is None:
+            if clean_round(message.content):
+                await proceed_turn(message.channel, key)
+                return
             if pending and not pending[0].done() and message.content.startswith('🔍'):
                 round_of = pending[1]   # a continuation part (`🔍 (계속)`) of the round being awaited
             else:
