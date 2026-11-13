@@ -95,3 +95,29 @@ No code or deployment change. Lab queue empty after this cycle.
 - (ㄷ) More collection: another 48 new seeds with the same command (≈ 16 h of lab time; add the two failed seeds),
   after (ㄱ). The lab is idle while (ㄴ) is written.
 Bot recommendation: (ㄱ) first, then queue (ㄷ) and do (ㄴ) while it runs.
+
+## Follow-up (2026-11-13, E134) — owner: (ㄷ) waits; (ㄱ) done in 7cb307b
+
+- pair-012 step 224 reproduced in the work tree on an idle machine (`lab/scratch_dbg114.py`): Gleens, round 6,
+  173 candidates (44 free actions). The root ranking inside `parallel_search._prefetch` took **69.2 s**, past the
+  60 s cap, and the frozen search's entry check raised — the same crash. Cause (`lab/scratch_fork114.py`, engine call
+  time per candidate): the ranking makes a real fork only for free actions (apply the move and enumerate the next
+  decision's candidates, `fast_teacher.py:87–90`); after OreToPower ×10 or more the next decision has **17,318
+  FormFederation candidates** and one fork takes 6.9 s (44 free actions: mean 1.51 s, ≈ 66 s in total; every other
+  candidate type 0.00 s). `federation_limit_hits` stayed 0, so the engine limit (`gaia-engine/src/rules/ai.rs:171`)
+  does not catch this size. In the same game many decisions ran to 60 s with no completed comparison; over the whole
+  run 38 of the 858 rows at 55 s or more have zero completed comparisons (5 games) — those moves are the one-step
+  ranking, not a search result.
+- pair-037 step 111 (Taklons, round 3) was **not reproduced**: 3.8 s alone, also with the seat's last three
+  decisions re-chosen to rebuild its plan memory; the three other games running at that minute were normal
+  (`lab/scratch_when114.py`). Cause unknown.
+- Fix 7cb307b: when the cap has passed after `_prefetch`, the parallel search wrapper lets the frozen search publish
+  its first result from the cached ranking (local-baseline, before any comparison) and stops; `budget_teacher`
+  has the same safety net for any other path (`_root_result`); the audit key `expired_before_search` makes
+  `teacher_ab` count the decision as a fallback timeout. The reproduced decision now plays the ranking's first
+  choice after 69.3 s instead of crashing. Decisions whose cap has not passed before the search are unchanged.
+  Tests: `test_budget_fallback` 4 OK, `test_teacher_ab` 19 OK, `test_parallel_search` 1 of 3 failing on the value of
+  the last plan at decision 77 (the mismatch already recorded as pre-existing in E90; both sides completed four
+  plans, so the new zero-plan path was not taken; not re-run on a clean HEAD).
+- Open (owner decision): pruning the engine's federation candidates; whether the 38 zero-comparison rows are
+  excluded or flagged in BC training.
