@@ -1,0 +1,7 @@
+{
+ "kind": "command",
+ "note": "사용자 2026-11-13 「진행해」(HANDOFF E136 (ㄱ), E137): 115 재검증 — 엔진 966e9ea: 플래그 켬이면 건물 묶음마다 최소 길 하나만 복원(그 모양이 불법이면 전체 열거로 돌아감), 두 모드 공통으로 모양을 일반 토큰으로 한 번 검증한 뒤에만 토큰·보너스를 시도(플래그 끔의 후보 목록·탐색 예산은 불변이어야 함). 판정 없음, 대국 없음. 도구는 115와 같고 73262aa(④ 속도 검사)·917d4f5(크래시 상태 자유 행동 fork도 불변식 비교)가 들어감. 사전 등록 통과 기준(도구가 PASS여야 통과): ① 엔진 재빌드 성공·flag_effective 참(실패면 컴파일 오류 — 봇 턴에서 수정) ② 불변식 (a)(b)(c)(d) 위반 0 — 기록된 548결정과 pair-012 크래시 상태 자유 행동 44개 fork 모두(final_free checked = n) ③ fork 오류 0 ④ pair-012 자유 행동 fork 합 켬 10초 미만(115: 15.0초), 잘림 없음 ⑤ 플래그 끔 후보 수가 115와 같음: 크래시 상태 최대 17,318, 기록된 진행 pair-012 최대 204·합 340, pair-001 최대 12·합 46(다르면 끔 목록이 바뀐 것 = 실패). 볼 것(기준 아님): 끔 fork 합(115: 66.8초), 켬 후보 최대(115: 476). 예상 2–5분.",
+ "run": ["env", "GAIA_ENGINE_FIXES_2=1", "PYTHONPATH=python:baseline-teacher-20260917:tools", "{python}", "tools/federation_one_route_check.py", "runs/lab-114-all-tier-selfplay-18f-full/pair-012", "runs/lab-114-all-tier-selfplay-18f-full/pair-001", "--out", "runs/lab-115a-federation-one-route-check/metrics.json", "--max-final-free-seconds-on", "10", "--free-action-limit", "300"],
+ "metrics": "runs/lab-115a-federation-one-route-check/metrics.json",
+ "timeout_hours": 3
+}

@@ -1,0 +1,6 @@
+{
+ "kind": "command",
+ "note": "사용자 2026-11-13 「진행해」(HANDOFF E137): 엔진 966e9ea의 \"플래그 끔이면 후보 목록 불변\" 확인 — 114 자기대국을 새 빌드에서 엄격 재생(스텝 수·좌석 점수 + 결정마다 chosen 내용 대조)으로 재색인. 판정 없음, 대국 없음. 사전 등록 통과 기준: 완료 뒤 봇 턴의 bc_dataset.py stats에서 46판 전부 엄격 재생 통과·6R 46·결정 13,841(E133과 같은 수치), 재생 검사 엔진 빌드 id가 36d2e007이 아닌 새 빌드. 한 판이라도 chosen differs·스텝·점수 불일치면 끔 후보 목록이 바뀐 것 → 엔진 수정을 고치거나 되돌림. 엔진 컴파일 실패면 failed. 예상 5분 이내.",
+ "run": ["{python}", "tools/bc_dataset.py", "index", "runs", "--glob", "lab-114-all-tier-selfplay-18f-full", "--out", "runs/bc-115b/manifest.jsonl"],
+ "timeout_hours": 2
+}
