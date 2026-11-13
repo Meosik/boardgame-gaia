@@ -198,6 +198,20 @@ fn spend(budget: &mut usize, count: usize) -> Result<(), AiActionError> {
 }
 
 pub(super) fn federation_candidates(state: &GameState, player_id: PlayerId) -> Result<Vec<GameAction>, AiActionError> {
+    // Off by default: decision logs hold candidate indices, so a game recorded without the flag
+    // replays only without it (and one recorded with it only with it).
+    let one_route = std::env::var("GAIA_FEDERATION_ONE_ROUTE").as_deref() == Ok("1");
+    federation_candidates_with(state, player_id, one_route)
+}
+
+/// `one_route`: keep one satellite route per building set — the first, in the stable order, that
+/// yields a legal federation — instead of every minimum route. Lab 114 (pair-012 step 224): Gleens
+/// with 19 power tokens and 8 scattered buildings had 34 building sets x up to 80 equal-length
+/// routes (1,237 shapes) x 14 token choices = 17,318 legal federations, 7 s to enumerate and
+/// validate at every decision. The routes of one building set use the same number of satellites
+/// and differ only in which empty hexes hold them; legality is unchanged (same validator), the
+/// AI just cannot choose among those hexes.
+fn federation_candidates_with(state: &GameState, player_id: PlayerId, one_route: bool) -> Result<Vec<GameAction>, AiActionError> {
     let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
     let growth = player.faction == Some(FactionId::Ivits) && !player.federated_hexes.is_empty();
     let graph = Graph::new(state, player_id, growth);
@@ -267,7 +281,12 @@ pub(super) fn federation_candidates(state: &GameState, player_id: PlayerId) -> R
     }
     let mut actions = BTreeMap::new();
     let mut tile_choices_with_token: Option<Vec<TechTileChoice>> = None;
+    // `shapes` is ordered by the JSON of (buildings, satellites), so the routes of one building
+    // set are adjacent; `routed` is the last building set that already produced a legal action.
+    let mut routed: Option<Vec<HexCoord>> = None;
     for (_, (hexes, satellite_hexes)) in shapes {
+        if one_route && routed.as_ref() == Some(&hexes) { continue; }
+        let mut legal = false;
         for token in &tokens {
             let kind = resolve_federation_token_choice(state, player_id, *token)?;
             let mut bonuses = vec![(None, None, None)];
@@ -295,9 +314,11 @@ pub(super) fn federation_candidates(state: &GameState, player_id: PlayerId) -> R
                     token: *token, bonus_build_coord, bonus_tech_tile, bonus_research_track };
                 if RuleEngine::validate_action(state, player_id, &action).is_ok() {
                     actions.insert(serde_json::to_string(&action)?, action);
+                    legal = true;
                 }
             }
         }
+        if legal { routed = Some(hexes); }
     }
     Ok(actions.into_values().collect())
 }
