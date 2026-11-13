@@ -118,6 +118,8 @@ def _prefetch(env, snapshot, memory, budget, kwargs):
     import budget_teacher
     import four_factions.preparation as p
     from four_factions.preparation import Policies, PolicyCache
+    if _state.get('no_prefetch'):
+        return          # budget_teacher._root_result: the cap already passed, only the root ranking is wanted
     phase = snapshot['state']['phase']
     phases = ('ActionPhase', 'Setup', 'TinkeroidsTileSelectionPending') if kwargs.get('shared_factions') else ('ActionPhase', 'Setup')
     if not isinstance(phase, dict) or not any(k in phase for k in phases):
@@ -241,6 +243,17 @@ def install(processes):
         def search(env, snapshot, memory, publish, **kwargs):
             try:
                 _prefetch(env, snapshot, memory, budget_teacher._installed or 0, kwargs)
+                if time.monotonic() >= kwargs.get('hard_deadline', math.inf):
+                    # 114 (pair-012 step 224): the root ranking in _prefetch used up the safety cap (69 s: each
+                    # OreToPower fork enumerated 17,318 federations), and the frozen search's entry check then
+                    # expired with nothing published — the worker died. The ranking is done and cached, so let
+                    # the search publish it (its first result, before any comparison) and stop there.
+                    def publish_root(result):
+                        result['expired_before_search'] = True
+                        publish(result)
+                        raise p.SearchExpired('safety cap passed during the root ranking; no comparison')
+                    return original_search(env, snapshot, memory, publish_root,
+                                           **{**kwargs, 'hard_deadline': math.inf})
                 return original_search(env, snapshot, memory, publish, **kwargs)
             finally:
                 _drop_unfinished()

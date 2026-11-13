@@ -299,7 +299,8 @@ def worker(args):
                 return
             audit = teacher.last_audit or {}
             reply({'decision_id': decision, 'index': index,
-                   'fallback_timeout': audit.get('ranking_mode') == 'shared-quick-fallback',
+                   'fallback_timeout': (audit.get('ranking_mode') == 'shared-quick-fallback'
+                                        or bool(audit.get('expired_before_search'))),
                    'unsearched_comparisons': audit.get('unsearched_comparisons') or 0,
                    'completed_comparisons': len(audit.get('plans') or ()),
                    'selected': audit.get('selected'),

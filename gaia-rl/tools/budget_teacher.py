@@ -21,6 +21,7 @@ tree is still chosen by PYTHONPATH.
 import inspect
 import json
 import math
+import sys
 import time
 
 _installed = None
@@ -49,6 +50,30 @@ def budget_for(snapshot, scores, budget=None):
 
 def _spent(plans):
     return len({p['first'] for p in plans}) if _distinct_firsts else len(plans)
+
+
+def _root_result(self, snapshot, kwargs):
+    """The search's first published result — the complete root ranking and its choice ('local-baseline') — with no
+    deadline and no comparison. Used when the safety cap passed before the search could publish anything."""
+    from four_factions.preparation import SearchExpired, search
+    first = []
+
+    def publish(result):
+        first.append(json.loads(json.dumps(result, allow_nan=False)))
+        raise SearchExpired('root ranking only')
+
+    parallel = sys.modules.get('parallel_search')
+    if parallel is not None:
+        parallel._state['no_prefetch'] = True   # nothing goes to the pool; rank still reuses the ranking _prefetch cached
+    try:
+        search(self.env, snapshot, self.memory, publish, **{**kwargs, 'hard_deadline': math.inf})
+    except SearchExpired:
+        if not first:
+            raise
+    finally:
+        if parallel is not None:
+            parallel._state['no_prefetch'] = False
+    return first[0] if first else None
 
 
 def _choose(self, snapshot):
@@ -86,7 +111,13 @@ def _choose(self, snapshot):
         search(self.env, snapshot, self.memory, publish, **kwargs)
     except SearchExpired:
         if state['latest'] is None:
-            raise
+            # 114 (pair-012 step 224, pair-037 step 111): the cap passed before the frozen search started. With
+            # parallel_search the root ranking runs first in _prefetch, and in pair-012 that ranking took 69 s
+            # (each OreToPower fork enumerated 17,318 federations, 7 s a fork), so the search's entry check
+            # expired with nothing published and the worker died. Keep the promise above — the root ranking
+            # always completes: play its choice, the search's first published result, with no comparison.
+            state['latest'] = _root_result(self, snapshot, kwargs)
+            state['expired_before_search'] = True
     latest = state['latest']
     if latest is None:
         raise RuntimeError('Search returned without publishing a ranked decision')
@@ -107,6 +138,8 @@ def _choose(self, snapshot):
                        'budget_stopped': state['stopped'],
                        'time_capped': (cap is not None and not state['stopped']
                                        and time.monotonic() >= hard_deadline),
+                       'expired_before_search': bool(state.get('expired_before_search')
+                                                     or latest.get('expired_before_search')),
                        'timing': {'seconds': elapsed, 'quick_fallback_used': False}}
     return snapshot['decision_id'], index
 
