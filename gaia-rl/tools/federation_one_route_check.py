@@ -11,7 +11,8 @@ comparing the next decision's candidate lists:
   (d) flag on: exactly one FormFederation action per key
 
 After the last row (the crash decision of a crashed game) every FreeAction candidate is
-forked with the flag off and on to time the free-action enumeration.
+forked with the flag off and on; the forks are timed AND their candidate lists are compared
+with the same invariants (a)-(d).
 
   GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:baseline-teacher-20260917:tools \\
     .venv/bin/python tools/federation_one_route_check.py GAME [GAME ...] \\
@@ -20,7 +21,7 @@ forked with the flag off and on to time the free-action enumeration.
 GAME is a game directory or a pair directory (its single game-* subdirectory is used).
 Exit code 1 when a check fails (violation, fork error, the flag not reducing candidates, the
 crash-state free-action fork total with the flag on not under --max-final-free-seconds-on, or a
-free-action loop truncated).
+free-action loop truncated, a free-action fork left uncompared).
 """
 import argparse
 import gzip
@@ -144,26 +145,40 @@ def check_game(game, state):
     snap = json.loads(env.snapshot_json())
     free = [i for i, c in enumerate(snap['candidates']) if c['action'].get('type') == 'FreeAction']
     g['final_free_actions'] = len(free)
+    g['final_free_checked'] = 0
     g['final_free_truncated'] = {}
-    for mode in ('off', 'on'):
-        total = 0.0
-        largest = 0
-        set_flag(mode == 'on')
-        for i in free:
-            if total > state['free_limit']:
+    totals = {'off': 0.0, 'on': 0.0}
+    largest = {'off': 0, 'on': 0}
+    for i in free:
+        over = [mode for mode in ('off', 'on') if totals[mode] > state['free_limit']]
+        if over:
+            for mode in over:
                 g['final_free_truncated'][mode] = True
-                break
+            break
+        cands = {}
+        for mode in ('off', 'on'):
+            set_flag(mode == 'on')
             try:
                 branch, dt = timed_fork(env, snap['decision_id'], i)
-                total += dt
-                nxt = candidates_of(branch)
-                largest = max(largest, sum(1 for c in nxt if is_fed(c['action'])))
+                totals[mode] += dt
+                cands[mode] = candidates_of(branch)
+                largest[mode] = max(largest[mode], sum(1 for c in cands[mode] if is_fed(c['action'])))
             except Exception as e:
                 state['fork_errors'].append({'game': name, 'step': 'final', 'mode': mode,
                                              'free_index': i, 'error': repr(e)})
         set_flag(False)
-        g[f'final_free_fork_seconds_{mode}'] = total
-        g[f'final_free_max_fed_{mode}'] = largest
+        if 'off' in cands and 'on' in cands:
+            bad, _, _ = check_pair(cands['off'], cands['on'])
+            for letter in bad:
+                state['violations'][letter] += 1
+                ex = state['violation_examples'].setdefault(letter, [])
+                if len(ex) < 3:
+                    ex.append({'game': name, 'step': 'final', 'free_index': i})
+            g['final_free_checked'] += 1
+        cands = None
+    for mode in ('off', 'on'):
+        g[f'final_free_fork_seconds_{mode}'] = totals[mode]
+        g[f'final_free_max_fed_{mode}'] = largest[mode]
     return g
 
 
@@ -188,7 +203,7 @@ def main():
                   f'max_fed off/on={g["max_fed_off"]}/{g["max_fed_on"]} '
                   f'total_fed off/on={g["total_fed_off"]}/{g["total_fed_on"]} '
                   f'fork_s off/on={g["fork_seconds_off"]:.1f}/{g["fork_seconds_on"]:.1f} '
-                  f'final_free n={g["final_free_actions"]} '
+                  f'final_free n={g["final_free_actions"]} checked={g["final_free_checked"]} '
                   f'off/on={g["final_free_fork_seconds_off"]:.1f}/{g["final_free_fork_seconds_on"]:.1f}s '
                   f'truncated={g["final_free_truncated"] or False}')
     finally:
@@ -206,7 +221,8 @@ def main():
                                        'final_free_fork_seconds_on': g['final_free_fork_seconds_on'],
                                        'final_free_truncated': g['final_free_truncated']})
     passed = (not any(state['violations'].values()) and not state['fork_errors'] and effective
-              and not speed_failures)
+              and not speed_failures
+              and all(g['final_free_checked'] == g['final_free_actions'] for g in games.values()))
     metrics = {'games': games, 'violations': state['violations'],
                'violation_examples': state['violation_examples'],
                'fork_errors': state['fork_errors'], 'flag_effective': effective,
