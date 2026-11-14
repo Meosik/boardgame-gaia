@@ -55,9 +55,9 @@ Largest per-game gains +3.2·+3.4·+5.1 pt, largest losses −2.7·−2.6·−1.
 **Pre-registered reading: effect not confirmed** — the interval [−0.05, +0.99] includes 0. Exact two-sided sign test
 on 25 better vs 17 worse (4 ties left out): p = 0.28 (bot computation, binomial). Validation loss does not go down:
 lower in 1 fold of 5, equal in 1, higher in 3 (mean 2.215 → 2.218), where the E149 step `expand` → `expand+o` lowered
-it in all 5 folds (by 0.08–0.15). The upper end of the interval is +1.0 pt, so whatever o2 adds in this setting is
-less than half of the +2.3 pt [+1.6, +3.1] of the 53 outcome columns (E149) and far below the +12 pt of the flattened
-encoding (E147, single split).
+it in all 5 folds (by 0.08–0.15). The upper end of this run's 95% interval is about +1.0 pt — a bound of one
+estimate from a single training seed, not a limit on the effect (debate 1/1 correction). For reference the 53 outcome
+columns measured +2.3 pt [+1.6, +3.1] in E149; the two effects were not compared directly, so no ratio is claimed.
 
 ## Activation
 
@@ -69,8 +69,8 @@ encoding (E147, single split).
 ## Reading (HANDOFF 1 order)
 
 - ① noise: the difference is at the edge (lower bound −0.05 pt), 25/17 by sign with p = 0.28, one torch seed, and
-  the quartets disagree (a −0.7 pt with 2/10, the other five positive). Not a result in either direction; the size
-  that is still possible is ≤ 1 pt.
+  the quartets disagree (a −0.7 pt with 2/10, the other five positive). Not a result in either direction; the upper
+  bound of this run's interval is about +1 pt (single training seed, not an absolute limit).
 - ② activation: fired (53.1% of candidate rows).
 - ③ scope: part of o2 repeats what the candidate input already holds. The candidate encoding carries the action
   type and the upgrade target (`ACTION_FIELDS` `type`, `to`, `to.Academy`, `gaia_rl/encoding.py:10–12`; flattened to
@@ -93,8 +93,11 @@ No code or deployment change (scratch script only). Lab queue empty after this c
   retested later on the v4 code.
 - (ㄴ) Network size and data amount on the same 5 folds first (E149 (ㄷ)): `expand+o` at width 64 vs 256 × all
   training games vs half, plus one `expand+o2` arm at width 256 to answer reading ④; fixed 9 epochs as the main
-  comparison, per-epoch validation loss recorded for every arm (no selection). About 5 arms × 5 folds ≈ 15–20
-  minutes → lab queue `kind: command` in the work tree venv, as 116.
+  comparison, per-epoch validation loss recorded for every arm (no selection). Debate 1/1 correction: half the
+  games at 9 epochs also halves the optimizer updates (one step per 256-decision batch, `scratch_bc114_o2.py:159–178`),
+  so each width also gets an update-matched arm — half the games at 18 epochs — and the data-amount reading is all
+  games (9 epochs) vs half (18 epochs), with half (9 epochs) reported beside it; the actual update count of every
+  arm is recorded. About 7 arms × 5 folds ≈ 20–30 minutes → lab queue `kind: command` in the work tree venv, as 116.
 - (ㄷ) More self-play collection (user: on hold), (ㄹ) BC vs teacher A/B (needs torch in the lab venv and a seed
   count), (ㅁ) PPO as is (Seraph, user).
 Bot recommendation: (ㄴ) → (ㄱ). (ㄴ) is cheap and tells whether v4 should also change the network width, and
