@@ -10,6 +10,7 @@ import numpy as np
 import bc_train
 
 TORCH = importlib.util.find_spec('torch') is not None
+RAY = importlib.util.find_spec('ray') is not None
 
 
 def write_shard(path, counts, chosen, features=5, observation=7, seed=0):
@@ -62,6 +63,11 @@ class BatchTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, self.assertRaises(FileNotFoundError):
             bc_train.shard_paths(tmp)
 
+    def test_width_is_fixed_to_the_loader_width(self):
+        import inspect
+        self.assertEqual(bc_train.WIDTH, 64)
+        self.assertNotIn('width', inspect.signature(bc_train.train).parameters)
+
 
 @unittest.skipUnless(TORCH, 'torch is not installed (pyproject extra "train")')
 class TrainTests(unittest.TestCase):
@@ -82,6 +88,24 @@ class TrainTests(unittest.TestCase):
             result = bc_train._run(model, paths[1:], 32, 0.0)
             self.assertGreater(result['accuracy'], result['chance']+0.3)
             json.dumps(result)
+
+
+@unittest.skipUnless(TORCH and RAY, 'torch and ray are not installed (pyproject extra "train")')
+class CheckpointTests(unittest.TestCase):
+    def test_trained_checkpoint_loads_in_offline_policy(self):
+        from gaia_rl.encoding import FeatureEncoder
+        from gaia_rl.evaluation import OfflinePolicy
+        spaces = FeatureEncoder().observation_space.spaces
+        with tempfile.TemporaryDirectory() as tmp:
+            shards, out = Path(tmp)/'shards', Path(tmp)/'checkpoint'
+            shards.mkdir()
+            write_shard(shards/'shard-00000.npz', [2, 3, 4, 2], [1, 0, 3, 1],
+                        features=spaces['candidates'].shape[-1], observation=spaces['observation'].shape[0])
+            history = bc_train.train(shards, out, epochs=1, batch=2, val_shards=0)
+            self.assertEqual(len(history), 1)
+            policy = OfflinePolicy(out)
+            self.assertEqual(tuple(policy.module.state_dict()), bc_train.PARAMETERS)
+            self.assertEqual(json.loads((out/'metadata.json').read_text())['behaviour_cloning']['width'], 64)
 
 
 if __name__ == '__main__':

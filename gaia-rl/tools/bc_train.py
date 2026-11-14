@@ -2,7 +2,7 @@
 gaia_rl.evaluation.OfflinePolicy loads (HANDOFF E128 step 2, user 2026-11-12 "모델 업그레이드 진행").
 
   bc_train.py SHARDS_DIR --out CHECKPOINT_DIR [--epochs 4] [--batch 256] [--lr 0.0003] [--val-shards 1]
-              [--width 64] [--seed 0] [--value-weight 0]
+              [--seed 0] [--value-weight 0]
 
 SHARDS_DIR holds shard-*.npz from `bc_dataset.py export` (observation, ragged candidate features cand +
 cand_offsets, chosen index, value). The network is gaia_rl.module.CandidateModule's (state trunk, candidate
@@ -11,7 +11,7 @@ the saved state_dict loads into CandidateModule (ray) for OfflinePolicy and as t
 Loss: cross-entropy of the chosen candidate over the legal candidates (padded per batch to the largest list, not
 to the encoder capacity 2048). --value-weight > 0 adds MSE on value/100 for samples of finished 6-round games
 (value is NaN otherwise); 0 leaves the value head at its initial weights.
-Defaults: 4 epochs as in the earlier strategy pilot, lr 0.0003 and width 64 as in gaia_rl.training.
+Defaults: 4 epochs as in the earlier strategy pilot, lr 0.0003 as in gaia_rl.training. The width is fixed at 64: OfflinePolicy and PPO build CandidateModule with width 64, so another width could not be loaded (Codex debate 2026-11-14).
 Validation = the last --val-shards shards. Shards are cut by sample count, so a game can straddle the boundary:
 validation accuracy is optimistic by that leak until the export carries a game id. 'chance' is the mean of
 1/candidates over the validation samples (candidate order is the engine's, not a ranking).
@@ -27,6 +27,9 @@ import numpy as np
 PARAMETERS = ('state_encoder.0.weight', 'state_encoder.0.bias', 'action_encoder.0.weight', 'action_encoder.0.bias',
               'policy_head.0.weight', 'policy_head.0.bias', 'policy_head.2.weight', 'policy_head.2.bias',
               'value_head.weight', 'value_head.bias')     # CandidateModule.setup, gaia_rl/module.py:10-17
+
+
+WIDTH = 64   # fixed: OfflinePolicy (gaia_rl/evaluation.py:29) and PPO (gaia_rl/training.py:42) build CandidateModule with width 64
 
 
 def shard_paths(directory):
@@ -62,7 +65,7 @@ def batches(shard, size, rng=None):
                'chosen': shard['chosen'][rows].astype(np.int64), 'value': shard['value'][rows].astype(np.float32)}
 
 
-def build_model(observation_size, candidate_size, width=64):
+def build_model(observation_size, candidate_size, width=WIDTH):
     import torch
     from torch import nn
 
@@ -110,7 +113,7 @@ def _run(model, shards, size, value_weight, optimizer=None, rng=None):
     return {'loss': loss_sum/samples, 'accuracy': correct/samples, 'chance': chance/samples, 'samples': samples}
 
 
-def train(shards_dir, out, epochs=4, batch=256, lr=0.0003, val_shards=1, width=64, seed=0, value_weight=0.0):
+def train(shards_dir, out, epochs=4, batch=256, lr=0.0003, val_shards=1, seed=0, value_weight=0.0):
     import torch
     from gaia_rl.encoding import ENCODING_VERSION, FeatureEncoder
     from gaia_rl.versions import runtime_versions
@@ -129,7 +132,7 @@ def train(shards_dir, out, epochs=4, batch=256, lr=0.0003, val_shards=1, width=6
         raise ValueError(f'shards were exported with another encoding: {sizes}')
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
-    model = build_model(*sizes, width)
+    model = build_model(*sizes)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     history = []
     for epoch in range(1, epochs+1):
@@ -150,7 +153,7 @@ def train(shards_dir, out, epochs=4, batch=256, lr=0.0003, val_shards=1, width=6
                 'settings': {'capacity': encoder.candidate_capacity}, 'iteration': 0,
                 'behaviour_cloning': {'shards': str(shards_dir), 'training_shards': len(training),
                                       'validation_shards': len(validation), 'epochs': epochs, 'batch': batch,
-                                      'lr': lr, 'width': width, 'seed': seed, 'value_weight': value_weight,
+                                      'lr': lr, 'width': WIDTH, 'seed': seed, 'value_weight': value_weight,
                                       'history': history}}
     # Metadata is the completion marker, as in gaia_rl.training.save_run.
     (out/'metadata.json').write_text(json.dumps(metadata, indent=2))
@@ -165,11 +168,10 @@ def main():
     parser.add_argument('--batch', type=int, default=256)
     parser.add_argument('--lr', type=float, default=0.0003)
     parser.add_argument('--val-shards', type=int, default=1)
-    parser.add_argument('--width', type=int, default=64)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--value-weight', type=float, default=0.0)
     args = parser.parse_args()
-    train(args.shards, args.out, args.epochs, args.batch, args.lr, args.val_shards, args.width, args.seed,
+    train(args.shards, args.out, args.epochs, args.batch, args.lr, args.val_shards, args.seed,
           args.value_weight)
 
 
