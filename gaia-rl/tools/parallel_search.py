@@ -131,12 +131,16 @@ def _prefetch(env, snapshot, memory, budget, kwargs):
                 'fixed_openings': kwargs.get('fixed_openings', False)}
     policies = Policies(memory, cache=PolicyCache(), **settings)
     memory_before = _memory_key(policies.memory)
+    mark = time.monotonic()
     scores = p.Policies.rank.__wrapped__(policies, env, snapshot)
+    budget_teacher.add_stage('root_rank', time.monotonic()-mark)
     budget = budget_teacher.budget_for(snapshot, scores, budget)       # the same value search's publish reads
     if budget < 2:
         return
     _state['root'] = (_key(snapshot), memory_before, scores, copy.deepcopy(policies.memory))
+    mark = time.monotonic()
     tasks, capture = _planned_tasks(env, snapshot, policies.memory, scores, policies, kwargs)
+    budget_teacher.add_stage('planned_tasks', time.monotonic()-mark)
     state_json = json.dumps(snapshot['state'])
     memory_after = _memory_key(policies.memory)
     # A patch may compare one decision at another boundary (teacher_patches.decision_horizon).
@@ -241,8 +245,10 @@ def install(processes):
         original_search = p.search
 
         def search(env, snapshot, memory, publish, **kwargs):
+            entered = time.monotonic()
             try:
                 _prefetch(env, snapshot, memory, budget_teacher._installed or 0, kwargs)
+                budget_teacher.add_stage('prefetch', time.monotonic()-entered)   # root_rank + planned_tasks + submit
                 if time.monotonic() >= kwargs.get('hard_deadline', math.inf):
                     # 114 (pair-012 step 224): the root ranking in _prefetch used up the safety cap (69 s: each
                     # OreToPower fork enumerated 17,318 federations), and the frozen search's entry check then
@@ -256,7 +262,10 @@ def install(processes):
                                            **{**kwargs, 'hard_deadline': math.inf})
                 return original_search(env, snapshot, memory, publish, **kwargs)
             finally:
+                mark = time.monotonic()
                 _drop_unfinished()
+                budget_teacher.add_stage('drop_unfinished', time.monotonic()-mark)
+                budget_teacher.add_stage('parallel_search', time.monotonic()-entered)   # the whole wrapper
                 _state['prefetch'] = None
                 _state['root'] = None
         search._parallel = True

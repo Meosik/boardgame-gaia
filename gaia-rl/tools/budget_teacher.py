@@ -35,6 +35,14 @@ def count_distinct_firsts(enabled):
     _distinct_firsts = bool(enabled)
 
 
+stages = {}            # seconds per stage of the current decision (115e): _choose and parallel_search add to it
+
+
+def add_stage(name, seconds):
+    """Timing only, never read by the search: where one decision's wall time went (decision log 'timing')."""
+    stages[name] = stages.get(name, 0.0)+seconds
+
+
 budget_hooks = []      # f(snapshot, scores, budget) -> budget; a patch may widen one decision's budget
 max_seconds_hooks = []  # f(snapshot, seconds) -> seconds; a patch may widen one decision's safety cap
 
@@ -79,15 +87,19 @@ def _root_result(self, snapshot, kwargs):
 def _choose(self, snapshot):
     from four_factions.preparation import SearchExpired, search
     started = time.monotonic()
+    stages.clear()
     if self.env is None or json.loads(self.env.snapshot_json()) != snapshot:
         raise ValueError('Budget teacher must be bound to the current native snapshot')
     if snapshot['steps'] != len(self.prefix):
         raise ValueError('Missing native actions; cannot reconstruct plan memory')
+    add_stage('bind_check', time.monotonic()-started)
     budget = _installed
     state = {'latest': None, 'stopped': False}
+    published = []     # seconds since `started` of every published result (the first is the root ranking)
 
     def publish(result):
         nonlocal budget
+        published.append(round(time.monotonic()-started, 3))
         # Round-trip exactly like the subprocess worker's JSON hand-off.
         state['latest'] = json.loads(json.dumps(result, allow_nan=False))
         budget = budget_for(snapshot, result.get('scores'), _installed)
@@ -107,10 +119,14 @@ def _choose(self, snapshot):
                   observed_factions=self.observed_factions)
     if 'faction_tech_plans' in inspect.signature(search).parameters:
         kwargs['faction_tech_plans'] = self.faction_tech_plans
+    mark = time.monotonic()
     try:
         search(self.env, snapshot, self.memory, publish, **kwargs)
     except SearchExpired:
+        add_stage('search_call', time.monotonic()-mark)
+        mark = None
         if state['latest'] is None:
+            retry = time.monotonic()
             # 114 (pair-012 step 224, pair-037 step 111): the cap passed before the frozen search started. With
             # parallel_search the root ranking runs first in _prefetch, and in pair-012 that ranking took 69 s
             # (each OreToPower fork enumerated 17,318 federations, 7 s a fork), so the search's entry check
@@ -118,11 +134,16 @@ def _choose(self, snapshot):
             # always completes: play its choice, the search's first published result, with no comparison.
             state['latest'] = _root_result(self, snapshot, kwargs)
             state['expired_before_search'] = True
+            add_stage('root_result', time.monotonic()-retry)
+    if mark is not None:
+        add_stage('search_call', time.monotonic()-mark)
     latest = state['latest']
     if latest is None:
         raise RuntimeError('Search returned without publishing a ranked decision')
+    mark = time.monotonic()
     if json.loads(self.env.snapshot_json()) != snapshot:
         raise ValueError('Parent native state changed during in-process search')
+    add_stage('state_check', time.monotonic()-mark)
     index = latest['index']
     if (latest['decision_id'] != snapshot['decision_id'] or type(index) is not int
             or not 0 <= index < len(snapshot['candidates'])):
@@ -140,7 +161,10 @@ def _choose(self, snapshot):
                                        and time.monotonic() >= hard_deadline),
                        'expired_before_search': bool(state.get('expired_before_search')
                                                      or latest.get('expired_before_search')),
-                       'timing': {'seconds': elapsed, 'quick_fallback_used': False}}
+                       'timing': {'seconds': elapsed, 'quick_fallback_used': False,
+                                  'cap': cap if cap is None or math.isfinite(cap) else None,
+                                  'published_at': published,
+                                  'stages': {name: round(seconds, 3) for name, seconds in stages.items()}}}
     return snapshot['decision_id'], index
 
 

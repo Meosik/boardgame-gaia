@@ -79,6 +79,43 @@ class BudgetFallbackTest(unittest.TestCase):
         self.assertIs(me.last_audit['expired_before_search'], False)
         self.assertEqual(len(self.calls), 1)
 
+    def test_timing_stages_recorded(self):
+        def fake(publish, kwargs):
+            budget_teacher.add_stage('root_rank', 0.25)      # what parallel_search adds during the search
+            publish(dict(RESULT))
+        me, _ = self.run_choose(fake)
+        timing = me.last_audit['timing']
+        self.assertEqual(timing['cap'], 60)
+        self.assertEqual(len(timing['published_at']), 1)
+        self.assertEqual(timing['stages']['root_rank'], 0.25)
+        self.assertLessEqual({'bind_check', 'search_call', 'state_check'}, set(timing['stages']))
+        self.assertNotIn('root_result', timing['stages'])
+        json.dumps(timing, allow_nan=False)                  # goes through the worker's JSON reply
+
+    def test_timing_of_fallback_and_next_decision(self):
+        def expired(publish, kwargs):
+            if math.isfinite(kwargs['hard_deadline']):
+                raise SearchExpired('cap')
+            publish(dict(RESULT))
+        me, _ = self.run_choose(expired)
+        self.assertIn('root_result', me.last_audit['timing']['stages'])
+        self.assertEqual(me.last_audit['timing']['published_at'], [])
+        me, _ = self.run_choose(lambda publish, kwargs: publish(dict(RESULT)))
+        self.assertNotIn('root_result', me.last_audit['timing']['stages'])   # stages are per decision
+
+    def test_decision_timing_marks_stale_audit(self):
+        import time
+        import teacher_ab
+        me, (decision, _) = self.run_choose(lambda publish, kwargs: publish(dict(RESULT)))
+        fresh = teacher_ab.decision_timing(me.last_audit, decision, time.monotonic())
+        self.assertIs(fresh['audit_fresh'], True)
+        self.assertIn('bind_check', fresh['stages'])
+        self.assertIs(fresh['expired_before_search'], False)
+        stale = teacher_ab.decision_timing(me.last_audit, decision+1, time.monotonic())
+        self.assertEqual(set(stale), {'choose', 'audit_fresh'})
+        self.assertIs(stale['audit_fresh'], False)
+        json.dumps(fresh, allow_nan=False)
+
     def test_prefetch_skipped_when_flagged(self):
         parallel_search._state['no_prefetch'] = True
         try:

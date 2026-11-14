@@ -292,13 +292,14 @@ def worker(args):
             if command['digest'] != digest(snapshot):
                 reply({'error': 'worker native state diverged from runner'})
                 return
+            tick = time.monotonic()
             try:
                 decision, index = teacher.choose(snapshot)
             except TimeoutError as error:
                 reply({'timeout': repr(error)})
                 return
             audit = teacher.last_audit or {}
-            reply({'decision_id': decision, 'index': index,
+            reply({'decision_id': decision, 'index': index, 'timing': decision_timing(audit, decision, tick),
                    'fallback_timeout': (audit.get('ranking_mode') == 'shared-quick-fallback'
                                         or bool(audit.get('expired_before_search'))),
                    'unsearched_comparisons': audit.get('unsearched_comparisons') or 0,
@@ -341,6 +342,23 @@ def menu_slots(attribute='_menu_slots'):
 
 def digest(snapshot):
     return hashlib.sha256(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
+
+
+def decision_timing(audit, decision, tick):
+    """Where one decision's wall time went, for the decision log (115e: a 110 s decision with no comparison and
+    no fallback flag). 'choose' is the worker's whole teacher.choose; 'search' is budget_teacher._choose inside it
+    (the rest is wrappers around choose); 'stages' are budget_teacher.stages; 'published_at' the seconds at which
+    results were published (first = root ranking). 'audit_fresh' false = this decision did not go through
+    budget_teacher (an immediate return), so the other fields are absent."""
+    timing = {'choose': round(time.monotonic()-tick, 3), 'audit_fresh': audit.get('decision_id') == decision}
+    if timing['audit_fresh']:
+        inner = audit.get('timing') or {}
+        seconds = inner.get('seconds')
+        timing.update({'search': None if seconds is None else round(seconds, 3), 'cap': inner.get('cap'),
+                       'published_at': inner.get('published_at'), 'stages': inner.get('stages'),
+                       'time_capped': audit.get('time_capped'), 'budget_stopped': audit.get('budget_stopped'),
+                       'expired_before_search': audit.get('expired_before_search')})
+    return timing
 
 
 class Worker:
@@ -417,7 +435,8 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None):
                     faction = factions[seat]
                     limits = snapshot.get('candidate_generation') or {}
                     tick = time.monotonic()
-                    reply = workers[arm].request({'op': 'choose', 'digest': digest(snapshot)}, decision_budget)
+                    state_digest = digest(snapshot)
+                    reply = workers[arm].request({'op': 'choose', 'digest': state_digest}, decision_budget)
                     if 'timeout' in reply:
                         raise WorkerTimeout(reply['timeout'])
                     if 'error' in reply:
@@ -434,6 +453,8 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None):
                     counts['completed_comparisons'] += int(reply.get('completed_comparisons', 0))
                     counts['search_milliseconds'] += round((time.monotonic()-tick)*1000)
                     trace.write(json.dumps({'step': snapshot['steps'], 'seat': seat, 'arm': arm,
+                                            'round': snapshot['state']['round'], 'digest': state_digest,
+                                            'timing': reply.get('timing'),
                                             'decision_id': snapshot['decision_id'], 'index': index,
                                             'chosen': snapshot['candidates'][index],
                                             'seconds': round(time.monotonic()-tick, 3),
