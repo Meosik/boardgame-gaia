@@ -6,8 +6,9 @@ o  = the 53 outcome columns of E148 (gaia-rl/runs/bc-114-outcome/outcome.npz, la
 o2 = o + for every candidate, state right after it (Environment.preview_state_json) minus the state before:
      the acting player's structure count per kind (`players[].structures[].kind`), the number of planets the acting
      player owns per planet type (`board.hexes[].planet`), and the number of hexes with the acting player's satellite.
-Stage 1 writes gaia-rl/runs/bc-114-outcome/o2.npz (reused when present), stage 2 prints one line per fold and the
-per-game summary and writes gaia-rl/runs/bc-114-o2/metrics.json.
+Stage 1 writes gaia-rl/runs/bc-114-outcome/o2.npz (reused when present with the same extraction
+version; columns are numbered by first appearance over a sorted key order, so a re-extraction gives the same columns),
+stage 2 prints one line per fold and the per-game summary and writes gaia-rl/runs/bc-114-o2/metrics.json.
 Usage: scratch_bc114_o2.py          # both stages, about 9 minutes
        scratch_bc114_o2.py smoke    # 2 games extracted, 1 epoch, fold 0, nothing written"""
 import glob
@@ -30,6 +31,7 @@ SMOKE = sys.argv[1:] == ['smoke']
 EPOCHS = 1 if SMOKE else 9
 WIDTH, LR, FIELDS = 64, 0.001, 34
 EXTRA = 40            # o2 columns; grows by first appearance, fatal when exceeded
+VERSION = 2          # o2.npz extraction version: 2 = columns numbered in sorted key order (reproducible)
 STORE = 'gaia-rl/runs/bc-114-outcome/o2.npz'
 METRICS = 'gaia-rl/runs/bc-114-o2/metrics.json'
 E149 = {'expand+o per game': 0.346, 'expand+o decision-weighted': 0.347}
@@ -69,7 +71,7 @@ def extract(limit):
                 block = np.zeros((len(snapshot['candidates']), EXTRA), dtype=np.float32)
                 for index in range(len(block)):
                     after = tally(json.loads(env.preview_state_json(snapshot['decision_id'], index)), actor)
-                    for key in after.keys() | before.keys():
+                    for key in sorted(after.keys() | before.keys()):
                         delta = after[key]-before[key]
                         if delta:
                             column = columns.setdefault(key, len(columns))
@@ -82,9 +84,11 @@ def extract(limit):
 
 
 start = time.time()
-if not SMOKE and os.path.exists(STORE) and np.array_equal(np.load(STORE)['counts'], counts):
-    names = [str(n) for n in np.load(STORE)['names']]
-    extra = np.load(STORE)['extra'].astype(np.float32)
+cache = np.load(STORE) if not SMOKE and os.path.exists(STORE) else None
+if (cache is not None and np.array_equal(cache['counts'], counts)
+        and 'version' in cache.files and int(cache['version']) == VERSION):
+    names = [str(n) for n in cache['names']]
+    extra = cache['extra'].astype(np.float32)
     print('o2 columns read from', STORE, flush=True)
 else:
     part, names, decisions = extract(2 if SMOKE else len(games))
@@ -92,7 +96,8 @@ else:
     extra[:len(part)] = np.clip(part, -30, 30)
     if not SMOKE:
         assert decisions == len(counts) and len(part) == offsets[-1], (decisions, len(counts), len(part))
-        np.savez_compressed(STORE, extra=extra.astype(np.float16), counts=counts, names=np.array(names))
+        np.savez_compressed(STORE, extra=extra.astype(np.float16), counts=counts, names=np.array(names),
+                            version=np.array(VERSION))
 extract_seconds = round(time.time()-start)
 used = np.abs(extra).max(axis=0) > 0
 changed = float((np.abs(extra).max(axis=1) > 0).mean())
@@ -211,7 +216,7 @@ half = float(t.ppf(0.975, n-1))*sd/math.sqrt(n)
 reading = 'effect not confirmed (interval includes 0)' if mean-half <= 0 <= mean+half else (
     'o2 better' if mean > 0 else 'o2 worse')
 metrics = {
-    'epochs': EPOCHS, 'games': n, 'decisions': len(chosen), 'o_columns': int(base.shape[1]),
+    'epochs': EPOCHS, 'games': n, 'decisions': len(chosen), 'o_columns': int(base.shape[1]), 'o2_version': VERSION,
     'o2_extra_columns': [name for name, keep_it in zip(names, used) if keep_it],
     'candidate_rows_with_o2_change': round(changed, 3), 'extract_seconds': extract_seconds, 'folds': folds,
     'decision_weighted': {arm: round(float(hit[arm].mean()), 4) for arm in ARMS},
