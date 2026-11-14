@@ -1,0 +1,7 @@
+{
+ "kind": "command",
+ "note": "사용자 2026-11-14 「(a) 진행해」(HANDOFF E149 (ㄴ) ② 실행 방법 (a), E150): 114 BC 표본(46판 13,841결정)에서 결과 특징에 건물 종류·행성 종류·위성 변화를 더한 것이 도움이 되는지 짝 비교 — `expand+o`(E148의 53칸) 대 `expand+o2`(o + 둔 사람의 건물 종류별 개수 변화 + 둔 사람이 차지한 행성 종류별 개수 변화 + 둔 사람 위성 칸 수 변화, 모두 preview_state_json 직후 상태 − 직전 상태). 대국 없음, 교사 판정 아님. 고정 조건(E149와 같음): 쿼텟 층화 5겹 판 단위 교차 검증, width 64, lr 0.001, 고정 9 epoch(검증 겹으로 epoch를 고르지 않음), 같은 torch 시드·배치 순서. lab venv에 torch가 없어 명령은 봇 작업 트리(~/projects/gaia-work)에서 작업 트리 venv로 돈다(shard·outcome.npz가 작업 트리 runs/에만 있음, 엔진 36d2e007). 사전 등록 보고: 판별 정확도 차이(o2 − o) 평균, 판 단위 t 구간, o2가 나은 판 n/46, 겹별 검증 손실, 쿼텟별 차이. 읽기: 구간이 0을 포함하면 「효과 미확인」, 0 위면 o2를 인코딩 v4 후보에 넣음, 0 아래면 뺌. 점검: `expand+o` 팔의 판별 정확도가 E149의 34.6%와 맞는지(다르면 재현성 문제로 따로 보고), 후보 수가 outcome.npz와 다르면 스크립트가 오류로 끝남(재생 어긋남). 예상 ≈ 10–15분(특징 추출 ≈ 5분 + 학습 ≈ 4분; 봇 턴 스모크 2판 13초·1 epoch 1겹 통과).",
+ "run": ["env", "-C", "/home/sohegi/projects/gaia-work", "GAIA_ENGINE_FIXES_2=1", "PYTHONPATH=gaia-rl/python:gaia-rl/baseline-teacher-20260917:gaia-rl/tools", "/home/sohegi/projects/gaia-work/gaia-rl/.venv/bin/python", "gaia-rl/lab/scratch_bc114_o2.py"],
+ "metrics": "/home/sohegi/projects/gaia-work/gaia-rl/runs/bc-114-o2/metrics.json",
+ "timeout_hours": 1
+}
