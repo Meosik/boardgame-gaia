@@ -8,7 +8,9 @@ takes a random FRACTION of the training games inside each quartet (SUBSET_SEED).
            (FeatureEncoder stores one ordinal scalar per field), the board columns (sum of 2**role) become
            three 0/1 planes (single-coordinate roles, federation hexes, satellites); state columns that are
            never non-zero are dropped in both variants.
-Usage: scratch_bc114_variants.py raw|expand WIDTH LR EPOCHS [STATE_LAYERS [FRACTION [SUBSET_SEED]]]"""
+  raw+o / expand+o   the same plus the outcome features of lab/scratch_bc114_outcome.py (state right after the
+           candidate minus the state before, acting player's numeric fields; E147 (ㄱ)) added to the candidate input.
+Usage: scratch_bc114_variants.py raw|expand|raw+o|expand+o WIDTH LR EPOCHS [STATE_LAYERS [FRACTION [SUBSET_SEED]]]"""
 import glob
 import json
 import sys
@@ -19,6 +21,7 @@ import torch
 from torch import nn
 
 variant, width, lr, epochs = sys.argv[1], int(sys.argv[2]), float(sys.argv[3]), int(sys.argv[4])
+base, use_outcome = variant.split('+')[0], variant.endswith('+o')
 state_layers = int(sys.argv[5]) if len(sys.argv) > 5 else 1
 FIELDS = 34
 paths = sorted(glob.glob('gaia-rl/runs/bc-114-shards/shard-*.npz'))
@@ -63,6 +66,12 @@ for f in range(FIELDS):                       # value column 2f+1, presence colu
     ids[:, f] = inverse
     sizes.append(len(values))
 board = cand[:, FIELDS*2:].astype(np.int16)
+outcome = None
+if use_outcome:
+    stored = np.load('gaia-rl/runs/bc-114-outcome/outcome.npz')
+    assert (stored['counts'] == counts).all(), 'outcome rows do not line up with the shards'
+    outcome = stored['outcome'][:, np.abs(stored['outcome']).max(axis=0) > 0].astype(np.float32)/4
+    print('outcome columns', outcome.shape[1], flush=True)
 print(variant, 'width', width, 'lr', lr, 'state columns', int(keep.sum()), 'train', len(train_rows),
       'validation', len(val_rows), 'uniform loss %.3f' % float(np.log(counts[val_rows]).mean()),
       'chance %.3f' % float((1/counts[val_rows]).mean()), flush=True)
@@ -75,7 +84,9 @@ class Net(nn.Module):
         for _ in range(state_layers-1):
             layers += [nn.Linear(width, width), nn.Tanh()]
         self.state = nn.Sequential(*layers)
-        if variant == 'raw':
+        if use_outcome:
+            self.outcome = nn.Linear(outcome.shape[1], width)
+        if base == 'raw':
             self.action = nn.Linear(cand.shape[1], width)
         else:
             self.embed = nn.ModuleList(nn.Embedding(size, width) for size in sizes)
@@ -84,7 +95,7 @@ class Net(nn.Module):
 
     def forward(self, rows, cand_rows, owner):
         state = self.state(obs[rows])
-        if variant == 'raw':
+        if base == 'raw':
             action = self.action(torch.from_numpy(cand[cand_rows].astype(np.float32)))
         else:
             cells = board[cand_rows]
@@ -93,6 +104,8 @@ class Net(nn.Module):
             field = torch.from_numpy(ids[cand_rows])
             for f, table in enumerate(self.embed):
                 action = action+table(field[:, f])
+        if use_outcome:
+            action = action+self.outcome(torch.from_numpy(outcome[cand_rows]))
         return self.head(torch.cat((state[owner], torch.tanh(action)), dim=-1)).squeeze(-1)
 
 
