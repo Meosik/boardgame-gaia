@@ -1,0 +1,8 @@
+{
+  "description": "Behaviour-cloned policy from the 114 self-play games (tools/bc_train.py, 12 training shards, 7 epochs = best validation loss; HANDOFF E147) in a teacher seat: one forward pass per decision, no search. The checkpoint is under runs/ (not in git) and must exist on the machine that plays.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "policy_teacher:make",
+  "kwargs": {
+    "checkpoint": "runs/bc-114-ckpt-e7"
+  }
+}
