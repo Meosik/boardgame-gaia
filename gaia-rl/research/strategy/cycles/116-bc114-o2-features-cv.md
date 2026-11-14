@@ -95,9 +95,11 @@ No code or deployment change (scratch script only). Lab queue empty after this c
   training games vs half, plus one `expand+o2` arm at width 256 to answer reading ④; fixed 9 epochs as the main
   comparison, per-epoch validation loss recorded for every arm (no selection). Debate 1/1 correction: half the
   games at 9 epochs also halves the optimizer updates (one step per 256-decision batch, `scratch_bc114_o2.py:159–178`),
-  so each width also gets an update-matched arm — half the games at 18 epochs — and the data-amount reading is all
-  games (9 epochs) vs half (18 epochs), with half (9 epochs) reported beside it; the actual update count of every
-  arm is recorded. About 7 arms × 5 folds ≈ 20–30 minutes → lab queue `kind: command` in the work tree venv, as 116.
+  so each width also gets an update-matched arm: half the games, trained until exactly the optimizer step count of
+  the all-games arm of the same fold, 9 × ceil(N_all/256), stopping mid-epoch (debate 2/2 correction: a fixed 18
+  epochs does not match the count — games differ in decisions and the last partial batch also steps, so the real
+  count is epochs × ceil(decisions/256)). The data-amount reading is all games (9 epochs) vs half (same step
+  count), with half (9 epochs) reported beside it; the step count of every arm is recorded. About 7 arms × 5 folds ≈ 20–30 minutes → lab queue `kind: command` in the work tree venv, as 116.
 - (ㄷ) More self-play collection (user: on hold), (ㄹ) BC vs teacher A/B (needs torch in the lab venv and a seed
   count), (ㅁ) PPO as is (Seraph, user).
 Bot recommendation: (ㄴ) → (ㄱ). (ㄴ) is cheap and tells whether v4 should also change the network width, and
