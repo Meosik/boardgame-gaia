@@ -1,5 +1,7 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import bc_dataset
 
@@ -62,6 +64,23 @@ class ReplayTests(unittest.TestCase):
             list(bc_dataset.iter_samples([old, new]))
         # games without engine_build_id never match a given prefix
         self.assertEqual(list(bc_dataset.iter_samples([row], builds=['aaa'])), [])
+
+
+class LoadTests(unittest.TestCase):
+    def test_load_resolves_relative_game_paths_against_manifest_parents(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)/'root'
+            game = root/'runs'/'lab-x'/'pair-000'/'game-0-A02'
+            game.mkdir(parents=True)
+            manifest = root/'runs'/'bc'/'manifest.jsonl'
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text('\n'.join(json.dumps({'game': g}) for g in
+                                          ['runs/lab-x/pair-000/game-0-A02', '/abs/missing/game', 'runs/nope/g'])+'\n')
+            games = bc_dataset._load(manifest)
+            self.assertEqual(Path(games[0]['game']).resolve(), game.resolve())
+            self.assertIsInstance(games[0]['game'], str)
+            self.assertEqual(games[1]['game'], '/abs/missing/game')
+            self.assertEqual(games[2]['game'], 'runs/nope/g')
 
 
 if __name__ == '__main__':

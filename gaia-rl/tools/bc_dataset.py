@@ -118,9 +118,26 @@ def cmd_index(args):
     print(f'{n} games indexed -> {out}')
 
 
+def _game_dir(game, manifest):
+    """A manifest written elsewhere may hold game paths relative to the directory `index` ran in (the lab's
+    gaia-rl/, two levels above runs/<name>/manifest.jsonl): try the path as written, then against each parent of
+    the manifest file."""
+    path = Path(game)
+    if path.is_absolute() or path.exists():
+        return path
+    for parent in Path(manifest).resolve().parents:
+        if (parent/path).exists():
+            return parent/path
+    return path
+
+
 def _load(manifest):
     with open(manifest) as f:
-        return [json.loads(line) for line in f if line.strip()]
+        games = [json.loads(line) for line in f if line.strip()]
+    for g in games:
+        if 'game' in g:
+            g['game'] = str(_game_dir(g['game'], manifest))
+    return games
 
 
 def cmd_stats(args):
