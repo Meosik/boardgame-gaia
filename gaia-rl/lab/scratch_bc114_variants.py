@@ -1,11 +1,14 @@
 """Is the weak BC fit on the 114 shards an optimisation/capacity problem or an encoding problem?
-Same shards, same split (last 2 shards = validation), three variants:
+Same shards, fixed split by game (= seed; Codex debate 2026-11-14: the first version validated on the last two
+shards, which leaks one game across the boundary, and cut the learning curve from the front of the export):
+validation = every fifth game of each quartet (manifest order), training = the other games; the learning curve
+takes a random FRACTION of the training games inside each quartet (SUBSET_SEED). Variants:
   raw      the bc_train network on the stored features (width and lr from the command line)
   expand   candidate fields re-expanded: every categorical/integer value column becomes an embedding id
            (FeatureEncoder stores one ordinal scalar per field), the board columns (sum of 2**role) become
            three 0/1 planes (single-coordinate roles, federation hexes, satellites); state columns that are
            never non-zero are dropped in both variants.
-Usage: scratch_bc114_variants.py raw|expand WIDTH LR EPOCHS [STATE_LAYERS]"""
+Usage: scratch_bc114_variants.py raw|expand WIDTH LR EPOCHS [STATE_LAYERS [FRACTION [SUBSET_SEED]]]"""
 import glob
 import json
 import sys
@@ -19,19 +22,38 @@ variant, width, lr, epochs = sys.argv[1], int(sys.argv[2]), float(sys.argv[3]), 
 state_layers = int(sys.argv[5]) if len(sys.argv) > 5 else 1
 FIELDS = 34
 paths = sorted(glob.glob('gaia-rl/runs/bc-114-shards/shard-*.npz'))
-obs, cand, counts, chosen, split = [], [], [], [], 0
-for n, path in enumerate(paths):
+obs, cand, counts, chosen = [], [], [], []
+for path in paths:
     shard = np.load(path)
     obs.append(shard['observation'])
     cand.append(shard['cand'])
     counts.append(np.diff(shard['cand_offsets']))
     chosen.append(shard['chosen'])
-    if n == len(paths)-3:
-        split = sum(len(c) for c in chosen)
 obs, cand = np.concatenate(obs), np.concatenate(cand)
 counts, chosen = np.concatenate(counts).astype(np.int64), np.concatenate(chosen).astype(np.int64)
 offsets = np.concatenate([[0], np.cumsum(counts)])
-keep = np.abs(obs[:split]).max(axis=0) > 0
+# Game of every sample: the export walks the manifest in order (bc_dataset.iter_samples), one seed per game.
+games = [json.loads(line) for line in open('gaia-rl/runs/bc-114/manifest.jsonl')]
+games = [g for g in games if g['replays']]
+assert sum(g['decisions'] for g in games) == len(chosen), 'manifest and shards disagree'
+game_of = np.repeat(np.arange(len(games)), [g['decisions'] for g in games])
+quartet = [g['seed'].rsplit('-', 1)[0] for g in games]
+fraction = float(sys.argv[6]) if len(sys.argv) > 6 else 1.0
+subset = np.random.default_rng(int(sys.argv[7]) if len(sys.argv) > 7 else 0)
+val_games, train_games = [], []
+for name in sorted(set(quartet)):
+    members = [i for i, q in enumerate(quartet) if q == name]
+    held = members[4::5]
+    rest = [i for i in members if i not in held]
+    take = max(1, round(len(rest)*fraction))
+    val_games += held
+    train_games += sorted(subset.permutation(rest)[:take].tolist()) if fraction < 1 else rest
+train_rows = np.flatnonzero(np.isin(game_of, train_games))
+val_rows = np.flatnonzero(np.isin(game_of, val_games))
+print('games: train', len(train_games), 'validation', len(val_games), 'per quartet',
+      {name: (sum(quartet[i] == name for i in train_games), sum(quartet[i] == name for i in val_games))
+       for name in sorted(set(quartet))}, flush=True)
+keep = np.abs(obs[train_rows]).max(axis=0) > 0
 obs = torch.from_numpy(obs[:, keep].astype(np.float32))
 ids = np.zeros((len(cand), FIELDS), dtype=np.int64)
 sizes = []
@@ -41,8 +63,9 @@ for f in range(FIELDS):                       # value column 2f+1, presence colu
     ids[:, f] = inverse
     sizes.append(len(values))
 board = cand[:, FIELDS*2:].astype(np.int16)
-print(variant, 'width', width, 'lr', lr, 'state columns', int(keep.sum()), 'train', split, 'validation',
-      len(chosen)-split, 'distinct values per field', sizes, flush=True)
+print(variant, 'width', width, 'lr', lr, 'state columns', int(keep.sum()), 'train', len(train_rows),
+      'validation', len(val_rows), 'uniform loss %.3f' % float(np.log(counts[val_rows]).mean()),
+      'chance %.3f' % float((1/counts[val_rows]).mean()), flush=True)
 
 
 class Net(nn.Module):
@@ -103,9 +126,6 @@ torch.manual_seed(0)
 rng = np.random.default_rng(0)
 model = Net()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-limit = int(sys.argv[6]) if len(sys.argv) > 6 else split      # learning curve: train on the first LIMIT samples
-train_rows, val_rows = np.arange(min(limit, split)), np.arange(split, len(chosen))
-print('training samples', len(train_rows), flush=True)
 best = None
 start = time.time()
 for epoch in range(1, epochs+1):
@@ -124,6 +144,8 @@ print('best by validation loss', json.dumps(best))
 
 # Validation accuracy of the final model by the action type the teacher chose (field 1 = 'type').
 from gaia_rl.vocabulary import CATEGORIES
+if fraction < 1:
+    sys.exit()          # learning-curve runs: the summary line is enough
 model.eval()
 table = {}
 with torch.no_grad():
