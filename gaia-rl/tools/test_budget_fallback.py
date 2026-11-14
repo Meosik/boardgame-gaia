@@ -116,6 +116,16 @@ class BudgetFallbackTest(unittest.TestCase):
         self.assertIs(stale['audit_fresh'], False)
         json.dumps(fresh, allow_nan=False)
 
+    def test_decision_timing_stages_empty_when_none_recorded(self):
+        import time
+        import teacher_ab
+        audit = {'decision_id': 7, 'timing': {'seconds': 0.0}}      # an immediate return: no stage recorded
+        timing = teacher_ab.decision_timing(audit, 7, time.monotonic())
+        self.assertIs(timing['audit_fresh'], True)
+        self.assertEqual(timing['stages'], {})
+        self.assertEqual(timing['search'], 0.0)
+        json.dumps(timing, allow_nan=False)
+
     def test_prefetch_skipped_when_flagged(self):
         parallel_search._state['no_prefetch'] = True
         try:

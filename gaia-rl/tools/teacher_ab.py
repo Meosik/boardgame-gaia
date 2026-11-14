@@ -347,7 +347,8 @@ def digest(snapshot):
 def decision_timing(audit, decision, tick):
     """Where one decision's wall time went, for the decision log (115e: a 110 s decision with no comparison and
     no fallback flag). 'choose' is the worker's whole teacher.choose; 'search' is budget_teacher._choose inside it
-    (the rest is wrappers around choose); 'stages' are budget_teacher.stages; 'published_at' the seconds at which
+    (the rest is wrappers around choose); 'stages' are budget_teacher.stages ({} when the decision returned before any stage was recorded, e.g. the booster-tier
+    immediate return); 'published_at' the seconds at which
     results were published (first = root ranking). 'audit_fresh' false = this decision did not go through
     budget_teacher (an immediate return), so the other fields are absent."""
     timing = {'choose': round(time.monotonic()-tick, 3), 'audit_fresh': audit.get('decision_id') == decision}
@@ -355,7 +356,7 @@ def decision_timing(audit, decision, tick):
         inner = audit.get('timing') or {}
         seconds = inner.get('seconds')
         timing.update({'search': None if seconds is None else round(seconds, 3), 'cap': inner.get('cap'),
-                       'published_at': inner.get('published_at'), 'stages': inner.get('stages'),
+                       'published_at': inner.get('published_at'), 'stages': inner.get('stages') or {},
                        'time_capped': audit.get('time_capped'), 'budget_stopped': audit.get('budget_stopped'),
                        'expired_before_search': audit.get('expired_before_search')})
     return timing
