@@ -62,16 +62,21 @@ federation list on play.
 
 ## Reading (HANDOFF 1 order)
 
-- ① noise: E134 could not reproduce 114 pair-037 step 111 alone (3.8 s) and suspected the machine. The same seed
-  now shows the same step and seat at 110.65 s in a second run on a different line and a different engine build —
-  a state-family cause (Taklons at step 111 — round 3 in 114 per E134 — here the academy upgrade), not chance. n = 2 runs, so "always" is not
-  shown.
+- ① noise: E134 could not reproduce 114 pair-037 step 111 alone (3.8 s). The delay was observed again at the same
+  seed, step number and seat (110.65 s), but the two games differ from decision 87 on, so the states are not the
+  same, and the slow stage was measured in neither run. Observation only: **a delay re-observed at the same seed and
+  seat, cause not established** — chance (for example machine load) is not excluded with n = 2 runs, and the round
+  and state of the 115d decision were not recorded (debate 1/1).
 - ② activation: the flag was on in runner and workers (indirect, above). It did not remove this slow decision, and
   pair-000 (the 17,318-candidate seed) never came near the cap before the search (max 60.03 s) — but that game
   follows another line than 114, so, as pre-registered, this is not evidence that the flag fixed pair-012.
-- ③ scope/implementation: the flag targets federation enumeration (pair-012). The pair-037 slow path is a
-  different, still unidentified stage; 7cb307b turned its crash into a finished game but its fallback counter does
-  not see it (0 fallbacks reported next to a 110 s, 0-comparison decision).
+- ③ scope/implementation: hypotheses, not findings (debate 1/1). (a) Whether the delay lies outside federation
+  enumeration is unknown: it happened with the flag on, but the stage is unmeasured, so a federation-related stage
+  is not excluded. (b) Whether 7cb307b is what kept this game alive is unknown: its path sets
+  `expired_before_search` (`budget_teacher.py:112–120`, `parallel_search.py:246–256`) and the row has
+  `fallback_timeout` false, so that path did not run in this decision — it may have ended through the normal path
+  (a time-capped search with no finished comparison, or time outside `_choose`). Observed only: 0 fallbacks
+  reported next to a 110 s decision with 0 finished comparisons.
 - ④ interaction: none measured. ⑤–⑦ do not apply (no claim under test).
 - Health and timing: apart from the one decision the run is inside cap60 (max 60.03 s, 2.4 % at the cap, 114
   5.1 %). The two games are flag-on data and stay out of the 114 (flag-off) BC set (E140 (ㄷ)).
@@ -84,7 +89,10 @@ the flag stays off by default and no spec turns it on. Lab queue empty after thi
 - (ㄱ) Find the stage behind step 111: record per-stage seconds in the decision log (worker time before the search,
   root ranking / prefetch, comparisons, `time_capped`, `expired_before_search`; small change in
   `budget_teacher.py` · `teacher_ab.py`, bot turn) and re-run only `quartet-d-75189@order=1,2,0,3` with the flag,
-  stopped at the start of round 4 (step 111 was round 3 in 114; lab ≈ 30 min). Decides: which stage holds the ≈ 50–110 s.
+  stopped at the start of round 4 (step 111 was round 3 in 114; lab ≈ 30 min). Also record the round and a state
+  digest of every decision over the cap. Pre-registered reading: if a decision of 100 s or more (or 30 s or more
+  with 0 comparisons) appears, the per-stage seconds name the stage; if none appears (time-budget search may take
+  another line), the cause stays not established and the run only shows that the timing fields work.
 - (ㄴ) Accept the single 110 s decision (the game finishes, 1/580) and go on with flag-on collection — leaves a
   0-comparison root move that is not counted as a fallback in BC data (same question as E134 (나), 38 rows).
 - (ㄷ) Work tree engine rebuild (owner command `cd ~/projects/gaia-work/gaia-rl && .venv/bin/maturin develop --release`)
