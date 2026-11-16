@@ -146,7 +146,7 @@ def train(shards_dir, out, epochs=4, batch=256, lr=0.0003, val_shards=1, seed=0,
           val_every=5, val_games=None):
     import torch
     from gaia_rl.encoding import FeatureEncoder, FeatureEncoderV4
-    from gaia_rl.versions import runtime_versions
+    from gaia_rl.versions import model_build_id, runtime_versions
     out = Path(out)
     if (out/'metadata.json').exists():
         raise FileExistsError(f'{out} already holds a checkpoint')
@@ -198,7 +198,9 @@ def train(shards_dir, out, epochs=4, batch=256, lr=0.0003, val_shards=1, seed=0,
     saved_epoch, state = (best[1], best[2]) if best else (epochs, model.state_dict())
     assert tuple(state) == PARAMETERS[encoding], tuple(state)
     torch.save(state, out/'inference.pt')
-    metadata = {'versions': runtime_versions(), 'encoding_version': encoding,
+    # versions = the full record of this run; model_build_id = what OfflinePolicy checks before loading the weights
+    # (gaia_rl.versions.require_loadable_checkpoint: vocabulary, encoding, network, module + engine + dependencies).
+    metadata = {'versions': runtime_versions(), 'model_build_id': model_build_id(), 'encoding_version': encoding,
                 'settings': {'capacity': encoders[encoding].candidate_capacity},
                 'model': {'width': width, 'encoding': encoding}, 'iteration': 0,
                 'behaviour_cloning': {'shards': str(shards_dir), 'training_shards': len(training),

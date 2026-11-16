@@ -1,8 +1,8 @@
 {
-  "description": "Behaviour-cloned policy, encoding 4 at width 256, from the 114 self-play games in a teacher seat: one forward pass per decision over the previewed candidates, no search. Checkpoint = fold 0 of cycle 118 (35 training games, lr 0.001, batch 256, seed 0, epoch 6 = lowest validation loss; validation accuracy 37.9% on its 11 held-out games), retrained 2026-11-16 with `bc_train.py runs/bc-114-v4-shards --epochs 6 --lr 0.001 --width 256 --val-games 0,2,7,12,17,21,26,30,35,38,43` because a checkpoint is refused when any gaia_rl python source changed since it was saved (python_build_id); the six epochs repeat the 118 figures to the last digit. The checkpoint is under runs/ (not in git) and must exist on the machine that plays.",
+  "description": "Behaviour-cloned policy, encoding 4 at width 256, from the 114 self-play games in a teacher seat: one forward pass per decision over the previewed candidates, no search. Checkpoint = fold 0 of cycle 118 (35 training games, lr 0.001, batch 256, seed 0, epoch 6 = lowest validation loss; validation accuracy 37.9% on its 11 held-out games), retrained 2026-11-16 with `bc_train.py runs/bc-114-v4-shards --epochs 6 --lr 0.001 --width 256 --val-games 0,2,7,12,17,21,26,30,35,38,43` so that its metadata carries model_build_id (gaia_rl.versions.require_loadable_checkpoint: loadable until vocabulary, encoding, network, module, the engine build or the dependencies change); the six epochs repeat the 118 figures to the last digit. The checkpoint is under runs/ (not in git) and must exist on the machine that plays.",
   "source": "gaia-rl/baseline-teacher-20260917",
   "factory": "policy_teacher:make",
   "kwargs": {
-    "checkpoint": "runs/bc-114-v4-w256-fold0-e6"
+    "checkpoint": "runs/bc-114-v4-w256-fold0-e6b"
   }
 }

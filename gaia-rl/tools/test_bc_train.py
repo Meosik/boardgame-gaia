@@ -263,6 +263,48 @@ class CheckpointTests(unittest.TestCase):
             (out/'metadata.json').write_text(json.dumps(metadata))
             self.assertEqual(OfflinePolicy(out).encoding, 3)
 
+    def test_checkpoint_loads_after_other_sources_changed_but_not_after_model_sources_changed(self):
+        from gaia_rl import versions
+        from gaia_rl.encoding import FeatureEncoder
+        from gaia_rl.evaluation import OfflinePolicy
+        spaces = FeatureEncoder().observation_space.spaces
+        with tempfile.TemporaryDirectory() as tmp:
+            shards, out = Path(tmp)/'shards', Path(tmp)/'checkpoint'
+            shards.mkdir()
+            write_shard(shards/'shard-00000.npz', [2, 3], [1, 0],
+                        features=spaces['candidates'].shape[-1], observation=spaces['observation'].shape[0])
+            bc_train.train(shards, out, epochs=1, batch=2, val_shards=0)
+            metadata = json.loads((out/'metadata.json').read_text())
+            self.assertEqual(metadata['model_build_id'], versions.model_build_id())
+            self.assertEqual(metadata['versions'], versions.runtime_versions())       # the full record stays
+            def load(**change):
+                (out/'metadata.json').write_text(json.dumps({**metadata, **change}))
+                return OfflinePolicy(out)
+            elsewhere = {**metadata['versions'], 'python_build_id': 'a source outside the model changed'}
+            load(versions=elsewhere)                                                  # loads
+            for change in ({'model_build_id': 'vocabulary, encoding, network or module changed'},
+                           {'versions': {**metadata['versions'], 'engine_build_id': 'another engine'}},
+                           {'versions': {**metadata['versions'], 'dependencies': 'torch=0'}}):
+                with self.assertRaises(versions.VersionMismatchError):
+                    load(**change)
+            del metadata['model_build_id']                  # a checkpoint saved before the id existed: strict rule
+            load()
+            with self.assertRaises(versions.VersionMismatchError):
+                load(versions=elsewhere)
+
+    def test_model_sources_import_nothing_else_from_the_package(self):
+        import re
+        from gaia_rl import versions
+        package = Path(versions.__file__).parent
+        allowed = {Path(name).stem for name in versions.MODEL_SOURCES} | {'_native'}
+        for name in versions.MODEL_SOURCES:
+            text = (package/name).read_text()
+            imported = set(re.findall(r'^from \.(\w+) import', text, re.M))
+            for names in re.findall(r'^from \. import (.+)$', text, re.M):
+                imported |= {part.strip().split(' ')[0] for part in names.split(',')}
+            self.assertLessEqual(imported, allowed, name)
+            self.assertNotRegex(text, r'(?m)^(from|import) gaia_rl')
+
 
 if __name__ == '__main__':
     unittest.main()

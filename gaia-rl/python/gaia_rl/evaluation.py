@@ -13,7 +13,7 @@ from ray.rllib.core.columns import Columns
 from ._native import Environment
 from .encoding import FeatureEncoder, FeatureEncoderV4
 from .module import CandidateModule
-from .versions import require_current_sources, require_compatible_versions, runtime_versions
+from .versions import require_current_sources, require_loadable_checkpoint, runtime_versions
 
 ENCODERS={3:FeatureEncoder,4:FeatureEncoderV4}
 
@@ -28,7 +28,7 @@ class OfflinePolicy:
     def __init__(self, checkpoint):
         checkpoint=Path(checkpoint)
         metadata=json.loads((checkpoint/'metadata.json').read_text())
-        require_compatible_versions(metadata['versions'])
+        require_loadable_checkpoint(metadata)
         self.encoding=metadata['encoding_version']
         model=metadata.get('model') or {'width':64,'encoding':3}
         if self.encoding not in ENCODERS or model['encoding']!=self.encoding:

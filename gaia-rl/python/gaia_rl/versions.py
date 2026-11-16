@@ -70,3 +70,40 @@ def require_compatible_versions(saved: dict[str, str | int]) -> None:
     mismatches = [key for key, value in current.items() if saved.get(key) != value]
     if mismatches:
         raise VersionMismatchError("Incompatible checkpoint: " + ", ".join(mismatches))
+
+
+# The package sources that decide what saved policy weights mean: the category ids (vocabulary), the feature layout
+# (encoding), the layers (network, module). Their imports inside the package stay inside this set (plus the native
+# engine, which engine_build_id covers); tools/test_bc_train.py checks that.
+MODEL_SOURCES = ("vocabulary.py", "encoding.py", "network.py", "module.py")
+
+
+def model_build_id() -> str:
+    digest = sha256()
+    package = Path(__file__).parent
+    for name in MODEL_SOURCES:
+        digest.update(name.encode())
+        digest.update(b"\0")
+        digest.update((package / name).read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def require_loadable_checkpoint(metadata: dict) -> None:
+    """May the weights of this checkpoint (metadata.json) be loaded for inference?
+
+    metadata['versions'] stays the full record of the run that saved it (runtime_versions: every package source).
+    A checkpoint that also carries 'model_build_id' is loadable when the engine build, the environment schema, the
+    dependency versions and the model sources are the saved ones: an edit elsewhere in the package (training loop,
+    evaluation, this file) does not change what the weights read. A checkpoint without it keeps the strict rule."""
+    saved = metadata["versions"]
+    if "model_build_id" not in metadata:
+        require_compatible_versions(saved)
+        return
+    current = runtime_versions()
+    mismatches = [key for key in ("dependencies", "engine_build_id", "environment_schema")
+                  if saved.get(key) != current[key]]
+    if metadata["model_build_id"] != model_build_id():
+        mismatches.append("model_build_id")
+    if mismatches:
+        raise VersionMismatchError("Incompatible checkpoint: " + ", ".join(mismatches))
