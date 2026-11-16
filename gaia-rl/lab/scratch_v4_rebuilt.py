@@ -7,7 +7,8 @@ trains the 5 folds of cycle 118 again.
   2 equal    observation, cand, counts, chosen, game equal to the old shards, every row; any difference ends the run
   3 train    the 5 folds of cycle 118 (same val_games), width 256, 9 epochs, lr 0.001, batch 256, seed 0; every epoch's
              validation loss / accuracy and train loss compared with the 118 metrics
-Writes gaia-rl/runs/bc-114-v4-rebuilt/metrics.json. Checkpoints: gaia-rl/runs/bc-114-v4-w256-fc19/fold-<k>.
+Writes gaia-rl/runs/bc-114-v4-rebuilt/metrics.json; it also records `conditions` (the versions of this run, those saved
+with 118's fold 0, the torch thread count). Checkpoints: gaia-rl/runs/bc-114-v4-w256-fc19/fold-<k>.
 Usage: scratch_v4_rebuilt.py          # export and 5 folds, about 15-20 minutes
        scratch_v4_rebuilt.py smoke    # first 300 decisions, 1 epoch, nothing kept"""
 import glob
@@ -90,14 +91,22 @@ samples = sum(row['samples'] for row in last)
 accuracy = round(sum(row['accuracy']*row['samples'] for row in last)/samples, 4)
 identical = all(fold['max_abs_difference_from_118'] == 0 for fold in folds)
 largest = max(fold['max_abs_difference_from_118'] for fold in folds)
-from gaia_rl.versions import ENGINE_BUILD_ID
+import torch
+from gaia_rl.versions import ENGINE_BUILD_ID, runtime_versions
+# What could explain a training difference from 118: the versions of this run against those saved with 118's fold 0.
+versions = runtime_versions()
+versions_118 = json.load(open(json.load(open(OLD_METRICS))['checkpoints'] + '/fold-0/metadata.json'))['versions']
+conditions = {'versions': versions, 'versions_118': versions_118, 'torch_threads': torch.get_num_threads(),
+              'changed_since_118': sorted(key for key in versions if versions[key] != versions_118.get(key))}
 metrics = {'engine_build_id': ENGINE_BUILD_ID, 'equal': equal, 'folds': folds,
            'epoch_9': {'accuracy': accuracy, 'fold_mean_loss': round(float(np.mean([row['loss'] for row in last])), 4),
                        'samples': samples},
-           'identical_to_118': identical, 'max_abs_difference_from_118': largest, 'checkpoints': ROOT,
+           'identical_to_118': identical, 'max_abs_difference_from_118': largest,
+           'conditions': conditions, 'checkpoints': ROOT,
            'seconds': round(time.time()-start)}
 os.makedirs(os.path.dirname(METRICS), exist_ok=True)
 with open(METRICS, 'w') as handle:
     json.dump(metrics, handle, indent=1)
 print('5 folds, decision-weighted epoch 9 accuracy %.4f (118: 0.3638), identical to 118: %s, largest difference %s'
       % (accuracy, identical, largest))
+print('changed since 118:', conditions['changed_since_118'], '| torch threads', conditions['torch_threads'])
