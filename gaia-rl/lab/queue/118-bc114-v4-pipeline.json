@@ -1,0 +1,7 @@
+{
+ "kind": "command",
+ "note": "사용자 2026-11-16 「대충 알아서 돌려」·「진행해」(HANDOFF E153 (ㄱ) 2단계, E155): 인코딩 v4를 실제 도구로 114 46판에 돌려 보는 재현 점검. 대국 없음, 교사 판정 아님. 순서: ① bc_dataset.py export --encoding 4 (runs/bc-114/manifest.jsonl → runs/bc-114-v4-shards, 후보마다 preview 상태) ② 저장된 v3 shard(runs/bc-114-shards)·outcome.npz와 전 행 비교 — 결정 수·후보 수·고른 번호·상태 벡터 같음, 보드 칸 같음, 필드 있음/없음 같음, 필드 id ↔ v3 값 일대일, 결과 53칸 같음·새 5칸 0, 판 번호 = manifest 줄; 하나라도 다르면 assert로 실패 종료 ③ 117과 같은 5겹(쿼텟 층화, 쿼텟 안 k번째 판 → 겹 k mod 5)으로 tools/bc_train.py 학습: 폭 256, 9 epoch, lr 0.001, 배치 256, 시드 0, 겹의 판을 통째로 떼어 검증, 검증 손실 최저 epoch 저장. 사전 등록 보고: 겹별 epoch마다 검증 손실·정확도, 저장 epoch, 5겹 결정 가중 정확도(9 epoch 값과 저장 epoch 값), 겹 평균 손실 곡선과 최저 epoch. 읽기(9 epoch 결정 가중 정확도, 117 기준 w256-all 36.51%·w64-all 34.69%, 중간 35.60%): ≥ 35.60%면 실제 도구가 폭 256 결과를 재현 → 3단계(OfflinePolicy·정책 교사·PPO 연결)로; 34.69–35.60%면 부분 재현 — 차이 원인(상태 층이 16,384칸 전부를 읽어 초기값 크기가 다름, shard 안에서만 섞음, 다른 초기 난수)을 먼저 봄; < 34.69%면 재현 안 됨 — 3단계 보류하고 원인부터. 저장 epoch 값은 검증으로 고른 값이라 참고만. 117의 판별 배열이 저장돼 있지 않아 짝 비교·구간 없음(평균끼리 비교), torch 시드 1개 — 117의 같은 시드 실행 간 바닥은 ≈0.04%p이나 초기 난수가 달라 그 바닥은 적용 안 됨. 겹 0–4 체크포인트는 runs/bc-114-v4-w256-<시각>/에 남음(겹당 ≈ 30MB). lab venv에 torch가 없어 작업 트리 venv로 돈다. 예상: export ≈ 30분(E154: 6판 238초) + 학습 5겹 ≈ 40분(봇 턴 스모크: 300결정 export·비교·1 epoch 10초).",
+ "run": ["env", "-C", "/home/sohegi/projects/gaia-work", "/home/sohegi/projects/gaia-work/gaia-rl/.venv/bin/python", "gaia-rl/lab/scratch_v4_pipeline.py"],
+ "metrics": "/home/sohegi/projects/gaia-work/gaia-rl/runs/bc-114-v4-pipeline/metrics.json",
+ "timeout_hours": 3
+}
