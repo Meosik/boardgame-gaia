@@ -20,6 +20,33 @@ class CounterEncoder:
         return {"observation": np.array([snapshot["steps"], player], dtype=np.float32)}
 
 
+class EncodingFourTests(unittest.TestCase):
+    def test_observation_carries_the_previewed_outcome_of_every_candidate(self):
+        import json
+        from gaia_rl.encoding import FeatureEncoderV4
+        encoder = FeatureEncoderV4()
+        env = GaiaAEC(encoder)
+        env.reset(seed=5)
+        rng = np.random.default_rng(0)
+        outcome_seen = False
+        for _ in range(8):
+            agent, snapshot = env.agent_selection, env.snapshot
+            count = len(snapshot["candidates"])
+            observation = env.observe(agent)
+            self.assertEqual(env.snapshot, snapshot)                # previews do not step the game
+            self.assertEqual(int(observation["action_mask"].sum()), count)
+            previews = [json.loads(env._native.preview_state_json(snapshot["decision_id"], index))
+                        for index in range(count)]
+            expected = encoder.encode(snapshot, snapshot["player"], previews)
+            np.testing.assert_array_equal(observation["candidates"], expected["candidates"])
+            np.testing.assert_array_equal(observation["observation"], expected["observation"])
+            outcome_seen |= bool(observation["candidates"][:count, encoder.outcome_offset:].any())
+            other = next(name for name in env.possible_agents if name != agent)
+            self.assertEqual(int(env.observe(other)["action_mask"].sum()), 0)
+            env.step(int(rng.integers(count)))
+        self.assertTrue(outcome_seen)
+
+
 class AdapterTests(unittest.TestCase):
     def test_api(self):
         api_test(GaiaAEC(CounterEncoder(), max_steps=12), num_cycles=15)

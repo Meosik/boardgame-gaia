@@ -16,6 +16,8 @@ class ObservationEncoder(Protocol):
     candidate_capacity: int
 
     def encode(self, snapshot: dict, player: int) -> dict: ...
+    # An encoder with `version == 4` (encoding.FeatureEncoderV4) is called as encode(snapshot, player, previews):
+    # previews = the state right after every candidate, which GaiaAEC reads from the engine once per decision.
 
 
 class CandidateCapacityError(RuntimeError):
@@ -35,6 +37,7 @@ class GaiaAEC(AECEnv):
         self._action_space = spaces.Discrete(encoder.candidate_capacity)
         self._native = None
         self._snapshot = None
+        self._previews = None
         self._seed_rng = np.random.default_rng()
         self._resume_rng_state = None
         self.agents = []
@@ -54,6 +57,7 @@ class GaiaAEC(AECEnv):
 
     def _read_snapshot(self):
         self._snapshot = json.loads(self._native.snapshot_json())
+        self._previews = None
         count = len(self._snapshot["candidates"])
         if count > self.encoder.candidate_capacity:
             raise CandidateCapacityError(
@@ -93,11 +97,22 @@ class GaiaAEC(AECEnv):
                 "steps": self._snapshot["steps"],
             }
 
+    def _candidate_previews(self):
+        """The state right after every candidate of the current decision (a preview: nothing is stepped)."""
+        if self._previews is None:
+            decision = self._snapshot["decision_id"]
+            self._previews = [json.loads(self._native.preview_state_json(decision, index))
+                              for index in range(len(self._snapshot["candidates"]))]
+        return self._previews
+
     def observe(self, agent):
         if self._snapshot is None:
             raise RuntimeError("reset() is required")
         player = self.possible_agents.index(agent)
-        observation = dict(self.encoder.encode(self._snapshot, player))
+        if getattr(self.encoder, "version", None) == 4:
+            observation = dict(self.encoder.encode(self._snapshot, player, self._candidate_previews()))
+        else:
+            observation = dict(self.encoder.encode(self._snapshot, player))
         mask = np.zeros(self.encoder.candidate_capacity, dtype=np.int8)
         if (agent == self.agent_selection and agent in self.agents
                 and not self.terminations[agent] and not self.truncations[agent]):

@@ -9,11 +9,11 @@ cand_offsets, chosen index, value, and from 2026-11-16 the game of every sample)
 gaia_rl.network's (state trunk, candidate scoring head, value head), the layers gaia_rl.module.CandidateModule
 (ray) builds under the same parameter names, so training needs torch only and the saved state_dict loads into
 CandidateModule for OfflinePolicy and as the PPO starting point.
-Encoding: read from the shards' row sizes. Encoding 3 (FeatureEncoder) keeps width 64 — PPO builds
-CandidateModule with width 64, so another width could not be continued (Codex debate 2026-11-14). Encoding 4
-(FeatureEncoderV4; `bc_dataset.py export --encoding 4`) defaults to width 256 (cycle 117). OfflinePolicy (and
-with it tools/policy_teacher.py) reads encoding_version and model.width from the checkpoint's metadata, so it
-plays both; PPO does not read encoding 4 yet (HANDOFF E153 step 3).
+Encoding: read from the shards' row sizes. Encoding 3 (FeatureEncoder) keeps width 64, the width of the earlier
+PPO runs (Codex debate 2026-11-14). Encoding 4 (FeatureEncoderV4; `bc_dataset.py export --encoding 4`) defaults
+to width 256 (cycle 117). OfflinePolicy (and with it tools/policy_teacher.py) reads encoding_version and
+model.width from the checkpoint's metadata, so it plays both; PPO starts from a checkpoint with
+`python -m gaia_rl.training --encoding 4 --init <checkpoint>` (same encoding, width and capacity).
 Loss: cross-entropy of the chosen candidate over the legal candidates (padded per batch to the largest list, not
 to the encoder capacity 2048). --value-weight > 0 adds MSE on value/100 for samples of finished 6-round games
 (value is NaN otherwise); 0 leaves the value head at its initial weights.
@@ -42,7 +42,7 @@ PARAMETERS = {     # by encoding: the state_dict of gaia_rl.network.build (= Can
     4: ('state_encoder.0.weight', 'state_encoder.0.bias', 'field_embedding.weight', 'board_encoder.weight',
         'board_encoder.bias', 'outcome_encoder.weight', 'outcome_encoder.bias') + _HEADS,
 }
-# Encoding 3 is fixed: PPO (gaia_rl/training.py:42) builds width 64.
+# Encoding 3 stays at the width of the earlier PPO runs and checkpoints (64).
 WIDTHS = {3: 64, 4: 256}
 
 
