@@ -10,10 +10,14 @@ game is replayed instead of stored state by state. Three commands:
   stats   MANIFEST
           games / decisions per faction and teacher, 6-round games, games that no longer replay.
   export  MANIFEST --out DIR [--shard 2000] [--max N] [--only-6r] [--teacher SUBSTRING] [--build ID_PREFIX]...
+                   [--encoding 3|4]
           replays the games and writes compressed npz shards of encoded samples: observation (float16),
           the legal candidates' features (ragged: cand + cand_offsets), chosen index, seat, faction id,
-          round, and the seat's final score minus the table mean (value target; NaN for games that stopped
-          before round 6). Uses gaia_rl.encoding.FeatureEncoder, so features match the RL environment.
+          round, the seat's final score minus the table mean (value target; NaN for games that stopped
+          before round 6), the game's line number in the manifest (game; bc_train holds out whole games) and
+          the encoding version. Uses gaia_rl.encoding.FeatureEncoder, so features match the RL environment;
+          --encoding 4 uses FeatureEncoderV4 and previews the state after every candidate (the 114 games:
+          about 40 s per game instead of a few).
 
 Training code can also call iter_samples(manifest) directly (one replay at a time, nothing written).
 Caution: the log holds indices only, so a game must be replayed on an engine whose legal candidates match
@@ -170,15 +174,20 @@ def cmd_stats(args):
         print('no longer replay: ' + ', '.join(f'{k} {v}' for k, v in broken.most_common()))
 
 
-def iter_samples(manifest, only_6r=False, teacher=None, encoder=None, allow_engine_mismatch=False, builds=None):
+def iter_samples(manifest, only_6r=False, teacher=None, encoder=None, allow_engine_mismatch=False, builds=None,
+                 encoding=3):
     """Yield one dict per decision of the indexed games (see the module docstring).
-    builds: keep only games recorded on an engine build whose id starts with one of these prefixes."""
+    builds: keep only games recorded on an engine build whose id starts with one of these prefixes.
+    encoding: 3 = FeatureEncoder, 4 = FeatureEncoderV4 (the state after every candidate is previewed, which
+    is most of the export time); 'game' is the game's line number among the manifest's games."""
     import numpy as np
     from gaia_rl import Environment
-    from gaia_rl.encoding import FeatureEncoder
+    from gaia_rl.encoding import FeatureEncoder, FeatureEncoderV4
     from gaia_rl.versions import ENGINE_BUILD_ID
-    encoder = encoder or FeatureEncoder()
-    for game in (_load(manifest) if isinstance(manifest, (str, Path)) else manifest):
+    if encoding not in (3, 4):
+        raise ValueError(f'unknown encoding {encoding}')
+    encoder = encoder or (FeatureEncoderV4() if encoding == 4 else FeatureEncoder())
+    for number, game in enumerate(_load(manifest) if isinstance(manifest, (str, Path)) else manifest):
         if not game['replays'] or (only_6r and not game['full_game']):
             continue
         if builds and not (game.get('engine_build_id') or '').startswith(tuple(builds)):
@@ -195,11 +204,15 @@ def iter_samples(manifest, only_6r=False, teacher=None, encoder=None, allow_engi
             snapshot = json.loads(env.snapshot_json())
             seat = snapshot.get('player')
             if seat is not None and (teacher is None or teacher in game['teachers'][seat]):
-                encoded = encoder.encode(snapshot, seat)
                 n = len(snapshot['candidates'])
+                if isinstance(encoder, FeatureEncoderV4):
+                    encoded = encoder.encode(snapshot, seat, [
+                        json.loads(env.preview_state_json(snapshot['decision_id'], i)) for i in range(n)])
+                else:
+                    encoded = encoder.encode(snapshot, seat)
                 yield {'observation': encoded['observation'].astype(np.float16),
                        'candidates': encoded['candidates'][:n].astype(np.float16),
-                       'chosen': row['index'], 'seat': seat,
+                       'chosen': row['index'], 'seat': seat, 'game': number,
                        'faction': FACTIONS.index(game['factions'][seat]),
                        'round': snapshot['state'].get('round', 0),
                        'value': (scores[seat]-mean) if full else math.nan,
@@ -225,11 +238,13 @@ def cmd_export(args):
             cand_offsets=np.concatenate([[0], np.cumsum(counts)]),
             chosen=np.array([s['chosen'] for s in buffer]), seat=np.array([s['seat'] for s in buffer]),
             faction=np.array([s['faction'] for s in buffer]), round=np.array([s['round'] for s in buffer]),
-            value=np.array([s['value'] for s in buffer], dtype=np.float32))
+            value=np.array([s['value'] for s in buffer], dtype=np.float32),
+            game=np.array([s['game'] for s in buffer]), encoding=np.array(args.encoding))
         shard += 1
         buffer = []
     for sample in iter_samples(args.manifest, only_6r=args.only_6r, teacher=args.teacher,
-                                allow_engine_mismatch=args.allow_engine_mismatch, builds=args.build):
+                                allow_engine_mismatch=args.allow_engine_mismatch, builds=args.build,
+                                encoding=args.encoding):
         buffer.append(sample)
         total += 1
         if len(buffer) >= args.shard:
@@ -258,6 +273,8 @@ def main():
     p.add_argument('--teacher')
     p.add_argument('--allow-engine-mismatch', action='store_true')
     p.add_argument('--build', action='append', help='keep only games recorded on this engine build id prefix (repeatable)')
+    p.add_argument('--encoding', type=int, choices=(3, 4), default=3,
+                   help='4 = FeatureEncoderV4 candidate rows (field ids | board | outcome of the previewed state)')
     args = parser.parse_args()
     {'index': cmd_index, 'stats': cmd_stats, 'export': cmd_export}[args.cmd](args)
 
