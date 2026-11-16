@@ -11,29 +11,46 @@ from gymnasium import spaces
 from ray.rllib.core.columns import Columns
 
 from ._native import Environment
-from .encoding import FeatureEncoder, ENCODING_VERSION
+from .encoding import FeatureEncoder, FeatureEncoderV4
 from .module import CandidateModule
 from .versions import require_current_sources, require_compatible_versions, runtime_versions
 
+ENCODERS={3:FeatureEncoder,4:FeatureEncoderV4}
+
 
 class OfflinePolicy:
-    """Inference-only boundary for future integration; never mutates game state."""
+    """Inference-only boundary for future integration; never mutates game state.
+
+    The checkpoint's metadata chooses the encoder and the network: encoding_version 3 or 4, model.width (a
+    checkpoint without 'model' is encoding 3 at width 64: gaia_rl.training, bc_train before encoding 4).
+    Encoding 4 reads the state after every candidate, so choose() needs the environment the snapshot came from
+    (Environment.preview_state_json: a preview, nothing is stepped)."""
     def __init__(self, checkpoint):
         checkpoint=Path(checkpoint)
         metadata=json.loads((checkpoint/'metadata.json').read_text())
         require_compatible_versions(metadata['versions'])
-        if metadata['encoding_version']!=ENCODING_VERSION:
+        self.encoding=metadata['encoding_version']
+        model=metadata.get('model') or {'width':64,'encoding':3}
+        if self.encoding not in ENCODERS or model['encoding']!=self.encoding:
             raise ValueError('Incompatible observation encoding')
-        self.encoder=FeatureEncoder(metadata['settings']['capacity'])
+        self.encoder=ENCODERS[self.encoding](metadata['settings']['capacity'])
         self.module=CandidateModule(observation_space=self.encoder.observation_space,
-            action_space=spaces.Discrete(self.encoder.candidate_capacity),model_config={'width':64})
+            action_space=spaces.Discrete(self.encoder.candidate_capacity),
+            model_config={'width':model['width'],'encoding':self.encoding})
         self.module.load_state_dict(torch.load(checkpoint/'inference.pt',weights_only=True,map_location='cpu'))
         self.module.eval()
 
-    def choose(self,snapshot):
+    def choose(self,snapshot,env=None):
         if snapshot['player'] is None or not snapshot['candidates']:
             raise ValueError('No live decision to choose')
-        observation=self.encoder.encode(snapshot,snapshot['player'])
+        if self.encoding==4:
+            if env is None:
+                raise ValueError('An encoding 4 policy needs the environment to preview every candidate')
+            previews=[json.loads(env.preview_state_json(snapshot['decision_id'],i))
+                      for i in range(len(snapshot['candidates']))]
+            observation=self.encoder.encode(snapshot,snapshot['player'],previews)
+        else:
+            observation=self.encoder.encode(snapshot,snapshot['player'])
         with torch.no_grad():
             batch={Columns.OBS:{key:torch.as_tensor(value).unsqueeze(0) for key,value in observation.items()}}
             logits=self.module.forward_inference(batch)[Columns.ACTION_DIST_INPUTS][0]
@@ -55,7 +72,7 @@ def evaluate(policy, opponent, seed_count, prefix):
                 snapshot=json.loads(env.snapshot_json())
                 player=snapshot['player']
                 current=policy if player==seat else opponent
-                decision,index=(current.choose(snapshot) if current else
+                decision,index=(current.choose(snapshot,env) if current else
                                 (snapshot['decision_id'],rng.randrange(len(snapshot['candidates']))))
                 env.step(decision,index)
             scores=dict(env.final_scores());best=max(scores.values())

@@ -2,6 +2,8 @@
 {"source": "gaia-rl/baseline-teacher-20260917", "factory": "policy_teacher:make", "kwargs": {"checkpoint": "<dir>"}}.
 The checkpoint directory (inference.pt + metadata.json from tools/bc_train.py or gaia_rl.training) is read by
 gaia_rl.evaluation.OfflinePolicy: one forward pass per decision, argmax over the legal candidates, no search.
+The checkpoint's metadata sets the encoding and the width; an encoding 4 checkpoint previews the state after every
+candidate on the bound environment (no step, no search).
 A relative checkpoint path is resolved against gaia-rl/ (runs/ is not in git: the checkpoint must exist on the
 machine that plays)."""
 from pathlib import Path
@@ -22,7 +24,7 @@ class PolicyTeacher:
         self.env = env
 
     def choose(self, snapshot):
-        decision, index = self.policy.choose(snapshot)
+        decision, index = self.policy.choose(snapshot, self.env)
         # The decision log reads these keys (teacher_ab.worker): no plans were compared, nothing was searched.
         self.last_audit = {'decision_id': decision, 'selected': 'policy', 'plans': [], 'unsearched_comparisons': 0}
         return decision, index

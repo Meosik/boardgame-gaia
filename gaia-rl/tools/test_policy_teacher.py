@@ -12,7 +12,8 @@ class FakeOfflinePolicy:
     def __init__(self, checkpoint):
         self.checkpoint = checkpoint
 
-    def choose(self, snapshot):
+    def choose(self, snapshot, env=None):
+        self.env = env
         return snapshot['decision_id'], 1
 
 
@@ -32,9 +33,11 @@ class PolicyTeacherTest(unittest.TestCase):
         teacher = policy_teacher.make('seed', target_seconds=3, maximum_seconds=6,
                                       adaptive_clock=object(), checkpoint='runs/x')
         self.assertIsNone(teacher.last_audit)
-        teacher.bind(object())
+        env = object()
+        teacher.bind(env)
         result = teacher.choose({'decision_id': 7, 'player': 0, 'candidates': [{}, {}]})
         self.assertEqual(result, (7, 1))
+        self.assertIs(teacher.policy.env, env)      # an encoding 4 policy previews candidates on the bound environment
         self.assertEqual(teacher.last_audit['decision_id'], 7)
         self.assertEqual(teacher.last_audit['selected'], 'policy')
         self.assertEqual(teacher.last_audit['plans'], [])

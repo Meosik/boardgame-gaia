@@ -106,7 +106,7 @@ def reproduce_ppo(report):
         while not env.is_terminal():
             actor = snapshot['player']
             current = policy if actor == row['seat'] else opponent
-            decision, index = (current.choose(snapshot) if current else
+            decision, index = (current.choose(snapshot, env) if current else
                                (snapshot['decision_id'], rng.randrange(len(snapshot['candidates']))))
             action = snapshot['candidates'][index]['action']
             before = snapshot

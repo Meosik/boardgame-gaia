@@ -207,6 +207,61 @@ class CheckpointTests(unittest.TestCase):
             policy = OfflinePolicy(out)
             self.assertEqual(tuple(policy.module.state_dict()), bc_train.PARAMETERS[3])
             self.assertEqual(json.loads((out/'metadata.json').read_text())['behaviour_cloning']['width'], 64)
+            self.assertEqual(policy.encoding, 3)
+
+    def test_encoding_4_checkpoint_plays_through_offline_policy(self):
+        """The metadata picks FeatureEncoderV4 and the width; choose() previews every candidate on the environment
+        and picks the candidate that bc_train's network scores highest on the same rows (training = playing input)."""
+        import torch
+        from gaia_rl import Environment, network
+        from gaia_rl.encoding import FeatureEncoderV4
+        from gaia_rl.evaluation import OfflinePolicy
+        encoder = FeatureEncoderV4()
+        with tempfile.TemporaryDirectory() as tmp:
+            shards, out = Path(tmp)/'shards', Path(tmp)/'checkpoint'
+            shards.mkdir()
+            write_shard(shards/'shard-00000.npz', [2, 3, 4, 2], [1, 0, 3, 1], observation=encoder.state_size, v4=True)
+            bc_train.train(shards, out, epochs=1, batch=2, val_shards=0, width=16)
+            policy = OfflinePolicy(out)
+            self.assertEqual((policy.encoding, type(policy.encoder)), (4, FeatureEncoderV4))
+            self.assertEqual(tuple(policy.module.state_dict()), bc_train.PARAMETERS[4])
+            model = bc_train.build_model(encoder.state_size, encoder.candidate_size, 16, 4)
+            model.load_state_dict(torch.load(out/'inference.pt', weights_only=True))
+            model.eval()
+            env = Environment('quartet-a-72715')
+            for _ in range(6):
+                snapshot = json.loads(env.snapshot_json())
+                count = len(snapshot['candidates'])
+                with self.assertRaises(ValueError):
+                    policy.choose(snapshot)                 # no environment: nothing to preview
+                decision, index = policy.choose(snapshot, env)
+                previews = [json.loads(env.preview_state_json(snapshot['decision_id'], i)) for i in range(count)]
+                rows = encoder.encode(snapshot, snapshot['player'], previews)
+                with torch.no_grad():
+                    logits, _ = network.score(model, torch.as_tensor(rows['observation'])[None],
+                                              torch.as_tensor(rows['candidates'][:count])[None],
+                                              torch.ones(1, count, dtype=torch.bool))
+                self.assertEqual((decision, index), (snapshot['decision_id'], int(logits[0].argmax())))
+                env.step(decision, index)
+
+    def test_metadata_whose_model_disagrees_with_the_encoding_is_refused(self):
+        from gaia_rl.encoding import FeatureEncoder
+        from gaia_rl.evaluation import OfflinePolicy
+        spaces = FeatureEncoder().observation_space.spaces
+        with tempfile.TemporaryDirectory() as tmp:
+            shards, out = Path(tmp)/'shards', Path(tmp)/'checkpoint'
+            shards.mkdir()
+            write_shard(shards/'shard-00000.npz', [2, 3], [1, 0],
+                        features=spaces['candidates'].shape[-1], observation=spaces['observation'].shape[0])
+            bc_train.train(shards, out, epochs=1, batch=2, val_shards=0)
+            metadata = json.loads((out/'metadata.json').read_text())
+            for change in ({'encoding_version': 4}, {'encoding_version': 5, 'model': {'width': 64, 'encoding': 5}}):
+                (out/'metadata.json').write_text(json.dumps({**metadata, **change}))
+                with self.assertRaises(ValueError):
+                    OfflinePolicy(out)
+            del metadata['model']                           # checkpoints of gaia_rl.training: encoding 3, width 64
+            (out/'metadata.json').write_text(json.dumps(metadata))
+            self.assertEqual(OfflinePolicy(out).encoding, 3)
 
 
 if __name__ == '__main__':
