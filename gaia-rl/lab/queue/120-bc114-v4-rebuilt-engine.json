@@ -1,0 +1,7 @@
+{
+ "kind": "command",
+ "note": "사용자 2026-11-17 「진행해」(HANDOFF E160: 작업 트리 엔진 재빌드 뒤 재색인·export·학습, E161): 재빌드된 작업 트리 엔진(fc19671c4278 = lab 엔진)에서 114 46판을 인코딩 4로 다시 export하고 옛 빌드(36d2e007) shard와 전 행 비교, 118의 5겹을 다시 학습. 대국 없음, 교사 판정 아님. 재색인은 봇 턴에서 끝남(runs/bc-114-fc19/manifest.jsonl: 46/46 엄격 재생·6R 46·결정 13,841, 판 순서가 옛 manifest와 같음). 순서: ① bc_dataset.py export --encoding 4 → runs/bc-114-v4-shards-fc19 ② 옛 shard(runs/bc-114-v4-shards)와 상태 벡터·후보 행·후보 수·고른 번호·판 번호 전부 같음(하나라도 다르면 assert로 실패 종료) ③ 118과 같은 겹·설정(폭 256, 9 epoch, lr 0.001, 배치 256, 시드 0, 검증 손실 최저 epoch 저장)으로 tools/bc_train.py → runs/bc-114-v4-w256-fc19/fold-0…4 (metadata에 model_build_id와 엔진 fc19671c4278 = lab에서 읽히는 체크포인트). 사전 등록 읽기: ②가 통과하고 ③의 겹별·epoch별 검증 손실·정확도·학습 손실이 118 metrics와 같으면(최대 차이 0; 봇 턴에서 옛 빌드의 겹 0 재학습은 마지막 자리까지 같았음) 엔진 재빌드가 인코딩 4 입력과 학습 결과를 바꾸지 않음 → 114 shard를 119와 합쳐 쓰고 겹 체크포인트를 스모크·A/B에 씀. ② 실패면 어느 배열이 다른지 보고 119와 합치기 전에 원인부터(엔진 966e9ea는 플래그 끔이면 후보 목록 불변 — 115c — 이라 같아야 함). ②는 통과하고 ③만 다르면 학습의 비결정성으로 읽고 차이 크기(max_abs_difference_from_118)와 5겹 결정 가중 정확도(118: 36.38%)를 보고. 판정 아님 — 재현 점검. 예상 ≈ 15–20분(118: 15분), lab이 119를 끝낸 뒤 실행. lab venv에 torch가 없어 작업 트리 venv로 돈다.",
+ "run": ["env", "-C", "/home/sohegi/projects/gaia-work", "/home/sohegi/projects/gaia-work/gaia-rl/.venv/bin/python", "gaia-rl/lab/scratch_v4_rebuilt.py"],
+ "metrics": "/home/sohegi/projects/gaia-work/gaia-rl/runs/bc-114-v4-rebuilt/metrics.json",
+ "timeout_hours": 2
+}
