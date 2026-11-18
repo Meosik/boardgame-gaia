@@ -18,6 +18,10 @@ GROUPS = {
     '함선·기타 행동': ['EclipsePlanetTypeBonus', 'ExamineArtifact', 'PowerAction', 'TinkeroidsUseTile'],
     '충전 비용': ['ChargePower'],
 }
+# The groups follow the kind of action, not where the option came from: '함선·기타 행동' is not the return on ship
+# entries (PowerAction and TinkeroidsUseTile are in it; ship-named actions such as RebellionGainTechTile, TFMarsTechBonus,
+# Twilight* and Eclipse* are booked under the building, tech and federation groups), and VP is booked when it is
+# scored, so later points from a ship's tile or resources are in no ship column (Codex debate 2026-11-18).
 kind_group = {kind: group for group, kinds in GROUPS.items() for kind in kinds}
 assert all(kind in kind_group for row in rows for kind in row['booked']), 'ungrouped action type'
 COLUMNS = ['시작'] + list(GROUPS) + ['종료: 트랙', '종료: 목표+자원']
