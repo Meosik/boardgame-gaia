@@ -1,8 +1,8 @@
 {
-  "description": "Behaviour-cloned policy, encoding 4 at width 256, from the 114 self-play games in a teacher seat: one forward pass per decision over the previewed candidates, no search. Checkpoint = fold 0 of cycle 118 (35 training games, lr 0.001, batch 256, seed 0, epoch 6 = lowest validation loss; validation accuracy 37.9% on its 11 held-out games), retrained 2026-11-16 with `bc_train.py runs/bc-114-v4-shards --epochs 6 --lr 0.001 --width 256 --val-games 0,2,7,12,17,21,26,30,35,38,43` so that its metadata carries model_build_id (gaia_rl.versions.require_loadable_checkpoint: loadable until vocabulary, encoding, network, module, the engine build or the dependencies change); the six epochs repeat the 118 figures to the last digit. The checkpoint is under runs/ (not in git) and must exist on the machine that plays.",
+  "description": "Behaviour-cloned policy, encoding 4 at width 256, from the 114 self-play games in a teacher seat: one forward pass per decision over the previewed candidates, no search. Checkpoint = fold 0 of cycle 120 (the fold 0 of cycle 118 trained again on the rebuilt engine fc19671c4278 = the lab engine: 35 training games, lr 0.001, batch 256, seed 0, 9 epochs with the weights of epoch 6 = lowest validation loss saved; validation accuracy 37.9% at that epoch on its 11 held-out games; every epoch repeats the 118 figures with difference 0.0), written by `lab/scratch_v4_rebuilt.py` through `bc_train.train`, so its metadata carries model_build_id (gaia_rl.versions.require_loadable_checkpoint: loadable until vocabulary, encoding, network, module, the engine build or the dependencies change). The earlier checkpoint runs/bc-114-v4-w256-fold0-e6b was built on the old work tree engine 36d2e007 and is refused by the rebuilt engine. The checkpoint is under runs/ (not in git) and must exist on the machine that plays.",
   "source": "gaia-rl/baseline-teacher-20260917",
   "factory": "policy_teacher:make",
   "kwargs": {
-    "checkpoint": "runs/bc-114-v4-w256-fold0-e6b"
+    "checkpoint": "runs/bc-114-v4-w256-fc19/fold-0"
   }
 }
