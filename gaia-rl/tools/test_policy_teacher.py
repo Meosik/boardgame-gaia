@@ -9,8 +9,9 @@ import policy_teacher
 
 
 class FakeOfflinePolicy:
-    def __init__(self, checkpoint):
+    def __init__(self, checkpoint, capacity=None):
         self.checkpoint = checkpoint
+        self.capacity = capacity
 
     def choose(self, snapshot, env=None):
         self.env = env
@@ -47,6 +48,15 @@ class PolicyTeacherTest(unittest.TestCase):
         self.assertEqual(policy_teacher.make('s', checkpoint='runs/x').checkpoint, policy_teacher.ROOT/'runs/x')
         self.assertEqual(policy_teacher.ROOT.name, 'gaia-rl')
         self.assertEqual(policy_teacher.make('s', checkpoint='/tmp/ckpt').checkpoint, Path('/tmp/ckpt'))
+
+    def test_capacity_reaches_the_policy(self):
+        self.assertIsNone(policy_teacher.make('s', checkpoint='runs/x').policy.capacity)     # the checkpoint's own
+        self.assertEqual(policy_teacher.make('s', checkpoint='runs/x', capacity=4096).policy.capacity, 4096)
+
+    def test_93_game_spec_plays_at_capacity_4096(self):
+        spec = json.loads(Path(__file__).with_name('teacher-policy-bc-93-v4.json').read_text())
+        self.assertEqual(spec['factory'], 'policy_teacher:make')
+        self.assertEqual(spec['kwargs'], {'checkpoint': 'runs/bc-93-v4-w256-fc19/epoch-09', 'capacity': 4096})
 
     def test_spec_file_names_the_factory(self):
         spec = json.loads(Path(__file__).with_name('teacher-policy-bc-114.json').read_text())

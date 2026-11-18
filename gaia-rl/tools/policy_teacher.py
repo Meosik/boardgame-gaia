@@ -1,5 +1,6 @@
 """A trained policy checkpoint in a teacher seat (HANDOFF E128 step 2): teacher_ab spec
-{"source": "gaia-rl/baseline-teacher-20260917", "factory": "policy_teacher:make", "kwargs": {"checkpoint": "<dir>"}}.
+{"source": "gaia-rl/baseline-teacher-20260917", "factory": "policy_teacher:make",
+ "kwargs": {"checkpoint": "<dir>", "capacity": 4096}} (capacity is optional).
 The checkpoint directory (inference.pt + metadata.json from tools/bc_train.py or gaia_rl.training) is read by
 gaia_rl.evaluation.OfflinePolicy: one forward pass per decision, argmax over the legal candidates, no search.
 The checkpoint's metadata sets the encoding and the width; an encoding 4 checkpoint previews the state after every
@@ -12,11 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PolicyTeacher:
-    def __init__(self, checkpoint):
+    def __init__(self, checkpoint, capacity=None):
         from gaia_rl.evaluation import OfflinePolicy
         path = Path(checkpoint)
         self.checkpoint = path if path.is_absolute() else ROOT/path
-        self.policy = OfflinePolicy(self.checkpoint)
+        self.policy = OfflinePolicy(self.checkpoint, capacity)
         self.last_audit = None
         self.env = None
 
@@ -33,8 +34,12 @@ class PolicyTeacher:
         pass
 
 
-def make(seed, target_seconds=None, maximum_seconds=None, adaptive_clock=None, checkpoint=None, **_):
-    """teacher_ab factory: the clock arguments are accepted and ignored (a forward pass has no budget)."""
+def make(seed, target_seconds=None, maximum_seconds=None, adaptive_clock=None, checkpoint=None, capacity=None, **_):
+    """teacher_ab factory: the clock arguments are accepted and ignored (a forward pass has no budget).
+
+    kwargs.capacity: the candidate capacity at run time (default: the checkpoint's own, 2048 for the BC checkpoints).
+    A game decision can list more candidates than 2048 (2,257 in 119, HANDOFF E165); 4096 scores it with the same
+    weights instead of stopping the game with EncodingError."""
     if not checkpoint:
         raise ValueError('policy_teacher: kwargs.checkpoint (checkpoint directory) is required')
-    return PolicyTeacher(checkpoint)
+    return PolicyTeacher(checkpoint, capacity)

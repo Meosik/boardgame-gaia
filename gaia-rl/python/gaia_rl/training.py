@@ -61,19 +61,27 @@ def parameter_vector(algorithm):
     return torch.cat([p.detach().cpu().flatten() for p in algorithm.get_module('shared').parameters()])
 
 
+def require_initial_model(metadata, settings):
+    """Refuse an initial checkpoint whose encoding or width is not this run's.
+
+    The candidate capacity may differ: no weight depends on it (network.build), it only sizes the padded candidate
+    list, so a BC checkpoint saved at 2048 starts a run at 4096."""
+    model = metadata.get('model') or dict(MODEL_DEFAULTS)
+    wanted = model_settings(settings)
+    if metadata['encoding_version'] != wanted['encoding'] or model != wanted:
+        raise ValueError('Initial checkpoint encoding/width differ from this run')
+
+
 def initialize_from(algorithm, source, settings):
     """Start from saved policy weights (tools/bc_train.py or save_run): the weights only, no optimizer and no RNG.
 
-    The checkpoint must be loadable (versions.require_loadable_checkpoint) and have this run's encoding, width and
-    candidate capacity. Returns what save_run records as `initialized_from`."""
+    The checkpoint must be loadable (versions.require_loadable_checkpoint) and have this run's encoding and width
+    (require_initial_model; its candidate capacity is recorded, not required). Returns what save_run records as
+    `initialized_from`."""
     source = Path(source).resolve()
     metadata = json.loads((source/'metadata.json').read_text())
     require_loadable_checkpoint(metadata)
-    model = metadata.get('model') or dict(MODEL_DEFAULTS)
-    wanted = model_settings(settings)
-    if (metadata['encoding_version'] != wanted['encoding'] or model != wanted
-            or metadata['settings']['capacity'] != settings['capacity']):
-        raise ValueError('Initial checkpoint encoding/width/capacity differ from this run')
+    require_initial_model(metadata, settings)
     weights = torch.load(source/'inference.pt', weights_only=True, map_location='cpu')
     algorithm.learner_group.set_weights({'shared': {key: value.cpu().numpy() for key, value in weights.items()}})
     algorithm.env_runner_group.sync_weights(from_worker_or_learner_group=algorithm.learner_group,
@@ -83,7 +91,8 @@ def initialize_from(algorithm, source, settings):
         if not torch.equal(applied[key].cpu(), value):
             raise RuntimeError(f'Initial weights were not applied: {key}')
     return {'checkpoint': str(source), 'model_build_id': metadata.get('model_build_id'),
-            'iteration': metadata.get('iteration'), 'behaviour_cloning': 'behaviour_cloning' in metadata}
+            'iteration': metadata.get('iteration'), 'behaviour_cloning': 'behaviour_cloning' in metadata,
+            'capacity': metadata['settings']['capacity']}
 
 
 def save_run(algorithm, destination, settings, iteration, initialized_from=None):

@@ -244,6 +244,57 @@ class CheckpointTests(unittest.TestCase):
                 self.assertEqual((decision, index), (snapshot['decision_id'], int(logits[0].argmax())))
                 env.step(decision, index)
 
+    def test_run_time_capacity_keeps_the_logits_and_sets_the_candidate_limit(self):
+        """A checkpoint saved at capacity 2048 read at 4096 (HANDOFF E165/E169): the same logits on the legal
+        candidates and the same choice. The run-time capacity, not the saved one, is the limit on a decision's
+        candidates (shown with a capacity one below a real decision's count; the 2,257-candidate decision of 119 was
+        scored by lab/scratch_capacity_policy.py)."""
+        import torch
+        from gaia_rl import Environment
+        from gaia_rl.encoding import EncodingError, FeatureEncoderV4
+        from gaia_rl.evaluation import OfflinePolicy
+        with tempfile.TemporaryDirectory() as tmp:
+            shards, out = Path(tmp)/'shards', Path(tmp)/'checkpoint'
+            shards.mkdir()
+            write_shard(shards/'shard-00000.npz', [2, 3, 4, 2], [1, 0, 3, 1],
+                        observation=FeatureEncoderV4().state_size, v4=True)
+            bc_train.train(shards, out, epochs=1, batch=2, val_shards=0, width=16)
+            self.assertEqual(json.loads((out/'metadata.json').read_text())['settings']['capacity'], 2048)
+            saved, wide = OfflinePolicy(out), OfflinePolicy(out, capacity=4096)
+            self.assertEqual((saved.encoder.candidate_capacity, wide.encoder.candidate_capacity), (2048, 4096))
+            env = Environment('quartet-a-72715')
+            snapshot = json.loads(env.snapshot_json())
+            count = len(snapshot['candidates'])
+            self.assertGreater(count, 1)
+            with self.assertRaises(EncodingError):
+                OfflinePolicy(out, capacity=count-1).choose(snapshot, env)
+            self.assertEqual(OfflinePolicy(out, capacity=count).choose(snapshot, env), saved.choose(snapshot, env))
+            for _ in range(6):
+                snapshot = json.loads(env.snapshot_json())
+                count = len(snapshot['candidates'])
+                narrow, broad = saved.logits(snapshot, env), wide.logits(snapshot, env)
+                self.assertEqual((len(narrow), len(broad)), (2048, 4096))
+                self.assertTrue(torch.equal(narrow[:count], broad[:count]))
+                choice = saved.choose(snapshot, env)
+                self.assertEqual(choice, wide.choose(snapshot, env))
+                env.step(*choice)
+            for bad in (0, -1, 2.5, '4096'):
+                with self.assertRaises(ValueError):
+                    OfflinePolicy(out, capacity=bad)
+
+    def test_initial_checkpoint_may_have_another_capacity_but_not_another_model(self):
+        from gaia_rl import training
+        metadata = {'encoding_version': 4, 'model': {'encoding': 4, 'width': 256}, 'settings': {'capacity': 2048}}
+        settings = {'capacity': 4096, 'encoding': 4, 'width': 256}
+        training.require_initial_model(metadata, settings)                    # capacity 2048 into a 4096 run
+        for change in ({'width': 64}, {'encoding': 3}):
+            with self.assertRaises(ValueError):
+                training.require_initial_model(metadata, {**settings, **change})
+        with self.assertRaises(ValueError):
+            training.require_initial_model({**metadata, 'encoding_version': 3}, settings)
+        # A checkpoint without 'model' and settings without the model keys: encoding 3 at width 64 on both sides.
+        training.require_initial_model({'encoding_version': 3, 'settings': {'capacity': 2048}}, {'capacity': 4096})
+
     def test_metadata_whose_model_disagrees_with_the_encoding_is_refused(self):
         from gaia_rl.encoding import FeatureEncoder
         from gaia_rl.evaluation import OfflinePolicy

@@ -5,7 +5,9 @@ Skips training.main's require_current_sources on purpose: the work tree's compil
 (gaia-engine/src/rules/ai_federation.rs, 966e9ea), so `python -m gaia_rl.training` refuses to start until the user
 rebuilds. This is a throwaway check of the Python path, not a run of record.
 
-Usage: scratch_ppo_v4_smoke.py <initial checkpoint> <new output directory>
+Usage: scratch_ppo_v4_smoke.py <initial checkpoint> <new output directory> [capacity, default 2048]
+A capacity other than the initial checkpoint's (HANDOFF E169: a BC checkpoint saved at 2048 into a 4096 run) must
+start, train and save; the saved run then says the run's capacity and `initialized_from.capacity` the checkpoint's.
 """
 import json
 import random
@@ -22,14 +24,15 @@ from gaia_rl.evaluation import OfflinePolicy
 from gaia_rl.training import build_algorithm, initialize_from, parameter_vector, save_run
 
 init, out = Path(sys.argv[1]), Path(sys.argv[2])
+capacity = int(sys.argv[3]) if len(sys.argv) > 3 else 2048
 torch.set_num_threads(2)
 random.seed(0); np.random.seed(0); torch.manual_seed(0)
-settings = {'seed': 0, 'capacity': 2048, 'batch_size': 32, 'device': 'cpu', 'encoding': 4, 'width': 256}
+settings = {'seed': 0, 'capacity': capacity, 'batch_size': 32, 'device': 'cpu', 'encoding': 4, 'width': 256}
 ray.init(num_cpus=2, include_dashboard=False, object_store_memory=128*1024**2, log_to_driver=False)
 algorithm = None
 try:
     start = time.monotonic()
-    algorithm = build_algorithm(0, 2048, 32, 4, 256)
+    algorithm = build_algorithm(0, capacity, 32, 4, 256)
     origin = initialize_from(algorithm, init, settings)
     before = parameter_vector(algorithm)
     result = algorithm.train()
@@ -48,5 +51,6 @@ metadata = json.loads((out/'metadata.json').read_text())
 policy = OfflinePolicy(out)
 env = Environment('quartet-a-72715')
 snapshot = json.loads(env.snapshot_json())
+assert metadata['settings']['capacity'] == policy.encoder.candidate_capacity == capacity
 print({key: metadata[key] for key in ('encoding_version', 'model', 'iteration')}, policy.encoding,
-      policy.choose(snapshot, env))
+      policy.encoder.candidate_capacity, policy.choose(snapshot, env))

@@ -1,0 +1,9 @@
+{
+  "description": "Behaviour-cloned policy, encoding 4 at width 256, trained on all 93 self-play games of 114 + 119 (28,098 decisions, engine fc19671c4278) in a teacher seat: one forward pass per decision over the previewed candidates, no search. Checkpoint = epoch 9 of the full training of cycle 122 (`lab/scratch_v4_epochs.py`: lr 0.001, batch 256, seed 0, 1,026 steps; epoch 9 = the lowest fold-mean validation loss on the 5-fold curve of the same cycle, 2.1091, per-game accuracy 38.90% on the folds — the full model has no validation of its own). The epoch is the loss rule's; the pre-registered second candidate is epoch-13 (highest fold accuracy, uncorrected) and the choice between them is the user's (HANDOFF E171): change the checkpoint path to use it. capacity 4096 = the candidate capacity at run time: the checkpoint's metadata says 2048 and a game decision can list more (2,257 in 119, E165); no weight depends on the capacity. The checkpoint is under runs/ (not in git) and must exist on the machine that plays.",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "policy_teacher:make",
+  "kwargs": {
+    "checkpoint": "runs/bc-93-v4-w256-fc19/epoch-09",
+    "capacity": 4096
+  }
+}

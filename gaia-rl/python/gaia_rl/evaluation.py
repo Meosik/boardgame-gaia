@@ -24,8 +24,12 @@ class OfflinePolicy:
     The checkpoint's metadata chooses the encoder and the network: encoding_version 3 or 4, model.width (a
     checkpoint without 'model' is encoding 3 at width 64: gaia_rl.training, bc_train before encoding 4).
     Encoding 4 reads the state after every candidate, so choose() needs the environment the snapshot came from
-    (Environment.preview_state_json: a preview, nothing is stepped)."""
-    def __init__(self, checkpoint):
+    (Environment.preview_state_json: a preview, nothing is stepped).
+
+    capacity: the candidate capacity at run time; None = the checkpoint's settings.capacity. No weight depends on it
+    (network.build: every layer is sized by the observation, one candidate row or the width), it only sizes the padded
+    candidate list, so a checkpoint saved at 2048 scores a decision with more candidates under capacity 4096."""
+    def __init__(self, checkpoint, capacity=None):
         checkpoint=Path(checkpoint)
         metadata=json.loads((checkpoint/'metadata.json').read_text())
         require_loadable_checkpoint(metadata)
@@ -33,14 +37,18 @@ class OfflinePolicy:
         model=metadata.get('model') or {'width':64,'encoding':3}
         if self.encoding not in ENCODERS or model['encoding']!=self.encoding:
             raise ValueError('Incompatible observation encoding')
-        self.encoder=ENCODERS[self.encoding](metadata['settings']['capacity'])
+        self.capacity=metadata['settings']['capacity'] if capacity is None else capacity
+        if type(self.capacity) is not int or self.capacity<1:
+            raise ValueError('Candidate capacity must be a positive integer')
+        self.encoder=ENCODERS[self.encoding](self.capacity)
         self.module=CandidateModule(observation_space=self.encoder.observation_space,
             action_space=spaces.Discrete(self.encoder.candidate_capacity),
             model_config={'width':model['width'],'encoding':self.encoding})
         self.module.load_state_dict(torch.load(checkpoint/'inference.pt',weights_only=True,map_location='cpu'))
         self.module.eval()
 
-    def choose(self,snapshot,env=None):
+    def logits(self,snapshot,env=None):
+        """One logit per candidate slot (capacity of them; the legal candidates come first)."""
         if snapshot['player'] is None or not snapshot['candidates']:
             raise ValueError('No live decision to choose')
         if self.encoding==4:
@@ -56,7 +64,10 @@ class OfflinePolicy:
             logits=self.module.forward_inference(batch)[Columns.ACTION_DIST_INPUTS][0]
             if not torch.isfinite(logits).all():
                 raise ValueError('Non-finite policy logits')
-            index=int(logits.argmax())
+        return logits
+
+    def choose(self,snapshot,env=None):
+        index=int(self.logits(snapshot,env).argmax())
         if not 0<=index<len(snapshot['candidates']):
             raise ValueError('Policy selected a masked action')
         return snapshot['decision_id'],index
