@@ -1,3 +1,4 @@
+import argparse
 import json
 import tempfile
 import unittest
@@ -64,6 +65,31 @@ class ReplayTests(unittest.TestCase):
             list(bc_dataset.iter_samples([old, new]))
         # games without engine_build_id never match a given prefix
         self.assertEqual(list(bc_dataset.iter_samples([row], builds=['aaa'])), [])
+
+
+class ExportTests(unittest.TestCase):
+    def test_export_capacity_builds_the_encoder(self):
+        seen = []
+
+        def stub(manifest, **kwargs):
+            seen.append(kwargs)
+            return iter(())
+        original = bc_dataset.iter_samples
+        bc_dataset.iter_samples = stub
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                for encoding in (3, 4):
+                    for capacity in (4096, 0):
+                        args = argparse.Namespace(manifest='m', out=str(Path(tmp)/f'{encoding}-{capacity}'), shard=2000,
+                                                  max=0, only_6r=False, teacher=None, allow_engine_mismatch=False,
+                                                  build=None, encoding=encoding, capacity=capacity)
+                        bc_dataset.cmd_export(args)
+        finally:
+            bc_dataset.iter_samples = original
+        self.assertEqual([k['encoder'].candidate_capacity if k['encoder'] else None for k in seen],
+                         [4096, None, 4096, None])
+        self.assertEqual([type(k['encoder']).__name__ if k['encoder'] else None for k in seen],
+                         ['FeatureEncoder', None, 'FeatureEncoderV4', None])
 
 
 class LoadTests(unittest.TestCase):

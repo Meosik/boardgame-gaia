@@ -10,14 +10,16 @@ game is replayed instead of stored state by state. Three commands:
   stats   MANIFEST
           games / decisions per faction and teacher, 6-round games, games that no longer replay.
   export  MANIFEST --out DIR [--shard 2000] [--max N] [--only-6r] [--teacher SUBSTRING] [--build ID_PREFIX]...
-                   [--encoding 3|4]
+                   [--encoding 3|4] [--capacity N]
           replays the games and writes compressed npz shards of encoded samples: observation (float16),
           the legal candidates' features (ragged: cand + cand_offsets), chosen index, seat, faction id,
           round, the seat's final score minus the table mean (value target; NaN for games that stopped
           before round 6), the game's line number in the manifest (game; bc_train holds out whole games) and
           the encoding version. Uses gaia_rl.encoding.FeatureEncoder, so features match the RL environment;
           --encoding 4 uses FeatureEncoderV4 and previews the state after every candidate (the 114 games:
-          about 40 s per game instead of a few).
+          about 40 s per game instead of a few). A decision with more candidates than the encoder capacity (2048)
+          stops the export with `Candidate capacity exceeded`; --capacity 4096 lets it through without changing
+          any other row.
 
 Training code can also call iter_samples(manifest) directly (one replay at a time, nothing written).
 Caution: the log holds indices only, so a game must be replayed on an engine whose legal candidates match
@@ -242,7 +244,11 @@ def cmd_export(args):
             game=np.array([s['game'] for s in buffer]), encoding=np.array(args.encoding))
         shard += 1
         buffer = []
-    for sample in iter_samples(args.manifest, only_6r=args.only_6r, teacher=args.teacher,
+    encoder = None
+    if args.capacity:
+        from gaia_rl.encoding import FeatureEncoder, FeatureEncoderV4
+        encoder = (FeatureEncoderV4 if args.encoding == 4 else FeatureEncoder)(args.capacity)
+    for sample in iter_samples(args.manifest, only_6r=args.only_6r, teacher=args.teacher, encoder=encoder,
                                 allow_engine_mismatch=args.allow_engine_mismatch, builds=args.build,
                                 encoding=args.encoding):
         buffer.append(sample)
@@ -275,6 +281,7 @@ def main():
     p.add_argument('--build', action='append', help='keep only games recorded on this engine build id prefix (repeatable)')
     p.add_argument('--encoding', type=int, choices=(3, 4), default=3,
                    help='4 = FeatureEncoderV4 candidate rows (field ids | board | outcome of the previewed state)')
+    p.add_argument('--capacity', type=int, default=0, help='candidate capacity of the export encoder (0 = the encoder default, 2048); samples are cut to their own candidate count, so a larger value only lets decisions with more candidates through')
     args = parser.parse_args()
     {'index': cmd_index, 'stats': cmd_stats, 'export': cmd_export}[args.cmd](args)
 

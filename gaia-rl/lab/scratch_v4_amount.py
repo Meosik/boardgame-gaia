@@ -1,7 +1,11 @@
-"""Amount of data with encoding 4 on the 93 games of 114 + 119 (HANDOFF E162 (ㄱ), E163; lab queue 121, run in the
+"""Amount of data with encoding 4 on the 93 games of 114 + 119 (HANDOFF E162 (ㄱ), E163; lab queue 121a (121 failed in the export), run in the
 work tree). Both collections were indexed on the rebuilt engine fc19671c4278 (46 + 47 strict replays, 28,098
 decisions); cycle 120 showed the 114 export on that engine equal to the old one, row for row.
-  1 export   bc_dataset.py export --encoding 4 of the 119 manifest -> gaia-rl/runs/bc-119-v4-shards-fc19
+  1 export   bc_dataset.py export --encoding 4 of the 119 manifest -> gaia-rl/runs/bc-119-v4-shards-fc19-c4096
+             with --capacity 4096 (queue 121 failed here: game 20 of 119, quartet-b-98306, round 5, Bescods lists
+             2,257 candidates, 2,208 of them federation routes, above the encoder's 2048; rows are cut to their own
+             candidate count, so the other rows do not depend on the capacity), written to <dir>.partial and
+             renamed when the export ends
              (skipped when the directory already holds shards; the 114 shards are those of cycle 120)
   2 folds    5 game-level folds over the 93 games, stratified by quartet: game k of a quartet (114 games first,
              then 119, manifest order) -> fold k mod 5, so the 114 games keep their folds of 117 / 118 / 120
@@ -24,6 +28,7 @@ import glob
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -40,10 +45,11 @@ SMOKE = sys.argv[1:] == ['smoke']
 SCRIPT = 'gaia-rl/lab/scratch_v4_amount.py'
 SOURCES = [('114', 'gaia-rl/runs/bc-114-fc19/manifest.jsonl', 'gaia-rl/runs/bc-114-v4-shards-fc19'),
            ('119', 'gaia-rl/runs/bc-119-fc19/manifest.jsonl',
-            'gaia-rl/runs/bc-v4-amount-smoke' if SMOKE else 'gaia-rl/runs/bc-119-v4-shards-fc19')]
+            'gaia-rl/runs/bc-v4-amount-smoke-c4096' if SMOKE else 'gaia-rl/runs/bc-119-v4-shards-fc19-c4096')]
 METRICS = 'gaia-rl/runs/bc-v4-amount-93/metrics.json'
 EPOCHS = 1 if SMOKE else 9
 BATCH, LR, WIDTH, FOLDS = 256, 0.001, 256, 5
+CAPACITY = 4096   # export encoder capacity: one decision of 119 lists 2,257 candidates (2,208 federation routes)
 ARMS = {   # name: (training games, stop)
     'all': ('all', 'epochs'),
     'half-steps': ('half', 'steps'),
@@ -71,8 +77,12 @@ if not SMOKE:
 
 for _, manifest, directory in SOURCES:
     if not glob.glob(directory+'/shard-*.npz'):
-        subprocess.run([sys.executable, 'gaia-rl/tools/bc_dataset.py', 'export', manifest, '--out', directory,
-                        '--encoding', '4'] + (['--max', '300'] if SMOKE else []), check=True)
+        partial = directory+'.partial'      # a failed export must not leave a directory that looks complete
+        shutil.rmtree(partial, ignore_errors=True)
+        subprocess.run([sys.executable, 'gaia-rl/tools/bc_dataset.py', 'export', manifest, '--out', partial,
+                        '--encoding', '4', '--capacity', str(CAPACITY)] + (['--max', '300'] if SMOKE else []),
+                       check=True)
+        os.rename(partial, directory)
         print('exported', directory, '| seconds', round(time.time()-start), flush=True)
 
 games, shards, decisions = [], [], 0
