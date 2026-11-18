@@ -25,16 +25,53 @@ pub enum EnvError {
     Configuration(&'static str),
 }
 
-/// Split `<seed>@order=a,b,c,d` into the map seed and the turn order (seat ids, first to last).
-fn split_order(full_seed: &str) -> Result<(&str, Option<Vec<PlayerId>>), EnvError> {
-    let Some((seed, order)) = full_seed.split_once("@order=") else {
-        return Ok((full_seed, None));
-    };
-    let seats: Result<Vec<PlayerId>, _> = order.split(',').map(|s| s.trim().parse::<PlayerId>()).collect();
-    match seats {
-        Ok(seats) if seats.len() == 4 => Ok((seed, Some(seats))),
-        _ => Err(EnvError::Configuration("@order= needs four seat ids, e.g. @order=2,0,3,1")),
+/// The parts of a full seed `<seed>[@key=value]...`; the suffixes come in any order, each at most once.
+/// `@order=a,b,c,d`: the turn order as seat ids, first to last.
+/// `@factions=A,B,C,D`: the factions of seats 0 to 3 (engine names such as `Terrans`).
+/// `@tiles=<seed>`: the map of `<seed>` with every other setup component of the tile seed.
+struct SeedParts<'a> {
+    seed: &'a str,
+    order: Option<Vec<PlayerId>>,
+    factions: Option<Vec<&'a str>>,
+    tiles: Option<&'a str>,
+}
+
+fn split_seed(full_seed: &str) -> Result<SeedParts<'_>, EnvError> {
+    let mut pieces = full_seed.split('@');
+    let mut parts = SeedParts { seed: pieces.next().unwrap_or(""), order: None, factions: None, tiles: None };
+    for piece in pieces {
+        let twice = EnvError::Configuration("a seed suffix is given twice");
+        if let Some(order) = piece.strip_prefix("order=") {
+            let seats: Result<Vec<PlayerId>, _> = order.split(',').map(|s| s.trim().parse::<PlayerId>()).collect();
+            match seats {
+                Ok(seats) if seats.len() == 4 => {
+                    if parts.order.replace(seats).is_some() {
+                        return Err(twice);
+                    }
+                }
+                _ => return Err(EnvError::Configuration("@order= needs four seat ids, e.g. @order=2,0,3,1")),
+            }
+        } else if let Some(names) = piece.strip_prefix("factions=") {
+            let names: Vec<&str> = names.split(',').map(str::trim).collect();
+            if names.len() != 4 {
+                return Err(EnvError::Configuration(
+                    "@factions= needs four faction names in seat order, e.g. @factions=Terrans,Xenos,Taklons,Geodens",
+                ));
+            }
+            if parts.factions.replace(names).is_some() {
+                return Err(twice);
+            }
+        } else if let Some(tiles) = piece.strip_prefix("tiles=") {
+            if parts.tiles.replace(tiles).is_some() {
+                return Err(twice);
+            }
+        } else {
+            return Err(EnvError::Configuration(
+                "unknown seed suffix: the known ones are @order=, @factions= and @tiles=",
+            ));
+        }
     }
+    Ok(parts)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,16 +134,28 @@ impl Environment {
         // `<seed>@order=2,0,3,1`: the same map and factions as `<seed>` (the suffix is stripped before any
         // randomness), then the turn order is the listed seats, first to last — starting placements and
         // starting boosters follow it (lab turn order by expected faction strength, HANDOFF E117).
-        let (seed, order) = split_order(full_seed)?;
+        // `<seed>@factions=A,B,C,D`: the four factions are the named ones by seat instead of drawn.
+        // `<seed>@tiles=<tile seed>`: the map of `<seed>` with every other setup component of the tile seed
+        // (fixed-seed ladder, HANDOFF E177). The suffixes combine in any order.
+        let SeedParts { seed, order, factions, tiles } = split_seed(full_seed)?;
         // Runs recorded before the same-type adjacency fix (engine 7d012a0) replay only on the
         // drawn sector rotations; GAIA_DRAWN_ROTATIONS=1 rebuilds those maps.
-        let setup = if std::env::var_os("GAIA_DRAWN_ROTATIONS").is_some_and(|value| value == "1") {
-            Randomizer::generate_setup_with_drawn_rotations(seed)?
-        } else {
-            Randomizer::generate_setup(seed)?
+        let setup_of = |seed: &str| -> Result<_, EnvError> {
+            Ok(if std::env::var_os("GAIA_DRAWN_ROTATIONS").is_some_and(|value| value == "1") {
+                Randomizer::generate_setup_with_drawn_rotations(seed)?
+            } else {
+                Randomizer::generate_setup(seed)?
+            })
         };
         let players: Vec<_> = (0..4).map(|i| (i, format!("AI-{i}"))).collect();
-        let mut state = MapEngine::init_game_state("RL", seed, &players, &setup);
+        let mut state = match tiles {
+            None => MapEngine::init_game_state("RL", seed, &players, &setup_of(seed)?),
+            Some(tiles) => {
+                let mut state = MapEngine::init_game_state("RL", tiles, &players, &setup_of(tiles)?);
+                state.board = MapEngine::init_game_state("RL", seed, &players, &setup_of(seed)?).board;
+                state
+            }
+        };
         // Wall-clock metadata is not part of an offline simulation.
         state.created_at = 0;
         let mut rng = Randomizer::new(&format!("{seed}:rl-factions"));
@@ -114,9 +163,23 @@ impl Environment {
         // two factions can share a physical board. Selection is setup randomness, not training.
         for _ in 0..4 {
             let choices = RuleEngine::ai_decisions(&state)?;
-            let candidate = &choices[rng.random_int(choices.len())];
             let Some(player) = RuleEngine::decision_player(&state)? else {
                 return Err(EnvError::Ended);
+            };
+            let candidate = match &factions {
+                None => &choices[rng.random_int(choices.len())],
+                Some(names) => {
+                    let wanted = names[usize::from(player)];
+                    choices
+                        .iter()
+                        .find(|choice| {
+                            matches!(choice, AiDecision::Setup(SetupAction::SelectFaction { faction })
+                                if format!("{faction:?}") == wanted)
+                        })
+                        .ok_or(EnvError::Configuration(
+                            "@factions= names a faction that is not a legal choice for its seat (unknown name, repeated, or both sides of one board)",
+                        ))?
+                }
             };
             let AiDecision::Setup(action @ SetupAction::SelectFaction { .. }) = candidate else {
                 return Err(EnvError::Configuration("expected faction-selection setup"));

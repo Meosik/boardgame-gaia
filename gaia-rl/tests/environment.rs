@@ -44,6 +44,79 @@ fn order_suffix_keeps_map_and_factions_and_reorders_setup() {
     assert!(Environment::new("quartet-d-113082@order=2,0,3,3", 10000).is_err());
 }
 
+fn faction_names(env: &Environment) -> Vec<String> {
+    env.state().players.iter().map(|p| format!("{:?}", p.faction.unwrap())).collect()
+}
+
+fn field_json<T: serde::Serialize>(field: &T) -> serde_json::Value {
+    serde_json::to_value(field).unwrap()
+}
+
+#[test]
+fn factions_suffix_assigns_factions_by_seat_and_keeps_the_setup() {
+    let seed = "quartet-e-88365";
+    let plain = Environment::new(seed, 10000).unwrap();
+    let named = Environment::new(&format!("{seed}@factions=Darkanians,BalTaks,Itars,Ivits"), 10000).unwrap();
+    assert_eq!(faction_names(&named), vec!["Darkanians", "BalTaks", "Itars", "Ivits"]);
+    let (p, n) = (plain.state(), named.state());
+    assert_same_json(&field_json(&p.board), &field_json(&n.board), "board");
+    assert_same_json(&field_json(&p.round_tiles), &field_json(&n.round_tiles), "round_tiles");
+    assert_same_json(&field_json(&p.final_scoring_tiles), &field_json(&n.final_scoring_tiles), "final_scoring_tiles");
+    assert_same_json(&field_json(&p.research_board), &field_json(&n.research_board), "research_board");
+    assert_same_json(&field_json(&p.spaceship_boards), &field_json(&n.spaceship_boards), "spaceship_boards");
+    assert_same_json(
+        &field_json(&p.terraforming_color_order),
+        &field_json(&n.terraforming_color_order),
+        "terraforming_color_order",
+    );
+    let a = Environment::new(&format!("{seed}@factions=Darkanians,BalTaks,Itars,Ivits@order=2,0,3,1"), 10000).unwrap();
+    let b = Environment::new(&format!("{seed}@order=2,0,3,1@factions=Darkanians,BalTaks,Itars,Ivits"), 10000).unwrap();
+    assert_same_json(&a.state().serialize(), &b.state().serialize(), "state");
+    assert_eq!(a.state().turn_order, vec![2, 0, 3, 1]);
+    assert_eq!(faction_names(&a), vec!["Darkanians", "BalTaks", "Itars", "Ivits"]);
+    assert_eq!(faction_names(&b), faction_names(&a));
+    let other_side = format!("{:?}", gaia_engine::game_state::FactionId::Terrans.other_board_side());
+    for bad in [
+        format!("{seed}@factions=Terrans,Xenos,Taklons"),
+        format!("{seed}@factions=Terran,Xenos,Taklons,Geodens"),
+        format!("{seed}@factions=Terrans,Terrans,Xenos,Taklons"),
+        format!("{seed}@factions=Terrans,{other_side},Xenos,Taklons"),
+        format!("{seed}@faction=Terrans,Xenos,Taklons,Geodens"),
+        format!("{seed}@order=0,1,2,3@order=0,1,2,3"),
+    ] {
+        assert!(Environment::new(&bad, 10000).is_err(), "{bad} should be refused");
+    }
+}
+
+#[test]
+fn tiles_suffix_keeps_the_map_and_takes_the_rest_of_the_setup_from_the_tile_seed() {
+    let f = "@factions=Terrans,Xenos,Taklons,Geodens";
+    let new = |seed: &str| Environment::new(&format!("{seed}{f}"), 10000).unwrap();
+    let base = new("quartet-e-88365");
+    let tile = new("quartet-d-113082");
+    let mixed = new("quartet-e-88365@tiles=quartet-d-113082");
+    let same = new("quartet-e-88365@tiles=quartet-e-88365");
+    assert_same_json(&same.state().serialize(), &base.state().serialize(), "state");
+    let (b, t, m) = (base.state(), tile.state(), mixed.state());
+    assert_same_json(&field_json(&m.board), &field_json(&b.board), "board");
+    assert_same_json(&field_json(&m.round_tiles), &field_json(&t.round_tiles), "round_tiles");
+    assert_same_json(&field_json(&m.boosters), &field_json(&t.boosters), "boosters");
+    assert_same_json(&field_json(&m.final_scoring_tiles), &field_json(&t.final_scoring_tiles), "final_scoring_tiles");
+    assert_same_json(&field_json(&m.research_board), &field_json(&t.research_board), "research_board");
+    assert_same_json(&field_json(&m.spaceship_boards), &field_json(&t.spaceship_boards), "spaceship_boards");
+    assert_same_json(
+        &field_json(&m.terraforming_color_order),
+        &field_json(&t.terraforming_color_order),
+        "terraforming_color_order",
+    );
+    assert_ne!(field_json(&b.board), field_json(&t.board));
+    assert_ne!(field_json(&b.research_board), field_json(&t.research_board));
+    let drawn = Environment::new("quartet-e-88365@tiles=quartet-d-113082", 10000).unwrap();
+    let plain = Environment::new("quartet-e-88365", 10000).unwrap();
+    assert_eq!(faction_names(&drawn), faction_names(&plain));
+    assert!(Environment::new("quartet-e-88365@tiles=", 10000).is_err());
+}
+
 #[test]
 fn stale_indices_and_failed_steps_do_not_mutate() {
     let mut env = Environment::new("rl-stale", 10000).unwrap();
