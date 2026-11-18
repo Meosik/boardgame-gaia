@@ -67,6 +67,7 @@ def main():
             wanted[s['game']][s['seat']] = s
     print('seats', sum(len(v) for v in wanted.values()), 'in games', len(wanted))
     played = {5: Counter(), 6: Counter()}
+    outside = Counter()
     instead = {5: Counter(), 6: Counter()}
     left = {5: [], 6: []}
     with_build = {5: [0, 0], 6: [0, 0]}                      # decisions, of them with a build/upgrade candidate
@@ -111,7 +112,7 @@ def main():
                             if not adds_outside(action, federated) and action.get('type') != 'FreeAction':
                                 instead[round_][kind] += 1
                         if adds_outside(action, federated):
-                            played[round_]['(adds power outside the federation)'] += 1
+                            outside[round_] += 1
                         res = player['resources']
                         history[seat].append((round_, step, kind, res['ore'], res['credits'], res['knowledge'], res['qic'],
                                               res['power']['bowl3'], len(build)))
@@ -133,7 +134,9 @@ def main():
             print(kind, json.dumps(action)[:260])
         return
     for round_ in (5, 6):
-        print(f"\nR{round_}: main actions played {sum(played[round_].values())}: {played[round_].most_common(14)}")
+        total = sum(played[round_].values())
+        print(f"\nR{round_}: main actions played {total} (Pass {passes[round_]}, without Pass {total - passes[round_]}), "
+              f"adding power outside the federation {outside[round_]}: {played[round_].most_common(14)}")
         print(f"  main-turn decisions {with_build[round_][0]}, with a mine/upgrade candidate {with_build[round_][1]}; "
               f"played instead of building at those: {instead[round_].most_common(10)}")
         rows = left[round_]
