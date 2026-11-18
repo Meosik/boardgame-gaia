@@ -86,9 +86,12 @@ epoch 9 (loss) and epoch 13 (accuracy).** No automatic rule.
 ## Reading (HANDOFF 1 order, adapted — no teacher verdict)
 
 - **Epoch by the loss rule = 9; "longer is better" is not shown.** After epoch 9 the model overfits in the sense the
-  rule measures (validation loss +0.117 by epoch 18) while accuracy stays level: the mean of epochs 10–18 is 38.96%
-  against 38.90% at epoch 9 (table above). Rising loss with level accuracy = the argmax is kept, the probabilities get
-  over-confident — which matters for a PPO starting point (a distribution), less for a policy teacher (argmax).
+  rule measures (validation loss +0.117 by epoch 18) while the mean accuracy stays at the same level: the mean of epochs 10–18 is
+  38.96% against 38.90% at epoch 9 (table above). That is all that was measured. A level mean does not mean the same
+  moves are picked: between epochs 9 and 18 the accuracy changed in 91 of the 93 games (44 better / 2 equal / 47
+  worse), so the chosen moves differ. An earlier reading here ("the argmax is kept, the probabilities get
+  over-confident, which costs a PPO starting point") is withdrawn (debate 1/1, accepted): neither calibration nor the
+  effect on PPO was measured — unconfirmed.
 - **Epoch 13 (① noise is not excluded).** The pre-registered comparison is above 0, and that is what is reported. What
   weakens it, all of it written in the queue note as limits or visible in the table: (a) epoch 13 is the best of 18
   epochs picked on the same 93 games and the interval is uncorrected — against 17 other epochs the Bonferroni two-sided
