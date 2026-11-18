@@ -1,0 +1,1067 @@
+{
+ "name": "124-bc-v4-data-amount-141",
+ "kind": "command",
+ "status": "done",
+ "note": "사용자 2026-11-13 「codex 이상 없으면 추천대로 진행해」 + 코덱스 이상 없음(E182 (ㄱ), 11-19): 123 큐 note가 정해 둔 다음 단계 — 114+119+123 141판(42,148결정, 셋 다 엔진 fc19671c4278에서 엄격 재생)을 인코딩 4로 쓰는 자료량 한 단계 더 + epoch 곡선 + 141판 전체 자료 체크포인트를 한 번에. 대국 없음, 교사 판정 아님. 스크립트 lab/scratch_v4_amount_141.py(8354afb, 큐 전에 커밋; 시작할 때 자기 파일에 미커밋 차이가 있거나 체크포인트 폴더가 이미 있으면 거부, 커밋 id를 지표 script_commit에 적음 — E162 규칙). 순서: ① bc_dataset.py export --encoding 4 --capacity 4096으로 123 manifest(runs/bc-123-fc19, 48판 14,050결정) → runs/bc-123-v4-shards-fc19-c4096(.partial에 쓰고 끝나면 이름 변경; 123에 후보 2,417개 결정 1건), 114·119 shard는 120·121a 것 그대로(shard 결정 수가 manifest와 다르면 assert 실패) ② 141판을 쿼텟 층화 5겹으로(쿼텟 안 k번째 판 → 겹 k mod 5, 114 → 119 → 123 순서라 114·119 판은 121a·122의 겹 그대로) ③ 겹마다 2팔 — tools/bc_train.py의 망·학습 스텝 그대로(폭 256, lr 0.001, 배치 256, torch 시드 0·배치 순서 시드 0, shard 순서대로), 검증 = 그 겹의 빼 둔 판: all(학습 판 전부 약 113판, 18 epoch, epoch마다 검증 손실·검증 결정별 적중) · twothirds-steps(쿼텟 안 학습 판 셋 중 둘 = 약 75판 — 셋째·여섯째… 판을 뺌, 무작위 추출 없음 — 같은 겹 all의 9 epoch 스텝 수에서 정지) ④ 같은 설정으로 141판 전부를 18 epoch 학습하며 epoch마다 체크포인트(runs/bc-141-v4-w256-fc19/epoch-01…18, bc_train과 같은 inference.pt + metadata.json; .partial에 쓰고 끝나면 이름 변경; 작업 트리, git 밖). 사전 등록 읽기 — 자료량(주 비교 1개): all의 epoch 9 − twothirds-steps(같은 스텝 수)의 판별 정확도 차, 검증 141판 짝, t 95% 구간, 좋음/같음/나쁨 판 수·겹별·쿼텟별·수집(114/119/123)별 보고. 0 위 → 약 113판에서도 판 수가 한계 중 하나(같은 방식 추가 수집이 여전히 지렛대 후보; 몇 판 더는 사용자 결정), 0 포함 → 약 75판을 넘어서는 이득 미확인 — 포화로 읽지 않고(구간이 0을 포함해도 큰 이득을 배제하지 못함, 121 토론 정정 그대로) 구간 상한을 보고만 함, 0 아래 → 보고하고 원인(부분집합·겹 흔들림)을 먼저 봄. 121a ①(약 74 대 37판 +2.32pt [+1.68, +2.96])과는 판 수 비가 달라(2배 대 1.5배) 크기를 직접 비교하지 않음. epoch(122와 같은 읽기): 체크포인트 epoch = 겹 평균 검증 손실이 최저인 epoch(bc_train 규칙); 최저가 18번째면 「아직 안 꺾임」 — 18 epoch 체크포인트, 더 긴 학습은 미측정으로 남김. epoch별 판별 정확도와 epoch 9 대비 짝 차이(141판)를 전부 보고; (i) 규칙 epoch − 9 (ii) 18 − 9: 0 위 → 9 epoch보다 긴 학습이 모방 정확도를 올림, 0 포함 → 미확인, 0 아래 → 해침. 정확도 최고 epoch ≠ 손실 최저 epoch면 둘의 짝 차이를 보고: 0 포함 → 손실 규칙 epoch 그대로, 0 위 → 후보 둘을 정리 턴에서 사용자에게(자동 규칙 없음; E171 (ㄱ)의 93판 epoch 선택도 답 대기 중). 보정 없음. 점검: all 팔 epoch별 스텝 수 = epoch당 스텝 × k(assert), twothirds-steps 스텝 수 = all의 9 epoch 스텝 수(assert), 검증 결정 전부 채점·두 팔 같은 결정(assert), 마지막 epoch 체크포인트를 다시 읽어 같은 손실·적중(assert), 학습 손실 유한(assert). all 팔의 epoch 1–9는 122와 같은 계산이 아님(학습 판이 다름) → 122 값과의 일치 점검 없음; 수집별 결정 가중 정확도(114·119·123 판)는 참고로 보고. 미리 적는 한계: 3분의 2 부분집합이 겹 사이에 겹침(구간에 부분집합 흔들림 없음), torch 시드 1개, 고른 epoch의 수치는 검증 판으로 고른 값이라 낙관적(참고), 겹 곡선은 약 113판·전체 학습은 141판(epoch당 스텝 약 25% 많음)이라 epoch 수로 옮기는 것, 전체 학습 모델은 자기 검증 없음, metadata 용량은 기본 2048(대국은 실행 용량 4096, db997d9), 폴백 행 12/42,148(검색 안 한 root 1위 표지)은 그대로 포함, 모방 정확도는 실력 아님(1–3R 충전은 BC vs 교사 A/B 몫). 알고 넣는 것: 이 뒤 env.rs 접미사 구현(E177·E181)으로 엔진 빌드 id가 바뀌면 이 체크포인트는 재빌드 뒤 다시 학습해야 함(120과 같은 재현 점검, ≈ 20분) — 자료량·epoch 측정값은 그대로 유효. 스모크(봇 턴, 123의 300결정·겹 0·2 epoch): epoch당 93스텝, twothirds-steps 93스텝·학습 51판(all 73판), 전체 232스텝·학습 손실 2.4000 → 2.1883, 다시 읽기 같음, 122초. 예상 ≈ 1.5시간(export ≈ 6분 + 겹당 ≈ 13분 × 5 + 전체 ≈ 10분; 스모크 ≈ 0.2초/스텝), 작업 트리 venv(lab venv에 torch 없음). 실행 중에는 작업 트리의 gaia_rl·엔진 소스를 고치지 않음(E169).",
+ "host": "agentmaco",
+ "commit": "e1cc517",
+ "started_at": "2026-11-19T06:59:21+09:00",
+ "finished_at": "2026-11-19T08:25:42+09:00",
+ "command": [
+  "env",
+  "-C",
+  "/home/sohegi/projects/gaia-work",
+  "/home/sohegi/projects/gaia-work/gaia-rl/.venv/bin/python",
+  "gaia-rl/lab/scratch_v4_amount_141.py"
+ ],
+ "exit_code": 0,
+ "metrics": {
+  "script": "gaia-rl/lab/scratch_v4_amount_141.py",
+  "script_commit": "8354afbb01ccedab77c52fd4ad6884dbc5f528b1",
+  "engine_build_id": "fc19671c4278246becaa0710511b6d1a37b4049d58290aa8450c1c9f2c9041db",
+  "games": 141,
+  "decisions": 42148,
+  "games_per_quartet": {
+   "geo-quartet": 6,
+   "quartet-a": 30,
+   "quartet-b": 28,
+   "quartet-c": 27,
+   "quartet-d": 26,
+   "quartet-e": 24
+  },
+  "games_per_source": {
+   "114": 46,
+   "119": 47,
+   "123": 48
+  },
+  "fold_val_games": [
+   31,
+   29,
+   28,
+   27,
+   26
+  ],
+  "settings": {
+   "width": 256,
+   "epochs": 18,
+   "reference_epoch": 9,
+   "lr": 0.001,
+   "batch": 256,
+   "seed": 0,
+   "export_capacity": 4096
+  },
+  "amount": {
+   "comparison": "all at epoch 9 minus twothirds-steps at the same step count",
+   "all": {
+    "per_game": 0.4003,
+    "decision_weighted": 0.4002,
+    "train_games": [
+     110,
+     112,
+     113,
+     114,
+     115
+    ],
+    "fold_loss": [
+     2.1124,
+     2.118,
+     2.073,
+     2.0442,
+     2.0951
+    ],
+    "fold_accuracy": [
+     0.398,
+     0.4028,
+     0.3966,
+     0.4033,
+     0.4005
+    ]
+   },
+   "twothirds-steps": {
+    "per_game": 0.3765,
+    "decision_weighted": 0.3761,
+    "train_games": [
+     75,
+     76,
+     77,
+     78,
+     79
+    ],
+    "fold_loss": [
+     2.1387,
+     2.1753,
+     2.1314,
+     2.153,
+     2.175
+    ],
+    "fold_accuracy": [
+     0.3844,
+     0.3862,
+     0.376,
+     0.3689,
+     0.3627
+    ],
+    "fold_loss_curve": [
+     [
+      2.3187,
+      2.1927,
+      2.1862,
+      2.1159,
+      2.1365,
+      2.2011,
+      2.1673,
+      2.2194,
+      2.1387
+     ],
+     [
+      2.2436,
+      2.1877,
+      2.1375,
+      2.1474,
+      2.1017,
+      2.1143,
+      2.1664,
+      2.1774,
+      2.1753
+     ],
+     [
+      2.3287,
+      2.1693,
+      2.1396,
+      2.1358,
+      2.0919,
+      2.0942,
+      2.1025,
+      2.1399,
+      2.1314
+     ],
+     [
+      2.232,
+      2.165,
+      2.138,
+      2.0972,
+      2.1098,
+      2.1278,
+      2.0874,
+      2.1196,
+      2.153
+     ],
+     [
+      2.2262,
+      2.1556,
+      2.1363,
+      2.0907,
+      2.1202,
+      2.1383,
+      2.1866,
+      2.2055,
+      2.175
+     ]
+    ]
+   },
+   "difference": {
+    "mean": 0.0238,
+    "low": 0.0188,
+    "high": 0.0289,
+    "t": 9.38,
+    "n": 141,
+    "better": 110,
+    "equal": 6,
+    "worse": 25,
+    "per_fold": [
+     0.0141,
+     0.015,
+     0.0212,
+     0.0345,
+     0.0371
+    ],
+    "per_quartet": {
+     "geo-quartet": [
+      0.0328,
+      6
+     ],
+     "quartet-a": [
+      0.0253,
+      30
+     ],
+     "quartet-b": [
+      0.0247,
+      28
+     ],
+     "quartet-c": [
+      0.0202,
+      27
+     ],
+     "quartet-d": [
+      0.0206,
+      26
+     ],
+     "quartet-e": [
+      0.0262,
+      24
+     ]
+    },
+    "per_source": {
+     "114": [
+      0.0213,
+      46
+     ],
+     "119": [
+      0.0275,
+      47
+     ],
+     "123": [
+      0.0226,
+      48
+     ]
+    }
+   }
+  },
+  "epochs": [
+   {
+    "epoch": 1,
+    "loss_fold_mean": 2.2456,
+    "train_loss_fold_mean": 2.383,
+    "fold_loss": [
+     2.2628,
+     2.237,
+     2.247,
+     2.2616,
+     2.2195
+    ],
+    "fold_accuracy": [
+     0.3451,
+     0.3443,
+     0.3302,
+     0.3307,
+     0.3493
+    ],
+    "per_game": 0.3396,
+    "decision_weighted": 0.34,
+    "decision_weighted_by_source": {
+     "114": 0.3352,
+     "119": 0.3422,
+     "123": 0.3425
+    },
+    "against_reference": {
+     "mean": -0.0607,
+     "low": -0.0658,
+     "high": -0.0556,
+     "t": -23.48,
+     "n": 141,
+     "better": 3,
+     "equal": 1,
+     "worse": 137,
+     "per_fold": [
+      -0.053,
+      -0.0595,
+      -0.0679,
+      -0.0728,
+      -0.0509
+     ]
+    }
+   },
+   {
+    "epoch": 2,
+    "loss_fold_mean": 2.1576,
+    "train_loss_fold_mean": 2.1687,
+    "fold_loss": [
+     2.1751,
+     2.1518,
+     2.1603,
+     2.1607,
+     2.14
+    ],
+    "fold_accuracy": [
+     0.3619,
+     0.365,
+     0.3565,
+     0.3602,
+     0.367
+    ],
+    "per_game": 0.362,
+    "decision_weighted": 0.3621,
+    "decision_weighted_by_source": {
+     "114": 0.3598,
+     "119": 0.3623,
+     "123": 0.3641
+    },
+    "against_reference": {
+     "mean": -0.0382,
+     "low": -0.0428,
+     "high": -0.0337,
+     "t": -16.65,
+     "n": 141,
+     "better": 11,
+     "equal": 2,
+     "worse": 128,
+     "per_fold": [
+      -0.0366,
+      -0.0385,
+      -0.0408,
+      -0.0423,
+      -0.033
+     ]
+    }
+   },
+   {
+    "epoch": 3,
+    "loss_fold_mean": 2.1203,
+    "train_loss_fold_mean": 2.0752,
+    "fold_loss": [
+     2.1304,
+     2.124,
+     2.1062,
+     2.1213,
+     2.1195
+    ],
+    "fold_accuracy": [
+     0.3734,
+     0.3762,
+     0.3877,
+     0.3696,
+     0.3799
+    ],
+    "per_game": 0.377,
+    "decision_weighted": 0.3773,
+    "decision_weighted_by_source": {
+     "114": 0.3771,
+     "119": 0.3818,
+     "123": 0.373
+    },
+    "against_reference": {
+     "mean": -0.0233,
+     "low": -0.0279,
+     "high": -0.0188,
+     "t": -10.18,
+     "n": 141,
+     "better": 22,
+     "equal": 10,
+     "worse": 109,
+     "per_fold": [
+      -0.0254,
+      -0.0271,
+      -0.0099,
+      -0.0332,
+      -0.0209
+     ]
+    }
+   },
+   {
+    "epoch": 4,
+    "loss_fold_mean": 2.1243,
+    "train_loss_fold_mean": 2.0193,
+    "fold_loss": [
+     2.1577,
+     2.1009,
+     2.096,
+     2.1006,
+     2.1664
+    ],
+    "fold_accuracy": [
+     0.3717,
+     0.3882,
+     0.3796,
+     0.3723,
+     0.3631
+    ],
+    "per_game": 0.3747,
+    "decision_weighted": 0.3751,
+    "decision_weighted_by_source": {
+     "114": 0.3788,
+     "119": 0.3742,
+     "123": 0.3725
+    },
+    "against_reference": {
+     "mean": -0.0256,
+     "low": -0.0303,
+     "high": -0.0209,
+     "t": -10.72,
+     "n": 141,
+     "better": 22,
+     "equal": 7,
+     "worse": 112,
+     "per_fold": [
+      -0.0278,
+      -0.0157,
+      -0.0174,
+      -0.0308,
+      -0.0375
+     ]
+    }
+   },
+   {
+    "epoch": 5,
+    "loss_fold_mean": 2.1171,
+    "train_loss_fold_mean": 1.9732,
+    "fold_loss": [
+     2.1629,
+     2.097,
+     2.1043,
+     2.0846,
+     2.1366
+    ],
+    "fold_accuracy": [
+     0.3802,
+     0.3877,
+     0.3752,
+     0.3724,
+     0.3769
+    ],
+    "per_game": 0.3781,
+    "decision_weighted": 0.3786,
+    "decision_weighted_by_source": {
+     "114": 0.3808,
+     "119": 0.3799,
+     "123": 0.3753
+    },
+    "against_reference": {
+     "mean": -0.0222,
+     "low": -0.0269,
+     "high": -0.0175,
+     "t": -9.35,
+     "n": 141,
+     "better": 26,
+     "equal": 2,
+     "worse": 113,
+     "per_fold": [
+      -0.019,
+      -0.016,
+      -0.0225,
+      -0.0309,
+      -0.0236
+     ]
+    }
+   },
+   {
+    "epoch": 6,
+    "loss_fold_mean": 2.1013,
+    "train_loss_fold_mean": 1.9343,
+    "fold_loss": [
+     2.1034,
+     2.0917,
+     2.0789,
+     2.0501,
+     2.1825
+    ],
+    "fold_accuracy": [
+     0.3956,
+     0.4023,
+     0.3913,
+     0.3918,
+     0.355
+    ],
+    "per_game": 0.3876,
+    "decision_weighted": 0.3878,
+    "decision_weighted_by_source": {
+     "114": 0.3912,
+     "119": 0.3889,
+     "123": 0.3833
+    },
+    "against_reference": {
+     "mean": -0.0127,
+     "low": -0.0176,
+     "high": -0.0078,
+     "t": -5.1,
+     "n": 141,
+     "better": 44,
+     "equal": 11,
+     "worse": 86,
+     "per_fold": [
+      -0.0033,
+      -0.001,
+      -0.0061,
+      -0.0111,
+      -0.0455
+     ]
+    }
+   },
+   {
+    "epoch": 7,
+    "loss_fold_mean": 2.0886,
+    "train_loss_fold_mean": 1.9006,
+    "fold_loss": [
+     2.0945,
+     2.0878,
+     2.0574,
+     2.0425,
+     2.1609
+    ],
+    "fold_accuracy": [
+     0.3965,
+     0.4004,
+     0.3909,
+     0.3975,
+     0.3734
+    ],
+    "per_game": 0.3918,
+    "decision_weighted": 0.392,
+    "decision_weighted_by_source": {
+     "114": 0.3866,
+     "119": 0.3977,
+     "123": 0.3917
+    },
+    "against_reference": {
+     "mean": -0.0085,
+     "low": -0.0123,
+     "high": -0.0047,
+     "t": -4.43,
+     "n": 141,
+     "better": 47,
+     "equal": 6,
+     "worse": 88,
+     "per_fold": [
+      -0.0024,
+      -0.0029,
+      -0.0064,
+      -0.0056,
+      -0.0274
+     ]
+    }
+   },
+   {
+    "epoch": 8,
+    "loss_fold_mean": 2.0874,
+    "train_loss_fold_mean": 1.8641,
+    "fold_loss": [
+     2.108,
+     2.0676,
+     2.0578,
+     2.0667,
+     2.1369
+    ],
+    "fold_accuracy": [
+     0.4006,
+     0.4112,
+     0.4028,
+     0.3917,
+     0.3851
+    ],
+    "per_game": 0.3982,
+    "decision_weighted": 0.3986,
+    "decision_weighted_by_source": {
+     "114": 0.4003,
+     "119": 0.4014,
+     "123": 0.3941
+    },
+    "against_reference": {
+     "mean": -0.0021,
+     "low": -0.006,
+     "high": 0.0018,
+     "t": -1.09,
+     "n": 141,
+     "better": 65,
+     "equal": 7,
+     "worse": 69,
+     "per_fold": [
+      0.0018,
+      0.0071,
+      0.0055,
+      -0.0115,
+      -0.0156
+     ]
+    }
+   },
+   {
+    "epoch": 9,
+    "loss_fold_mean": 2.0885,
+    "train_loss_fold_mean": 1.8287,
+    "fold_loss": [
+     2.1124,
+     2.118,
+     2.073,
+     2.0442,
+     2.0951
+    ],
+    "fold_accuracy": [
+     0.398,
+     0.4028,
+     0.3966,
+     0.4033,
+     0.4005
+    ],
+    "per_game": 0.4003,
+    "decision_weighted": 0.4002,
+    "decision_weighted_by_source": {
+     "114": 0.3956,
+     "119": 0.4067,
+     "123": 0.398
+    },
+    "against_reference": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "t": null,
+     "n": 141,
+     "better": 0,
+     "equal": 141,
+     "worse": 0,
+     "per_fold": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   {
+    "epoch": 10,
+    "loss_fold_mean": 2.1092,
+    "train_loss_fold_mean": 1.8005,
+    "fold_loss": [
+     2.1017,
+     2.1459,
+     2.1374,
+     2.0679,
+     2.0932
+    ],
+    "fold_accuracy": [
+     0.4021,
+     0.3962,
+     0.3953,
+     0.4052,
+     0.4032
+    ],
+    "per_game": 0.4002,
+    "decision_weighted": 0.4003,
+    "decision_weighted_by_source": {
+     "114": 0.4003,
+     "119": 0.4049,
+     "123": 0.3957
+    },
+    "against_reference": {
+     "mean": -0.0001,
+     "low": -0.0033,
+     "high": 0.0031,
+     "t": -0.07,
+     "n": 141,
+     "better": 67,
+     "equal": 12,
+     "worse": 62,
+     "per_fold": [
+      0.0038,
+      -0.0068,
+      -0.0023,
+      0.0023,
+      0.0025
+     ]
+    }
+   },
+   {
+    "epoch": 11,
+    "loss_fold_mean": 2.1482,
+    "train_loss_fold_mean": 1.78,
+    "fold_loss": [
+     2.108,
+     2.1533,
+     2.1233,
+     2.1106,
+     2.2457
+    ],
+    "fold_accuracy": [
+     0.4003,
+     0.3941,
+     0.3971,
+     0.3973,
+     0.3701
+    ],
+    "per_game": 0.3922,
+    "decision_weighted": 0.3922,
+    "decision_weighted_by_source": {
+     "114": 0.392,
+     "119": 0.3951,
+     "123": 0.3894
+    },
+    "against_reference": {
+     "mean": -0.0081,
+     "low": -0.0121,
+     "high": -0.0041,
+     "t": -3.99,
+     "n": 141,
+     "better": 46,
+     "equal": 8,
+     "worse": 87,
+     "per_fold": [
+      0.0024,
+      -0.0089,
+      -0.0004,
+      -0.0054,
+      -0.0308
+     ]
+    }
+   },
+   {
+    "epoch": 12,
+    "loss_fold_mean": 2.152,
+    "train_loss_fold_mean": 1.7548,
+    "fold_loss": [
+     2.1499,
+     2.1797,
+     2.1197,
+     2.1424,
+     2.1681
+    ],
+    "fold_accuracy": [
+     0.3954,
+     0.3913,
+     0.4041,
+     0.3905,
+     0.3851
+    ],
+    "per_game": 0.3932,
+    "decision_weighted": 0.3934,
+    "decision_weighted_by_source": {
+     "114": 0.3891,
+     "119": 0.3988,
+     "123": 0.3924
+    },
+    "against_reference": {
+     "mean": -0.0071,
+     "low": -0.0111,
+     "high": -0.0031,
+     "t": -3.5,
+     "n": 141,
+     "better": 50,
+     "equal": 10,
+     "worse": 81,
+     "per_fold": [
+      -0.0032,
+      -0.0117,
+      0.0066,
+      -0.0126,
+      -0.0158
+     ]
+    }
+   },
+   {
+    "epoch": 13,
+    "loss_fold_mean": 2.1504,
+    "train_loss_fold_mean": 1.723,
+    "fold_loss": [
+     2.1377,
+     2.1685,
+     2.125,
+     2.139,
+     2.182
+    ],
+    "fold_accuracy": [
+     0.3993,
+     0.4046,
+     0.3947,
+     0.3939,
+     0.3861
+    ],
+    "per_game": 0.396,
+    "decision_weighted": 0.396,
+    "decision_weighted_by_source": {
+     "114": 0.3931,
+     "119": 0.4004,
+     "123": 0.3943
+    },
+    "against_reference": {
+     "mean": -0.0043,
+     "low": -0.0085,
+     "high": -0.0001,
+     "t": -2.03,
+     "n": 141,
+     "better": 54,
+     "equal": 5,
+     "worse": 82,
+     "per_fold": [
+      0.001,
+      0.0019,
+      -0.003,
+      -0.0083,
+      -0.015
+     ]
+    }
+   },
+   {
+    "epoch": 14,
+    "loss_fold_mean": 2.1902,
+    "train_loss_fold_mean": 1.7021,
+    "fold_loss": [
+     2.2036,
+     2.1989,
+     2.1023,
+     2.2612,
+     2.1852
+    ],
+    "fold_accuracy": [
+     0.392,
+     0.4012,
+     0.401,
+     0.3837,
+     0.3825
+    ],
+    "per_game": 0.3924,
+    "decision_weighted": 0.3923,
+    "decision_weighted_by_source": {
+     "114": 0.3891,
+     "119": 0.3975,
+     "123": 0.3902
+    },
+    "against_reference": {
+     "mean": -0.0079,
+     "low": -0.0122,
+     "high": -0.0036,
+     "t": -3.61,
+     "n": 141,
+     "better": 50,
+     "equal": 5,
+     "worse": 86,
+     "per_fold": [
+      -0.0063,
+      -0.0016,
+      0.0035,
+      -0.0183,
+      -0.0181
+     ]
+    }
+   },
+   {
+    "epoch": 15,
+    "loss_fold_mean": 2.1847,
+    "train_loss_fold_mean": 1.6822,
+    "fold_loss": [
+     2.1839,
+     2.2192,
+     2.1138,
+     2.2171,
+     2.1896
+    ],
+    "fold_accuracy": [
+     0.3965,
+     0.3965,
+     0.4043,
+     0.3964,
+     0.3881
+    ],
+    "per_game": 0.3968,
+    "decision_weighted": 0.3965,
+    "decision_weighted_by_source": {
+     "114": 0.3914,
+     "119": 0.4025,
+     "123": 0.3954
+    },
+    "against_reference": {
+     "mean": -0.0035,
+     "low": -0.0075,
+     "high": 0.0006,
+     "t": -1.7,
+     "n": 141,
+     "better": 59,
+     "equal": 7,
+     "worse": 75,
+     "per_fold": [
+      -0.0017,
+      -0.006,
+      0.0071,
+      -0.0048,
+      -0.0128
+     ]
+    }
+   },
+   {
+    "epoch": 16,
+    "loss_fold_mean": 2.1835,
+    "train_loss_fold_mean": 1.6592,
+    "fold_loss": [
+     2.2195,
+     2.171,
+     2.1477,
+     2.2025,
+     2.1769
+    ],
+    "fold_accuracy": [
+     0.3894,
+     0.4066,
+     0.4012,
+     0.393,
+     0.396
+    ],
+    "per_game": 0.3976,
+    "decision_weighted": 0.3972,
+    "decision_weighted_by_source": {
+     "114": 0.3958,
+     "119": 0.4008,
+     "123": 0.395
+    },
+    "against_reference": {
+     "mean": -0.0027,
+     "low": -0.007,
+     "high": 0.0016,
+     "t": -1.25,
+     "n": 141,
+     "better": 62,
+     "equal": 5,
+     "worse": 74,
+     "per_fold": [
+      -0.0083,
+      0.0041,
+      0.004,
+      -0.0093,
+      -0.004
+     ]
+    }
+   },
+   {
+    "epoch": 17,
+    "loss_fold_mean": 2.2079,
+    "train_loss_fold_mean": 1.6395,
+    "fold_loss": [
+     2.235,
+     2.2167,
+     2.1203,
+     2.2698,
+     2.1974
+    ],
+    "fold_accuracy": [
+     0.4003,
+     0.3943,
+     0.4018,
+     0.3942,
+     0.392
+    ],
+    "per_game": 0.3969,
+    "decision_weighted": 0.3967,
+    "decision_weighted_by_source": {
+     "114": 0.3933,
+     "119": 0.4,
+     "123": 0.3966
+    },
+    "against_reference": {
+     "mean": -0.0034,
+     "low": -0.0079,
+     "high": 0.0011,
+     "t": -1.49,
+     "n": 141,
+     "better": 64,
+     "equal": 10,
+     "worse": 67,
+     "per_fold": [
+      0.0019,
+      -0.0081,
+      0.0041,
+      -0.0076,
+      -0.0082
+     ]
+    }
+   },
+   {
+    "epoch": 18,
+    "loss_fold_mean": 2.2205,
+    "train_loss_fold_mean": 1.6176,
+    "fold_loss": [
+     2.1974,
+     2.2475,
+     2.1583,
+     2.25,
+     2.2493
+    ],
+    "fold_accuracy": [
+     0.3981,
+     0.4004,
+     0.4027,
+     0.4027,
+     0.388
+    ],
+    "per_game": 0.3988,
+    "decision_weighted": 0.3985,
+    "decision_weighted_by_source": {
+     "114": 0.3941,
+     "119": 0.4035,
+     "123": 0.3977
+    },
+    "against_reference": {
+     "mean": -0.0015,
+     "low": -0.0059,
+     "high": 0.0028,
+     "t": -0.69,
+     "n": 141,
+     "better": 64,
+     "equal": 9,
+     "worse": 68,
+     "per_fold": [
+      -0.0003,
+      -0.0021,
+      0.0056,
+      0.0006,
+      -0.0122
+     ]
+    }
+   }
+  ],
+  "selection": {
+   "rule": "the epoch with the lowest fold-mean validation loss",
+   "checkpoint_epoch": 8,
+   "lowest_loss_epoch": 8,
+   "highest_accuracy_epoch": 9,
+   "lowest_loss_epoch_per_fold": [
+    7,
+    8,
+    7,
+    7,
+    10
+   ],
+   "lowest_loss_is_the_last_epoch": false,
+   "highest_accuracy_minus_lowest_loss": {
+    "mean": 0.0021,
+    "low": -0.0018,
+    "high": 0.006,
+    "t": 1.09,
+    "n": 141,
+    "better": 69,
+    "equal": 7,
+    "worse": 65,
+    "per_fold": [
+     -0.0018,
+     -0.0071,
+     -0.0055,
+     0.0115,
+     0.0156
+    ]
+   }
+  },
+  "full": {
+   "directory": "gaia-rl/runs/bc-141-v4-w256-fc19",
+   "epochs": 18,
+   "games": 141,
+   "decisions": 42148,
+   "steps": 3078,
+   "train_loss": [
+    2.3453,
+    2.1322,
+    2.0372,
+    1.9803,
+    1.9402,
+    1.9164,
+    1.892,
+    1.8641,
+    1.8256,
+    1.7951,
+    1.7584,
+    1.7342,
+    1.7141,
+    1.6707,
+    1.6429,
+    1.6231,
+    1.5944,
+    1.5868
+   ],
+   "capacity_in_metadata": 2048,
+   "last_epoch_read_back_equal": true
+  },
+  "conditions": {
+   "versions": {
+    "dependencies": "numpy=2.5.3;gymnasium=1.2.2;pettingzoo=1.27.0;ray=2.58.0;torch=2.14.0",
+    "engine_build_id": "fc19671c4278246becaa0710511b6d1a37b4049d58290aa8450c1c9f2c9041db",
+    "environment_schema": 1,
+    "python_build_id": "4feceef933b682be5c2c0ecb5f252fcd0e807cdb0fc3dd244b8b28e12a78dd7f"
+   },
+   "torch_threads": 8
+  },
+  "seconds": 5178
+ }
+}
