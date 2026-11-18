@@ -1,0 +1,100 @@
+{
+  "purpose": "fixed-seed ladder: faction sets, one per game, seat order as listed; reused before and after every teacher fix (HANDOFF E178, E180)",
+  "map_seed": "quartet-e-88365",
+  "draw_seed": "fixed-seed-ladder-1",
+  "attempts": 250,
+  "games": [
+    [
+      "Darkanians",
+      "BalTaks",
+      "Itars",
+      "Ivits"
+    ],
+    [
+      "Moweyds",
+      "Nevlas",
+      "Firaks",
+      "BalTaks"
+    ],
+    [
+      "Bescods",
+      "HadschHallas",
+      "BalTaks",
+      "Gleens"
+    ],
+    [
+      "Lantids",
+      "Xenos",
+      "Bescods",
+      "Itars"
+    ],
+    [
+      "Darkanians",
+      "Terrans",
+      "SpaceGiants",
+      "Geodens"
+    ],
+    [
+      "Tinkeroids",
+      "SpaceGiants",
+      "Taklons",
+      "Lantids"
+    ],
+    [
+      "Firaks",
+      "Terrans",
+      "Nevlas",
+      "Darkanians"
+    ],
+    [
+      "Ivits",
+      "Geodens",
+      "Taklons",
+      "Tinkeroids"
+    ],
+    [
+      "Geodens",
+      "Terrans",
+      "Firaks",
+      "Gleens"
+    ],
+    [
+      "Ambas",
+      "Xenos",
+      "Bescods",
+      "Moweyds"
+    ],
+    [
+      "Xenos",
+      "Lantids",
+      "Taklons",
+      "Tinkeroids"
+    ],
+    [
+      "SpaceGiants",
+      "HadschHallas",
+      "Nevlas",
+      "Ambas"
+    ]
+  ],
+  "counts": {
+    "Ambas": 2,
+    "BalTaks": 3,
+    "Bescods": 3,
+    "Darkanians": 3,
+    "Firaks": 3,
+    "Geodens": 3,
+    "Gleens": 2,
+    "HadschHallas": 2,
+    "Itars": 2,
+    "Ivits": 2,
+    "Lantids": 3,
+    "Moweyds": 2,
+    "Nevlas": 3,
+    "SpaceGiants": 3,
+    "Taklons": 3,
+    "Terrans": 3,
+    "Tinkeroids": 3,
+    "Xenos": 3
+  }
+}
