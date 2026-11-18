@@ -1,0 +1,13 @@
+{
+ "kind": "command",
+ "note": "사용자 2026-11-13 「codex 이상 없으면 추천대로 진행해」 + 코덱스 이상 없음(E166 (ㄱ), 11-18): 121a의 all 팔이 9 epoch에서 검증 손실 최저(마지막 점)라 더 긴 학습이 미측정 → epoch 길이 측정 + 93판 전체 자료 체크포인트를 한 번에. 대국 없음, 교사 판정 아님. 스크립트 lab/scratch_v4_epochs.py(6c4ace7, 큐 전에 커밋; 시작할 때 자기 파일에 미커밋 차이가 있거나 체크포인트 폴더가 이미 있으면 거부, 커밋 id를 지표 script_commit에 적음 — E162 규칙). 자료: 121a와 같은 shard(runs/bc-114-v4-shards-fc19 + runs/bc-119-v4-shards-fc19-c4096, 93판 28,098결정, 엔진 fc19671c4278), export 없음. 순서: ① 121a와 같은 쿼텟 층화 5겹, 겹마다 all 팔(그 겹의 학습 판 전부 72–77판; tools/bc_train.py의 망·학습 스텝 그대로 — 폭 256, lr 0.001, 배치 256, torch 시드 0·배치 순서 시드 0, shard 순서대로)을 18 epoch까지, epoch마다 검증 손실과 검증 결정별 적중 기록 ② 같은 설정으로 93판 전부를 18 epoch 학습하며 epoch마다 체크포인트 저장(runs/bc-93-v4-w256-fc19/epoch-01…18, bc_train과 같은 inference.pt + metadata.json; .partial에 쓰고 끝나면 이름 변경; 작업 트리, git 밖). 점검(사전 등록): (가) epoch 1–9는 121a all 팔과 같은 계산 → epoch 9의 겹별 손실·정확도가 121a 값(손실 2.0816·2.0940·2.1144·2.1069·2.1488, 정확도 40.52·40.07·36.47·38.07·39.17%)과 넷째 자리까지 같아야 함(identical_to_121a); 다르면 결정성 깨짐으로 보고하고 121a와의 비교는 쓰지 않음(곡선 자체는 읽음) (나) 마지막 epoch 체크포인트를 다시 읽어 같은 손실·적중(assert) (다) 학습 손실 유한(assert). 사전 등록 읽기: 체크포인트 epoch = 겹 평균 검증 손실이 최저인 epoch(bc_train의 규칙, 117). 최저가 18번째(마지막)면 「아직 안 꺾임」 — 18 epoch 체크포인트를 쓰고 더 긴 학습은 미측정으로 남김(연장은 따로 결정). 정확도: epoch별 판별 정확도(검증 93판 평균)와 epoch 9 대비 짝 차이(93판, t 95% 구간, 좋음/같음/나쁨 판 수, 겹별)를 전부 보고; 주 비교 둘 — (i) 규칙으로 고른 epoch − epoch 9 (ii) epoch 18 − epoch 9: 0 위 → 9 epoch보다 긴 학습이 모방 정확도를 올림, 0 포함 → 미확인(9 epoch와 구별 안 됨), 0 아래 → 긴 학습이 해침. 정확도 최고 epoch가 손실 최저 epoch와 다르면 둘의 짝 차이를 보고: 0 포함 → 손실 규칙 epoch 그대로, 0 위 → 후보 둘(정책 교사는 argmax로 두므로 정확도, PPO 시작값은 분포라 손실)로 보고하고 선택은 정리 턴에서 사용자에게 — 자동 규칙 없음. 보정 없음. 미리 적는 한계: 18개 epoch 중 검증 판으로 고른 값이라 그 epoch의 수치는 낙관적(참고), 시드 1개, 겹 곡선은 72–77판·전체 학습은 93판(epoch당 스텝 약 25% 많음)이라 epoch 수로 옮기는 것이지 스텝 수가 아님, 전체 학습 모델은 자기 검증이 없음, metadata 용량은 기본 2048(E165 (가)(나)(다) 미결정 — 가중치는 용량과 무관), OfflinePolicy 로딩·대국은 정리 턴의 스모크 시드(E158·E164 시드)에서 확인하고 여기서는 안 함. 스모크(봇 턴, 겹 0과 전체 학습을 2 epoch): 겹 0 스텝 182·손실 2.3406 → 2.2228·정확도 31.05 → 34.48%, 전체 228스텝·학습 손실 2.4007 → 2.1873, 다시 읽기 같음, 83초. 예상 ≈ 40분(겹당 ≈ 5.5분 × 5 + 전체 ≈ 7분; 스모크 ≈ 0.2초/스텝), 작업 트리 venv(lab venv에 torch 없음).",
+ "run": [
+  "env",
+  "-C",
+  "/home/sohegi/projects/gaia-work",
+  "/home/sohegi/projects/gaia-work/gaia-rl/.venv/bin/python",
+  "gaia-rl/lab/scratch_v4_epochs.py"
+ ],
+ "metrics": "/home/sohegi/projects/gaia-work/gaia-rl/runs/bc-v4-epochs-93/metrics.json",
+ "timeout_hours": 2
+}
