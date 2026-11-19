@@ -301,6 +301,7 @@ pub async fn create_dev_game(
             &setup,
             faction,
             bot_factions,
+            false,
         )?
     } else {
         build_dev_game_state(&code, &seed, player_id, &bot_player_ids, &setup, faction)?

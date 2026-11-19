@@ -130,6 +130,7 @@ pub fn build_dev_game_state(
         setup,
         faction,
         dev_bot_factions(faction),
+        true,
     )
 }
 
@@ -212,6 +213,9 @@ pub fn ai_game_setup(
     Ok(Some((human, bots.to_vec())))
 }
 
+/// Build a fixed-table game with the named factions. The made-up bids (`simulated_bids`) are for
+/// the manual DEV table only; an AI game leaves every `setup_bid_vp` at 0 so the same seed and
+/// factions score the same.
 pub fn build_game_state_with_factions(
     room_code: &str,
     seed: &str,
@@ -220,6 +224,7 @@ pub fn build_game_state_with_factions(
     setup: &GameSetup,
     faction: FactionId,
     bot_factions: Vec<FactionId>,
+    simulated_bids: bool,
 ) -> ServerResult<GameState> {
     let mut players = vec![(player_id, "DEV".to_string())];
     players.extend(
@@ -247,7 +252,9 @@ pub fn build_game_state_with_factions(
             .map_err(dev_setup_error)?,
         );
     }
-    assign_simulated_dev_bids(&mut state, room_code);
+    if simulated_bids {
+        assign_simulated_dev_bids(&mut state, room_code);
+    }
 
     if !matches!(
         state.phase,
@@ -866,6 +873,29 @@ mod tests {
                     .unwrap_or_else(|error| panic!("DEV round should advance: {error}"));
             }
         }
+    }
+
+    #[test]
+    fn ai_game_seats_carry_no_made_up_bid() {
+        let setup = Randomizer::generate_setup("dev-game-test")
+            .unwrap_or_else(|error| panic!("setup should be generated: {error}"));
+        let state = super::build_game_state_with_factions(
+            "DEV001",
+            "dev-game-test",
+            7,
+            &[8, 9, 10],
+            &setup,
+            FactionId::Terrans,
+            vec![FactionId::Xenos, FactionId::Taklons, FactionId::HadschHallas],
+            false,
+        )
+        .unwrap_or_else(|error| panic!("ai game should be built: {error}"));
+
+        assert!(matches!(
+            state.phase,
+            GamePhase::Setup(SetupPhase::StartingStructures { .. })
+        ));
+        assert!(state.players.iter().all(|player| player.setup_bid_vp == 0));
     }
 
     #[test]
