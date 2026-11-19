@@ -7,12 +7,14 @@ tally RUN_DIR ... [--jobs N] [--top N]
     patterns `base type -> final type` with the value difference (winner - current-choice); three examples per
     leading pattern at the quartiles of that difference (not hand-picked).
 
-case GAME_DIR STEP [--comparisons N]
+case GAME_DIR STEP [--comparisons N] [--group]
     Ask the teacher again at STEP (as tools/explain_decision.py does: no plan memory of the real game) and print, for
     current-choice and for every compared plan, the forecast line of the acting seat (action, VP change) with the end
     VP and value, and the one-step scores of the base and the played move. Also prints whether the recorded move and
     the recorded comparison list (goal, first move, value) are reproduced, and the leaf value of the state before the
-    move and right after each plan's first move.
+    move and right after each plan's first move. --group lists the candidates that differ from the base move only in
+    the tech tile choice, with the score before and after tools/teacher_patches.py tile_prefs_scores, the final score
+    and the state value right after each.
 """
 import argparse
 import gzip
@@ -130,8 +132,20 @@ def case(args):
     budget_teacher.install(spec.get('comparisons', 2) if args.comparisons is None else args.comparisons)
     budget_teacher.set_horizon(spec.get('horizon_incomes', 1))
     module, _, name = spec['factory'].partition(':')
+    target, seen = [], []
+    if args.group:
+        import teacher_patches
+        original_rule = teacher_patches.tile_prefs_scores
+
+        def recorder(env, snap, scores):
+            out = original_rule(env, snap, scores)
+            if target and snap.get('decision_id') == target[0] and not seen:
+                seen.append(([s[0] for s in scores], [s[0] for s in out]))
+            return out
+        teacher_patches.tile_prefs_scores = recorder
     teacher = getattr(importlib.import_module(module), name)(seed, **spec.get('kwargs', {}))
     result, snapshot, recorded = explain_decision.rebuild(game_dir, args.step, teacher)
+    target.append(snapshot['decision_id'])
     _, chosen = teacher.choose(snapshot)
     audit = teacher.last_audit or {}
     scores = audit.get('scores') or []
@@ -163,6 +177,27 @@ def case(args):
         return leaf_value(snap, actor, player, guide_tracks=guide)
     root_value = value_of(snapshot)
     print(f'state value before the move (the leaf value function of the forecast, applied here): {root_value:.2f}')
+    if args.group and control and scores:
+        def group_key(i):
+            return json.dumps({k: v for k, v in candidates[i]['action'].items() if k != 'tech_tile_choice'}, sort_keys=True)
+        base = control['first']
+        members = [i for i in range(len(candidates)) if group_key(i) == group_key(base)]
+        overall = sorted(range(len(scores)), key=lambda i: (-scores[i][0], i))
+        print(f"group of the base move [{base}] {group_key(base)[:100]}: {len(members)} candidates | "
+              f"tile_prefs call at this decision recorded: {bool(seen)}")
+        if seen:
+            before, after_rule = seen[0]
+            top_before = sorted(range(len(before)), key=lambda i: (-before[i], i))[:3]
+            top_after = sorted(range(len(after_rule)), key=lambda i: (-after_rule[i], i))[:3]
+            print(f"  first three of ALL candidates before the rule: {[(i, round(before[i], 2)) for i in top_before]} | "
+                  f"after the rule: {[(i, round(after_rule[i], 2)) for i in top_after]} | final: {[(i, round(scores[i][0], 2)) for i in overall[:3]]}")
+        for i in sorted(members, key=lambda i: (-scores[i][0], i)):
+            choice = {k: v for k, v in (candidates[i]['action'].get('tech_tile_choice') or {}).items() if v is not None}
+            delta = value_of(json.loads(teacher.env.fork(snapshot['decision_id'], i).snapshot_json())) - root_value
+            rule = f'before the rule {seen[0][0][i]:.2f} after {seen[0][1][i]:.2f} | ' if seen else ''
+            reason = str(scores[i][1])[-60:] if len(scores[i]) > 1 else ''
+            print(f"  [{i}] {json.dumps(choice, sort_keys=True, ensure_ascii=False)[:110]} | {rule}final {scores[i][0]:.2f} (rank {overall.index(i)+1}) | "
+                  f"state value right after {delta:+.2f} | ...{reason}")
     for label, index in (('base', control['first'] if control else None), ('played', recorded)):
         if index is not None and scores:
             rank = sorted(range(len(scores)), key=lambda i: (-scores[i][0], i)).index(index) + 1
@@ -196,6 +231,7 @@ def main():
     one.add_argument('step', type=int)
     one.add_argument('--comparisons', type=int)
     one.add_argument('--line', type=int, default=16)
+    one.add_argument('--group', action='store_true')
     args = parser.parse_args()
     (tally if args.command == 'tally' else case)(args)
 
