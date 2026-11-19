@@ -91,6 +91,22 @@ def levels_for(factory):
     return FACTORY_LEVELS.get(factory, LEVELS)
 
 
+def install_budget(budget_teacher, level):
+    """Set the process-wide budget for this request. budget_teacher.install resets TimedPreparationTeacher.choose to
+    its own _choose; a factory's wrapper around that (ships_menu1_all_tier: the booster-tier pick, installed once when
+    a room's teacher is made) is put back, else it is gone from the room's second request on and the worker searches
+    the starting-booster pick the lab teacher answers at once (lab 126, HANDOFF E204)."""
+    from four_factions.timed import TimedPreparationTeacher
+    kept = TimedPreparationTeacher.choose
+    budget_teacher.install(level['comparisons'], max_seconds=level['max_seconds'])
+    budget_teacher.set_horizon(level['horizon_incomes'])
+    inner = kept
+    while inner is not None and inner is not budget_teacher._choose:
+        inner = getattr(inner, '__wrapped__', None)
+    if kept is not budget_teacher._choose and inner is budget_teacher._choose:
+        TimedPreparationTeacher.choose = kept
+
+
 def main():
     # Patch before any teacher module is imported (see fast_teacher.install).
     import fast_teacher
@@ -137,8 +153,7 @@ def main():
                 raise ValueError(f'unknown op {op!r}')
             level = levels[request.get('level', 'normal')]
             # Budget settings are process-wide; set them for every request.
-            budget_teacher.install(level['comparisons'], max_seconds=level['max_seconds'])
-            budget_teacher.set_horizon(level['horizon_incomes'])
+            install_budget(budget_teacher, level)
             original = json.loads(Environment.from_state_json(json.dumps(request['state']), 2000).snapshot_json())
             if original['player'] != request['player']:
                 raise ValueError(f"state awaits player {original['player']}, not {request['player']}")

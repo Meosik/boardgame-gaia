@@ -13,9 +13,11 @@ SEED = 'state-evaluation-ab-20260917-1580'
 
 
 class Worker:
-    def __init__(self):
+    def __init__(self, factory=None):
         env = {**os.environ, 'GAIA_ENGINE_FIXES_2': '1',
                'PYTHONPATH': os.pathsep.join(str(GAIA_RL/p) for p in ('python', 'baseline-teacher-20260917', 'tools'))}
+        if factory:
+            env['GAIA_AI_TEACHER'] = factory
         self.process = subprocess.Popen([sys.executable, str(GAIA_RL/'tools'/'ai_worker.py')], cwd=GAIA_RL, env=env,
                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                         text=True)
@@ -70,6 +72,35 @@ class AiWorkerTests(unittest.TestCase):
         reply = self.worker.ask({'op': 'choose', 'room': 'x', 'state': snapshot['state'],
                                  'player': (snapshot['player']+1) % 4})
         self.assertFalse(reply['ok'])
+
+
+class BoosterTierWorkerTests(unittest.TestCase):
+    """Lab 126 (HANDOFF E204): budget_teacher.install runs on every request and reset TimedPreparationTeacher.choose,
+    so the all_tier factory's booster-tier pick was gone from a room's second request on and the worker searched the
+    starting-booster pick (up to 120 s) where the lab teacher answers at once."""
+    NEW = 'guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier'
+
+    def test_new_factory_keeps_the_booster_tier_pick_after_the_first_request(self):
+        env = Environment('quartet-e-88365', 2000)
+        snapshot = json.loads(env.snapshot_json())
+        for _ in range(60):     # first candidate at every start place: no teacher needed to reach the booster pick
+            if snapshot['candidates'][0]['action'].get('type') == 'SelectStartingBooster':
+                break
+            env.step(snapshot['decision_id'], 0)
+            snapshot = json.loads(env.snapshot_json())
+        else:
+            self.fail('no starting-booster pick reached')
+        worker = Worker(self.NEW)
+        try:
+            for request in range(3):
+                reply = worker.ask({'op': 'choose', 'room': 'tier', 'level': 'hard',
+                                    'state': snapshot['state'], 'player': snapshot['player']})
+                self.assertTrue(reply['ok'], reply)
+                self.assertTrue(str(reply['selected']).startswith('booster-tier-'), (request, reply))
+                self.assertEqual(reply['completed_comparisons'], 0, (request, reply))
+                self.assertLess(reply['seconds'], 5, (request, reply))
+        finally:
+            worker.close()
 
 
 class LevelTableTests(unittest.TestCase):

@@ -77,7 +77,7 @@ def answered_row(reply, wall, rnd, snapshot):
     return {'wall': wall, 'seconds': reply.get('seconds'),
             'completed_comparisons': reply.get('completed_comparisons'),
             'time_capped': reply.get('time_capped'), 'round': rnd,
-            'candidates': len(snapshot['candidates'])}
+            'candidates': len(snapshot['candidates']), 'selected': reply.get('selected')}
 
 
 def run_cell(args, factory, level):
