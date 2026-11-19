@@ -68,7 +68,27 @@ LEVELS = {'easy': {'comparisons': 0, 'horizon_incomes': 2, 'max_seconds': None},
           # Cycle 023: 4 comparisons +13.1 VP/seat over 2, at ~1.9x decision time (mean 6.3 s,
           # p90 18.3 s on a laptop). Opt-in per room; the cap keeps the server's 30 s guard clear.
           'hard': {'comparisons': 4, 'horizon_incomes': 1, 'max_seconds': 20}}
+DEFAULT_FACTORY = 'guide_r1_charge3_lf_more_vm_lf_ts_ships'
+# User 2026-11-19 (HANDOFF E202, "난이도 일단 정리하자 … 전부 최선의 자원으로 최대한의 점수"): the level choices of lab 125
+# are set aside; with lab's current factory every level plays the budget the lab measures that teacher with
+# (spec ...-menu1-all-tier-cap60-p2: 4 comparisons, one income ahead, 60 s cap; the 2 parallel rollouts are
+# GAIA_AI_PARALLEL=2). The budget is tied to the factory: without GAIA_AI_TEACHER the worker keeps the deployed
+# factory and LEVELS above, so a deployment changes nothing until the teacher is switched, and switching back
+# restores both. The 60 s cap (120 s at the starting booster pick) is past the server's default 30 s guard:
+# GAIA_AI_TIMEOUT_SECS has to be raised with the switch.
+LAB_BUDGET = {'comparisons': 4, 'horizon_incomes': 1, 'max_seconds': 60}
+FACTORY_LEVELS = {'guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier': {name: LAB_BUDGET for name in LEVELS}}
 MAX_ROOMS = 256
+
+
+def factory_name(environ=None):
+    """The teacher_patches factory this worker runs: GAIA_AI_TEACHER, else the deployed stack."""
+    return (os.environ if environ is None else environ).get('GAIA_AI_TEACHER') or DEFAULT_FACTORY
+
+
+def levels_for(factory):
+    """Level name -> budget for a factory: its own table when it has one, else LEVELS."""
+    return FACTORY_LEVELS.get(factory, LEVELS)
 
 
 def main():
@@ -87,10 +107,11 @@ def main():
     # 2026-10-19: Terrans track_income joined the base faction table (lab 084, E18), and Lost Fleet
     # games no longer stop on a saved sheden opening label (teacher_patches._value_max).
     # GAIA_AI_TEACHER names another teacher_patches factory (timing runs, tools/worker_times.py);
-    # unset, the worker keeps the deployed stack.
+    # unset, the worker keeps the deployed stack. The level budgets follow the factory (levels_for).
     import teacher_patches
-    make_teacher = getattr(teacher_patches, os.environ.get('GAIA_AI_TEACHER')
-                           or 'guide_r1_charge3_lf_more_vm_lf_ts_ships')
+    factory = factory_name()
+    make_teacher = getattr(teacher_patches, factory)
+    levels = levels_for(factory)
 
     teachers = {}
     out = sys.stdout
@@ -114,7 +135,7 @@ def main():
                 continue
             if op != 'choose':
                 raise ValueError(f'unknown op {op!r}')
-            level = LEVELS[request.get('level', 'normal')]
+            level = levels[request.get('level', 'normal')]
             # Budget settings are process-wide; set them for every request.
             budget_teacher.install(level['comparisons'], max_seconds=level['max_seconds'])
             budget_teacher.set_horizon(level['horizon_incomes'])

@@ -72,5 +72,33 @@ class AiWorkerTests(unittest.TestCase):
         self.assertFalse(reply['ok'])
 
 
+class LevelTableTests(unittest.TestCase):
+    """HANDOFF E202: the lab budget for every level is tied to the teacher switch, the default changes nothing."""
+    NEW = 'guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier'
+
+    def test_default_keeps_the_deployed_factory_and_level_budgets(self):
+        import ai_worker
+        factory = ai_worker.factory_name({})
+        self.assertEqual(factory, 'guide_r1_charge3_lf_more_vm_lf_ts_ships')
+        self.assertEqual(ai_worker.factory_name({'GAIA_AI_TEACHER': ''}), factory)
+        self.assertEqual(ai_worker.levels_for(factory),
+                         {'easy': {'comparisons': 0, 'horizon_incomes': 2, 'max_seconds': None},
+                          'normal': {'comparisons': 2, 'horizon_incomes': 1, 'max_seconds': 5},
+                          'hard': {'comparisons': 4, 'horizon_incomes': 1, 'max_seconds': 20}})
+
+    def test_new_factory_plays_the_lab_budget_at_every_level(self):
+        import ai_worker
+        factory = ai_worker.factory_name({'GAIA_AI_TEACHER': self.NEW})
+        self.assertEqual(factory, self.NEW)
+        levels = ai_worker.levels_for(factory)
+        self.assertEqual(set(levels), {'easy', 'normal', 'hard'})
+        for budget in levels.values():
+            self.assertEqual(budget, {'comparisons': 4, 'horizon_incomes': 1, 'max_seconds': 60})
+
+    def test_another_factory_keeps_the_level_budgets(self):
+        import ai_worker
+        self.assertIs(ai_worker.levels_for('geodens_guide'), ai_worker.LEVELS)
+
+
 if __name__ == '__main__':
     unittest.main()
