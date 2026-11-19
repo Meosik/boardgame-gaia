@@ -104,32 +104,23 @@ class BoosterTierWorkerTests(unittest.TestCase):
 
 
 class LevelTableTests(unittest.TestCase):
-    """HANDOFF E202 / E206: the lab budget of the hard level is tied to the teacher switch, the default changes nothing."""
+    """User 2026-11-19 (HANDOFF E207): the level budgets are not touched; GAIA_AI_TEACHER only picks the factory."""
     NEW = 'guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier'
 
-    def test_default_keeps_the_deployed_factory_and_level_budgets(self):
+    def test_default_keeps_the_deployed_factory(self):
         import ai_worker
         factory = ai_worker.factory_name({})
         self.assertEqual(factory, 'guide_r1_charge3_lf_more_vm_lf_ts_ships')
         self.assertEqual(ai_worker.factory_name({'GAIA_AI_TEACHER': ''}), factory)
-        self.assertEqual(ai_worker.levels_for(factory),
+        self.assertEqual(ai_worker.factory_name({'GAIA_AI_TEACHER': self.NEW}), self.NEW)
+
+    def test_level_budgets_are_the_deployed_ones(self):
+        import ai_worker
+        self.assertEqual(ai_worker.LEVELS,
                          {'easy': {'comparisons': 0, 'horizon_incomes': 2, 'max_seconds': None},
                           'normal': {'comparisons': 2, 'horizon_incomes': 1, 'max_seconds': 5},
                           'hard': {'comparisons': 4, 'horizon_incomes': 1, 'max_seconds': 20}})
-
-    def test_new_factory_plays_the_lab_budget_at_hard_only(self):
-        import ai_worker
-        factory = ai_worker.factory_name({'GAIA_AI_TEACHER': self.NEW})
-        self.assertEqual(factory, self.NEW)
-        levels = ai_worker.levels_for(factory)
-        self.assertEqual(set(levels), {'easy', 'normal', 'hard'})
-        self.assertEqual(levels['hard'], {'comparisons': 4, 'horizon_incomes': 1, 'max_seconds': 60})
-        self.assertEqual(levels['easy'], ai_worker.LEVELS['easy'])
-        self.assertEqual(levels['normal'], ai_worker.LEVELS['normal'])
-
-    def test_another_factory_keeps_the_level_budgets(self):
-        import ai_worker
-        self.assertIs(ai_worker.levels_for('geodens_guide'), ai_worker.LEVELS)
+        self.assertFalse(hasattr(ai_worker, 'FACTORY_LEVELS'))
 
 
 if __name__ == '__main__':
