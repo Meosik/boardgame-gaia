@@ -42,6 +42,7 @@ import { GameLog } from './components/GameLog';
 import { SidebarTurnControls } from './components/SidebarTurnControls';
 import { TopPassControl } from './components/TopPassControl';
 import { PlayerActionShelf } from './components/PlayerActionShelf';
+import { TeacherHint } from './components/TeacherHint';
 import { GameOverScreen } from './components/GameOverScreen';
 import { TurnBanner } from './components/TurnBanner';
 import { ActionToast } from './components/ActionToast';
@@ -1450,6 +1451,10 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
           />
         </section>
 
+        {/* Outside the research row: that row is a grid with named areas. */}
+        {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && (
+          <TeacherHint roomCode={roomCode} sessionToken={sessionToken} state={gameState} />
+        )}
         <section className="game-table-section game-table-research-row" id="game-research-section">
           <article className="game-table-card game-table-tech-requirement-card">
             <h2>고급 기술 조건</h2>

@@ -477,10 +477,51 @@ pub async fn get_room(
         "player_count": room.display_players().len(),
         "state":        format!("{:?}", room.state),
         "host_player_id": room.host_player,
+        // The other seats are played by the teacher workers: the game screen offers hints.
+        "ai_game":      app.ai.is_some() && crate::ai::is_ai_room(room),
         "players":      room.players.iter()
             .map(|(id, nick, ready)| serde_json::json!({ "id": id, "player_id": id, "nickname": nick, "ready": ready }))
             .collect::<Vec<_>>(),
     })))
+}
+
+#[derive(Deserialize)]
+pub struct AiHintRequest {
+    pub session_token: String,
+    /// The room revision the player is looking at; the answer is only for that position.
+    pub expected_revision: u64,
+}
+
+/// What the teacher would play for the human seat of an AI game right now (`crate::ai::hint`).
+/// Read-only: nothing is applied and the revision does not change. The reply repeats the
+/// revision it belongs to, so the client can drop an answer for a position it has left.
+pub async fn ai_hint(
+    State(app): State<AppState>,
+    Path(code): Path<String>,
+    Json(req): Json<AiHintRequest>,
+) -> ServerResult<Json<serde_json::Value>> {
+    use crate::ai::HintError;
+    let (player, session_room) = ReconnectService::validate_session(&app, &req.session_token).await?;
+    if session_room != code {
+        return Err(ServerError::InvalidSession);
+    }
+    app.ensure_room_loaded(&code).await?;
+    match crate::ai::hint(&app, &code, player, req.expected_revision).await {
+        Ok(decision) => Ok(Json(serde_json::json!({
+            "revision": req.expected_revision,
+            "decision": decision,
+        }))),
+        Err(HintError::NotAnAiGame) => Err(ServerError::InvalidAction(
+            "teacher hints are for the human seat of an AI game".into(),
+        )),
+        Err(HintError::NotYourDecision) => Err(ServerError::NotYourTurn),
+        Err(HintError::Stale) => Err(ServerError::InvalidAction(
+            "the position changed while the teacher was thinking".into(),
+        )),
+        Err(HintError::NoAnswer) => Err(ServerError::Internal(
+            "the teacher gave no answer".into(),
+        )),
+    }
 }
 
 /// Read-only preview of the board/tiles the current `room.setup`/`room.seed` would produce if the

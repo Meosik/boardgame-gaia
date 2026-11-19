@@ -25,6 +25,12 @@ export interface AiGameTable {
   aiFactions?: FactionId[];
 }
 
+/** The teacher's move for one position: `decision` is `{ phase, action }` as the engine names it. */
+export interface AiHintReply {
+  revision: number;
+  decision: unknown;
+}
+
 const BASE = '/api';
 
 // Same "q,r" string <-> { q, r } object boundary conversion the WebSocket
@@ -121,6 +127,22 @@ export const api = {
 
   getRoom(code: string): Promise<RoomInfo> {
     return request(`${BASE}/rooms/${code}`);
+  },
+
+  /** Whether the room's other seats are played by the AI — the game screen then offers hints. */
+  async aiGame(code: string): Promise<boolean> {
+    const room = await request<{ ai_game?: boolean }>(`${BASE}/rooms/${code}`);
+    return room.ai_game === true;
+  },
+
+  /** What the teacher would play for the human seat at `revision` (nothing is applied). The
+   * teacher searches before it answers, so this can take a minute; the reply repeats the
+   * revision it belongs to. */
+  aiHint(code: string, sessionToken: string, revision: number): Promise<AiHintReply> {
+    return request(`${BASE}/rooms/${code}/ai-hint`, {
+      method: 'POST',
+      body: JSON.stringify({ session_token: sessionToken, expected_revision: revision }),
+    });
   },
 
   listRooms(): Promise<RoomSummary[]> {

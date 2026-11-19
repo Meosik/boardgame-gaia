@@ -20,7 +20,7 @@
 //! engine sources it was made from and the image records its own (`engine-fingerprint` in
 //! `GAIA_AI_DIR`); the server runs a version only while the two are equal, so a version left
 //! as `current` across an engine deploy falls back to the image teacher by itself.
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -36,11 +36,11 @@ use gaia_engine::{
 use serde::Deserialize;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, OnceCell};
 
 use crate::{
     coordinator::{self, CommandError},
-    room::manager::RoomState,
+    room::manager::{Room, RoomState},
     services::{
         dev_game::{fallback_step, required_player},
         game_action::apply_logged_action,
@@ -193,7 +193,15 @@ pub struct AiPool {
     /// Committed AI moves and how many of them used the DEV fallback instead of the teacher.
     moves: AtomicUsize,
     fallbacks: AtomicUsize,
+    /// Teacher hints for the human seat (`hint`), by (room, revision, player): one teacher run
+    /// per position however often the player asks, and the answer stays until the room moves on.
+    hints: std::sync::Mutex<HashMap<HintKey, Arc<OnceCell<AiDecision>>>>,
 }
+
+type HintKey = (String, u64, PlayerId);
+
+/// Hint cells kept at once (one per room that asked); past it the map starts over.
+const MAX_HINT_ROOMS: usize = 256;
 
 impl AiPool {
     pub fn new(config: AiConfig) -> Self {
@@ -207,7 +215,24 @@ impl AiPool {
             driving: std::sync::Mutex::new(HashSet::new()),
             moves: AtomicUsize::new(0),
             fallbacks: AtomicUsize::new(0),
+            hints: std::sync::Mutex::new(HashMap::new()),
         }
+    }
+
+    /// The cell of one hint position. Requests for the same position share it, so a second
+    /// press joins the run already going on instead of starting another; cells of the room's
+    /// earlier revisions are dropped, since a room never returns to them.
+    fn hint_cell(&self, room_code: &str, revision: u64, player: PlayerId) -> Arc<OnceCell<AiDecision>> {
+        let mut hints = self
+            .hints
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        hints.retain(|(room, cell_revision, _), _| room != room_code || *cell_revision == revision);
+        let key = (room_code.to_string(), revision, player);
+        if !hints.contains_key(&key) && hints.len() >= MAX_HINT_ROOMS {
+            hints.clear();
+        }
+        hints.entry(key).or_default().clone()
     }
 
     /// (committed AI moves, of which fallback moves) since the pool started.
@@ -378,6 +403,21 @@ impl AiPool {
         level: Option<&str>,
         teacher: Option<&str>,
     ) -> Option<AiDecision> {
+        self.choose_in(room_code, room_code, state, player, level, teacher)
+            .await
+    }
+
+    /// `choose` with the worker's per-room teacher memory kept under `memory` instead of the
+    /// room code. The worker slot is still the room's, so a room never runs two searches at once.
+    async fn choose_in(
+        &self,
+        room_code: &str,
+        memory: &str,
+        state: &GameState,
+        player: PlayerId,
+        level: Option<&str>,
+        teacher: Option<&str>,
+    ) -> Option<AiDecision> {
         let teacher = teacher.filter(|version| match self.version_dir(version) {
             Ok(_) => true,
             Err(reason) => {
@@ -410,7 +450,7 @@ impl AiPool {
         let worker = &mut guard.last_mut()?.1;
         let level = level.unwrap_or(&self.config.level);
         let request = serde_json::json!({
-            "op": "choose", "room": room_code, "player": player,
+            "op": "choose", "room": memory, "player": player,
             "level": level, "state": state,
         });
         let outcome = tokio::time::timeout(
@@ -595,6 +635,107 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
     }
 }
 
+/// A room whose other seats are played by the teacher workers: the same test `next_ai_turn`
+/// applies (the pool itself must exist too — `AppState::ai`).
+pub fn is_ai_room(room: &Room) -> bool {
+    room.dev_human_player.is_some()
+        && room
+            .game_state
+            .as_ref()
+            .is_some_and(|state| state.tutorial.is_none() && state.dev_controller.is_none())
+}
+
+/// Why no hint was given.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HintError {
+    /// Not an AI game, not its human seat, or the game is over.
+    NotAnAiGame,
+    /// The room is at `revision` but waits for another seat (or for an undo answer).
+    NotYourDecision,
+    /// The room is no longer at the revision the hint was asked for.
+    Stale,
+    /// The teacher was unavailable, erred or timed out.
+    NoAnswer,
+}
+
+/// The position a hint is asked for: `room` must be an AI game at `revision`, waiting for its
+/// human seat `player`. Checked before the teacher runs and again when it answers.
+fn hint_position(room: &Room, player: PlayerId, revision: u64) -> Result<&GameState, HintError> {
+    if !is_ai_room(room) || room.dev_human_player != Some(player) {
+        return Err(HintError::NotAnAiGame);
+    }
+    let state = room.game_state.as_ref().ok_or(HintError::NotAnAiGame)?;
+    if matches!(state.phase, GamePhase::Ended { .. }) {
+        return Err(HintError::NotAnAiGame);
+    }
+    if room.revision != revision {
+        return Err(HintError::Stale);
+    }
+    if required_player(state) != Some(player) || state.undo_state.pending_request.is_some() {
+        return Err(HintError::NotYourDecision);
+    }
+    Ok(state)
+}
+
+/// What the teacher would play for the human seat of an AI game at `revision`. Nothing is
+/// applied; the player only reads it.
+///
+/// The request is tied to the position: it is refused unless the room is at `revision` and
+/// waits for `player`, and the answer is dropped (`Stale`) when the room moved on while the
+/// teacher was thinking — the rule `drive` applies to an AI move. Requests for one position
+/// share one teacher run (`AiPool::hint_cell`).
+///
+/// The teacher memory is the room's own with a `#hint` suffix, so hints never touch what the
+/// AI seats remember; the worker slot is the room's, so a hint waits for that slot like any
+/// decision (other rooms share it, and that wait is outside the worker guard).
+pub async fn hint(
+    app: &AppState,
+    room_code: &str,
+    player: PlayerId,
+    revision: u64,
+) -> Result<AiDecision, HintError> {
+    let pool = app.ai.clone().ok_or(HintError::NotAnAiGame)?;
+    let (state, level, teacher) = {
+        let rooms = app.rooms.read().await;
+        let room = rooms.get_room(room_code).ok_or(HintError::NotAnAiGame)?;
+        let state = hint_position(room, player, revision)?.clone();
+        (state, room.ai_level.clone(), room.ai_teacher.clone())
+    };
+    let cell = pool.hint_cell(room_code, revision, player);
+    let decision = cell
+        .get_or_try_init(|| async {
+            // The teacher workers do not play the setup auction (see `drive`).
+            let answer = match crate::ai_bidding::decide(&state, player) {
+                Some(action) => Some(AiDecision::Setup(action)),
+                None => {
+                    pool.choose_in(
+                        room_code,
+                        &format!("{room_code}#hint"),
+                        &state,
+                        player,
+                        level.as_deref(),
+                        teacher.as_deref(),
+                    )
+                    .await
+                }
+            };
+            answer.ok_or(HintError::NoAnswer)
+        })
+        .await?
+        .clone();
+    {
+        let rooms = app.rooms.read().await;
+        let room = rooms.get_room(room_code).ok_or(HintError::Stale)?;
+        hint_position(room, player, revision)?;
+    }
+    // The record of a hint the player was shown, by the revision it belongs to.
+    log::info!(
+        "AI hint room={room_code} revision={revision} player={player} decision={}",
+        serde_json::to_string(&decision).unwrap_or_default()
+    );
+    Ok(decision)
+}
+
 fn apply_decision(
     state: &mut GameState,
     player: PlayerId,
@@ -610,6 +751,91 @@ fn apply_decision(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An AI game at revision 5 and the seat it waits for, made the room's human seat.
+    fn ai_room_waiting_for_its_human() -> (Room, PlayerId) {
+        use gaia_engine::{game_state::FactionId, Randomizer};
+        let setup = Randomizer::generate_setup("hint-test")
+            .unwrap_or_else(|error| panic!("setup should be generated: {error}"));
+        let state = crate::services::dev_game::build_game_state_with_factions(
+            "HINT01",
+            "hint-test",
+            7,
+            &[8, 9, 10],
+            &setup,
+            FactionId::Terrans,
+            vec![FactionId::Xenos, FactionId::Taklons, FactionId::HadschHallas],
+            false,
+        )
+        .unwrap_or_else(|error| panic!("ai game should be built: {error}"));
+        let to_move = required_player(&state).expect("a seat must act at the start");
+        let room = Room {
+            code: "HINT01".into(),
+            name: "HINT01".into(),
+            password_hash: None,
+            host_player: to_move,
+            players: vec![(to_move, "나".into(), true)],
+            state: RoomState::InGame,
+            game_state: Some(state),
+            setup: Some(setup),
+            seed: "hint-test".into(),
+            revision: 5,
+            connected: HashSet::from([to_move]),
+            paused: false,
+            dev_human_player: Some(to_move),
+            dev_bot_action_counts: HashMap::new(),
+            dev_bot_action_round: 0,
+            ai_level: Some("hard".into()),
+            ai_teacher: None,
+        };
+        (room, to_move)
+    }
+
+    #[test]
+    fn a_hint_belongs_to_the_human_seat_at_the_asked_revision() {
+        let (mut room, human) = ai_room_waiting_for_its_human();
+        assert!(is_ai_room(&room));
+        assert!(hint_position(&room, human, 5).is_ok());
+        // The room moved on (or the request is for a position not reached yet).
+        assert_eq!(hint_position(&room, human, 4).err(), Some(HintError::Stale));
+        assert_eq!(hint_position(&room, human, 6).err(), Some(HintError::Stale));
+        // Another seat is never given a hint, whoever is to move.
+        let other = [7, 8, 9, 10]
+            .into_iter()
+            .find(|seat| *seat != human)
+            .unwrap();
+        assert_eq!(
+            hint_position(&room, other, 5).err(),
+            Some(HintError::NotAnAiGame)
+        );
+        // The human seat while an AI seat is to move.
+        room.dev_human_player = Some(other);
+        assert_eq!(
+            hint_position(&room, other, 5).err(),
+            Some(HintError::NotYourDecision)
+        );
+        // A room without AI seats.
+        room.dev_human_player = None;
+        assert!(!is_ai_room(&room));
+        assert_eq!(
+            hint_position(&room, human, 5).err(),
+            Some(HintError::NotAnAiGame)
+        );
+    }
+
+    #[test]
+    fn hint_requests_for_one_position_share_one_cell() {
+        let pool = pool_with_teachers(None);
+        let first = pool.hint_cell("ROOM01", 5, 7);
+        assert!(Arc::ptr_eq(&first, &pool.hint_cell("ROOM01", 5, 7)));
+        let other_room = pool.hint_cell("ROOM02", 5, 7);
+        assert!(!Arc::ptr_eq(&first, &other_room));
+        // The room moved on: its old cell is gone, the other room's stays.
+        let next = pool.hint_cell("ROOM01", 6, 7);
+        assert!(!Arc::ptr_eq(&first, &next));
+        assert!(Arc::ptr_eq(&other_room, &pool.hint_cell("ROOM02", 5, 7)));
+        assert_eq!(pool.hints.lock().unwrap().len(), 2);
+    }
 
     #[test]
     fn hard_level_gets_a_longer_worker_guard() {
