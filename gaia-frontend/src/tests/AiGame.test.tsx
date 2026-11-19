@@ -23,9 +23,9 @@ describe('AI game', () => {
     const onRoomCreated = vi.fn();
     render(<CreateRoomView onRoomCreated={onRoomCreated} onBack={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
-    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
+    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' }));
     await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
-    expect(createAiGame).toHaveBeenCalledWith('나', 'normal', {
+    expect(createAiGame).toHaveBeenCalledWith('나', 'hard', {
       seed: 'quartet-e-88365',
       faction: 'Darkanians',
       aiFactions: ['BalTaks', 'Itars', 'Ivits'],
@@ -73,9 +73,9 @@ describe('AI game', () => {
     fireEvent.change(screen.getByLabelText('종족 묶음'), { target: { value: '3' } });
     expect(screen.getByLabelText('내 종족')).toHaveValue('Lantids');
     fireEvent.change(screen.getByLabelText('내 종족'), { target: { value: 'Bescods' } });
-    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
+    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' }));
     await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
-    expect(createAiGame).toHaveBeenCalledWith('나', 'normal', {
+    expect(createAiGame).toHaveBeenCalledWith('나', 'hard', {
       seed: 'quartet-e-88365',
       faction: 'Bescods',
       aiFactions: ['Lantids', 'Xenos', 'Itars'],
@@ -103,13 +103,19 @@ describe('AI game', () => {
   it('asks for a nickname before starting', () => {
     const createAiGame = vi.spyOn(api, 'createAiGame');
     render(<CreateRoomView onRoomCreated={vi.fn()} onBack={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
+    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' }));
     expect(createAiGame).not.toHaveBeenCalled();
     expect(screen.getByText('닉네임을 입력해주세요')).toBeInTheDocument();
   });
 
   it('is not offered in the manual DEV controller flow', () => {
     render(<CreateRoomView manualControl onRoomCreated={vi.fn()} onBack={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'AI 3명과 대전 (어려움)' })).not.toBeInTheDocument();
+  });
+
+  it('offers only the hard level', () => {
+    render(<CreateRoomView onRoomCreated={vi.fn()} onBack={vi.fn()} />);
     expect(screen.queryByRole('button', { name: 'AI 3명과 대전' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' })).toBeInTheDocument();
   });
 });

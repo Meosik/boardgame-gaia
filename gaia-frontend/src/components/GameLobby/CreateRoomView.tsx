@@ -239,24 +239,14 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
           </button>
         )}
         {!manualControl && (
-          <>
-            <button
-              className="btn btn-secondary"
-              onClick={() => handleCreateAiGame('normal')}
-              disabled={loading}
-              title="위에서 고른 종족 묶음으로 AI 3명과 대전합니다. 무작위 맵을 고르면 종족과 차례를 AI와 비딩으로 정합니다. 방 제목·비밀번호는 쓰지 않습니다."
-            >
-              AI 3명과 대전
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => handleCreateAiGame('hard')}
-              disabled={loading}
-              title="더 강한 AI 3명과 대전합니다. AI가 수마다 더 오래 생각합니다(평균 몇 초, 길면 20초)."
-            >
-              AI 3명과 대전 (어려움)
-            </button>
-          </>
+          <button
+            className="btn btn-secondary"
+            onClick={() => handleCreateAiGame('hard')}
+            disabled={loading}
+            title="위에서 고른 종족 묶음으로 AI 3명과 대전합니다. 무작위 맵을 고르면 종족과 차례를 AI와 비딩으로 정합니다. 방 제목·비밀번호는 쓰지 않습니다. AI가 수마다 오래 생각합니다(길면 20초)."
+          >
+            AI 3명과 대전 (어려움)
+          </button>
         )}
         <button className="btn btn-primary" onClick={handleCreate} disabled={loading}>
           {loading ? '생성 중...' : '방 만들기'}
