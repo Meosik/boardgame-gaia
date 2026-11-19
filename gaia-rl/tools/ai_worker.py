@@ -69,15 +69,15 @@ LEVELS = {'easy': {'comparisons': 0, 'horizon_incomes': 2, 'max_seconds': None},
           # p90 18.3 s on a laptop). Opt-in per room; the cap keeps the server's 30 s guard clear.
           'hard': {'comparisons': 4, 'horizon_incomes': 1, 'max_seconds': 20}}
 DEFAULT_FACTORY = 'guide_r1_charge3_lf_more_vm_lf_ts_ships'
-# User 2026-11-19 (HANDOFF E202, "난이도 일단 정리하자 … 전부 최선의 자원으로 최대한의 점수"): the level choices of lab 125
-# are set aside; with lab's current factory every level plays the budget the lab measures that teacher with
-# (spec ...-menu1-all-tier-cap60-p2: 4 comparisons, one income ahead, 60 s cap; the 2 parallel rollouts are
-# GAIA_AI_PARALLEL=2). The budget is tied to the factory: without GAIA_AI_TEACHER the worker keeps the deployed
-# factory and LEVELS above, so a deployment changes nothing until the teacher is switched, and switching back
-# restores both. The 60 s cap (120 s at the starting booster pick) is past the server's default 30 s guard:
+# User 2026-11-19 (HANDOFF E206, "난이도를 건들지마 일단 어려움만 고정해", replacing E202's "every level"): with lab's
+# current factory only the hard level plays the budget the lab measures that teacher with (spec
+# ...-menu1-all-tier-cap60-p2: 4 comparisons, one income ahead, 60 s cap; the 2 parallel rollouts are
+# GAIA_AI_PARALLEL=2); easy and normal keep LEVELS above. The budget is tied to the factory: without
+# GAIA_AI_TEACHER the worker keeps the deployed factory and LEVELS, so a deployment changes nothing until the
+# teacher is switched, and switching back restores both. The 60 s cap is past the server's default 30 s guard:
 # GAIA_AI_TIMEOUT_SECS has to be raised with the switch.
 LAB_BUDGET = {'comparisons': 4, 'horizon_incomes': 1, 'max_seconds': 60}
-FACTORY_LEVELS = {'guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier': {name: LAB_BUDGET for name in LEVELS}}
+FACTORY_LEVELS = {'guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier': {**LEVELS, 'hard': LAB_BUDGET}}
 MAX_ROOMS = 256
 
 
