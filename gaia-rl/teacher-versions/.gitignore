@@ -1,0 +1,4 @@
+# Mounted as /opt/gaia-teachers when GAIA_TEACHERS_DIR is unset (docker-compose.yml). Versions made
+# by tools/teacher_version.py are not committed.
+*
+!.gitignore

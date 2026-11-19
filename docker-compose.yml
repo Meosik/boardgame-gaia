@@ -50,12 +50,19 @@ services:
       GAIA_AI_WORKERS: ${GAIA_AI_WORKERS:-6}
       GAIA_AI_LEVEL: ${GAIA_AI_LEVEL:-normal}
       GAIA_AI_PARALLEL: ${GAIA_AI_PARALLEL:-0}
+      # Factory of the teacher built into the image (gaia-rl/tools/ai_worker.py); empty = its default.
+      GAIA_AI_TEACHER: ${GAIA_AI_TEACHER:-}
+      # Promoted teacher versions (gaia-server/src/ai.rs; made with gaia-rl/tools/teacher_version.py).
+      GAIA_AI_TEACHERS_DIR: /opt/gaia-teachers
     # AI replays and live spectating are served from host folders, so new recordings appear
     # without rebuilding the image. Point these at folders outside any checkout in .env (the
     # lab and the Discord bot write there); unset, they serve the repository's copies.
     volumes:
       - ${GAIA_REPLAY_DIR:-./gaia-frontend/public/ai-replays}:/app/gaia-frontend/dist/ai-replays:ro
       - ${GAIA_LIVE_DIR:-./gaia-frontend/public/ai-live}:/app/gaia-frontend/dist/ai-live:ro
+      # Teacher versions: point GAIA_TEACHERS_DIR at a folder outside any checkout in .env. Unset,
+      # the empty repository folder is mounted and AI seats use the teacher built into the image.
+      - ${GAIA_TEACHERS_DIR:-./gaia-rl/teacher-versions}:/opt/gaia-teachers:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
       interval: 10s
