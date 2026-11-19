@@ -76,6 +76,9 @@ pub struct Room {
     /// AI difficulty chosen when an AI game was created (`easy`/`normal`/`hard`); `None` uses
     /// the server's `GAIA_AI_LEVEL`.
     pub ai_level: Option<String>,
+    /// Teacher version this AI game is pinned to, read from `GAIA_AI_TEACHERS_DIR/current`
+    /// when the game was created (`crate::ai`); `None` = the teacher built into the image.
+    pub ai_teacher: Option<String>,
 }
 
 impl Room {
@@ -263,6 +266,7 @@ impl RoomManager {
             dev_bot_action_counts: HashMap::new(),
             dev_bot_action_round: 0,
             ai_level: None,
+            ai_teacher: None,
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))

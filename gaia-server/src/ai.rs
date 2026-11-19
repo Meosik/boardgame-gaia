@@ -7,6 +7,16 @@
 //! AI moves never run inside a room lock: the driver reads the state, asks a worker, then
 //! applies the reply through `coordinator::apply_server_transition` only if the room has not
 //! moved on meanwhile. A failed or slow worker falls back to the DEV bots' simple legal move.
+//!
+//! Teacher versions (optional, `GAIA_AI_TEACHERS_DIR`): a folder outside the image holding one
+//! sub-folder per promoted teacher (`tools/teacher_version.py`), each mirroring the repository
+//! layout (`<version>/gaia-rl/tools/ai_worker.py`, ...) plus `<version>/teacher.json`, and a
+//! one-line file `current` naming the version for new rooms. A room is pinned to the version
+//! that was current when it was created and keeps that version's worker until it ends, so a
+//! promotion never changes a running game. Without the folder, without `current`, or when the
+//! named version does not start, rooms use the teacher built into the image (`GAIA_AI_DIR`).
+//! A version carries only Python and data: it runs on the image's native engine module, so a
+//! change to the engine still needs a deploy.
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -46,13 +56,16 @@ pub struct AiConfig {
     pub workers: usize,
     pub level: String,
     pub timeout: Duration,
+    /// Folder of promoted teacher versions (`GAIA_AI_TEACHERS_DIR`); `None` = image teacher only.
+    pub teachers: Option<PathBuf>,
 }
 
 impl AiConfig {
     /// `GAIA_AI_DIR` (required), `GAIA_AI_PYTHON` (default `<dir>/.venv/bin/python`),
     /// `GAIA_AI_WORKERS` (default 6), `GAIA_AI_LEVEL` (`normal` or `easy`),
     /// `GAIA_AI_TIMEOUT_SECS` (default 30, a hung-worker guard; the teacher caps itself at 5 s;
-    /// the "hard" level gets at least 60 s, see `guard_timeout`).
+    /// the "hard" level gets at least 60 s, see `guard_timeout`),
+    /// `GAIA_AI_TEACHERS_DIR` (optional, see the module comment).
     pub fn from_env() -> Option<Self> {
         let dir = PathBuf::from(
             std::env::var("GAIA_AI_DIR")
@@ -73,15 +86,42 @@ impl AiConfig {
             .and_then(|value| value.parse().ok())
             .map(Duration::from_secs)
             .unwrap_or(Duration::from_secs(30));
+        let teachers = std::env::var("GAIA_AI_TEACHERS_DIR")
+            .ok()
+            .filter(|dir| !dir.trim().is_empty())
+            .map(PathBuf::from);
         Some(Self {
             dir,
             python,
             workers,
             level,
             timeout,
+            teachers,
         })
     }
 }
+
+/// A version name is one plain folder name, so it can never point outside the versions folder.
+fn valid_version(name: &str) -> bool {
+    !name.is_empty()
+        && !name.starts_with('.')
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+}
+
+/// `<version>/teacher.json`, written by `tools/teacher_version.py`.
+#[derive(Deserialize, Default)]
+struct TeacherMeta {
+    /// The `teacher_patches` factory; absent = the default of that version's `ai_worker.py`.
+    factory: Option<String>,
+}
+
+/// How long a version's worker may take to import the teacher and answer its first ping.
+const VERSION_START_TIMEOUT: Duration = Duration::from_secs(60);
+/// Workers of this many teacher versions may stay alive in one pool slot; the least recently
+/// used one is stopped first (its rooms' plan memory is rebuilt if they move again).
+const VERSIONS_PER_SLOT: usize = 3;
 
 /// The hung-worker guard for one request. "hard" caps itself at 20 s, but a comparison already
 /// running at the cap finishes first (cycle 025: max 33 s on a laptop), so it gets at least 60 s.
@@ -106,9 +146,27 @@ struct Reply {
     error: Option<String>,
 }
 
+/// One request line to a worker and its one reply line.
+async fn exchange(worker: &mut Worker, request: &serde_json::Value) -> std::io::Result<Reply> {
+    let mut line = serde_json::to_string(request).map_err(std::io::Error::other)?;
+    line.push('\n');
+    worker.stdin.write_all(line.as_bytes()).await?;
+    worker.stdin.flush().await?;
+    let mut response = String::new();
+    if worker.stdout.read_line(&mut response).await? == 0 {
+        return Err(std::io::Error::other("AI worker exited"));
+    }
+    serde_json::from_str::<Reply>(&response).map_err(std::io::Error::other)
+}
+
 pub struct AiPool {
     config: AiConfig,
-    workers: Vec<Mutex<Option<Worker>>>,
+    /// Per slot: the live workers by teacher version (`None` = the image teacher), most
+    /// recently used last. The slot lock is held for a whole decision, so the number of slots
+    /// still bounds CPU use however many versions are alive.
+    workers: Vec<Mutex<Vec<(Option<String>, Worker)>>>,
+    /// Versions whose worker started and answered a ping in this server process.
+    started_versions: Mutex<HashSet<String>>,
     driving: std::sync::Mutex<HashSet<String>>,
     /// Committed AI moves and how many of them used the DEV fallback instead of the teacher.
     moves: AtomicUsize,
@@ -117,10 +175,13 @@ pub struct AiPool {
 
 impl AiPool {
     pub fn new(config: AiConfig) -> Self {
-        let workers = (0..config.workers).map(|_| Mutex::new(None)).collect();
+        let workers = (0..config.workers)
+            .map(|_| Mutex::new(Vec::new()))
+            .collect();
         Self {
             config,
             workers,
+            started_versions: Mutex::new(HashSet::new()),
             driving: std::sync::Mutex::new(HashSet::new()),
             moves: AtomicUsize::new(0),
             fallbacks: AtomicUsize::new(0),
@@ -135,17 +196,114 @@ impl AiPool {
         )
     }
 
-    fn spawn_worker(&self) -> std::io::Result<Worker> {
+    /// The `gaia-rl` folder of a promoted version, if the name is valid and its worker exists.
+    fn version_dir(&self, version: &str) -> Option<PathBuf> {
+        let root = self.config.teachers.as_ref()?;
+        if !valid_version(version) {
+            return None;
+        }
+        let dir = root.join(version).join("gaia-rl");
+        dir.join("tools/ai_worker.py").is_file().then_some(dir)
+    }
+
+    /// The version named by `<GAIA_AI_TEACHERS_DIR>/current`. `None` = the image teacher: no
+    /// versions folder, no `current` file, an empty one, or a name without a usable folder.
+    pub fn current_teacher(&self) -> Option<String> {
+        let root = self.config.teachers.as_ref()?;
+        let text = std::fs::read_to_string(root.join("current")).ok()?;
+        let version = text.trim();
+        if version.is_empty() {
+            return None;
+        }
+        if self.version_dir(version).is_none() {
+            log::error!(
+                "teacher version {version:?} named by `current` has no usable folder; \
+                 new AI rooms use the image teacher"
+            );
+            return None;
+        }
+        Some(version.to_string())
+    }
+
+    /// The teacher version a new AI room is pinned to. A version is used only after its worker
+    /// has started and answered a ping once in this server process (its imports and factory
+    /// name are good); otherwise the room gets the image teacher (`None`).
+    pub async fn pin_teacher(&self) -> Option<String> {
+        let version = self.current_teacher()?;
+        let mut started = self.started_versions.lock().await;
+        if started.contains(&version) {
+            return Some(version);
+        }
+        let ping = async {
+            let mut worker = self.spawn_worker(Some(&version))?;
+            exchange(&mut worker, &serde_json::json!({"op": "ping"})).await
+        };
+        match tokio::time::timeout(VERSION_START_TIMEOUT, ping).await {
+            Ok(Ok(Reply { ok: true, .. })) => {
+                log::info!("teacher version {version} started; new AI rooms use it");
+                started.insert(version.clone());
+                Some(version)
+            }
+            Ok(Ok(reply)) => {
+                log::error!(
+                    "teacher version {version} refused a ping ({}); new AI rooms use the image teacher",
+                    reply.error.unwrap_or_default()
+                );
+                None
+            }
+            Ok(Err(error)) => {
+                log::error!(
+                    "teacher version {version} does not start ({error}); new AI rooms use the image teacher"
+                );
+                None
+            }
+            Err(_) => {
+                log::error!(
+                    "teacher version {version} did not answer a ping in {} s; new AI rooms use the image teacher",
+                    VERSION_START_TIMEOUT.as_secs()
+                );
+                None
+            }
+        }
+    }
+
+    /// Starts a worker of the image teacher (`None`) or of a promoted version.
+    fn spawn_worker(&self, version: Option<&str>) -> std::io::Result<Worker> {
+        let (dir, factory) = match version {
+            None => (self.config.dir.clone(), None),
+            Some(version) => {
+                let dir = self.version_dir(version).ok_or_else(|| {
+                    std::io::Error::other(format!("no folder for teacher version {version}"))
+                })?;
+                let meta = std::fs::read_to_string(dir.with_file_name("teacher.json"))
+                    .ok()
+                    .and_then(|text| serde_json::from_str::<TeacherMeta>(&text).ok())
+                    .unwrap_or_default();
+                (dir, Some(meta.factory))
+            }
+        };
         let pythonpath = ["python", "baseline-teacher-20260917", "tools"]
             .iter()
-            .map(|part| self.config.dir.join(part).display().to_string())
+            .map(|part| dir.join(part).display().to_string())
             .collect::<Vec<_>>()
             .join(":");
-        let mut child = Command::new(&self.config.python)
-            .arg(self.config.dir.join("tools/ai_worker.py"))
-            .current_dir(&self.config.dir)
+        let mut command = Command::new(&self.config.python);
+        command
+            .arg(dir.join("tools/ai_worker.py"))
+            .current_dir(&dir)
             .env("PYTHONPATH", pythonpath)
-            .env("GAIA_ENGINE_FIXES_2", "1")
+            .env("GAIA_ENGINE_FIXES_2", "1");
+        // A version names its own factory; the server's GAIA_AI_TEACHER is for the image teacher.
+        match factory {
+            Some(Some(factory)) => {
+                command.env("GAIA_AI_TEACHER", factory);
+            }
+            Some(None) => {
+                command.env_remove("GAIA_AI_TEACHER");
+            }
+            None => {}
+        }
+        let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -174,42 +332,57 @@ impl AiPool {
     }
 
     /// The teacher's move for `player`, or `None` when the worker is unavailable, errs or
-    /// exceeds the timeout (the worker is then restarted on the next request).
+    /// exceeds the timeout (the worker is then restarted on the next request). `teacher` is
+    /// the room's pinned version (`None` = the image teacher); a version whose folder has been
+    /// removed is played by the image teacher.
     pub async fn choose(
         &self,
         room_code: &str,
         state: &GameState,
         player: PlayerId,
         level: Option<&str>,
+        teacher: Option<&str>,
     ) -> Option<AiDecision> {
+        let teacher = teacher.filter(|version| {
+            let usable = self.version_dir(version).is_some();
+            if !usable {
+                log::warn!(
+                    "teacher version {version} of room {room_code} is gone; using the image teacher"
+                );
+            }
+            usable
+        });
         let mut guard = self.workers[self.slot(room_code)].lock().await;
-        if guard.is_none() {
-            match self.spawn_worker() {
-                Ok(worker) => *guard = Some(worker),
+        // Move this version's worker to the end (most recently used), starting it if needed.
+        let worker = match guard
+            .iter()
+            .position(|(version, _)| version.as_deref() == teacher)
+        {
+            Some(position) => guard.remove(position),
+            None => match self.spawn_worker(teacher) {
+                Ok(worker) => (teacher.map(str::to_string), worker),
                 Err(error) => {
                     log::error!("AI worker failed to start: {error}");
                     return None;
                 }
-            }
+            },
+        };
+        guard.push(worker);
+        if guard.len() > VERSIONS_PER_SLOT {
+            guard.remove(0);
         }
-        let worker = guard.as_mut()?;
+        let worker = &mut guard.last_mut()?.1;
         let level = level.unwrap_or(&self.config.level);
         let request = serde_json::json!({
             "op": "choose", "room": room_code, "player": player,
             "level": level, "state": state,
         });
-        let exchange = async {
-            let mut line = serde_json::to_string(&request).map_err(std::io::Error::other)?;
-            line.push('\n');
-            worker.stdin.write_all(line.as_bytes()).await?;
-            worker.stdin.flush().await?;
-            let mut response = String::new();
-            if worker.stdout.read_line(&mut response).await? == 0 {
-                return Err(std::io::Error::other("AI worker exited"));
-            }
-            serde_json::from_str::<Reply>(&response).map_err(std::io::Error::other)
-        };
-        match tokio::time::timeout(guard_timeout(self.config.timeout, level), exchange).await {
+        let outcome = tokio::time::timeout(
+            guard_timeout(self.config.timeout, level),
+            exchange(worker, &request),
+        )
+        .await;
+        match outcome {
             Ok(Ok(Reply {
                 ok: true,
                 decision: Some(decision),
@@ -224,12 +397,12 @@ impl AiPool {
             }
             Ok(Err(error)) => {
                 log::error!("AI worker failed for room {room_code}: {error}; restarting it");
-                *guard = None;
+                guard.pop();
                 None
             }
             Err(_) => {
                 log::error!("AI worker timed out for room {room_code}; restarting it");
-                *guard = None;
+                guard.pop();
                 None
             }
         }
@@ -270,6 +443,7 @@ struct Turn {
     human: PlayerId,
     state: GameState,
     level: Option<String>,
+    teacher: Option<String>,
 }
 
 async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
@@ -296,6 +470,7 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
         human,
         state: state.clone(),
         level: room.ai_level.clone(),
+        teacher: room.ai_teacher.clone(),
     })
 }
 
@@ -310,8 +485,14 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
         let decision = match crate::ai_bidding::decide(&turn.state, turn.player) {
             Some(action) => Some(AiDecision::Setup(action)),
             None => {
-                pool.choose(room_code, &turn.state, turn.player, turn.level.as_deref())
-                    .await
+                pool.choose(
+                    room_code,
+                    &turn.state,
+                    turn.player,
+                    turn.level.as_deref(),
+                    turn.teacher.as_deref(),
+                )
+                .await
             }
         };
         let mut used_fallback = false;
@@ -403,5 +584,67 @@ mod tests {
             guard_timeout(Duration::from_secs(90), "hard"),
             Duration::from_secs(90)
         );
+    }
+
+    fn pool_with_teachers(teachers: Option<PathBuf>) -> AiPool {
+        AiPool::new(AiConfig {
+            dir: PathBuf::from("/nonexistent/gaia-rl"),
+            python: PathBuf::from("/nonexistent/python"),
+            workers: 2,
+            level: "normal".into(),
+            timeout: Duration::from_secs(30),
+            teachers,
+        })
+    }
+
+    fn versions_folder(test: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!("gaia-teachers-{}-{test}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("v1/gaia-rl/tools")).unwrap();
+        std::fs::write(root.join("v1/gaia-rl/tools/ai_worker.py"), "").unwrap();
+        root
+    }
+
+    #[test]
+    fn version_names_are_single_plain_folder_names() {
+        assert!(valid_version("20261119-3d4588e"));
+        assert!(valid_version("v1.2_b"));
+        for bad in ["", ".", "..", ".hidden", "a/b", "../v1", "a b", "v1\n"] {
+            assert!(!valid_version(bad), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn current_teacher_needs_a_usable_version_folder() {
+        assert_eq!(pool_with_teachers(None).current_teacher(), None);
+        let root = versions_folder("current");
+        let pool = pool_with_teachers(Some(root.clone()));
+        // No `current` file, an empty one, a missing version, a path: all mean the image teacher.
+        assert_eq!(pool.current_teacher(), None);
+        for (text, expected) in [
+            ("", None),
+            ("\n", None),
+            ("v2\n", None),
+            ("../v1\n", None),
+            ("v1\n", Some("v1".to_string())),
+            ("  v1  ", Some("v1".to_string())),
+        ] {
+            std::fs::write(root.join("current"), text).unwrap();
+            assert_eq!(pool.current_teacher(), expected, "{text:?}");
+        }
+        assert!(pool.version_dir("v1").is_some());
+        assert!(pool.version_dir("v2").is_none());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_version_that_does_not_start_is_not_pinned() {
+        // The python path does not exist, so the ping fails and the room gets the image teacher.
+        let root = versions_folder("pin");
+        std::fs::write(root.join("current"), "v1\n").unwrap();
+        let pool = pool_with_teachers(Some(root.clone()));
+        assert_eq!(pool.current_teacher(), Some("v1".to_string()));
+        assert_eq!(pool.pin_teacher().await, None);
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }

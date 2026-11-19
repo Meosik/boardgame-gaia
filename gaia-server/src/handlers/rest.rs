@@ -331,6 +331,19 @@ pub async fn create_dev_game(
         }
     }
 
+    // The teacher version stays with the game until it ends (`crate::ai`). The first game of a
+    // newly promoted version waits here for that version's worker to start once.
+    let ai_teacher = match &app.ai {
+        Some(pool) if ai_opponents => pool.pin_teacher().await,
+        _ => None,
+    };
+    if ai_opponents {
+        log::info!(
+            "AI room {code}: teacher {}",
+            ai_teacher.as_deref().unwrap_or("built into the image")
+        );
+    }
+
     let (players, host_player_id) = {
         let mut rooms = app.rooms.write().await;
         let room = rooms
@@ -348,6 +361,7 @@ pub async fn create_dev_game(
         } else {
             None
         };
+        room.ai_teacher = ai_teacher;
         for (_, _, ready) in &mut room.players {
             *ready = !req.full_setup;
         }

@@ -736,6 +736,7 @@ mod tests {
                 dev_bot_action_counts: std::collections::HashMap::new(),
                 dev_bot_action_round: 0,
                 ai_level: None,
+                ai_teacher: None,
             },
             coord,
         )
