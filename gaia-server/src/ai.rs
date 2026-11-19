@@ -36,7 +36,7 @@ use gaia_engine::{
 use serde::Deserialize;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
-use tokio::sync::{Mutex, OnceCell};
+use tokio::sync::{watch, Mutex};
 
 use crate::{
     coordinator::{self, CommandError},
@@ -195,12 +195,16 @@ pub struct AiPool {
     fallbacks: AtomicUsize,
     /// Teacher hints for the human seat (`hint`), by (room, revision, player): one teacher run
     /// per position however often the player asks, and the answer stays until the room moves on.
-    hints: std::sync::Mutex<HashMap<HintKey, Arc<OnceCell<AiDecision>>>>,
+    hints: std::sync::Mutex<HashMap<HintKey, HintRun>>,
 }
 
 type HintKey = (String, u64, PlayerId);
 
-/// Hint cells kept at once (one per room that asked); past it the map starts over.
+/// One hint position's teacher run, as seen by a request waiting for it: `None` while the
+/// teacher thinks, then `Some(answer)` (`Some(None)` = the teacher gave no answer).
+type HintRun = watch::Receiver<Option<Option<AiDecision>>>;
+
+/// Hint runs kept at once (one per room that asked); past it the map starts over.
 const MAX_HINT_ROOMS: usize = 256;
 
 impl AiPool {
@@ -219,20 +223,58 @@ impl AiPool {
         }
     }
 
-    /// The cell of one hint position. Requests for the same position share it, so a second
-    /// press joins the run already going on instead of starting another; cells of the room's
-    /// earlier revisions are dropped, since a room never returns to them.
-    fn hint_cell(&self, room_code: &str, revision: u64, player: PlayerId) -> Arc<OnceCell<AiDecision>> {
+    /// The teacher run of one hint position, started with `search` unless one is already known.
+    ///
+    /// The run is a task of its own, not part of the request that started it: a request that
+    /// goes away (closed tab, lost connection) leaves the run going, and the next request for
+    /// the same position joins it or reads its answer instead of starting another. Runs of the
+    /// room's earlier revisions are forgotten, since a room never returns to them, and so is a
+    /// run without an answer, so that the next press tries again.
+    fn hint_run<F>(
+        self: &Arc<Self>,
+        room_code: &str,
+        revision: u64,
+        player: PlayerId,
+        search: impl FnOnce() -> F,
+    ) -> HintRun
+    where
+        F: std::future::Future<Output = Option<AiDecision>> + Send + 'static,
+    {
         let mut hints = self
             .hints
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        hints.retain(|(room, cell_revision, _), _| room != room_code || *cell_revision == revision);
+        hints.retain(|(room, run_revision, _), _| room != room_code || *run_revision == revision);
         let key = (room_code.to_string(), revision, player);
-        if !hints.contains_key(&key) && hints.len() >= MAX_HINT_ROOMS {
+        if let Some(run) = hints.get(&key) {
+            return run.clone();
+        }
+        if hints.len() >= MAX_HINT_ROOMS {
             hints.clear();
         }
-        hints.entry(key).or_default().clone()
+        let (answered, run) = watch::channel(None);
+        hints.insert(key.clone(), run.clone());
+        let (pool, search, started) = (Arc::clone(self), search(), run.clone());
+        tokio::spawn(async move {
+            let answer = search.await;
+            if answer.is_none() {
+                pool.forget_hint(&key, &started);
+            }
+            // No request may be waiting any more; the answer is then read from the map's copy.
+            answered.send_replace(Some(answer));
+        });
+        run
+    }
+
+    /// Drops `run` from the known hint runs, unless the position already has a newer one.
+    fn forget_hint(&self, key: &HintKey, run: &HintRun) {
+        let mut hints = self
+            .hints
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if hints.get(key).is_some_and(|known| known.same_channel(run)) {
+            hints.remove(key);
+        }
     }
 
     /// (committed AI moves, of which fallback moves) since the pool started.
@@ -429,8 +471,12 @@ impl AiPool {
             }
         });
         let mut guard = self.workers[self.slot(room_code)].lock().await;
-        // Move this version's worker to the end (most recently used), starting it if needed.
-        let worker = match guard
+        // This version's worker, started if needed. It is taken out of the slot while it
+        // answers and put back (most recently used) only after its whole reply was read: a
+        // reply line carries no request id, so a worker left with an unread reply would hand
+        // it to the next request. If this future is dropped in between (a cancelled caller),
+        // the worker is dropped with it and killed, like one that failed or timed out.
+        let (version, mut worker) = match guard
             .iter()
             .position(|(version, _)| version.as_deref() == teacher)
         {
@@ -443,11 +489,6 @@ impl AiPool {
                 }
             },
         };
-        guard.push(worker);
-        if guard.len() > VERSIONS_PER_SLOT {
-            guard.remove(0);
-        }
-        let worker = &mut guard.last_mut()?.1;
         let level = level.unwrap_or(&self.config.level);
         let request = serde_json::json!({
             "op": "choose", "room": memory, "player": player,
@@ -455,30 +496,35 @@ impl AiPool {
         });
         let outcome = tokio::time::timeout(
             guard_timeout(self.config.timeout, level),
-            exchange(worker, &request),
+            exchange(&mut worker, &request),
         )
         .await;
-        match outcome {
-            Ok(Ok(Reply {
+        let reply = match outcome {
+            Ok(Ok(reply)) => reply,
+            Ok(Err(error)) => {
+                log::error!("AI worker failed for room {room_code}: {error}; restarting it");
+                return None;
+            }
+            Err(_) => {
+                log::error!("AI worker timed out for room {room_code}; restarting it");
+                return None;
+            }
+        };
+        guard.push((version, worker));
+        if guard.len() > VERSIONS_PER_SLOT {
+            guard.remove(0);
+        }
+        match reply {
+            Reply {
                 ok: true,
                 decision: Some(decision),
                 ..
-            })) => Some(decision),
-            Ok(Ok(reply)) => {
+            } => Some(decision),
+            reply => {
                 log::warn!(
                     "AI worker declined room {room_code}: {}",
                     reply.error.unwrap_or_default()
                 );
-                None
-            }
-            Ok(Err(error)) => {
-                log::error!("AI worker failed for room {room_code}: {error}; restarting it");
-                guard.pop();
-                None
-            }
-            Err(_) => {
-                log::error!("AI worker timed out for room {room_code}; restarting it");
-                guard.pop();
                 None
             }
         }
@@ -683,7 +729,8 @@ fn hint_position(room: &Room, player: PlayerId, revision: u64) -> Result<&GameSt
 /// The request is tied to the position: it is refused unless the room is at `revision` and
 /// waits for `player`, and the answer is dropped (`Stale`) when the room moved on while the
 /// teacher was thinking — the rule `drive` applies to an AI move. Requests for one position
-/// share one teacher run (`AiPool::hint_cell`).
+/// share one teacher run, which goes on when the request that started it is cancelled
+/// (`AiPool::hint_run`).
 ///
 /// The teacher memory is the room's own with a `#hint` suffix, so hints never touch what the
 /// AI seats remember; the worker slot is the room's, so a hint waits for that slot like any
@@ -701,15 +748,16 @@ pub async fn hint(
         let state = hint_position(room, player, revision)?.clone();
         (state, room.ai_level.clone(), room.ai_teacher.clone())
     };
-    let cell = pool.hint_cell(room_code, revision, player);
-    let decision = cell
-        .get_or_try_init(|| async {
+    let key: HintKey = (room_code.to_string(), revision, player);
+    let mut run = pool.hint_run(room_code, revision, player, || {
+        let (pool, room_code) = (Arc::clone(&pool), room_code.to_string());
+        async move {
             // The teacher workers do not play the setup auction (see `drive`).
-            let answer = match crate::ai_bidding::decide(&state, player) {
+            match crate::ai_bidding::decide(&state, player) {
                 Some(action) => Some(AiDecision::Setup(action)),
                 None => {
                     pool.choose_in(
-                        room_code,
+                        &room_code,
                         &format!("{room_code}#hint"),
                         &state,
                         player,
@@ -718,11 +766,21 @@ pub async fn hint(
                     )
                     .await
                 }
-            };
-            answer.ok_or(HintError::NoAnswer)
-        })
-        .await?
-        .clone();
+            }
+        }
+    });
+    let answered = run
+        .wait_for(|answer| answer.is_some())
+        .await
+        .map(|answer| answer.clone().flatten());
+    let decision = match answered {
+        Ok(answer) => answer.ok_or(HintError::NoAnswer)?,
+        Err(_) => {
+            // The run ended without an answer of any kind (its task died).
+            pool.forget_hint(&key, &run);
+            return Err(HintError::NoAnswer);
+        }
+    };
     {
         let rooms = app.rooms.read().await;
         let room = rooms.get_room(room_code).ok_or(HintError::Stale)?;
@@ -823,18 +881,153 @@ mod tests {
         );
     }
 
-    #[test]
-    fn hint_requests_for_one_position_share_one_cell() {
-        let pool = pool_with_teachers(None);
-        let first = pool.hint_cell("ROOM01", 5, 7);
-        assert!(Arc::ptr_eq(&first, &pool.hint_cell("ROOM01", 5, 7)));
-        let other_room = pool.hint_cell("ROOM02", 5, 7);
-        assert!(!Arc::ptr_eq(&first, &other_room));
-        // The room moved on: its old cell is gone, the other room's stays.
-        let next = pool.hint_cell("ROOM01", 6, 7);
-        assert!(!Arc::ptr_eq(&first, &next));
-        assert!(Arc::ptr_eq(&other_room, &pool.hint_cell("ROOM02", 5, 7)));
+    fn slow_answer() -> AiDecision {
+        AiDecision::Setup(gaia_engine::SetupAction::PlaceBid { amount: 1 })
+    }
+
+    fn fast_answer() -> AiDecision {
+        AiDecision::Setup(gaia_engine::SetupAction::PassBid)
+    }
+
+    #[tokio::test]
+    async fn hint_requests_for_one_position_share_one_run() {
+        let pool = Arc::new(pool_with_teachers(None));
+        let answer = |decision: Option<AiDecision>| move || std::future::ready(decision);
+        let mut first = pool.hint_run("ROOM01", 5, 7, answer(Some(fast_answer())));
+        assert!(first.same_channel(&pool.hint_run("ROOM01", 5, 7, answer(None))));
+        let other_room = pool.hint_run("ROOM02", 5, 7, answer(Some(fast_answer())));
+        assert!(!first.same_channel(&other_room));
+        // The room moved on: its old run is forgotten, the other room's stays.
+        let mut next = pool.hint_run("ROOM01", 6, 7, answer(None));
+        assert!(!first.same_channel(&next));
+        assert!(other_room.same_channel(&pool.hint_run("ROOM02", 5, 7, answer(None))));
         assert_eq!(pool.hints.lock().unwrap().len(), 2);
+        // The run of revision 6 ends without an answer: asking again starts another run.
+        assert_eq!(*next.wait_for(|answer| answer.is_some()).await.unwrap(), Some(None));
+        assert_eq!(pool.hints.lock().unwrap().len(), 1);
+        let retried = pool.hint_run("ROOM01", 6, 7, answer(Some(slow_answer())));
+        assert!(!next.same_channel(&retried));
+        // A forgotten run still answers the requests that wait for it.
+        assert_eq!(
+            *first.wait_for(|answer| answer.is_some()).await.unwrap(),
+            Some(Some(fast_answer()))
+        );
+    }
+
+    /// A pool whose worker is a shell script in a folder of its own: it adds a line to the
+    /// folder's `seen` file for each request it has read, then answers a request of teacher
+    /// memory "slow" with `slow_answer` after half a second and any other with `fast_answer`
+    /// at once.
+    fn pool_with_scripted_worker(test: &str) -> (Arc<AiPool>, PathBuf) {
+        let dir = std::env::temp_dir().join(format!("gaia-worker-{}-{test}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("tools")).unwrap();
+        let reply = |decision: AiDecision| {
+            serde_json::json!({"ok": true, "decision": decision}).to_string()
+        };
+        let script = format!(
+            "while IFS= read -r line; do\n  echo request >> seen\n  case \"$line\" in\n    \
+             *'\"room\":\"slow\"'*) sleep 0.5; echo '{}' ;;\n    *) echo '{}' ;;\n  esac\ndone\n",
+            reply(slow_answer()),
+            reply(fast_answer()),
+        );
+        std::fs::write(dir.join("tools/ai_worker.py"), script).unwrap();
+        let pool = AiPool::new(AiConfig {
+            dir: dir.clone(),
+            python: PathBuf::from("/bin/sh"),
+            workers: 1,
+            level: "normal".into(),
+            timeout: Duration::from_secs(30),
+            teachers: None,
+            engine_fingerprint: None,
+        });
+        (Arc::new(pool), dir)
+    }
+
+    /// Waits until the scripted worker has read `count` requests.
+    async fn worker_has_read(dir: &std::path::Path, count: usize) {
+        for _ in 0..1000 {
+            let seen = std::fs::read_to_string(dir.join("seen")).unwrap_or_default();
+            if seen.lines().count() >= count {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!("the worker did not read {count} request(s)");
+    }
+
+    fn requests_read(dir: &std::path::Path) -> usize {
+        std::fs::read_to_string(dir.join("seen"))
+            .unwrap_or_default()
+            .lines()
+            .count()
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_request_does_not_leave_its_reply_to_the_next_one() {
+        let (pool, dir) = pool_with_scripted_worker("cancel");
+        let (room, human) = ai_room_waiting_for_its_human();
+        let state = room.game_state.expect("the room has a game");
+        let asked = {
+            let (pool, state) = (Arc::clone(&pool), state.clone());
+            tokio::spawn(async move {
+                pool.choose_in("ROOM01", "slow", &state, human, None, None)
+                    .await
+            })
+        };
+        // The worker has the request and is thinking when its caller goes away.
+        worker_has_read(&dir, 1).await;
+        asked.abort();
+        assert!(asked.await.unwrap_err().is_cancelled());
+        // The next request gets its own answer, not the one the cancelled request never read.
+        assert_eq!(
+            pool.choose_in("ROOM01", "fast", &state, human, None, None)
+                .await,
+            Some(fast_answer())
+        );
+        // And the worker stays in step with its requests afterwards.
+        assert_eq!(
+            pool.choose_in("ROOM01", "slow", &state, human, None, None)
+                .await,
+            Some(slow_answer())
+        );
+        assert_eq!(requests_read(&dir), 3);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_hint_run_goes_on_when_its_request_is_cancelled() {
+        let (pool, dir) = pool_with_scripted_worker("hint-run");
+        let (room, human) = ai_room_waiting_for_its_human();
+        let state = room.game_state.expect("the room has a game");
+        let mut first = pool.hint_run("ROOM01", 5, human, || {
+            let pool = Arc::clone(&pool);
+            async move {
+                pool.choose_in("ROOM01", "slow", &state, human, None, None)
+                    .await
+            }
+        });
+        let asked = tokio::spawn(async move {
+            let _ = first.wait_for(|answer| answer.is_some()).await;
+        });
+        // The request is sent to the worker; then the request for the hint is cancelled.
+        worker_has_read(&dir, 1).await;
+        asked.abort();
+        assert!(asked.await.unwrap_err().is_cancelled());
+        // Asked again: no second search, and the answer is the one of the run still going on.
+        let never = || -> std::future::Ready<Option<AiDecision>> {
+            panic!("a second search was started for the same position")
+        };
+        let mut again = pool.hint_run("ROOM01", 5, human, never);
+        assert_eq!(
+            *again.wait_for(|answer| answer.is_some()).await.unwrap(),
+            Some(Some(slow_answer()))
+        );
+        // Asked after the answer: it is read from the finished run.
+        let after = pool.hint_run("ROOM01", 5, human, never);
+        assert_eq!(*after.borrow(), Some(Some(slow_answer())));
+        assert_eq!(requests_read(&dir), 1);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
