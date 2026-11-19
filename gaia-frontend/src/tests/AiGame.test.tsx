@@ -25,7 +25,11 @@ describe('AI game', () => {
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
     fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
     await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
-    expect(createAiGame).toHaveBeenCalledWith('나', 'normal');
+    expect(createAiGame).toHaveBeenCalledWith('나', 'normal', {
+      seed: 'quartet-e-88365',
+      faction: 'Darkanians',
+      aiFactions: ['BalTaks', 'Itars', 'Ivits'],
+    });
     const room = useRoomStore.getState();
     expect(room.roomCode).toBe('AI1234');
     expect(room.playerId).toBe(5);
@@ -46,12 +50,14 @@ describe('AI game', () => {
     const onRoomCreated = vi.fn();
     render(<CreateRoomView onRoomCreated={onRoomCreated} onBack={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
+    fireEvent.change(screen.getByLabelText('종족 묶음'), { target: { value: '-1' } });
+    expect(screen.queryByLabelText('내 종족')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' }));
     await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
     expect(createAiGame).toHaveBeenCalledWith('나', 'hard');
   });
 
-  it('starts a fixed table when a seed or a faction is filled in', async () => {
+  it('plays the chosen faction of the chosen fixed table', async () => {
     const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
       room_code: 'AI9012',
       player_id: 7,
@@ -64,24 +70,15 @@ describe('AI game', () => {
     const onRoomCreated = vi.fn();
     render(<CreateRoomView onRoomCreated={onRoomCreated} onBack={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
-    fireEvent.change(screen.getByLabelText('맵 시드'), { target: { value: ' quartet-e-88365 ' } });
-    fireEvent.change(screen.getByLabelText('내 종족'), { target: { value: 'Ivits' } });
-    fireEvent.change(screen.getByLabelText('AI 1 종족'), { target: { value: 'Tinkeroids' } });
-    // Two of three AI seats named: nothing is sent.
-    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
-    expect(screen.getByText('AI 종족은 셋 다 고르거나 셋 다 무작위로 두세요')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('AI 2 종족'), { target: { value: 'Moweyds' } });
-    // The other side of the human's faction board: nothing is sent either.
-    fireEvent.change(screen.getByLabelText('AI 3 종족'), { target: { value: 'HadschHallas' } });
-    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
-    expect(createAiGame).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('AI 3 종족'), { target: { value: 'Terrans' } });
+    fireEvent.change(screen.getByLabelText('종족 묶음'), { target: { value: '3' } });
+    expect(screen.getByLabelText('내 종족')).toHaveValue('Lantids');
+    fireEvent.change(screen.getByLabelText('내 종족'), { target: { value: 'Bescods' } });
     fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
     await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
     expect(createAiGame).toHaveBeenCalledWith('나', 'normal', {
       seed: 'quartet-e-88365',
-      faction: 'Ivits',
-      aiFactions: ['Tinkeroids', 'Moweyds', 'Terrans'],
+      faction: 'Bescods',
+      aiFactions: ['Lantids', 'Xenos', 'Itars'],
     });
   });
 

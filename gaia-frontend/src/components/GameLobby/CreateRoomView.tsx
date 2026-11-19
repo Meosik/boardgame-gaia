@@ -2,48 +2,29 @@ import { useState } from 'react';
 import { shallow } from 'zustand/shallow';
 import { useRoomStore } from '../../store/roomStore';
 import type { FactionId, GameSetup, SetupMode } from '../../types/game';
-import type { AiGameTable, AiLevel } from '../../api/rest';
+import type { AiLevel } from '../../api/rest';
 import { FACTION_DISPLAY_NAMES, factionDisplayName } from '../../displayNames';
 
-/** The two sides of one faction board (engine: `FactionId::other_board_side`); one table
- * cannot seat both. */
-const FACTION_BOARDS: FactionId[][] = [
-  ['Terrans', 'Lantids'],
-  ['Xenos', 'Gleens'],
-  ['Taklons', 'Ambas'],
-  ['HadschHallas', 'Ivits'],
-  ['Geodens', 'BalTaks'],
-  ['Firaks', 'Bescods'],
-  ['Nevlas', 'Itars'],
-  ['Tinkeroids', 'Darkanians'],
-  ['Moweyds', 'SpaceGiants'],
+/** The lab's fixed-map experiment (gaia-rl/lab/fixed-seed-factions-quartet-e-88365.json,
+ * HANDOFF E178/E181): one map seed and twelve faction sets, seat order as listed. Keep in
+ * step with that file. */
+const FIXED_MAP_SEED = 'quartet-e-88365';
+const FIXED_MAP_TABLES: FactionId[][] = [
+  ['Darkanians', 'BalTaks', 'Itars', 'Ivits'],
+  ['Moweyds', 'Nevlas', 'Firaks', 'BalTaks'],
+  ['Bescods', 'HadschHallas', 'BalTaks', 'Gleens'],
+  ['Lantids', 'Xenos', 'Bescods', 'Itars'],
+  ['Darkanians', 'Terrans', 'SpaceGiants', 'Geodens'],
+  ['Tinkeroids', 'SpaceGiants', 'Taklons', 'Lantids'],
+  ['Firaks', 'Terrans', 'Nevlas', 'Darkanians'],
+  ['Ivits', 'Geodens', 'Taklons', 'Tinkeroids'],
+  ['Geodens', 'Terrans', 'Firaks', 'Gleens'],
+  ['Ambas', 'Xenos', 'Bescods', 'Moweyds'],
+  ['Xenos', 'Lantids', 'Taklons', 'Tinkeroids'],
+  ['SpaceGiants', 'HadschHallas', 'Nevlas', 'Ambas'],
 ];
-const FACTION_IDS = FACTION_BOARDS.flat();
-const AI_SEATS = [0, 1, 2];
-
-/** The fixed table the AI-game form asks for: `undefined` when nothing is filled in (the
- * usual auction game), a message when the choices cannot sit at one table. */
-function aiGameTable(
-  seed: string,
-  myFaction: FactionId | '',
-  aiFactions: (FactionId | '')[],
-): AiGameTable | string | undefined {
-  const named = aiFactions.filter((faction): faction is FactionId => faction !== '');
-  if (named.length !== 0 && named.length !== aiFactions.length) {
-    return 'AI 종족은 셋 다 고르거나 셋 다 무작위로 두세요';
-  }
-  const seats = myFaction ? [myFaction, ...named] : named;
-  const boards = seats.map((faction) => FACTION_BOARDS.findIndex((board) => board.includes(faction)));
-  if (new Set(boards).size !== boards.length) {
-    return '같은 종족이나 같은 종족판의 앞뒷면(모행성이 같은 두 종족)은 함께 고를 수 없습니다';
-  }
-  if (!seed && !myFaction && named.length === 0) return undefined;
-  return {
-    seed: seed || undefined,
-    faction: myFaction || undefined,
-    aiFactions: named.length ? named : undefined,
-  };
-}
+/** `aiTable` value for the earlier AI game: random map, factions by the setup auction. */
+const RANDOM_AUCTION = -1;
 
 interface Props {
   onRoomCreated: () => void;
@@ -56,9 +37,8 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [setupMode, setSetupMode] = useState<SetupMode>('bidding');
-  const [aiSeed, setAiSeed] = useState('');
-  const [aiMyFaction, setAiMyFaction] = useState<FactionId | ''>('');
-  const [aiFactions, setAiFactions] = useState<(FactionId | '')[]>(AI_SEATS.map(() => ''));
+  const [aiTable, setAiTable] = useState(0);
+  const [aiFaction, setAiFaction] = useState<FactionId>(FIXED_MAP_TABLES[0][0]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { gameSetup, actions } = useRoomStore(
@@ -98,16 +78,18 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
       setError('닉네임을 입력해주세요');
       return;
     }
-    const table = aiGameTable(aiSeed.trim(), aiMyFaction, aiFactions);
-    if (typeof table === 'string') {
-      setError(table);
-      return;
-    }
     setLoading(true);
     setError('');
     try {
-      if (table) await actions.createAiGame(nickname.trim(), level, table);
-      else await actions.createAiGame(nickname.trim(), level);
+      if (aiTable === RANDOM_AUCTION) {
+        await actions.createAiGame(nickname.trim(), level);
+      } else {
+        await actions.createAiGame(nickname.trim(), level, {
+          seed: FIXED_MAP_SEED,
+          faction: aiFaction,
+          aiFactions: FIXED_MAP_TABLES[aiTable].filter((faction) => faction !== aiFaction),
+        });
+      }
       onRoomCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 대전을 시작하지 못했습니다');
@@ -193,64 +175,50 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
         </label>
       </fieldset>
       {!manualControl && (
-        <details className="ai-table-picker">
-          <summary>AI 대전 맵·종족 고정 (선택)</summary>
-          <p>
-            <small>
-              하나라도 채우면 비딩 없이 바로 시작합니다. 같은 시드는 같은 맵·타일이고, 비워 둔
-              종족은 시드로 정해집니다.
-            </small>
-          </p>
+        <fieldset className="ai-table-picker">
+          <legend>AI 대전 (고정 맵 실험)</legend>
           <div className="form-group">
-            <label htmlFor="ai-seed">맵 시드</label>
-            <input
-              id="ai-seed"
-              type="text"
-              value={aiSeed}
-              onChange={(e) => setAiSeed(e.target.value)}
-              maxLength={64}
-              placeholder="비워두면 무작위 맵"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="ai-my-faction">내 종족</label>
+            <label htmlFor="ai-table">종족 묶음</label>
             <select
-              id="ai-my-faction"
-              value={aiMyFaction}
-              onChange={(e) => setAiMyFaction(e.target.value as FactionId | '')}
+              id="ai-table"
+              value={aiTable}
+              onChange={(e) => {
+                const index = Number(e.target.value);
+                setAiTable(index);
+                if (index >= 0) setAiFaction(FIXED_MAP_TABLES[index][0]);
+              }}
             >
-              <option value="">무작위</option>
-              {FACTION_IDS.map((faction) => (
-                <option key={faction} value={faction}>
-                  {FACTION_DISPLAY_NAMES[faction]}
+              {FIXED_MAP_TABLES.map((table, index) => (
+                <option key={index} value={index}>
+                  {`${index + 1}. ` + table.map((faction) => FACTION_DISPLAY_NAMES[faction]).join(' · ')}
                 </option>
               ))}
+              <option value={RANDOM_AUCTION}>무작위 맵 · 비딩 (기존 AI 대전)</option>
             </select>
           </div>
-          {AI_SEATS.map((seat) => (
-            <div className="form-group" key={seat}>
-              <label htmlFor={`ai-faction-${seat}`}>AI {seat + 1} 종족</label>
+          {aiTable !== RANDOM_AUCTION && (
+            <div className="form-group">
+              <label htmlFor="ai-my-faction">내 종족</label>
               <select
-                id={`ai-faction-${seat}`}
-                value={aiFactions[seat]}
-                onChange={(e) =>
-                  setAiFactions((current) =>
-                    current.map((faction, index) =>
-                      index === seat ? (e.target.value as FactionId | '') : faction,
-                    ),
-                  )
-                }
+                id="ai-my-faction"
+                value={aiFaction}
+                onChange={(e) => setAiFaction(e.target.value as FactionId)}
               >
-                <option value="">무작위</option>
-                {FACTION_IDS.map((faction) => (
+                {FIXED_MAP_TABLES[aiTable].map((faction) => (
                   <option key={faction} value={faction}>
                     {FACTION_DISPLAY_NAMES[faction]}
                   </option>
                 ))}
               </select>
             </div>
-          ))}
-        </details>
+          )}
+          <p>
+            <small>
+              맵·타일은 실험과 같은 시드(quartet-e-88365)로 고정되고 비딩 없이 바로 시작합니다. 고른
+              종족 말고 나머지 셋은 AI가 둡니다.
+            </small>
+          </p>
+        </fieldset>
       )}
 
       {error && <p className="error-msg">{error}</p>}
@@ -272,7 +240,7 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
               className="btn btn-secondary"
               onClick={() => handleCreateAiGame('normal')}
               disabled={loading}
-              title="무작위 맵으로 AI 3명과 바로 대전합니다. 종족과 차례는 AI와 비딩으로 정합니다. 방 제목·비밀번호는 쓰지 않습니다."
+              title="위에서 고른 종족 묶음으로 AI 3명과 대전합니다. 무작위 맵을 고르면 종족과 차례를 AI와 비딩으로 정합니다. 방 제목·비밀번호는 쓰지 않습니다."
             >
               AI 3명과 대전
             </button>
