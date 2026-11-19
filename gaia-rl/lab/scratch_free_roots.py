@@ -8,7 +8,8 @@ unlock GAME_DIR STEP [--roots i ...]
 tally RUN_DIR ... [--jobs N]
     Over every recorded decision (strict replay, the chosen action is checked against the candidate list):
     - root alternatives in `compared` (family root) by the type of their first move: slot, complete, value against
-      current-choice (above / equal / below), selected;
+      current-choice (above / equal / below), selected; for a free root also whether the free action alone makes a new
+      main action legal (whole candidate set, by fork);
     - turns as played: k free actions then a main action M - was M legal before the first free action, or after how
       many of them it became legal (exact JSON of the action).
 """
@@ -128,8 +129,13 @@ def tally_game(game_dir):
                 control = next((c for c in row['compared'] if c['goal'] == 'current-choice'), None)
                 out['decisions with a root alternative'] += 1
                 first_root = True
+                before_main = main_keys(snapshot)
                 for p, c in roots:
                     kind = 'free' if is_free(candidates[c['first']]) else 'main'
+                    if kind == 'free':
+                        after = json.loads(env.fork(snapshot['decision_id'], c['first']).snapshot_json())
+                        opens = ('turn-ended' if after['player'] != snapshot['player']
+                                 else 'yes' if main_keys(after) - before_main else 'no')
                     for scope in ('all', late):
                         name = f'{scope} root {kind}'
                         out[name] += 1
@@ -141,12 +147,19 @@ def tally_game(game_dir):
                                              if not is_free(a) and i != control['first'])
                                 out[f"{scope} first root is free: other main actions legal {'yes' if others else 'no'}"] += 1
                         if not c.get('complete') or control is None or not control.get('complete'):
-                            out[f'{name} incomplete'] += 1
+                            outcome = 'incomplete'
                         else:
                             diff = c['value'] - control['value']
-                            out[f"{name} {'above' if diff > 0 else 'equal' if diff == 0 else 'below'}"] += 1
-                        if row.get('selected') == c['goal'] and row['index'] == c['first']:
+                            outcome = 'above' if diff > 0 else 'equal' if diff == 0 else 'below'
+                        out[f'{name} {outcome}'] += 1
+                        picked = row.get('selected') == c['goal'] and row['index'] == c['first']
+                        if picked:
                             out[f'{name} selected'] += 1
+                        if kind == 'free':
+                            out[f'{name} opens {opens}'] += 1
+                            out[f'{name} opens {opens} {outcome}'] += 1
+                            if picked:
+                                out[f'{name} opens {opens} selected'] += 1
                     if kind == 'free':
                         out[f"all root free kind {candidates[c['first']].get('kind')}"] += 1
                     first_root = False
