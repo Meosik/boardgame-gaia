@@ -1,7 +1,7 @@
 import argparse
 import unittest
 
-from worker_times import replay_positions, summarise
+from worker_times import diverged, replay_positions, snapshot_digest, summarise
 
 
 def make_rows():
@@ -49,6 +49,41 @@ class SummariseTest(unittest.TestCase):
         self.assertEqual(cell['over_guard'], 1)
         self.assertEqual(cell['time_capped'], 1)
         self.assertEqual(cell['by_round']['4']['n'], 2)
+
+
+class DivergedTest(unittest.TestCase):
+    def setUp(self):
+        self.snapshot = {'decision_id': 7, 'candidates': [{'a': 1}, {'a': 2}], 'state': {'round': 4}}
+        self.row = {'decision_id': 7, 'index': 1, 'chosen': {'a': 2},
+                    'digest': snapshot_digest(self.snapshot)}
+
+    def test_matching_row(self):
+        self.assertIsNone(diverged(self.snapshot, self.row))
+
+    def test_row_without_digest(self):
+        del self.row['digest']
+        self.assertIsNone(diverged(self.snapshot, self.row))
+
+    def test_wrong_digest(self):
+        self.row['digest'] = '0'*64
+        self.assertEqual(diverged(self.snapshot, self.row), 'state digest')
+
+    def test_wrong_decision_id(self):
+        self.row['decision_id'] = 8
+        self.assertEqual(diverged(self.snapshot, self.row), 'decision id')
+
+    def test_chosen_differs(self):
+        self.row['chosen'] = {'a': 3}
+        self.assertEqual(diverged(self.snapshot, self.row), 'chosen move')
+
+    def test_record_of_another_engine_build(self):
+        # the record's digest was taken with the recording build's id in the snapshot
+        self.row['digest'] = snapshot_digest({**self.snapshot, 'engine_build_id': 'old'})
+        replayed = {**self.snapshot, 'engine_build_id': 'new'}
+        self.assertEqual(diverged(replayed, self.row), 'state digest')
+        self.assertIsNone(diverged(replayed, self.row, 'old'))
+        replayed['state'] = {'round': 5}
+        self.assertEqual(diverged(replayed, self.row, 'old'), 'state digest')
 
 
 if __name__ == '__main__':

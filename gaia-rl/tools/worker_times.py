@@ -11,10 +11,15 @@ positions: every --every-th decision of --rounds, the --slowest recorded decisio
 explicit --steps. All cells see the same recorded positions, so cells are comparable position by position,
 and late rounds are reached. The game continues with the recorded moves, never the worker's. Limit: the
 worker's teacher only sees the asked positions, so its plan memory between decisions is thinner than in a
-live game where it is asked every decision of its seats.
+live game where it is asked every decision of its seats. The replay stops with an error when the replayed
+state differs from the record (decision id, chosen move, or the recorded sha256 state digest), and each cell
+reports `planned` next to `decisions` and `timed_out`; --seconds is unlimited in replay mode unless given.
+The digest covers the snapshot's engine_build_id: for a record made by another engine build pass
+--record-engine-build <that build's full id>, otherwise the replay stops at step 0.
 """
 import argparse
 import gzip
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -76,7 +81,8 @@ def answered_row(reply, wall, rnd, snapshot):
 
 
 def run_cell(args, factory, level):
-    rows, cell = [], {'factory': factory, 'level': level, 'stopped': None, 'error': None}
+    rows, cell = [], {'factory': factory, 'level': level, 'stopped': None, 'error': None, 'planned': None}
+    seconds = 420 if args.seconds is None else args.seconds
     process = start_worker(factory)
     started = time.monotonic()
     try:
@@ -87,7 +93,7 @@ def run_cell(args, factory, level):
                 cell['stopped'] = 'game over'; break
             if len(rows) >= args.decisions:
                 cell['stopped'] = 'decisions'; break
-            if time.monotonic()-started > args.seconds:
+            if time.monotonic()-started > seconds:
                 cell['stopped'] = 'seconds'; break
             request = {'op': 'choose', 'room': f'times-{level}', 'level': level,
                        'state': snapshot['state'], 'player': snapshot['player']}
@@ -126,14 +132,40 @@ def load_record(game_dir):
     return result, rows
 
 
+def snapshot_digest(snapshot):
+    return hashlib.sha256(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
+
+
+def diverged(snapshot, row, record_build=None):
+    """Short reason when the replayed snapshot differs from the recorded row, else None. The snapshot carries
+    `engine_build_id`, so a record made by another engine build never has the same digest as it is: with
+    `record_build` (the full id of the build that recorded the game) the digest is taken with that id in place —
+    equal digests then mean the same state, candidates included, on both builds."""
+    if snapshot.get('decision_id') != row['decision_id']:
+        return 'decision id'
+    if row['index'] >= len(snapshot['candidates']):
+        return 'candidate index'
+    if 'chosen' in row and snapshot['candidates'][row['index']] != row['chosen']:
+        return 'chosen move'
+    if 'digest' in row:
+        recorded = {**snapshot, 'engine_build_id': record_build} if record_build else snapshot
+        if snapshot_digest(recorded) != row['digest']:
+            return 'state digest'
+    return None
+
+
 def run_replay_cell(args, factory, level):
     rows, cell = [], {'factory': factory, 'level': level, 'stopped': None, 'error': None}
+    games = []
+    for game_dir in args.replay:
+        result, records = load_record(game_dir)
+        games.append((game_dir, result, records,
+                      replay_positions(records, set(args.rounds), args.every, args.steps, args.slowest)))
+    cell['planned'] = sum(len(g[3]) for g in games)
     process = start_worker(factory)
     started = time.monotonic()
     try:
-        for g, game_dir in enumerate(args.replay):
-            result, records = load_record(game_dir)
-            positions = replay_positions(records, set(args.rounds), args.every, args.steps, args.slowest)
+        for g, (game_dir, result, records, positions) in enumerate(games):
             if not positions:
                 continue
             last = positions[-1]
@@ -142,14 +174,15 @@ def run_replay_cell(args, factory, level):
             env = Environment(result['seed'], 2000)
             for step, row in enumerate(records[:last+1]):
                 snapshot = json.loads(env.snapshot_json())
-                if (snapshot.get('decision_id') != row['decision_id']
-                        or row['index'] >= len(snapshot['candidates'])
-                        or ('chosen' in row and snapshot['candidates'][row['index']] != row['chosen'])):
+                reason = diverged(snapshot, row, args.record_engine_build)
+                if reason:
                     cell['stopped'] = 'error'
-                    cell['error'] = f'replay diverged from the record: {game_dir} step {step}'
+                    cell['error'] = (f'replay diverged from the record ({reason}): {game_dir} step {step}; engine '
+                                     f"build {snapshot.get('engine_build_id')}, --record-engine-build "
+                                     f'{args.record_engine_build}')
                     break
                 if step in wanted:
-                    if time.monotonic()-started > args.seconds:
+                    if args.seconds is not None and time.monotonic()-started > args.seconds:
                         cell['stopped'] = 'seconds'; break
                     rnd = snapshot['state'].get('round')
                     request = {'op': 'choose', 'room': f'times-{level}-{g}', 'level': level,
@@ -189,10 +222,13 @@ def main():
     parser.add_argument('--levels', nargs='+', default=['easy', 'normal', 'hard'])
     parser.add_argument('--seed', default='quartet-e-88365')
     parser.add_argument('--decisions', type=int, default=80)
-    parser.add_argument('--seconds', type=float, default=420)
+    parser.add_argument('--seconds', type=float, default=None)
     parser.add_argument('--decision-timeout', type=float, default=180)
     parser.add_argument('--guard', type=float, default=30)
     parser.add_argument('--replay', nargs='+', default=None)
+    parser.add_argument('--record-engine-build', default=None,
+                        help='full engine_build_id of the build that recorded the --replay games; needed when '
+                             'this engine is another build (the recorded state digest includes the build id)')
     parser.add_argument('--rounds', type=int, nargs='+', default=[4, 5, 6])
     parser.add_argument('--every', type=int, default=8)
     parser.add_argument('--steps', type=int, nargs='*', default=[])
@@ -206,13 +242,16 @@ def main():
             cells.append(cell)
             f = lambda v: 'None' if v is None else f'{v:.2f}'
             print(factory[-24:], level, cell['decisions'], cell['stopped'], cell['last_round'], f(cell['mean']),
-                  f(cell['median']), f(cell['p90']), f(cell['max']), cell['over_guard'], flush=True)
+                  f(cell['median']), f(cell['p90']), f(cell['max']), cell['over_guard'],
+                  *([cell['planned']] if args.replay else []), flush=True)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    head = {'seed': args.seed, 'decisions': args.decisions, 'seconds': args.seconds,
+    seconds = args.seconds if args.seconds is not None or args.replay else 420
+    head = {'seed': args.seed, 'decisions': args.decisions, 'seconds': seconds,
             'decision_timeout': args.decision_timeout, 'guard': args.guard}
     if args.replay:
-        head.update(mode='replay', replay=args.replay, rounds=args.rounds, every=args.every,
+        head.update(mode='replay', replay=args.replay, record_engine_build=args.record_engine_build,
+                    rounds=args.rounds, every=args.every,
                     steps=args.steps, slowest=args.slowest)
     else:
         head.update(mode='play')
