@@ -79,6 +79,13 @@ The part under test is the worker path itself: the booster-tier wrapper survives
   booster defect (126 correction) and 9170cd7 does not change it. Normal passed in 125 (max 10.17 s, 0 over the guard).
   So this cycle supports 「hard, first 80 decisions」 and nothing wider: not the late game, not the container, not easy.
 
+- **Correction (same day, user question 「왜 옛 교사로?」): the guard for `hard` is not 30 s.** `gaia-server/src/ai.rs:150`
+  `guard_timeout` gives the hard level at least 60 s (68d242e, 2026-10-04, after cycle 025's 33 s maximum); 30 s is the
+  guard of easy and normal. The queue note, the limits bullet above and the debate both used 30 s for hard. Against the
+  real guard: 0 / 80 over 60 s here, and the lab's cap-20 maximum (about 35 s) is inside it, so the late-game worry for a
+  hard room is much smaller than written. Unchanged: rounds 3–6 and the container were not timed with this factory, and
+  easy rooms (30 s guard) pass it in setup.
+
 No code or deployment change. Lab queue empty after this cycle.
 
 ## Proposal (user decision, nothing queued)
