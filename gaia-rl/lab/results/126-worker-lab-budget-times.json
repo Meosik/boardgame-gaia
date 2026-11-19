@@ -1,0 +1,717 @@
+{
+ "name": "126-worker-lab-budget-times",
+ "kind": "command",
+ "status": "done",
+ "note": "사용자 2026-11-19 「난이도 일단 정리하자. 나중에 결정하고 일단 전부 최선의 자원으로 최대한의 점수」(HANDOFF E202, 코덱스 이상 없음 → 진행): 실서버 워커가 새 교사로 전환됐을 때 쓰게 될 설정의 결정 시간 측정 — 교사 실력 판정 아님, 대국 A/B 아님. ai_worker.py(b8dbd7a)는 GAIA_AI_TEACHER가 새 공장 guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier일 때 쉬움·보통·어려움 전부 lab 예산(비교 4·수입 1회 내다보기·결정당 상한 60초)으로 두고, 환경 변수가 없으면 옛 공장·옛 수준 예산 그대로다. 이 큐: tools/worker_times.py 처음부터 두는 모드, 125와 같은 설계(Environment('quartet-e-88365') 셋업부터 워커가 고른 수로 80결정) — 새 공장 × 한 수준(hard 이름으로 요청; 새 공장에선 세 수준이 같은 값) = 1칸, GAIA_AI_PARALLEL=2(lab spec cap60-p2의 병렬 2), 벽시계 제한 5400초(최악 추정 84분 = 시작 자리 7 × 60초 + 시작 부스터 4 × 120초 + 69 × 60초보다 위 — 80결정 전에 끊기지 않게), 한 결정 180초 초과면 칸을 끊고 시간 초과로 기록. 시드 1개·한 번. 예상 ≈ 1–1.5시간. 볼 것: ① 결정 수(예정 80)·도달 라운드·멈춘 이유(decisions여야 함; seconds·decision timeout·error면 그대로 보고) ② 결정당 벽시계 평균·중앙·p90·최대, 라운드별 ③ 셋업 11결정의 합과 시작 자리·시작 부스터 각각의 시간 ④ rows에서 30·60·90·120초 초과 수 ⑤ 180초 시간 초과·오류 ⑥ 비교 완료 수와 time_capped 수(셋업에서 비교가 끝나는지 — 125 보통은 0개였음). 읽기(사전 등록): 통과·실패 판정 없음 — 서버 가드 GAIA_AI_TIMEOUT_SECS(기본 30초) 값의 근거를 내는 측정. 가드는 관측 최대보다 위여야 한다는 것까지만 적고 값은 사용자가 정함. 180초 시간 초과나 오류가 있으면 그 결정을 따로 보고하고 가드 제안을 미룸. 125의 새 공장 어려움 칸(상한 20초·병렬 없음: 셋업 평균 27.16초·최대 40.15초, 1R 평균 10.06초)과 나란히 적되 상한과 병렬이 함께 달라 차이를 한 원인으로 읽지 않음. 한계: 초반 80결정(1–2R 부근)뿐 — 후반 국면은 재생 모드(E199·E201, 규모는 사용자 수치)로 따로; lab 기계 시간이고 실서버 컨테이너 안 측정(E196 (b))은 따로; 워커 1개(방 여러 개가 동시에 돌 때의 시간은 안 봄). 리플레이 없음.",
+ "host": "agentmaco",
+ "commit": "bc9d0b9",
+ "started_at": "2026-11-19T15:57:42+09:00",
+ "finished_at": "2026-11-19T16:40:18+09:00",
+ "command": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "GAIA_AI_PARALLEL=2",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "tools/worker_times.py",
+  "--factories",
+  "guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier",
+  "--levels",
+  "hard",
+  "--decisions",
+  "80",
+  "--seconds",
+  "5400",
+  "--decision-timeout",
+  "180",
+  "--out",
+  "runs/worker-times-126/metrics.json"
+ ],
+ "exit_code": 0,
+ "metrics": {
+  "seed": "quartet-e-88365",
+  "decisions": 80,
+  "seconds": 5400.0,
+  "decision_timeout": 180.0,
+  "guard": 30,
+  "mode": "play",
+  "cells": [
+   {
+    "factory": "guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier",
+    "level": "hard",
+    "stopped": "decisions",
+    "error": null,
+    "planned": null,
+    "wall_total": 2555.6722005130723,
+    "decisions": 80,
+    "last_round": 2,
+    "mean": 31.943894079916937,
+    "median": 31.816435221000575,
+    "p90": 58.288334318087436,
+    "max": 120.02770590898581,
+    "over_guard": 44,
+    "timed_out": 0,
+    "time_capped": 4,
+    "by_round": {
+     "0": {
+      "n": 11,
+      "mean": 35.165869770201176,
+      "max": 120.02770590898581
+     },
+     "1": {
+      "n": 38,
+      "mean": 32.54992848203371,
+      "max": 60.039561158046126
+     },
+     "2": {
+      "n": 31,
+      "mean": 30.05773150335036,
+      "max": 60.05491082696244
+     }
+    },
+    "rows": [
+     {
+      "wall": 29.04173450602684,
+      "seconds": 28.982,
+      "completed_comparisons": 6,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 31.955502018914558,
+      "seconds": 31.955,
+      "completed_comparisons": 6,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 7.093588680960238,
+      "seconds": 7.093,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 2
+     },
+     {
+      "wall": 23.778333876049146,
+      "seconds": 23.778,
+      "completed_comparisons": 5,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 27.87748312507756,
+      "seconds": 27.877,
+      "completed_comparisons": 5,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 60.036582518951036,
+      "seconds": 60.036,
+      "completed_comparisons": 12,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 13
+     },
+     {
+      "wall": 0.08010000607464463,
+      "seconds": 0.08,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 38.70037199603394,
+      "seconds": 38.7,
+      "completed_comparisons": 7,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 7
+     },
+     {
+      "wall": 33.07951225806028,
+      "seconds": 33.079,
+      "completed_comparisons": 6,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 120.02770590898581,
+      "seconds": 120.027,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 15.153652577078901,
+      "seconds": 15.153,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 33.45795531698968,
+      "seconds": 33.458,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 56
+     },
+     {
+      "wall": 48.07764869707171,
+      "seconds": 48.077,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 51
+     },
+     {
+      "wall": 49.0682731680572,
+      "seconds": 49.068,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 88
+     },
+     {
+      "wall": 0.03518131095916033,
+      "seconds": 0.035,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 33.77808299206663,
+      "seconds": 33.778,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 65
+     },
+     {
+      "wall": 27.351455486030318,
+      "seconds": 27.351,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 80
+     },
+     {
+      "wall": 31.426425660029054,
+      "seconds": 31.426,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 36
+     },
+     {
+      "wall": 0.025916832964867353,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 45.58886470098514,
+      "seconds": 45.589,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 98
+     },
+     {
+      "wall": 35.12771612999495,
+      "seconds": 35.127,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 115
+     },
+     {
+      "wall": 23.62747940304689,
+      "seconds": 23.627,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 45
+     },
+     {
+      "wall": 22.985995358088985,
+      "seconds": 22.986,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 76
+     },
+     {
+      "wall": 28.45396274002269,
+      "seconds": 28.454,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 60
+     },
+     {
+      "wall": 0.026059479918330908,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 41.8307515460765,
+      "seconds": 41.83,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 121
+     },
+     {
+      "wall": 0.03181545692496002,
+      "seconds": 0.031,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 31.67736842308659,
+      "seconds": 31.677,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 51
+     },
+     {
+      "wall": 24.45366959902458,
+      "seconds": 24.453,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 17
+     },
+     {
+      "wall": 30.088938145083375,
+      "seconds": 30.089,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 28
+     },
+     {
+      "wall": 60.039561158046126,
+      "seconds": 60.039,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 68
+     },
+     {
+      "wall": 21.422711612074636,
+      "seconds": 21.422,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 32
+     },
+     {
+      "wall": 22.072035858989693,
+      "seconds": 22.072,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 12
+     },
+     {
+      "wall": 27.15099128591828,
+      "seconds": 27.151,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 32
+     },
+     {
+      "wall": 58.67758658993989,
+      "seconds": 58.677,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 44
+     },
+     {
+      "wall": 0.030112383072264493,
+      "seconds": 0.03,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 36.50209326390177,
+      "seconds": 36.502,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 22
+     },
+     {
+      "wall": 33.19394853897393,
+      "seconds": 33.194,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 8
+     },
+     {
+      "wall": 26.705194671987556,
+      "seconds": 26.705,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 13
+     },
+     {
+      "wall": 58.33558701095171,
+      "seconds": 58.335,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 17
+     },
+     {
+      "wall": 58.386879632016644,
+      "seconds": 58.387,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 19
+     },
+     {
+      "wall": 58.15247338009067,
+      "seconds": 58.152,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 18
+     },
+     {
+      "wall": 35.069681816967204,
+      "seconds": 35.069,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 21
+     },
+     {
+      "wall": 30.433938276022673,
+      "seconds": 30.433,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 10
+     },
+     {
+      "wall": 57.185189666925,
+      "seconds": 57.185,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 14
+     },
+     {
+      "wall": 32.232243138947524,
+      "seconds": 32.232,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 11
+     },
+     {
+      "wall": 57.16849410103168,
+      "seconds": 57.168,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 8
+     },
+     {
+      "wall": 56.995877570006996,
+      "seconds": 56.996,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 5
+     },
+     {
+      "wall": 0.02912191499490291,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 42.148339725099504,
+      "seconds": 42.148,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 88
+     },
+     {
+      "wall": 0.005203841021284461,
+      "seconds": 0.005,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 26.897142644040287,
+      "seconds": 26.897,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 28
+     },
+     {
+      "wall": 58.288334318087436,
+      "seconds": 58.288,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 41
+     },
+     {
+      "wall": 53.46610384795349,
+      "seconds": 53.466,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 31
+     },
+     {
+      "wall": 52.18035144393798,
+      "seconds": 52.18,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 29
+     },
+     {
+      "wall": 21.751248288084753,
+      "seconds": 21.751,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 24
+     },
+     {
+      "wall": 27.63665628200397,
+      "seconds": 27.636,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 18
+     },
+     {
+      "wall": 25.754392575006932,
+      "seconds": 25.754,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 35
+     },
+     {
+      "wall": 36.94466928194743,
+      "seconds": 36.944,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 21
+     },
+     {
+      "wall": 50.56167876801919,
+      "seconds": 50.561,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 31
+     },
+     {
+      "wall": 19.714804653893225,
+      "seconds": 19.714,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 26
+     },
+     {
+      "wall": 0.18582926702219993,
+      "seconds": 0.185,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 26
+     },
+     {
+      "wall": 0.03979686601087451,
+      "seconds": 0.039,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 0.004455867921933532,
+      "seconds": 0.004,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 20.903201770037413,
+      "seconds": 20.903,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 13
+     },
+     {
+      "wall": 38.07913785299752,
+      "seconds": 38.079,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 18
+     },
+     {
+      "wall": 36.363791598938406,
+      "seconds": 36.363,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 16
+     },
+     {
+      "wall": 50.09673366800416,
+      "seconds": 50.096,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 65
+     },
+     {
+      "wall": 51.06118083500769,
+      "seconds": 51.061,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 100
+     },
+     {
+      "wall": 0.009543369989842176,
+      "seconds": 0.009,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 39.98951729899272,
+      "seconds": 39.989,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 29
+     },
+     {
+      "wall": 56.160878427908756,
+      "seconds": 56.16,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 11
+     },
+     {
+      "wall": 36.315288673038594,
+      "seconds": 36.315,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 15
+     },
+     {
+      "wall": 60.05491082696244,
+      "seconds": 60.054,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 36
+     },
+     {
+      "wall": 0.011290246970020235,
+      "seconds": 0.011,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 35.566220588982105,
+      "seconds": 35.566,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 6
+     },
+     {
+      "wall": 27.137630018987693,
+      "seconds": 27.137,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 16
+     },
+     {
+      "wall": 35.71804142696783,
+      "seconds": 35.718,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 6
+     },
+     {
+      "wall": 28.735020697000436,
+      "seconds": 28.735,
+      "completed_comparisons": 4,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 6
+     },
+     {
+      "wall": 0.008281633025035262,
+      "seconds": 0.008,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     }
+    ]
+   }
+  ]
+ }
+}
