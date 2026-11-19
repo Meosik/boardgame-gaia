@@ -1,6 +1,7 @@
 import type {
   CreateRoomResponse,
   DevGameResponse,
+  FactionId,
   JoinRoomResponse,
   RoomInfo,
   RoomSummary,
@@ -13,6 +14,16 @@ import { apiError } from './errors';
 
 /** AI difficulty for games against AI seats (server: crate::ai::LEVELS). */
 export type AiLevel = 'easy' | 'normal' | 'hard';
+
+/** A fixed table for an AI game, so the same map and factions can be played again (the lab
+ * replays it with the teacher in every seat). Anything left out is drawn from the seed. */
+export interface AiGameTable {
+  seed?: string;
+  /** The human seat's faction. */
+  faction?: FactionId;
+  /** The three AI seats' factions: all three or none. */
+  aiFactions?: FactionId[];
+}
 
 const BASE = '/api';
 
@@ -51,11 +62,26 @@ export const api = {
       body: JSON.stringify({ nickname, seed, setup_mode: setupMode, full_setup: true }),
     });
   },
-  /** A game against three AI seats ('hard' searches twice as much and thinks longer); (server needs the AI pool); random map and factions. */
-  createAiGame(nickname: string, level: AiLevel = 'normal'): Promise<DevGameResponse> {
+  /** A game against three AI seats ('hard' searches twice as much and thinks longer); (server needs the AI pool); random map and factions.
+   * With `table` the game skips the setup auction: the map comes from `table.seed` and the seats
+   * get the named factions (the rest are drawn from the seed). `setup_mode` is always sent with
+   * it — the server's default is the auction, which has no fixed factions. */
+  createAiGame(nickname: string, level: AiLevel = 'normal', table?: AiGameTable): Promise<DevGameResponse> {
     return request(`${BASE}/dev-games`, {
       method: 'POST',
-      body: JSON.stringify({ nickname, ai_opponents: true, ai_level: level }),
+      body: JSON.stringify({
+        nickname,
+        ai_opponents: true,
+        ai_level: level,
+        ...(table
+          ? {
+              setup_mode: 'sequential',
+              seed: table.seed,
+              faction: table.faction,
+              ai_factions: table.aiFactions,
+            }
+          : {}),
+      }),
     });
   },
   createTutorialGame(): Promise<DevGameResponse> {

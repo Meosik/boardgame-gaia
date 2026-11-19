@@ -1,7 +1,7 @@
 import { useGameStore } from './gameStore';
 import { createWithEqualityFn } from 'zustand/traditional';   // see gameStore.ts
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { api, type AiLevel } from '../api/rest';
+import { api, type AiGameTable, type AiLevel } from '../api/rest';
 import { rememberRoom, type RecentRoom } from './recentRoom';
 import type { GameSetup, LobbyPlayer, PlayerId, PreviewBoard, SetupMode } from '../types/game';
 
@@ -39,7 +39,7 @@ interface RoomStore {
       options?: { name?: string; password?: string },
     ) => Promise<void>;
     createTutorialGame: () => Promise<void>;
-    createAiGame: (nickname: string, level?: AiLevel) => Promise<void>;
+    createAiGame: (nickname: string, level?: AiLevel, table?: AiGameTable) => Promise<void>;
     joinRoom: (code: string, nickname: string, sessionToken?: string, password?: string) => Promise<void>;
     regenerateSetup: (seed?: string) => Promise<void>;
     fetchPreviewBoard: () => Promise<void>;
@@ -113,8 +113,10 @@ export const useRoomStore = createWithEqualityFn<RoomStore>()(
             sessionToken: res.session_token, nickname: '나', manualControl: false });
         },
 
-        async createAiGame(nickname, level = 'normal') {
-          const res = await api.createAiGame(nickname, level);
+        async createAiGame(nickname, level = 'normal', table) {
+          const res = table
+            ? await api.createAiGame(nickname, level, table)
+            : await api.createAiGame(nickname, level);
           set({
             manualControl: false,
             roomCode: res.room_code,

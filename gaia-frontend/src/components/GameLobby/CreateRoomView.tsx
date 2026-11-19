@@ -1,9 +1,49 @@
 import { useState } from 'react';
 import { shallow } from 'zustand/shallow';
 import { useRoomStore } from '../../store/roomStore';
-import type { GameSetup, SetupMode } from '../../types/game';
-import type { AiLevel } from '../../api/rest';
-import { factionDisplayName } from '../../displayNames';
+import type { FactionId, GameSetup, SetupMode } from '../../types/game';
+import type { AiGameTable, AiLevel } from '../../api/rest';
+import { FACTION_DISPLAY_NAMES, factionDisplayName } from '../../displayNames';
+
+/** The two sides of one faction board (engine: `FactionId::other_board_side`); one table
+ * cannot seat both. */
+const FACTION_BOARDS: FactionId[][] = [
+  ['Terrans', 'Lantids'],
+  ['Xenos', 'Gleens'],
+  ['Taklons', 'Ambas'],
+  ['HadschHallas', 'Ivits'],
+  ['Geodens', 'BalTaks'],
+  ['Firaks', 'Bescods'],
+  ['Nevlas', 'Itars'],
+  ['Tinkeroids', 'Darkanians'],
+  ['Moweyds', 'SpaceGiants'],
+];
+const FACTION_IDS = FACTION_BOARDS.flat();
+const AI_SEATS = [0, 1, 2];
+
+/** The fixed table the AI-game form asks for: `undefined` when nothing is filled in (the
+ * usual auction game), a message when the choices cannot sit at one table. */
+function aiGameTable(
+  seed: string,
+  myFaction: FactionId | '',
+  aiFactions: (FactionId | '')[],
+): AiGameTable | string | undefined {
+  const named = aiFactions.filter((faction): faction is FactionId => faction !== '');
+  if (named.length !== 0 && named.length !== aiFactions.length) {
+    return 'AI 종족은 셋 다 고르거나 셋 다 무작위로 두세요';
+  }
+  const seats = myFaction ? [myFaction, ...named] : named;
+  const boards = seats.map((faction) => FACTION_BOARDS.findIndex((board) => board.includes(faction)));
+  if (new Set(boards).size !== boards.length) {
+    return '같은 종족이나 같은 종족판의 앞뒷면(모행성이 같은 두 종족)은 함께 고를 수 없습니다';
+  }
+  if (!seed && !myFaction && named.length === 0) return undefined;
+  return {
+    seed: seed || undefined,
+    faction: myFaction || undefined,
+    aiFactions: named.length ? named : undefined,
+  };
+}
 
 interface Props {
   onRoomCreated: () => void;
@@ -16,6 +56,9 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [setupMode, setSetupMode] = useState<SetupMode>('bidding');
+  const [aiSeed, setAiSeed] = useState('');
+  const [aiMyFaction, setAiMyFaction] = useState<FactionId | ''>('');
+  const [aiFactions, setAiFactions] = useState<(FactionId | '')[]>(AI_SEATS.map(() => ''));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { gameSetup, actions } = useRoomStore(
@@ -55,10 +98,16 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
       setError('닉네임을 입력해주세요');
       return;
     }
+    const table = aiGameTable(aiSeed.trim(), aiMyFaction, aiFactions);
+    if (typeof table === 'string') {
+      setError(table);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      await actions.createAiGame(nickname.trim(), level);
+      if (table) await actions.createAiGame(nickname.trim(), level, table);
+      else await actions.createAiGame(nickname.trim(), level);
       onRoomCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 대전을 시작하지 못했습니다');
@@ -143,6 +192,66 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
           </span>
         </label>
       </fieldset>
+      {!manualControl && (
+        <details className="ai-table-picker">
+          <summary>AI 대전 맵·종족 고정 (선택)</summary>
+          <p>
+            <small>
+              하나라도 채우면 비딩 없이 바로 시작합니다. 같은 시드는 같은 맵·타일이고, 비워 둔
+              종족은 시드로 정해집니다.
+            </small>
+          </p>
+          <div className="form-group">
+            <label htmlFor="ai-seed">맵 시드</label>
+            <input
+              id="ai-seed"
+              type="text"
+              value={aiSeed}
+              onChange={(e) => setAiSeed(e.target.value)}
+              maxLength={64}
+              placeholder="비워두면 무작위 맵"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="ai-my-faction">내 종족</label>
+            <select
+              id="ai-my-faction"
+              value={aiMyFaction}
+              onChange={(e) => setAiMyFaction(e.target.value as FactionId | '')}
+            >
+              <option value="">무작위</option>
+              {FACTION_IDS.map((faction) => (
+                <option key={faction} value={faction}>
+                  {FACTION_DISPLAY_NAMES[faction]}
+                </option>
+              ))}
+            </select>
+          </div>
+          {AI_SEATS.map((seat) => (
+            <div className="form-group" key={seat}>
+              <label htmlFor={`ai-faction-${seat}`}>AI {seat + 1} 종족</label>
+              <select
+                id={`ai-faction-${seat}`}
+                value={aiFactions[seat]}
+                onChange={(e) =>
+                  setAiFactions((current) =>
+                    current.map((faction, index) =>
+                      index === seat ? (e.target.value as FactionId | '') : faction,
+                    ),
+                  )
+                }
+              >
+                <option value="">무작위</option>
+                {FACTION_IDS.map((faction) => (
+                  <option key={faction} value={faction}>
+                    {FACTION_DISPLAY_NAMES[faction]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </details>
+      )}
 
       {error && <p className="error-msg">{error}</p>}
 

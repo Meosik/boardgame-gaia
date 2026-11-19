@@ -85,6 +85,10 @@ pub struct CreateDevGameRequest {
     pub ai_opponents: bool,
     /// AI difficulty for `ai_opponents` games: `easy`, `normal` or `hard` (default: server's).
     pub ai_level: Option<String>,
+    /// The three AI seats' factions for an `ai_opponents` game (default: drawn from the seed).
+    /// Naming these or `faction` skips the setup auction, see `dev_game::ai_game_setup`.
+    #[serde(default)]
+    pub ai_factions: Option<Vec<FactionId>>,
 }
 
 #[derive(Serialize)]
@@ -231,13 +235,26 @@ pub async fn create_dev_game(
     });
     let nickname = req.nickname.as_deref().unwrap_or("DEV");
     // AI games start with the setup auction (the human bids against the AI seats, see
-    // crate::ai_bidding); `setup_mode: Sequential` keeps the earlier random faction assignment.
-    let ai_bidding = req.ai_opponents
-        && !req.full_setup
-        && matches!(
-            req.setup_mode.unwrap_or(SetupMode::Bidding),
-            SetupMode::Bidding
-        );
+    // crate::ai_bidding); `setup_mode: Sequential` or a named faction skips it and seats fixed
+    // factions (the earlier seeded assignment unless the request names them).
+    let ai_game_request = req.ai_opponents && !req.full_setup;
+    if req.ai_factions.is_some() && !ai_game_request {
+        return Err(ServerError::InvalidAction(
+            "ai_factions needs ai_opponents without full_setup".into(),
+        ));
+    }
+    let ai_fixed_factions = if ai_game_request {
+        crate::services::dev_game::ai_game_setup(
+            &seed,
+            req.setup_mode,
+            req.faction,
+            req.ai_factions.as_deref(),
+        )
+        .map_err(ServerError::InvalidAction)?
+    } else {
+        None
+    };
+    let ai_bidding = ai_game_request && ai_fixed_factions.is_none();
     let setup_mode = if req.full_setup {
         req.setup_mode.unwrap_or(SetupMode::Bidding)
     } else if ai_bidding {
@@ -245,11 +262,9 @@ pub async fn create_dev_game(
     } else {
         SetupMode::Sequential
     };
-    let (faction, ai_bot_factions) = if req.ai_opponents && !ai_bidding {
-        let (human, bots) = crate::services::dev_game::ai_game_factions(&seed, req.faction);
-        (human, Some(bots))
-    } else {
-        (req.faction.unwrap_or(FactionId::Terrans), None)
+    let (faction, ai_bot_factions) = match ai_fixed_factions {
+        Some((human, bots)) => (human, Some(bots)),
+        None => (req.faction.unwrap_or(FactionId::Terrans), None),
     };
     let (code, player_id, setup) =
         GameSetupService::create_room(&app, nickname, Some(seed.clone()), setup_mode, None, None)

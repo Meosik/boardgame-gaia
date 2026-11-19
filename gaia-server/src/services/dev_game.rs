@@ -158,6 +158,60 @@ pub fn ai_game_factions(seed: &str, human: Option<FactionId>) -> (FactionId, Vec
     (human, chosen.split_off(1))
 }
 
+/// What an AI game request asks for: `None` is the setup auction, `Some` the four seats'
+/// factions (human first) of a game that skips it. Naming a faction selects the second form,
+/// so a request for a fixed table (the lab replays the same seed and factions) cannot fall
+/// into the auction and lose its factions; asking for the auction and a faction is an error.
+/// `bots` names the three AI seats; left out, they come from the seed (`ai_game_factions`).
+pub fn ai_game_setup(
+    seed: &str,
+    setup_mode: Option<gaia_engine::SetupMode>,
+    human: Option<FactionId>,
+    bots: Option<&[FactionId]>,
+) -> Result<Option<(FactionId, Vec<FactionId>)>, String> {
+    use gaia_engine::SetupMode;
+    let names_factions = human.is_some() || bots.is_some();
+    match setup_mode {
+        Some(SetupMode::Bidding) if names_factions => {
+            return Err("faction and ai_factions need setup_mode sequential".into());
+        }
+        Some(SetupMode::Bidding) => return Ok(None),
+        None if !names_factions => return Ok(None),
+        _ => {}
+    }
+    let Some(bots) = bots else {
+        return Ok(Some(ai_game_factions(seed, human)));
+    };
+    if bots.len() != 3 {
+        return Err(format!(
+            "ai_factions needs exactly 3 factions, got {}",
+            bots.len()
+        ));
+    }
+    let clash = |a: FactionId, b: FactionId| a == b || a.other_board_side() == b;
+    // The seeded table is four different boards and the AI seats block at most three of them.
+    let human = human.or_else(|| {
+        let (first, rest) = ai_game_factions(seed, None);
+        std::iter::once(first)
+            .chain(rest)
+            .find(|candidate| bots.iter().all(|bot| !clash(*candidate, *bot)))
+    });
+    let Some(human) = human else {
+        return Err("no faction left for the human seat".into());
+    };
+    let seats: Vec<FactionId> = std::iter::once(human).chain(bots.iter().copied()).collect();
+    for (index, a) in seats.iter().enumerate() {
+        for b in &seats[index + 1..] {
+            if clash(*a, *b) {
+                return Err(format!(
+                    "{a:?} and {b:?} are the same faction board; the four seats need four boards"
+                ));
+            }
+        }
+    }
+    Ok(Some((human, bots.to_vec())))
+}
+
 pub fn build_game_state_with_factions(
     room_code: &str,
     seed: &str,
@@ -1023,5 +1077,63 @@ mod tests {
             super::ai_game_factions("a", None),
             super::ai_game_factions("b", None)
         );
+    }
+
+    #[test]
+    fn ai_game_setup_keeps_named_factions_out_of_the_auction() {
+        use gaia_engine::SetupMode;
+        let bots = [FactionId::Tinkeroids, FactionId::Moweyds, FactionId::Terrans];
+        // No faction named: the auction unless sequential is asked for.
+        assert_eq!(super::ai_game_setup("s", None, None, None), Ok(None));
+        assert_eq!(
+            super::ai_game_setup("s", Some(SetupMode::Bidding), None, None),
+            Ok(None)
+        );
+        assert_eq!(
+            super::ai_game_setup("s", Some(SetupMode::Sequential), None, None),
+            Ok(Some(super::ai_game_factions("s", None)))
+        );
+        // A named faction without a mode is a fixed table, not an auction that drops it.
+        assert_eq!(
+            super::ai_game_setup("s", None, Some(FactionId::Ivits), None),
+            Ok(Some(super::ai_game_factions("s", Some(FactionId::Ivits))))
+        );
+        assert_eq!(
+            super::ai_game_setup("s", None, Some(FactionId::Ivits), Some(&bots)),
+            Ok(Some((FactionId::Ivits, bots.to_vec())))
+        );
+        assert!(
+            super::ai_game_setup("s", Some(SetupMode::Bidding), Some(FactionId::Ivits), None)
+                .is_err()
+        );
+        assert!(super::ai_game_setup("s", Some(SetupMode::Bidding), None, Some(&bots)).is_err());
+        // Only the AI seats named: the human seat is a seeded faction on a fourth board.
+        for seed in ["a", "b", "c", "x9"] {
+            let (human, named) = super::ai_game_setup(seed, None, None, Some(&bots))
+                .unwrap_or_else(|error| panic!("{seed}: {error}"))
+                .unwrap_or_else(|| panic!("{seed}: auction"));
+            assert_eq!(named, bots.to_vec(), "{seed}");
+            for bot in bots {
+                assert!(human != bot && human.other_board_side() != bot, "{seed}");
+            }
+        }
+        // Wrong count, a repeated faction, two sides of one board, the human's own board.
+        assert!(super::ai_game_setup("s", None, None, Some(&bots[..2])).is_err());
+        let repeated = [FactionId::Terrans, FactionId::Terrans, FactionId::Moweyds];
+        assert!(super::ai_game_setup("s", None, None, Some(&repeated)).is_err());
+        let one_board = [
+            FactionId::Terrans,
+            FactionId::Terrans.other_board_side(),
+            FactionId::Moweyds,
+        ];
+        assert!(super::ai_game_setup("s", None, None, Some(&one_board)).is_err());
+        assert!(super::ai_game_setup("s", None, Some(FactionId::Terrans), Some(&bots)).is_err());
+        assert!(super::ai_game_setup(
+            "s",
+            None,
+            Some(FactionId::Terrans.other_board_side()),
+            Some(&bots)
+        )
+        .is_err());
     }
 }

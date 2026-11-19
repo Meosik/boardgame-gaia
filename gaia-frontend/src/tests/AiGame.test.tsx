@@ -51,6 +51,58 @@ describe('AI game', () => {
     expect(createAiGame).toHaveBeenCalledWith('나', 'hard');
   });
 
+  it('starts a fixed table when a seed or a faction is filled in', async () => {
+    const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
+      room_code: 'AI9012',
+      player_id: 7,
+      session_token: 'token',
+      game_setup: null as never,
+      game_state: null as never,
+      players: [{ player_id: 7, nickname: '나', ready: true }] as never,
+      host_player_id: 7,
+    });
+    const onRoomCreated = vi.fn();
+    render(<CreateRoomView onRoomCreated={onRoomCreated} onBack={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
+    fireEvent.change(screen.getByLabelText('맵 시드'), { target: { value: ' quartet-e-88365 ' } });
+    fireEvent.change(screen.getByLabelText('내 종족'), { target: { value: 'Ivits' } });
+    fireEvent.change(screen.getByLabelText('AI 1 종족'), { target: { value: 'Tinkeroids' } });
+    // Two of three AI seats named: nothing is sent.
+    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
+    expect(screen.getByText('AI 종족은 셋 다 고르거나 셋 다 무작위로 두세요')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('AI 2 종족'), { target: { value: 'Moweyds' } });
+    // The other side of the human's faction board: nothing is sent either.
+    fireEvent.change(screen.getByLabelText('AI 3 종족'), { target: { value: 'HadschHallas' } });
+    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
+    expect(createAiGame).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('AI 3 종족'), { target: { value: 'Terrans' } });
+    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전' }));
+    await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
+    expect(createAiGame).toHaveBeenCalledWith('나', 'normal', {
+      seed: 'quartet-e-88365',
+      faction: 'Ivits',
+      aiFactions: ['Tinkeroids', 'Moweyds', 'Terrans'],
+    });
+  });
+
+  it('sends setup_mode sequential with a fixed table and nothing extra without one', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => new Response('{}', { status: 200 }));
+    await api.createAiGame('나', 'hard', { seed: 's1', faction: 'Ivits' });
+    await api.createAiGame('나', 'normal');
+    const bodies = fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
+    expect(bodies[0]).toEqual({
+      nickname: '나',
+      ai_opponents: true,
+      ai_level: 'hard',
+      setup_mode: 'sequential',
+      seed: 's1',
+      faction: 'Ivits',
+    });
+    expect(bodies[1]).toEqual({ nickname: '나', ai_opponents: true, ai_level: 'normal' });
+  });
+
   it('asks for a nickname before starting', () => {
     const createAiGame = vi.spyOn(api, 'createAiGame');
     render(<CreateRoomView onRoomCreated={vi.fn()} onBack={vi.fn()} />);
