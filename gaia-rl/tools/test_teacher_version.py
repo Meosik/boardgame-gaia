@@ -5,6 +5,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
+import engine_fingerprint as ef
 import teacher_version as tv
 
 FILES = {
@@ -115,6 +116,71 @@ class TeacherVersionTest(unittest.TestCase):
         tv.use(self.vdir, 'builtin')
         self.assertEqual((self.vdir / 'current').read_text(), '')
         self.assertFalse((self.vdir / '.current.tmp').exists())
+
+    def test_fingerprint_stored(self):
+        name = self.add(name='v1')
+        meta = json.loads((self.vdir / name / 'teacher.json').read_text())
+        self.assertRegex(meta['engine_fingerprint'], r'^[0-9a-f]{64}$')
+        self.assertEqual(meta['engine_fingerprint'], ef.of_commit(self.repo, self.first))
+
+    def test_use_same_engine(self):
+        name = self.add(name='v1')
+        tv.use(self.vdir, name, repo=self.repo, live_dir=self.repo)
+        self.assertEqual(tv.current(self.vdir), name)
+
+    def test_use_other_engine(self):
+        old = self.add(name='old')
+        tv.use(self.vdir, old)
+        (self.repo / 'gaia-engine/src/lib.rs').write_text('// two\n')
+        second = commit(self.repo, 'second')
+        live = self.tmp / 'live'
+        run(self.repo, 'git', 'worktree', 'add', '-q', '--detach', str(live), second)
+        with self.assertRaises(SystemExit) as cm:
+            tv.use(self.vdir, old, repo=self.repo, live_dir=live)
+        self.assertIn('engine', str(cm.exception))
+        self.assertEqual(tv.current(self.vdir), old)
+        tv.use(self.vdir, 'builtin')
+        with self.assertRaises(SystemExit):
+            tv.use(self.vdir, old, repo=self.repo, live_dir=live)
+        self.assertEqual(tv.current(self.vdir), '')
+        tv.use(self.vdir, old, repo=self.repo, live_dir=live, force_engine=True)
+        self.assertEqual(tv.current(self.vdir), old)
+
+    def test_use_forced_version_against_other_live(self):
+        (self.repo / 'gaia-engine/src/lib.rs').write_text('// two\n')
+        second = commit(self.repo, 'second')
+        live = self.tmp / 'live'
+        run(self.repo, 'git', 'worktree', 'add', '-q', '--detach', str(live), self.first)
+        name = tv.add(self.repo, self.vdir, second, 'good_factory', name='v2', live_dir=live, force_engine=True)
+        with self.assertRaises(SystemExit) as cm:
+            tv.use(self.vdir, name, repo=self.repo, live_dir=live)
+        self.assertIn('engine', str(cm.exception))
+        self.assertEqual(tv.current(self.vdir), '')
+        tv.use(self.vdir, name, repo=self.repo, live_dir=live, force_engine=True)
+        self.assertEqual(tv.current(self.vdir), name)
+
+    def test_use_without_fingerprint(self):
+        name = self.add(name='v1')
+        p = self.vdir / name / 'teacher.json'
+        meta = json.loads(p.read_text())
+        del meta['engine_fingerprint']
+        p.write_text(json.dumps(meta))
+        for force in (False, True):
+            with self.assertRaises(SystemExit) as cm:
+                tv.use(self.vdir, name, repo=self.repo, live_dir=self.repo, force_engine=force)
+            self.assertIn('fingerprint', str(cm.exception))
+        with self.assertRaises(SystemExit):
+            tv.use(self.vdir, name)
+        self.assertEqual(tv.current(self.vdir), '')
+
+    def test_use_live_missing(self):
+        name = self.add(name='v1')
+        tv.use(self.vdir, name, repo=self.repo, live_dir=self.tmp / 'nolive')
+        self.assertEqual(tv.current(self.vdir), name)
+
+    def test_use_builtin_without_repo(self):
+        tv.use(self.vdir, 'builtin')
+        self.assertEqual((self.vdir / 'current').read_text(), '')
 
     def test_versions(self):
         self.add(name='v1')

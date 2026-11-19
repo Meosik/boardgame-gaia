@@ -14,6 +14,8 @@ Commands:
 
 A version carries only Python and data and runs on the engine module built into the image, so a
 commit whose engine sources differ from the deployed commit needs a deploy instead; `add` refuses it.
+Each version records the engine fingerprint of its commit (engine_fingerprint.py); the server (and
+`use`) compare it with the deployed engine.
 """
 import argparse
 import io
@@ -22,15 +24,17 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 from datetime import date, datetime
 from pathlib import Path
 
+import engine_fingerprint
+
 TEACHER_PATHS = ['gaia-rl/baseline-teacher-20260917', 'gaia-rl/tools',
                  'gaia-rl/research/strategy/bgg-openings-part2.csv',
                  'gaia-frontend/src/data', 'gaia-engine/data']          # what gaia-server/Dockerfile copies for the worker
-ENGINE_PATHS = ['gaia-engine', 'gaia-rl/src', 'gaia-rl/python', 'gaia-rl/Cargo.toml',
-                'gaia-rl/Cargo.lock', 'gaia-rl/build.rs', 'gaia-rl/pyproject.toml']  # built into the image
+ENGINE_PATHS = engine_fingerprint.ENGINE_PATHS  # built into the image
 NAME = re.compile(r'^[A-Za-z0-9_-][A-Za-z0-9._-]*$')
 RESERVED = {'current', 'builtin'}
 WORKER = 'gaia-rl/tools/ai_worker.py'
@@ -41,6 +45,15 @@ def git(repo, *args, binary=False):
     if r.returncode != 0:
         raise SystemExit(r.stderr.decode(errors='replace').strip() or f'git {args[0]} failed')
     return r.stdout if binary else r.stdout.decode().strip()
+
+
+def deployed_commit(live_dir):
+    if live_dir is None or not Path(live_dir).exists():
+        return None
+    try:
+        return git(live_dir, 'rev-parse', 'HEAD')
+    except SystemExit:
+        return None
 
 
 def add(repo, versions_dir, commit, factory, name=None, live_dir=None, force_engine=False, today=None):
@@ -57,30 +70,20 @@ def add(repo, versions_dir, commit, factory, name=None, live_dir=None, force_eng
     if not re.search(rf'^def {re.escape(factory)}\(', text, re.M):
         raise SystemExit(f'factory {factory} is not defined in gaia-rl/tools/teacher_patches.py at {full[:7]}')
 
-    deployed = None
-    if live_dir is not None and Path(live_dir).exists():
-        try:
-            deployed = git(live_dir, 'rev-parse', 'HEAD')
-        except SystemExit:
-            deployed = None
+    fingerprint = engine_fingerprint.of_commit(repo, full)
+    deployed = deployed_commit(live_dir)
     engine_same = None
     if deployed is None:
         if not force_engine:
-            raise SystemExit(f'cannot read the deployed commit from {live_dir}; pass --force-engine '
-                             "only if the image was built from this commit's engine")
+            raise SystemExit(f'cannot read the deployed commit from {live_dir}; pass --force-engine to make the '
+                             'version anyway (the server runs it only on an image built from the same engine)')
     else:
-        r = subprocess.run(['git', 'diff', '--quiet', deployed, full, '--', *ENGINE_PATHS], cwd=repo)
-        if r.returncode == 0:
-            engine_same = True
-        elif r.returncode == 1:
-            engine_same = False
-            if not force_engine:
-                raise SystemExit(
-                    f'engine sources of {full[:7]} differ from the deployed commit {deployed[:7]}: '
-                    'this teacher needs a deploy. See: '
-                    f'git diff --stat {deployed[:7]} {full[:7]} -- gaia-engine gaia-rl/src gaia-rl/python')
-        else:
-            raise SystemExit(f'git diff failed (exit {r.returncode}) comparing {deployed[:7]} and {full[:7]}')
+        engine_same = engine_fingerprint.of_commit(repo, deployed) == fingerprint
+        if not engine_same and not force_engine:
+            raise SystemExit(
+                f'engine sources of {full[:7]} differ from the deployed commit {deployed[:7]}: '
+                'this teacher needs a deploy. See: '
+                f'git diff --stat {deployed[:7]} {full[:7]} -- gaia-engine gaia-rl/src gaia-rl/python')
 
     data = git(repo, 'archive', '--format=tar', full, '--', *TEACHER_PATHS, binary=True)
     versions_dir.mkdir(parents=True, exist_ok=True)
@@ -96,13 +99,14 @@ def add(repo, versions_dir, commit, factory, name=None, live_dir=None, force_eng
 
     meta = {'name': name, 'commit': full, 'factory': factory,
             'created': datetime.now().astimezone().isoformat(timespec='seconds'),
-            'deployed_commit': deployed, 'engine_same_as_deployed': engine_same}
+            'deployed_commit': deployed, 'engine_same_as_deployed': engine_same,
+            'engine_fingerprint': fingerprint}
     (tmp / 'teacher.json').write_text(json.dumps(meta, indent=2) + '\n')
     os.rename(tmp, versions_dir / name)
     return name
 
 
-def use(versions_dir, name):
+def use(versions_dir, name, repo=None, live_dir=None, force_engine=False):
     versions_dir = Path(versions_dir)
     if name == 'builtin':
         versions_dir.mkdir(parents=True, exist_ok=True)
@@ -110,6 +114,23 @@ def use(versions_dir, name):
     else:
         if not NAME.match(name) or not (versions_dir / name / WORKER).is_file():
             raise SystemExit(f'unknown version: {name!r}')
+        try:
+            meta = json.loads((versions_dir / name / 'teacher.json').read_text())
+        except (OSError, ValueError):
+            meta = {}
+        fingerprint = meta.get('engine_fingerprint') if isinstance(meta, dict) else None
+        if not fingerprint:
+            raise SystemExit(f'version {name} has no engine fingerprint; the server will not run it')
+        if repo is not None:
+            deployed = deployed_commit(live_dir)
+            if deployed is None:
+                print(f'cannot read the deployed commit from {live_dir}; not compared '
+                      '- the server checks the engine itself', file=sys.stderr)
+            elif engine_fingerprint.of_commit(repo, deployed) != fingerprint and not force_engine:
+                raise SystemExit(
+                    f'version {name} was made for another engine than the deployed commit {deployed[:7]}: '
+                    'the server would play new rooms with the image teacher. Deploy that engine first, '
+                    'or pass --force-engine if that deploy is about to happen')
         content = name + '\n'
     tmp = versions_dir / '.current.tmp'
     tmp.write_text(content)
@@ -151,27 +172,40 @@ def main(argv=None):
     u = sub.add_parser('use')
     u.add_argument('name')
     u.add_argument('--dir', default=default_dir)
+    u.add_argument('--live', default='~/gaia-live')
+    u.add_argument('--force-engine', action='store_true')
     l = sub.add_parser('list')
     l.add_argument('--dir', default=default_dir)
+    l.add_argument('--live', default='~/gaia-live')
     args = ap.parse_args(argv)
     vdir = Path(args.dir).expanduser()
+    repo = Path(__file__).resolve().parents[2]
     if args.cmd == 'add':
-        repo = Path(__file__).resolve().parents[2]
         name = add(repo, vdir, args.commit, args.factory, name=args.name,
                    live_dir=Path(args.live).expanduser(), force_engine=args.force_engine)
         print(name)
         print(vdir / name)
         print(f'next: check it inside the container, then  teacher_version.py use {name}')
     elif args.cmd == 'use':
-        use(vdir, args.name)
+        use(vdir, args.name, repo=repo, live_dir=Path(args.live).expanduser(), force_engine=args.force_engine)
         what = 'the teacher built into the image' if args.name == 'builtin' else args.name
         print(f'new AI rooms use {what}; running games keep their version')
     else:
         cur = current(vdir)
         print(f'current: {cur or "builtin (image teacher)"}')
+        live = Path(args.live).expanduser()
+        deployed = deployed_commit(live)
+        deployed_fp = engine_fingerprint.of_commit(repo, deployed) if deployed else None
+        if deployed_fp:
+            print(f'deployed engine: {deployed_fp[:12]} (commit {deployed[:7]})')
+        else:
+            print(f'deployed engine: unknown (cannot read {live})')
         for name, meta in versions(vdir):
             mark = '* ' if name == cur else '  '
-            print(f'{mark}{name} {meta.get("factory", "?")} {str(meta.get("commit", "?"))[:7]} {meta.get("created", "?")}')
+            fp = meta.get('engine_fingerprint')
+            state = '?' if not (deployed_fp and fp) else ('ok' if fp == deployed_fp else 'differs')
+            print(f'{mark}{name} {meta.get("factory", "?")} {str(meta.get("commit", "?"))[:7]} '
+                  f'{meta.get("created", "?")} engine {state}')
 
 
 if __name__ == '__main__':
