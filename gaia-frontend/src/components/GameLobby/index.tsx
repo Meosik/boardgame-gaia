@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { LobbyHomeView } from './LobbyHomeView';
 import { CreateRoomView } from './CreateRoomView';
+import { AiTestView } from './AiTestView';
 import { WaitingRoomView } from './WaitingRoomView';
 import { FactionSelectView } from './FactionSelectView';
 import { useRoomStore } from '../../store/roomStore';
 
 import { forgetRecentRoom, readRecentRoom, rememberRoom } from '../../store/recentRoom';
 
-type LobbyView = 'lobby' | 'create' | 'waiting' | 'faction';
+type LobbyView = 'lobby' | 'create' | 'ai-test' | 'waiting' | 'faction';
 
 interface Props {
   onGameStart: () => void;
@@ -51,7 +52,15 @@ export function GameLobby({ onGameStart, manualControl = false }: Props) {
           } : undefined}
           onTutorialStart={onGameStart}
           onCreateRoom={() => navigate('create')}
+          onAiTest={manualControl ? undefined : () => navigate('ai-test')}
           onRoomJoined={() => navigate('waiting')}
+        />
+      );
+    case 'ai-test':
+      return (
+        <AiTestView
+          onGameCreated={() => navigate('waiting')}
+          onBack={() => navigate('lobby')}
         />
       );
     case 'create':

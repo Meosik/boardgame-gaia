@@ -8,6 +8,8 @@ interface Props {
   onRoomJoined: () => void;
   onCreateRoom: () => void;
   onTutorialStart?: () => void;
+  /** Opens the AI test (fixed map, four dealt factions, three hard AI seats); absent in the DEV flow. */
+  onAiTest?: () => void;
   recentRoomCode?: string;
   onResumeRoom?: () => void;
 }
@@ -18,7 +20,7 @@ const SETUP_MODE_LABELS = { bidding: '승점 비딩', sequential: '순차 선택
  * full-width entries underneath. Every waiting room is listed, so picking one from the list is the
  * only way in — typing a code would just be a slower way to reach the same rooms, and reconnecting
  * to a game already in progress is what the 이어하기 shortcut is for. */
-export function LobbyHomeView({ onRoomJoined, onCreateRoom, onTutorialStart, recentRoomCode, onResumeRoom }: Props) {
+export function LobbyHomeView({ onRoomJoined, onCreateRoom, onTutorialStart, onAiTest, recentRoomCode, onResumeRoom }: Props) {
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [lockedRoom, setLockedRoom] = useState<RoomSummary | null>(null);
@@ -167,6 +169,12 @@ export function LobbyHomeView({ onRoomJoined, onCreateRoom, onTutorialStart, rec
           }}>1라운드 따라 하기</button>
           <a href="?tutorial=1">행동 설명 보기</a>
         </div>
+        {onAiTest && (
+          <button type="button" className="lobby-entry" onClick={onAiTest}>
+            <span className="lobby-entry-title">AI 테스트</span>
+            <span className="lobby-entry-desc">고정 맵에서 무작위 4종족 중 하나를 골라 AI 3명(어려움)과 둡니다</span>
+          </button>
+        )}
         <a className="lobby-entry" href="?aiReplay=1">
           <span className="lobby-entry-title">AI 보기</span>
           <span className="lobby-entry-desc">AI끼리 둔 대국을 처음부터 되돌려 봅니다</span>

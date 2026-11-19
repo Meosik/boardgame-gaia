@@ -1,16 +1,41 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { AiTestView } from '../components/GameLobby/AiTestView';
 import { CreateRoomView } from '../components/GameLobby/CreateRoomView';
+import { LobbyHomeView } from '../components/GameLobby/LobbyHomeView';
 import { api } from '../api/rest';
 import { useRoomStore } from '../store/roomStore';
+import { AI_TEST_FACTIONS, otherBoardSide, readShownCounts } from '../aiTestDraw';
+import type { FactionId } from '../types/game';
 
-describe('AI game', () => {
+function dealtButtons(): HTMLElement[] {
+  const group = screen.getByRole('group', { name: /이번 판 종족/ });
+  return within(group).getAllByRole('button');
+}
+
+function dealtFactions(): FactionId[] {
+  return dealtButtons().map((button) => button.dataset.faction as FactionId);
+}
+
+describe('AI test', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
     useRoomStore.getState().actions.reset();
   });
 
-  it('starts a game against three AI seats from the create-room view', async () => {
+  it('deals four factions of four different boards', () => {
+    render(<AiTestView onGameCreated={vi.fn()} onBack={vi.fn()} />);
+    const dealt = dealtFactions();
+    expect(dealt).toHaveLength(4);
+    expect(new Set(dealt).size).toBe(4);
+    for (const faction of dealt) {
+      expect(AI_TEST_FACTIONS).toContain(faction);
+      expect(dealt).not.toContain(otherBoardSide(faction));
+    }
+  });
+
+  it('starts a hard game on the fixed map with the picked faction and the other three as AI', async () => {
     const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
       room_code: 'AI1234',
       player_id: 5,
@@ -20,66 +45,35 @@ describe('AI game', () => {
       players: [{ player_id: 5, nickname: '나', ready: true }] as never,
       host_player_id: 5,
     });
-    const onRoomCreated = vi.fn();
-    render(<CreateRoomView onRoomCreated={onRoomCreated} onBack={vi.fn()} />);
+    const onGameCreated = vi.fn();
+    render(<AiTestView onGameCreated={onGameCreated} onBack={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
-    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' }));
-    await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
+    const dealt = dealtFactions();
+    fireEvent.click(dealtButtons()[1]);
+    await waitFor(() => expect(onGameCreated).toHaveBeenCalled());
     expect(createAiGame).toHaveBeenCalledWith('나', 'hard', {
       seed: 'quartet-e-88365',
-      faction: 'Darkanians',
-      aiFactions: ['BalTaks', 'Itars', 'Ivits'],
+      faction: dealt[1],
+      aiFactions: [dealt[0], dealt[2], dealt[3]],
     });
     const room = useRoomStore.getState();
     expect(room.roomCode).toBe('AI1234');
     expect(room.playerId).toBe(5);
     expect(room.manualControl).toBe(false);
     expect(room.roomState).toBe('faction_selection');
+    // The started game's four factions are counted, so the next draw prefers the other fourteen.
+    const shown = readShownCounts();
+    expect(Object.keys(shown).sort()).toEqual([...dealt].sort());
+    expect(Object.values(shown)).toEqual([1, 1, 1, 1]);
   });
 
-  it('starts a hard AI game from its own button', async () => {
-    const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
-      room_code: 'AI5678',
-      player_id: 6,
-      session_token: 'token',
-      game_setup: null as never,
-      game_state: null as never,
-      players: [{ player_id: 6, nickname: '나', ready: true }] as never,
-      host_player_id: 6,
-    });
-    const onRoomCreated = vi.fn();
-    render(<CreateRoomView onRoomCreated={onRoomCreated} onBack={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
-    fireEvent.change(screen.getByLabelText('종족 묶음'), { target: { value: '-1' } });
-    expect(screen.queryByLabelText('내 종족')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' }));
-    await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
-    expect(createAiGame).toHaveBeenCalledWith('나', 'hard');
-  });
-
-  it('plays the chosen faction of the chosen fixed table', async () => {
-    const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
-      room_code: 'AI9012',
-      player_id: 7,
-      session_token: 'token',
-      game_setup: null as never,
-      game_state: null as never,
-      players: [{ player_id: 7, nickname: '나', ready: true }] as never,
-      host_player_id: 7,
-    });
-    const onRoomCreated = vi.fn();
-    render(<CreateRoomView onRoomCreated={onRoomCreated} onBack={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
-    fireEvent.change(screen.getByLabelText('종족 묶음'), { target: { value: '3' } });
-    expect(screen.getByLabelText('내 종족')).toHaveValue('Lantids');
-    fireEvent.change(screen.getByLabelText('내 종족'), { target: { value: 'Bescods' } });
-    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' }));
-    await waitFor(() => expect(onRoomCreated).toHaveBeenCalled());
-    expect(createAiGame).toHaveBeenCalledWith('나', 'hard', {
-      seed: 'quartet-e-88365',
-      faction: 'Bescods',
-      aiFactions: ['Lantids', 'Xenos', 'Itars'],
-    });
+  it('asks for a nickname before starting and counts nothing', () => {
+    const createAiGame = vi.spyOn(api, 'createAiGame');
+    render(<AiTestView onGameCreated={vi.fn()} onBack={vi.fn()} />);
+    fireEvent.click(dealtButtons()[0]);
+    expect(createAiGame).not.toHaveBeenCalled();
+    expect(screen.getByText('닉네임을 입력해주세요')).toBeInTheDocument();
+    expect(readShownCounts()).toEqual({});
   });
 
   it('sends setup_mode sequential with a fixed table and nothing extra without one', async () => {
@@ -100,22 +94,17 @@ describe('AI game', () => {
     expect(bodies[1]).toEqual({ nickname: '나', ai_opponents: true, ai_level: 'normal' });
   });
 
-  it('asks for a nickname before starting', () => {
-    const createAiGame = vi.spyOn(api, 'createAiGame');
-    render(<CreateRoomView onRoomCreated={vi.fn()} onBack={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' }));
-    expect(createAiGame).not.toHaveBeenCalled();
-    expect(screen.getByText('닉네임을 입력해주세요')).toBeInTheDocument();
+  it('opens from its own entry on the lobby front page', async () => {
+    vi.spyOn(api, 'listRooms').mockResolvedValue([]);
+    const onAiTest = vi.fn();
+    render(<LobbyHomeView onRoomJoined={vi.fn()} onCreateRoom={vi.fn()} onAiTest={onAiTest} />);
+    fireEvent.click(await screen.findByRole('button', { name: /AI 테스트/ }));
+    expect(onAiTest).toHaveBeenCalled();
   });
 
-  it('is not offered in the manual DEV controller flow', () => {
-    render(<CreateRoomView manualControl onRoomCreated={vi.fn()} onBack={vi.fn()} />);
-    expect(screen.queryByRole('button', { name: 'AI 3명과 대전 (어려움)' })).not.toBeInTheDocument();
-  });
-
-  it('offers only the hard level', () => {
+  it('is no longer part of the create-room view', () => {
     render(<CreateRoomView onRoomCreated={vi.fn()} onBack={vi.fn()} />);
-    expect(screen.queryByRole('button', { name: 'AI 3명과 대전' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'AI 3명과 대전 (어려움)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /AI 3명과 대전/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('종족 묶음')).not.toBeInTheDocument();
   });
 });
