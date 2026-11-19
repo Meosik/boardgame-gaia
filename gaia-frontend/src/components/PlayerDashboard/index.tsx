@@ -2,6 +2,7 @@ import { clsx } from 'clsx';
 import { ExplorationBoard } from './ExplorationBoard';
 import { FactionBoard } from './FactionBoard';
 import { PowerCycle } from './PowerCycle';
+import { FactionTipCard } from '../FactionTipCard';
 import type { PlayerState } from '../../types/game';
 
 interface Props {
@@ -53,6 +54,7 @@ export function PlayerDashboard({ player }: Props) {
             <div className="player-resource-summary">
               <PowerCycle power={player.resources.power} faction={player.faction ?? undefined} />
             </div>
+            {player.faction && <FactionTipCard faction={player.faction} />}
           </aside>
         </div>
       </div>

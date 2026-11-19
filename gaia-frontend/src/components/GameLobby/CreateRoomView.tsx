@@ -4,6 +4,7 @@ import { useRoomStore } from '../../store/roomStore';
 import type { FactionId, GameSetup, SetupMode } from '../../types/game';
 import type { AiLevel } from '../../api/rest';
 import { FACTION_DISPLAY_NAMES, factionDisplayName } from '../../displayNames';
+import { FactionTipCard } from '../FactionTipCard';
 
 /** The lab's fixed-map experiment (gaia-rl/lab/fixed-seed-factions-quartet-e-88365.json,
  * HANDOFF E178/E181): one map seed and twelve faction sets, seat order as listed. Keep in
@@ -197,20 +198,23 @@ export function CreateRoomView({ onRoomCreated, onBack, manualControl = false }:
             </select>
           </div>
           {aiTable !== RANDOM_AUCTION && (
-            <div className="form-group">
-              <label htmlFor="ai-my-faction">내 종족</label>
-              <select
-                id="ai-my-faction"
-                value={aiFaction}
-                onChange={(e) => setAiFaction(e.target.value as FactionId)}
-              >
-                {FIXED_MAP_TABLES[aiTable].map((faction) => (
-                  <option key={faction} value={faction}>
-                    {FACTION_DISPLAY_NAMES[faction]}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="form-group">
+                <label htmlFor="ai-my-faction">내 종족</label>
+                <select
+                  id="ai-my-faction"
+                  value={aiFaction}
+                  onChange={(e) => setAiFaction(e.target.value as FactionId)}
+                >
+                  {FIXED_MAP_TABLES[aiTable].map((faction) => (
+                    <option key={faction} value={faction}>
+                      {FACTION_DISPLAY_NAMES[faction]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <FactionTipCard faction={aiFaction} defaultOpen />
+            </>
           )}
           <p>
             <small>
