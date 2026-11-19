@@ -86,7 +86,11 @@ def main():
     # shared by easy, normal and hard; only hard was measured (lab 082 measures normal).
     # 2026-10-19: Terrans track_income joined the base faction table (lab 084, E18), and Lost Fleet
     # games no longer stop on a saved sheden opening label (teacher_patches._value_max).
-    from teacher_patches import guide_r1_charge3_lf_more_vm_lf_ts_ships as make_teacher
+    # GAIA_AI_TEACHER names another teacher_patches factory (timing runs, tools/worker_times.py);
+    # unset, the worker keeps the deployed stack.
+    import teacher_patches
+    make_teacher = getattr(teacher_patches, os.environ.get('GAIA_AI_TEACHER')
+                           or 'guide_r1_charge3_lf_more_vm_lf_ts_ships')
 
     teachers = {}
     out = sys.stdout
