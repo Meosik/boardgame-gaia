@@ -72,14 +72,26 @@ The part under test is the worker path itself: the booster-tier wrapper survives
   not established for the late game — there the server plays its fallback move. Inside the live container: not measured
   (E196 (b)).
 
+- Scope of the switch (Codex debate 1/1, both findings accepted): `GAIA_AI_TEACHER` picks the factory for the whole
+  worker (`tools/ai_worker.py:77`); the level arrives per request (`:139`). 127 timed `hard` only. With the same line an
+  easy room also runs the new factory, and 125 measured that cell: 6 of 8 setup decisions over 30 s, max 128.6 s
+  (starting places compared in full, `teacher_patches.setup_places_budget`, no cap at easy). That reading was not the
+  booster defect (126 correction) and 9170cd7 does not change it. Normal passed in 125 (max 10.17 s, 0 over the guard).
+  So this cycle supports 「hard, first 80 decisions」 and nothing wider: not the late game, not the container, not easy.
+
 No code or deployment change. Lab queue empty after this cycle.
 
 ## Proposal (user decision, nothing queued)
 
-- (ㄱ) Switch: the timing gate for the early game is passed; the deploy and `.env` commands of E208 stand as they are
-  (user commands: fetch · checkout → `.env` `GAIA_AI_TEACHER=…_all_tier` → `up -d --build`).
+Corrected after the debate: the first version recommended switching now; that went past what was measured.
+
+- (ㄱ) Keep the E196 order: deploy with the old teacher (the E208 commands without the `GAIA_AI_TEACHER` line) → (ㄴ) and
+  (ㄷ) → switch by adding the line and `up -d` (no rebuild). The fixed-map 「AI 3명」 room works from the first step.
 - (ㄴ) Late-game timing by replay (`worker_times.py --replay`, E199 / E201): rounds 3–6 of recorded 123 games at the hard
   level, to see whether any decision passes 30 s. Scale is the user's number; bot suggestion 2 games × default sampling
   (every 8th decision + the 5 slowest per round) ≈ 100 positions, lab ≈ 35–40 min.
 - (ㄷ) In-container timing after the deploy (E196 (b)) — user commands.
-Bot recommendation: (ㄱ) now, (ㄴ) alongside once the user gives the scale.
+- (ㄹ) Easy path before the switch (user; E207 froze the difficulty code): accept that easy rooms pass the guard in
+  setup and get the server's fallback move, or hold the switch, or reopen the easy setup budget.
+- The one-step switch of E208 (user 「빨리」) stays the user's choice, with those three unmeasured risks.
+Bot recommendation: (ㄱ) → (ㄴ) once the user gives the scale → (ㄷ) → (ㄹ) → switch.
