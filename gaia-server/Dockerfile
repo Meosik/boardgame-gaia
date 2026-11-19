@@ -59,11 +59,12 @@ COPY gaia-engine/data gaia-engine/data
 COPY gaia-rl/Cargo.toml gaia-rl/Cargo.lock gaia-rl/build.rs gaia-rl/pyproject.toml gaia-rl/
 COPY gaia-rl/src gaia-rl/src
 COPY gaia-rl/python gaia-rl/python
-RUN cd gaia-rl && maturin build --release -i python3.12 --out /wheels
 # Fingerprint of the engine inputs above. A teacher version (gaia-rl/tools/teacher_version.py)
 # records the fingerprint of its commit; the server runs it only when the two are equal.
+# Taken before the build, so nothing the build writes (a refreshed Cargo.lock) can change it.
 COPY gaia-rl/tools/engine_fingerprint.py /tmp/engine_fingerprint.py
 RUN python3 /tmp/engine_fingerprint.py /workspace > /engine-fingerprint
+RUN cd gaia-rl && maturin build --release -i python3.12 --out /wheels
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 # Python runtime (Debian bookworm) so the server can run its AI worker pool.
