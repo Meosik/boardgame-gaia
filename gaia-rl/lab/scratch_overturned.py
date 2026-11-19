@@ -10,7 +10,9 @@ tally RUN_DIR ... [--jobs N] [--top N]
 case GAME_DIR STEP [--comparisons N]
     Ask the teacher again at STEP (as tools/explain_decision.py does: no plan memory of the real game) and print, for
     current-choice and for every compared plan, the forecast line of the acting seat (action, VP change) with the end
-    VP and value, and the one-step scores of the base and the played move.
+    VP and value, and the one-step scores of the base and the played move. Also prints whether the recorded move and
+    the recorded comparison list (goal, first move, value) are reproduced, and the leaf value of the state before the
+    move and right after each plan's first move.
 """
 import argparse
 import gzip
@@ -144,6 +146,23 @@ def case(args):
     control = next((p for p in plans if p.get('goal') == 'current-choice'), None)
     print(f"played [{recorded}] {short(candidates[recorded]['action'])} | asked again [{chosen}] "
           f"{short(candidates[chosen]['action'])} | selected {audit.get('selected')}")
+    with gzip.open(game_dir/'decisions.jsonl.gz', 'rt') as f:
+        row = [json.loads(line) for line in f][args.step]
+
+    def triple(c):
+        return c.get('goal'), c.get('first'), None if c.get('value') is None else round(c['value'], 2)
+    rec, now = [triple(c) for c in row.get('compared') or []], [triple(p) for p in plans]
+    print(f"reproduction: move {'same' if chosen == recorded else 'DIFFERENT'} | comparisons recorded {len(rec)}, asked again {len(now)} | "
+          f"recorded list {'reproduced as the first entries' if rec and now[:len(rec)] == rec else 'NOT reproduced'}")
+    print(f"  recorded (goal, first, value): {rec} | selected {row.get('selected')}")
+    print(f'  asked again: {now}')
+    from four_factions.preparation import leaf_value
+    guide = player['faction'] in (getattr(teacher, 'delta_factions', None) or ())
+
+    def value_of(snap):
+        return leaf_value(snap, actor, player, guide_tracks=guide)
+    root_value = value_of(snapshot)
+    print(f'state value before the move (the leaf value function of the forecast, applied here): {root_value:.2f}')
     for label, index in (('base', control['first'] if control else None), ('played', recorded)):
         if index is not None and scores:
             rank = sorted(range(len(scores)), key=lambda i: (-scores[i][0], i)).index(index) + 1
@@ -152,7 +171,12 @@ def case(args):
     for plan in plans:
         end = plan.get('end_player') or {}
         value = plan.get('value')
-        print(f"\n{plan.get('goal')} | first [{plan.get('first')}] | value {'' if value is None else f'{value:.2f}'} | "
+        first = plan.get('first')
+        after = None
+        if isinstance(first, int):
+            after = value_of(json.loads(teacher.env.fork(snapshot['decision_id'], first).snapshot_json()))
+        print(f"\n{plan.get('goal')} | first [{first}] | value {'' if value is None else f'{value:.2f}'} | "
+              f"right after the first move {'' if after is None else f'{after:.2f} ({after-root_value:+.2f})'} | "
               f"end VP {end.get('vp')} | end round {plan.get('end_round')} | complete {plan.get('complete')}")
         for a in (plan.get('actions') or [])[:args.line]:
             gain = a['vp_after'] - a['vp_before']
