@@ -16,7 +16,10 @@
 //! promotion never changes a running game. Without the folder, without `current`, or when the
 //! named version does not start, rooms use the teacher built into the image (`GAIA_AI_DIR`).
 //! A version carries only Python and data: it runs on the image's native engine module, so a
-//! change to the engine still needs a deploy.
+//! change to the engine still needs a deploy. Each version records the fingerprint of the
+//! engine sources it was made from and the image records its own (`engine-fingerprint` in
+//! `GAIA_AI_DIR`); the server runs a version only while the two are equal, so a version left
+//! as `current` across an engine deploy falls back to the image teacher by itself.
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -58,6 +61,10 @@ pub struct AiConfig {
     pub timeout: Duration,
     /// Folder of promoted teacher versions (`GAIA_AI_TEACHERS_DIR`); `None` = image teacher only.
     pub teachers: Option<PathBuf>,
+    /// Hash of the engine sources this image's native module was built from
+    /// (`<GAIA_AI_DIR>/engine-fingerprint`, written by `tools/engine_fingerprint.py` during the
+    /// image build). A teacher version runs only when its `teacher.json` names the same hash.
+    pub engine_fingerprint: Option<String>,
 }
 
 impl AiConfig {
@@ -90,6 +97,10 @@ impl AiConfig {
             .ok()
             .filter(|dir| !dir.trim().is_empty())
             .map(PathBuf::from);
+        let engine_fingerprint = std::fs::read_to_string(dir.join("engine-fingerprint"))
+            .ok()
+            .map(|text| text.trim().to_string())
+            .filter(|text| !text.is_empty());
         Some(Self {
             dir,
             python,
@@ -97,6 +108,7 @@ impl AiConfig {
             level,
             timeout,
             teachers,
+            engine_fingerprint,
         })
     }
 }
@@ -115,6 +127,16 @@ fn valid_version(name: &str) -> bool {
 struct TeacherMeta {
     /// The `teacher_patches` factory; absent = the default of that version's `ai_worker.py`.
     factory: Option<String>,
+    /// `tools/engine_fingerprint.py` of the commit the version was made from.
+    engine_fingerprint: Option<String>,
+}
+
+/// The `teacher.json` beside a version's `gaia-rl` folder; missing or unreadable = empty.
+fn teacher_meta(version_gaia_rl: &std::path::Path) -> TeacherMeta {
+    std::fs::read_to_string(version_gaia_rl.with_file_name("teacher.json"))
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default()
 }
 
 /// How long a version's worker may take to import the teacher and answer its first ping.
@@ -196,18 +218,34 @@ impl AiPool {
         )
     }
 
-    /// The `gaia-rl` folder of a promoted version, if the name is valid and its worker exists.
-    fn version_dir(&self, version: &str) -> Option<PathBuf> {
-        let root = self.config.teachers.as_ref()?;
+    /// The `gaia-rl` folder of a promoted version, or why this server must not run it. A
+    /// version is Python on top of the image's native engine module, so besides a valid name
+    /// and a worker file it needs the engine fingerprint of this image in its `teacher.json`:
+    /// a version made for another engine (an engine deploy with `current` left in place, or a
+    /// switch back to an old version) is never started. Checked on every use, not only when
+    /// the version was made.
+    fn version_dir(&self, version: &str) -> Result<PathBuf, &'static str> {
+        let root = self.config.teachers.as_ref().ok_or("no versions folder")?;
         if !valid_version(version) {
-            return None;
+            return Err("not a plain folder name");
         }
         let dir = root.join(version).join("gaia-rl");
-        dir.join("tools/ai_worker.py").is_file().then_some(dir)
+        if !dir.join("tools/ai_worker.py").is_file() {
+            return Err("no worker file in its folder");
+        }
+        match (
+            &self.config.engine_fingerprint,
+            teacher_meta(&dir).engine_fingerprint,
+        ) {
+            (None, _) => Err("this server has no engine fingerprint"),
+            (_, None) => Err("its teacher.json has no engine fingerprint"),
+            (Some(image), Some(made_for)) if *image == made_for => Ok(dir),
+            _ => Err("it was made for another engine than this image's"),
+        }
     }
 
     /// The version named by `<GAIA_AI_TEACHERS_DIR>/current`. `None` = the image teacher: no
-    /// versions folder, no `current` file, an empty one, or a name without a usable folder.
+    /// versions folder, no `current` file, an empty one, or a version this server must not run.
     pub fn current_teacher(&self) -> Option<String> {
         let root = self.config.teachers.as_ref()?;
         let text = std::fs::read_to_string(root.join("current")).ok()?;
@@ -215,9 +253,9 @@ impl AiPool {
         if version.is_empty() {
             return None;
         }
-        if self.version_dir(version).is_none() {
+        if let Err(reason) = self.version_dir(version) {
             log::error!(
-                "teacher version {version:?} named by `current` has no usable folder; \
+                "teacher version {version:?} named by `current` is not used ({reason}); \
                  new AI rooms use the image teacher"
             );
             return None;
@@ -272,14 +310,11 @@ impl AiPool {
         let (dir, factory) = match version {
             None => (self.config.dir.clone(), None),
             Some(version) => {
-                let dir = self.version_dir(version).ok_or_else(|| {
-                    std::io::Error::other(format!("no folder for teacher version {version}"))
+                let dir = self.version_dir(version).map_err(|reason| {
+                    std::io::Error::other(format!("teacher version {version}: {reason}"))
                 })?;
-                let meta = std::fs::read_to_string(dir.with_file_name("teacher.json"))
-                    .ok()
-                    .and_then(|text| serde_json::from_str::<TeacherMeta>(&text).ok())
-                    .unwrap_or_default();
-                (dir, Some(meta.factory))
+                let factory = teacher_meta(&dir).factory;
+                (dir, Some(factory))
             }
         };
         let pythonpath = ["python", "baseline-teacher-20260917", "tools"]
@@ -333,8 +368,8 @@ impl AiPool {
 
     /// The teacher's move for `player`, or `None` when the worker is unavailable, errs or
     /// exceeds the timeout (the worker is then restarted on the next request). `teacher` is
-    /// the room's pinned version (`None` = the image teacher); a version whose folder has been
-    /// removed is played by the image teacher.
+    /// the room's pinned version (`None` = the image teacher); a version this server must not
+    /// run (folder removed, made for another engine) is played by the image teacher.
     pub async fn choose(
         &self,
         room_code: &str,
@@ -343,14 +378,15 @@ impl AiPool {
         level: Option<&str>,
         teacher: Option<&str>,
     ) -> Option<AiDecision> {
-        let teacher = teacher.filter(|version| {
-            let usable = self.version_dir(version).is_some();
-            if !usable {
+        let teacher = teacher.filter(|version| match self.version_dir(version) {
+            Ok(_) => true,
+            Err(reason) => {
                 log::warn!(
-                    "teacher version {version} of room {room_code} is gone; using the image teacher"
+                    "teacher version {version} of room {room_code} is not used ({reason}); \
+                     using the image teacher"
                 );
+                false
             }
-            usable
         });
         let mut guard = self.workers[self.slot(room_code)].lock().await;
         // Move this version's worker to the end (most recently used), starting it if needed.
@@ -586,7 +622,12 @@ mod tests {
         );
     }
 
+    /// A pool whose image was built from engine "engine-a".
     fn pool_with_teachers(teachers: Option<PathBuf>) -> AiPool {
+        pool_with_engine(teachers, Some("engine-a"))
+    }
+
+    fn pool_with_engine(teachers: Option<PathBuf>, engine: Option<&str>) -> AiPool {
         AiPool::new(AiConfig {
             dir: PathBuf::from("/nonexistent/gaia-rl"),
             python: PathBuf::from("/nonexistent/python"),
@@ -594,15 +635,54 @@ mod tests {
             level: "normal".into(),
             timeout: Duration::from_secs(30),
             teachers,
+            engine_fingerprint: engine.map(str::to_string),
         })
     }
 
+    fn write_version(root: &std::path::Path, version: &str, teacher_json: Option<&str>) {
+        std::fs::create_dir_all(root.join(version).join("gaia-rl/tools")).unwrap();
+        std::fs::write(root.join(version).join("gaia-rl/tools/ai_worker.py"), "").unwrap();
+        if let Some(text) = teacher_json {
+            std::fs::write(root.join(version).join("teacher.json"), text).unwrap();
+        }
+    }
+
+    /// A versions folder with `v1`, made for engine "engine-a".
     fn versions_folder(test: &str) -> PathBuf {
         let root = std::env::temp_dir().join(format!("gaia-teachers-{}-{test}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
-        std::fs::create_dir_all(root.join("v1/gaia-rl/tools")).unwrap();
-        std::fs::write(root.join("v1/gaia-rl/tools/ai_worker.py"), "").unwrap();
+        write_version(
+            &root,
+            "v1",
+            Some(r#"{"factory": "f", "engine_fingerprint": "engine-a"}"#),
+        );
         root
+    }
+
+    #[test]
+    fn a_version_made_for_another_engine_is_never_used() {
+        let root = versions_folder("engine");
+        write_version(&root, "old", Some(r#"{"engine_fingerprint": "engine-b"}"#));
+        write_version(&root, "unmarked", Some(r#"{"factory": "f"}"#));
+        write_version(&root, "nojson", None);
+        let pool = pool_with_teachers(Some(root.clone()));
+        assert!(pool.version_dir("v1").is_ok());
+        for version in ["old", "unmarked", "nojson"] {
+            assert!(pool.version_dir(version).is_err(), "{version}");
+            // Neither for new rooms (`current` left in place over an engine deploy, or switched
+            // back to an old version) nor for a room already pinned to it.
+            std::fs::write(root.join("current"), version).unwrap();
+            assert_eq!(pool.current_teacher(), None, "{version}");
+            assert!(pool.spawn_worker(Some(version)).is_err(), "{version}");
+        }
+        // The same folder under an image built from the other engine: only `old` fits.
+        let other = pool_with_engine(Some(root.clone()), Some("engine-b"));
+        assert!(other.version_dir("old").is_ok());
+        assert!(other.version_dir("v1").is_err());
+        // An image without a fingerprint runs no version at all.
+        let unmarked_image = pool_with_engine(Some(root.clone()), None);
+        assert!(unmarked_image.version_dir("v1").is_err());
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]
@@ -632,8 +712,8 @@ mod tests {
             std::fs::write(root.join("current"), text).unwrap();
             assert_eq!(pool.current_teacher(), expected, "{text:?}");
         }
-        assert!(pool.version_dir("v1").is_some());
-        assert!(pool.version_dir("v2").is_none());
+        assert!(pool.version_dir("v1").is_ok());
+        assert!(pool.version_dir("v2").is_err());
         std::fs::remove_dir_all(&root).unwrap();
     }
 
