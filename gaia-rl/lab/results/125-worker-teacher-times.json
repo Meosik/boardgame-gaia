@@ -1,0 +1,2739 @@
+{
+ "name": "125-worker-teacher-times",
+ "kind": "command",
+ "status": "done",
+ "note": "사용자 2026-11-19 「바꾸고 한번에 배포하자」(HANDOFF E194 (ㄱ), E195): 실서버 AI 워커의 교사를 lab 현재 교사로 바꾸기 전의 시간 측정 — 교사 실력 판정 아님, 대국 A/B 아님. E194에서 공장을 guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier로 바꾸니 워커 테스트의 쉬움 수준 40결정이 7분 안에 안 끝났고, 옛 공장의 같은 시간은 안 쟀음. tools/worker_times.py: 공장 2개(옛 = guide_r1_charge3_lf_more_vm_lf_ts_ships, 새 = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier; ai_worker.py가 GAIA_AI_TEACHER로 고르고 기본값은 옛 공장) × 수준 3개(easy 비교 0·상한 없음, normal 비교 2·5초, hard 비교 4·20초 — ai_worker.py LEVELS 그대로) = 6칸. 칸마다 워커 하나를 띄워 Environment('quartet-e-88365')의 초기 배치부터 워커가 고른 수로 진행, 80결정 또는 벽시계 420초에서 멈춤, 한 결정이 180초를 넘으면 그 칸을 끊고 시간 초과로 기록. 칸마다 진행이 달라 같은 국면 비교가 아님(시간 분포만 봄). 시드 1개·한 번. 예상 ≈ 45분(최대 60분). 볼 것(칸별): ① 결정 수·도달 라운드·멈춘 이유 ② 결정당 벽시계 평균·중앙·p90·최대 ③ 30초 초과 수(서버 가드 GAIA_AI_TIMEOUT_SECS 기본값 — 넘으면 실서버는 대체 수를 둠) ④ 180초 시간 초과·오류 ⑤ normal·hard의 time_capped 수. 읽기(사전 등록): 새 공장의 칸에서 30초 초과 0·시간 초과 0·오류 0이면 그 수준은 상한 변경 없이 교체 가능; 30초 초과가 있으면 그 수준은 그대로는 교체 불가 — 선택지(쉬움 수준에 상한 추가 / 가드 올리기 / 그 수준만 옛 교사 유지)와 수치는 사용자. 옛 공장의 칸은 비교 기준(지금 실서버가 내는 시간). 한계: 초반 80결정(1–2R 부근)뿐이라 후반 라운드의 긴 결정(lab 6R 수집의 검색 전 구간 60–138초, 12/42,148행)은 안 잡힘; lab 기계에서 잰 시간이고 실서버 기계와 다름; 워커 1개·GAIA_AI_PARALLEL 없음. 리플레이 없음.",
+ "host": "agentmaco",
+ "commit": "d1d6757",
+ "started_at": "2026-11-19T12:11:25+09:00",
+ "finished_at": "2026-11-19T12:42:12+09:00",
+ "command": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "tools/worker_times.py",
+  "--out",
+  "runs/worker-times-125/metrics.json"
+ ],
+ "exit_code": 0,
+ "metrics": {
+  "seed": "quartet-e-88365",
+  "decisions": 80,
+  "seconds": 420,
+  "decision_timeout": 180,
+  "guard": 30,
+  "cells": [
+   {
+    "factory": "guide_r1_charge3_lf_more_vm_lf_ts_ships",
+    "level": "easy",
+    "stopped": "decisions",
+    "error": null,
+    "wall_total": 5.29231928603258,
+    "decisions": 80,
+    "last_round": 2,
+    "mean": 0.0643468989568646,
+    "median": 0.0453069320647046,
+    "p90": 0.12877051904797554,
+    "max": 0.2642957589123398,
+    "over_guard": 0,
+    "timed_out": 0,
+    "time_capped": 0,
+    "by_round": {
+     "0": {
+      "n": 11,
+      "mean": 0.04461543399586596,
+      "max": 0.14894834998995066
+     },
+     "1": {
+      "n": 51,
+      "mean": 0.06574820045281347,
+      "max": 0.22126084403134882
+     },
+     "2": {
+      "n": 18,
+      "mean": 0.07243466219450864,
+      "max": 0.2642957589123398
+     }
+    },
+    "rows": [
+     {
+      "wall": 0.14894834998995066,
+      "seconds": 0.064,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 0.03441259206738323,
+      "seconds": 0.034,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 0.03235021303407848,
+      "seconds": 0.032,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 2
+     },
+     {
+      "wall": 0.031581992050632834,
+      "seconds": 0.031,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 0.03573606500867754,
+      "seconds": 0.035,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 0.042688144952990115,
+      "seconds": 0.042,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 13
+     },
+     {
+      "wall": 0.031234530033543706,
+      "seconds": 0.031,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 0.03639488003682345,
+      "seconds": 0.036,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 7
+     },
+     {
+      "wall": 0.03588793892413378,
+      "seconds": 0.035,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 0.031878497917205095,
+      "seconds": 0.032,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 0.029656569939106703,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 0.08426198991946876,
+      "seconds": 0.084,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 50
+     },
+     {
+      "wall": 0.029189124004915357,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.024929041974246502,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.09527165198232979,
+      "seconds": 0.095,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 44
+     },
+     {
+      "wall": 0.025318052037619054,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.0280251499498263,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.12931342795491219,
+      "seconds": 0.129,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 95
+     },
+     {
+      "wall": 0.028381939977407455,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.028877569013275206,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.08598631399217993,
+      "seconds": 0.086,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 53
+     },
+     {
+      "wall": 0.025678547914139926,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.12267601804342121,
+      "seconds": 0.122,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 75
+     },
+     {
+      "wall": 0.030465907999314368,
+      "seconds": 0.03,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.025462673045694828,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.15328418195713311,
+      "seconds": 0.153,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 69
+     },
+     {
+      "wall": 0.02569787495303899,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.028227970004081726,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.11674308904912323,
+      "seconds": 0.116,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 159
+     },
+     {
+      "wall": 0.027620972017757595,
+      "seconds": 0.027,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.029135363060049713,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.1299164789961651,
+      "seconds": 0.13,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 103
+     },
+     {
+      "wall": 0.025984200998209417,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.12877051904797554,
+      "seconds": 0.128,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 81
+     },
+     {
+      "wall": 0.09581510093994439,
+      "seconds": 0.096,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 35
+     },
+     {
+      "wall": 0.10406232194509357,
+      "seconds": 0.104,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 87
+     },
+     {
+      "wall": 0.06397053692489862,
+      "seconds": 0.064,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 40
+     },
+     {
+      "wall": 0.02597167796920985,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.07076719589531422,
+      "seconds": 0.07,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 36
+     },
+     {
+      "wall": 0.09858576895203441,
+      "seconds": 0.098,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 25
+     },
+     {
+      "wall": 0.22126084403134882,
+      "seconds": 0.221,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 76
+     },
+     {
+      "wall": 0.21933748596347868,
+      "seconds": 0.219,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 198
+     },
+     {
+      "wall": 0.06083695904817432,
+      "seconds": 0.061,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 30
+     },
+     {
+      "wall": 0.02520599204581231,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.05946013599168509,
+      "seconds": 0.059,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 26
+     },
+     {
+      "wall": 0.0790998371085152,
+      "seconds": 0.079,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 26
+     },
+     {
+      "wall": 0.06731916801072657,
+      "seconds": 0.067,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 18
+     },
+     {
+      "wall": 0.053297005011700094,
+      "seconds": 0.053,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 31
+     },
+     {
+      "wall": 0.05171851394698024,
+      "seconds": 0.051,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 24
+     },
+     {
+      "wall": 0.06306029995903373,
+      "seconds": 0.063,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 36
+     },
+     {
+      "wall": 0.028820552048273385,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.03292176499962807,
+      "seconds": 0.032,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.04892224899958819,
+      "seconds": 0.048,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 21
+     },
+     {
+      "wall": 0.06508605997078121,
+      "seconds": 0.065,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 45
+     },
+     {
+      "wall": 0.04432309104595333,
+      "seconds": 0.044,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 15
+     },
+     {
+      "wall": 0.12546229409053922,
+      "seconds": 0.125,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 108
+     },
+     {
+      "wall": 0.02935902203898877,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.04629077308345586,
+      "seconds": 0.046,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 15
+     },
+     {
+      "wall": 0.0486578430281952,
+      "seconds": 0.048,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 14
+     },
+     {
+      "wall": 0.0280655660899356,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.03825650305952877,
+      "seconds": 0.038,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 6
+     },
+     {
+      "wall": 0.028005603002384305,
+      "seconds": 0.027,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.12624249688815325,
+      "seconds": 0.126,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 84
+     },
+     {
+      "wall": 0.008771263994276524,
+      "seconds": 0.008,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 0.004481095005758107,
+      "seconds": 0.004,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 0.2642957589123398,
+      "seconds": 0.264,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 152
+     },
+     {
+      "wall": 0.00417650502640754,
+      "seconds": 0.004,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 0.007477775914594531,
+      "seconds": 0.007,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 0.09697762201540172,
+      "seconds": 0.096,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 31
+     },
+     {
+      "wall": 0.06568155600689352,
+      "seconds": 0.065,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 40
+     },
+     {
+      "wall": 0.049145046970807016,
+      "seconds": 0.049,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 26
+     },
+     {
+      "wall": 0.03692038601730019,
+      "seconds": 0.037,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 24
+     },
+     {
+      "wall": 0.09443557390477508,
+      "seconds": 0.094,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 40
+     },
+     {
+      "wall": 0.039540892001241446,
+      "seconds": 0.039,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 26
+     },
+     {
+      "wall": 0.11918909603264183,
+      "seconds": 0.119,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 30
+     },
+     {
+      "wall": 0.084850272978656,
+      "seconds": 0.084,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 35
+     },
+     {
+      "wall": 0.0442704240558669,
+      "seconds": 0.044,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 19
+     },
+     {
+      "wall": 0.10110773891210556,
+      "seconds": 0.101,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 28
+     },
+     {
+      "wall": 0.08077744289766997,
+      "seconds": 0.08,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 85
+     },
+     {
+      "wall": 0.07548297196626663,
+      "seconds": 0.075,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 81
+     }
+    ]
+   },
+   {
+    "factory": "guide_r1_charge3_lf_more_vm_lf_ts_ships",
+    "level": "normal",
+    "stopped": "decisions",
+    "error": null,
+    "wall_total": 254.24916924105491,
+    "decisions": 80,
+    "last_round": 2,
+    "mean": 3.1762517979877884,
+    "median": 5.006265677511692,
+    "p90": 5.192701551015489,
+    "max": 6.132569056935608,
+    "over_guard": 0,
+    "timed_out": 0,
+    "time_capped": 42,
+    "by_round": {
+     "0": {
+      "n": 11,
+      "mean": 3.2625894888240676,
+      "max": 5.196028221980669
+     },
+     "1": {
+      "n": 47,
+      "mean": 3.0346013547386974,
+      "max": 6.132569056935608
+     },
+     "2": {
+      "n": 22,
+      "mean": 3.435699808601798,
+      "max": 5.192701551015489
+     }
+    },
+    "rows": [
+     {
+      "wall": 5.075309867039323,
+      "seconds": 5.036,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 0.03333094296976924,
+      "seconds": 0.033,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 0.03258263901807368,
+      "seconds": 0.032,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 2
+     },
+     {
+      "wall": 0.03199944505468011,
+      "seconds": 0.032,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 5.107145203975961,
+      "seconds": 5.107,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 5.187266957014799,
+      "seconds": 5.187,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 13
+     },
+     {
+      "wall": 0.032600412028841674,
+      "seconds": 0.032,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 5.017197948996909,
+      "seconds": 5.017,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 7
+     },
+     {
+      "wall": 5.170349613996223,
+      "seconds": 5.17,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 5.004673124989495,
+      "seconds": 5.004,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 5.196028221980669,
+      "seconds": 5.196,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 5.005148848053068,
+      "seconds": 5.005,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 50
+     },
+     {
+      "wall": 0.03035458899103105,
+      "seconds": 0.03,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.03132550104055554,
+      "seconds": 0.031,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.009774012956768,
+      "seconds": 5.009,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 44
+     },
+     {
+      "wall": 0.025315908016636968,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.029092181008309126,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.016089649987407,
+      "seconds": 5.016,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 95
+     },
+     {
+      "wall": 0.027704918989911675,
+      "seconds": 0.027,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.02877930400427431,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.106492107966915,
+      "seconds": 5.106,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 53
+     },
+     {
+      "wall": 0.02605973300524056,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.221148403012194,
+      "seconds": 5.221,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 75
+     },
+     {
+      "wall": 0.030780537985265255,
+      "seconds": 0.03,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.02567613299470395,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.064830218907446,
+      "seconds": 5.065,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 69
+     },
+     {
+      "wall": 0.025547572993673384,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.027983942069113255,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.028654368943535,
+      "seconds": 5.028,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 159
+     },
+     {
+      "wall": 0.037316698930226266,
+      "seconds": 0.037,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.028876257012598217,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.116043354966678,
+      "seconds": 5.116,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 103
+     },
+     {
+      "wall": 0.025856412015855312,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.03086853295099,
+      "seconds": 5.031,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 81
+     },
+     {
+      "wall": 5.027527355006896,
+      "seconds": 5.027,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 35
+     },
+     {
+      "wall": 5.039038327988237,
+      "seconds": 5.039,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 87
+     },
+     {
+      "wall": 0.030959645053371787,
+      "seconds": 0.031,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.030251724994741,
+      "seconds": 5.03,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 39
+     },
+     {
+      "wall": 0.026753444923087955,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.087587487068959,
+      "seconds": 5.087,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 36
+     },
+     {
+      "wall": 5.033732365001924,
+      "seconds": 5.033,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 25
+     },
+     {
+      "wall": 5.033579146955162,
+      "seconds": 5.033,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 69
+     },
+     {
+      "wall": 0.0297199689084664,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 6.0269731290172786,
+      "seconds": 6.027,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 32
+     },
+     {
+      "wall": 0.051373736932873726,
+      "seconds": 0.051,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.2832837770693,
+      "seconds": 5.283,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 26
+     },
+     {
+      "wall": 5.043641361990012,
+      "seconds": 5.043,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 26
+     },
+     {
+      "wall": 4.8308609360829,
+      "seconds": 4.831,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 18
+     },
+     {
+      "wall": 4.31981568003539,
+      "seconds": 4.319,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 19
+     },
+     {
+      "wall": 4.3780216629384086,
+      "seconds": 4.378,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 21
+     },
+     {
+      "wall": 6.1108383249957114,
+      "seconds": 6.11,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 24
+     },
+     {
+      "wall": 4.447290007956326,
+      "seconds": 4.447,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 15
+     },
+     {
+      "wall": 6.076904722023755,
+      "seconds": 6.077,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 21
+     },
+     {
+      "wall": 4.5264606879791245,
+      "seconds": 4.526,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 7
+     },
+     {
+      "wall": 6.132569056935608,
+      "seconds": 6.132,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 15
+     },
+     {
+      "wall": 4.45477256400045,
+      "seconds": 4.454,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 6
+     },
+     {
+      "wall": 4.575646230019629,
+      "seconds": 4.575,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 5
+     },
+     {
+      "wall": 0.02894314203877002,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 4.522087494959123,
+      "seconds": 4.522,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 83
+     },
+     {
+      "wall": 0.0757687280420214,
+      "seconds": 0.075,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 0.004338217084296048,
+      "seconds": 0.004,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 5.192701551015489,
+      "seconds": 5.192,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 137
+     },
+     {
+      "wall": 0.004866719013080001,
+      "seconds": 0.005,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 0.007038383046165109,
+      "seconds": 0.007,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 5.023561886977404,
+      "seconds": 5.023,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 31
+     },
+     {
+      "wall": 5.065051103010774,
+      "seconds": 5.065,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 40
+     },
+     {
+      "wall": 5.007382506970316,
+      "seconds": 5.007,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 44
+     },
+     {
+      "wall": 0.00854512897785753,
+      "seconds": 0.008,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 5.028540565050207,
+      "seconds": 5.028,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 23
+     },
+     {
+      "wall": 5.007997150998563,
+      "seconds": 5.008,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 26
+     },
+     {
+      "wall": 5.076755236950703,
+      "seconds": 5.076,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 26
+     },
+     {
+      "wall": 5.028490882948972,
+      "seconds": 5.027,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 30
+     },
+     {
+      "wall": 0.007291928050108254,
+      "seconds": 0.007,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 5.151958896080032,
+      "seconds": 5.152,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 18
+     },
+     {
+      "wall": 5.113876248942688,
+      "seconds": 5.114,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 15
+     },
+     {
+      "wall": 5.066643389989622,
+      "seconds": 5.066,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 21
+     },
+     {
+      "wall": 5.019608231028542,
+      "seconds": 5.019,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 16
+     },
+     {
+      "wall": 5.036466063000262,
+      "seconds": 5.036,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 15
+     },
+     {
+      "wall": 5.12818005005829,
+      "seconds": 5.128,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 18
+     },
+     {
+      "wall": 0.008245427045039833,
+      "seconds": 0.008,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     }
+    ]
+   },
+   {
+    "factory": "guide_r1_charge3_lf_more_vm_lf_ts_ships",
+    "level": "hard",
+    "stopped": "seconds",
+    "error": null,
+    "wall_total": 422.19395464810077,
+    "decisions": 42,
+    "last_round": 1,
+    "mean": 10.050153971846504,
+    "median": 10.073127692041453,
+    "p90": 20.08738662698306,
+    "max": 20.194188878056593,
+    "over_guard": 0,
+    "timed_out": 0,
+    "time_capped": 21,
+    "by_round": {
+     "0": {
+      "n": 11,
+      "mean": 12.77299722344403,
+      "max": 20.16643188102171
+     },
+     "1": {
+      "n": 31,
+      "mean": 9.08398378579577,
+      "max": 20.194188878056593
+     }
+    },
+    "rows": [
+     {
+      "wall": 20.16643188102171,
+      "seconds": 20.126,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 0.03361624700482935,
+      "seconds": 0.033,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 0.03400353400502354,
+      "seconds": 0.034,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 2
+     },
+     {
+      "wall": 0.03460151597391814,
+      "seconds": 0.034,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 20.027409701026045,
+      "seconds": 20.027,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 20.013151125982404,
+      "seconds": 20.013,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 13
+     },
+     {
+      "wall": 0.03312617796473205,
+      "seconds": 0.033,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 20.08429842395708,
+      "seconds": 20.084,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 7
+     },
+     {
+      "wall": 20.06449332390912,
+      "seconds": 20.064,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 20.00633943802677,
+      "seconds": 20.006,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 20.00549808901269,
+      "seconds": 20.005,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 0.10561627603601664,
+      "seconds": 0.105,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 50
+     },
+     {
+      "wall": 0.030031131929717958,
+      "seconds": 0.03,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.025647400063462555,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.099404860986397,
+      "seconds": 20.099,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 44
+     },
+     {
+      "wall": 0.02605300094000995,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.028931931010447443,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.074868134921417,
+      "seconds": 20.075,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 95
+     },
+     {
+      "wall": 0.029225952923297882,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.029373319004662335,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.12021181499585509,
+      "seconds": 0.12,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 53
+     },
+     {
+      "wall": 0.026032561901956797,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.006818967987783,
+      "seconds": 20.006,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 75
+     },
+     {
+      "wall": 0.029750235029496253,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.025971767958253622,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.05111435696017,
+      "seconds": 20.051,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 69
+     },
+     {
+      "wall": 0.026888758991844952,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.028342173900455236,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.070968459942378,
+      "seconds": 20.071,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 159
+     },
+     {
+      "wall": 0.02916217304300517,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.029746138025075197,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.038609520997852,
+      "seconds": 20.038,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 103
+     },
+     {
+      "wall": 0.026481703971512616,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.023112631984986,
+      "seconds": 20.023,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 81
+     },
+     {
+      "wall": 20.194188878056593,
+      "seconds": 20.194,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 35
+     },
+     {
+      "wall": 20.007939318893477,
+      "seconds": 20.008,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 87
+     },
+     {
+      "wall": 20.051675399998203,
+      "seconds": 20.051,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 42
+     },
+     {
+      "wall": 20.08738662698306,
+      "seconds": 20.087,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 72
+     },
+     {
+      "wall": 0.14075729507021606,
+      "seconds": 0.14,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.115646157064475,
+      "seconds": 20.115,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 36
+     },
+     {
+      "wall": 20.00812020909507,
+      "seconds": 20.008,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 25
+     },
+     {
+      "wall": 20.01542020100169,
+      "seconds": 20.015,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 78
+     }
+    ]
+   },
+   {
+    "factory": "guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier",
+    "level": "easy",
+    "stopped": "seconds",
+    "error": null,
+    "wall_total": 424.51429890305735,
+    "decisions": 8,
+    "last_round": 0,
+    "mean": 53.05746905152046,
+    "median": 51.71825422998518,
+    "p90": 128.58492346398998,
+    "max": 128.58492346398998,
+    "over_guard": 6,
+    "timed_out": 0,
+    "time_capped": 0,
+    "by_round": {
+     "0": {
+      "n": 8,
+      "mean": 53.05746905152046,
+      "max": 128.58492346398998
+     }
+    },
+    "rows": [
+     {
+      "wall": 52.05956833693199,
+      "seconds": 52.02,
+      "completed_comparisons": 6,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 57.38329176104162,
+      "seconds": 57.383,
+      "completed_comparisons": 6,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 13.640473268111236,
+      "seconds": 13.64,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 2
+     },
+     {
+      "wall": 41.35157728905324,
+      "seconds": 41.351,
+      "completed_comparisons": 5,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 51.376940123038366,
+      "seconds": 51.377,
+      "completed_comparisons": 5,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 128.58492346398998,
+      "seconds": 128.585,
+      "completed_comparisons": 13,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 13
+     },
+     {
+      "wall": 0.021538552013225853,
+      "seconds": 0.021,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 80.041439617984,
+      "seconds": 80.041,
+      "completed_comparisons": 7,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 7
+     }
+    ]
+   },
+   {
+    "factory": "guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier",
+    "level": "normal",
+    "stopped": "decisions",
+    "error": null,
+    "wall_total": 300.9652174219955,
+    "decisions": 80,
+    "last_round": 2,
+    "mean": 3.7600606332707684,
+    "median": 5.049529162526596,
+    "p90": 5.561019290005788,
+    "max": 10.16905173996929,
+    "over_guard": 0,
+    "timed_out": 0,
+    "time_capped": 54,
+    "by_round": {
+     "0": {
+      "n": 11,
+      "mean": 6.894223754812794,
+      "max": 10.16905173996929
+     },
+     "1": {
+      "n": 57,
+      "mean": 3.2314085964166575,
+      "max": 5.983035158016719
+     },
+     "2": {
+      "n": 12,
+      "mean": 3.398174946914272,
+      "max": 5.202437392086722
+     }
+    },
+    "rows": [
+     {
+      "wall": 5.122330053942278,
+      "seconds": 5.083,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 5.052365462994203,
+      "seconds": 5.052,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 5.0801480079535395,
+      "seconds": 5.08,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 2
+     },
+     {
+      "wall": 5.026927245082334,
+      "seconds": 5.027,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 5.020894258981571,
+      "seconds": 5.021,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 5.0882597849704325,
+      "seconds": 5.088,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 13
+     },
+     {
+      "wall": 5.04157453996595,
+      "seconds": 5.041,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 10.1254862700589,
+      "seconds": 10.125,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 7
+     },
+     {
+      "wall": 10.090173950069584,
+      "seconds": 10.09,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 10.16905173996929,
+      "seconds": 10.169,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 10.019249988952652,
+      "seconds": 10.019,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 5.0119592369301245,
+      "seconds": 5.012,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 50
+     },
+     {
+      "wall": 0.03133131202775985,
+      "seconds": 0.031,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.02635674097109586,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.04003264894709,
+      "seconds": 5.04,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 47
+     },
+     {
+      "wall": 0.02661443396937102,
+      "seconds": 0.026,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.028614295995794237,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.668120902962983,
+      "seconds": 5.668,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 62
+     },
+     {
+      "wall": 0.02809922897722572,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.02986693603452295,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.011593412025832,
+      "seconds": 5.011,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 66
+     },
+     {
+      "wall": 5.010433675954118,
+      "seconds": 5.01,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 76
+     },
+     {
+      "wall": 0.030388653045520186,
+      "seconds": 0.03,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.025588108925148845,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.044023734983057,
+      "seconds": 5.044,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 71
+     },
+     {
+      "wall": 0.025780599913559854,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.028960936004295945,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.518387799966149,
+      "seconds": 5.518,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 102
+     },
+     {
+      "wall": 0.029082334018312395,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.030413841013796628,
+      "seconds": 0.03,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.184222093084827,
+      "seconds": 5.184,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 116
+     },
+     {
+      "wall": 5.203092952026054,
+      "seconds": 5.203,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 70
+     },
+     {
+      "wall": 5.099472858011723,
+      "seconds": 5.099,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 36
+     },
+     {
+      "wall": 5.025107481051236,
+      "seconds": 5.025,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 49
+     },
+     {
+      "wall": 5.14752935396973,
+      "seconds": 5.147,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 49
+     },
+     {
+      "wall": 5.132451309938915,
+      "seconds": 5.132,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 32
+     },
+     {
+      "wall": 5.983035158016719,
+      "seconds": 5.983,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 28
+     },
+     {
+      "wall": 5.009030835004523,
+      "seconds": 5.009,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 61
+     },
+     {
+      "wall": 5.04669286205899,
+      "seconds": 5.046,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 210
+     },
+     {
+      "wall": 5.815470415982418,
+      "seconds": 5.815,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 31
+     },
+     {
+      "wall": 0.029575478984043002,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.02933737193234265,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.025782093056477606,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.318627894972451,
+      "seconds": 5.318,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 28
+     },
+     {
+      "wall": 5.40522334293928,
+      "seconds": 5.405,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 23
+     },
+     {
+      "wall": 5.4430264859693125,
+      "seconds": 5.443,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 18
+     },
+     {
+      "wall": 0.02720545302145183,
+      "seconds": 0.027,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.3476869750302285,
+      "seconds": 5.347,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 36
+     },
+     {
+      "wall": 5.561019290005788,
+      "seconds": 5.561,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 20
+     },
+     {
+      "wall": 5.232292313943617,
+      "seconds": 5.232,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 20
+     },
+     {
+      "wall": 0.030043707112781703,
+      "seconds": 0.03,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.136386711965315,
+      "seconds": 5.136,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 9
+     },
+     {
+      "wall": 0.025559445028193295,
+      "seconds": 0.025,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.216464916011319,
+      "seconds": 5.216,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 47
+     },
+     {
+      "wall": 0.02946465101558715,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.030014963005669415,
+      "seconds": 0.03,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.292701271013357,
+      "seconds": 5.292,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 10
+     },
+     {
+      "wall": 5.053038144949824,
+      "seconds": 5.053,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 16
+     },
+     {
+      "wall": 5.145414105965756,
+      "seconds": 5.145,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 8
+     },
+     {
+      "wall": 5.263517197105102,
+      "seconds": 5.263,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 53
+     },
+     {
+      "wall": 5.147930174949579,
+      "seconds": 5.148,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 9
+     },
+     {
+      "wall": 5.124946160940453,
+      "seconds": 5.125,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 5
+     },
+     {
+      "wall": 5.183761278050952,
+      "seconds": 5.183,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 7
+     },
+     {
+      "wall": 5.4744076010538265,
+      "seconds": 5.474,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 48
+     },
+     {
+      "wall": 5.152098143938929,
+      "seconds": 5.152,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 55
+     },
+     {
+      "wall": 0.031726712943054736,
+      "seconds": 0.031,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.112216352950782,
+      "seconds": 5.112,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 5
+     },
+     {
+      "wall": 0.029067606083117425,
+      "seconds": 0.028,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 5.032622267957777,
+      "seconds": 5.032,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 22
+     },
+     {
+      "wall": 5.132472408935428,
+      "seconds": 5.132,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 32
+     },
+     {
+      "wall": 5.068342562997714,
+      "seconds": 5.068,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 28
+     },
+     {
+      "wall": 0.007838793913833797,
+      "seconds": 0.007,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 5.026968252030201,
+      "seconds": 5.027,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 32
+     },
+     {
+      "wall": 5.08640320203267,
+      "seconds": 5.086,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 38
+     },
+     {
+      "wall": 0.005260306992568076,
+      "seconds": 0.005,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 0.007531939074397087,
+      "seconds": 0.007,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     },
+     {
+      "wall": 5.01772267895285,
+      "seconds": 5.017,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 49
+     },
+     {
+      "wall": 5.182526262011379,
+      "seconds": 5.182,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 22
+     },
+     {
+      "wall": 5.202437392086722,
+      "seconds": 5.202,
+      "completed_comparisons": 0,
+      "time_capped": true,
+      "round": 2,
+      "candidates": 50
+     },
+     {
+      "wall": 0.007973295985721052,
+      "seconds": 0.008,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 2,
+      "candidates": 2
+     }
+    ]
+   },
+   {
+    "factory": "guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier",
+    "level": "hard",
+    "stopped": "seconds",
+    "error": null,
+    "wall_total": 439.6915067839436,
+    "decisions": 25,
+    "last_round": 1,
+    "mean": 17.585272822519766,
+    "median": 20.041032718028873,
+    "p90": 40.06877788109705,
+    "max": 40.147251953952946,
+    "over_guard": 4,
+    "timed_out": 0,
+    "time_capped": 17,
+    "by_round": {
+     "0": {
+      "n": 11,
+      "mean": 27.157145025176842,
+      "max": 40.147251953952946
+     },
+     "1": {
+      "n": 14,
+      "mean": 10.06451609186063,
+      "max": 20.220105246989988
+     }
+    },
+    "rows": [
+     {
+      "wall": 20.063002650043927,
+      "seconds": 20.022,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 20.04115170100704,
+      "seconds": 20.041,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 17.96410970890429,
+      "seconds": 17.964,
+      "completed_comparisons": 2,
+      "time_capped": false,
+      "round": 0,
+      "candidates": 2
+     },
+     {
+      "wall": 20.1448552000802,
+      "seconds": 20.145,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 20.133836841909215,
+      "seconds": 20.134,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 20.041032718028873,
+      "seconds": 20.041,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 13
+     },
+     {
+      "wall": 20.032168820966035,
+      "seconds": 20.032,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 40.07181291398592,
+      "seconds": 40.071,
+      "completed_comparisons": 4,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 7
+     },
+     {
+      "wall": 40.020594886969775,
+      "seconds": 40.02,
+      "completed_comparisons": 4,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 6
+     },
+     {
+      "wall": 40.147251953952946,
+      "seconds": 40.147,
+      "completed_comparisons": 4,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 5
+     },
+     {
+      "wall": 40.06877788109705,
+      "seconds": 40.068,
+      "completed_comparisons": 3,
+      "time_capped": true,
+      "round": 0,
+      "candidates": 4
+     },
+     {
+      "wall": 20.026584916049615,
+      "seconds": 20.026,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 48
+     },
+     {
+      "wall": 0.02958230208605528,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.014713587937877,
+      "seconds": 20.014,
+      "completed_comparisons": 1,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 44
+     },
+     {
+      "wall": 0.027413301984779537,
+      "seconds": 0.027,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.198573667090386,
+      "seconds": 20.198,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 95
+     },
+     {
+      "wall": 0.1429096640786156,
+      "seconds": 0.142,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 0.03150396596174687,
+      "seconds": 0.031,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.220105246989988,
+      "seconds": 20.22,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 53
+     },
+     {
+      "wall": 0.02705446898471564,
+      "seconds": 0.027,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.0590474299388,
+      "seconds": 20.059,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 73
+     },
+     {
+      "wall": 0.02963432902470231,
+      "seconds": 0.029,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.053192507009953,
+      "seconds": 20.053,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 68
+     },
+     {
+      "wall": 0.027046744944527745,
+      "seconds": 0.027,
+      "completed_comparisons": 0,
+      "time_capped": false,
+      "round": 1,
+      "candidates": 2
+     },
+     {
+      "wall": 20.015863153967075,
+      "seconds": 20.016,
+      "completed_comparisons": 2,
+      "time_capped": true,
+      "round": 1,
+      "candidates": 156
+     }
+    ]
+   }
+  ]
+ }
+}
