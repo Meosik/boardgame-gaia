@@ -23,7 +23,7 @@ fn awaited_player(state: &GameState) -> Option<u8> {
 }
 
 #[tokio::test]
-#[ignore = "requires PostgreSQL and GAIA_AI_DIR (a built gaia-rl checkout)"]
+#[ignore = "requires PostgreSQL and GAIA_AI_DIR (a built gaia-rl checkout); set GAIA_AI_MOVE_PAUSE_MS=0 so AI seats do not wait between moves"]
 async fn human_plays_a_full_game_against_three_ai_seats() {
     let _ = dotenvy::from_path(concat!(env!("CARGO_MANIFEST_DIR"), "/.env"));
     if std::env::var("GAIA_AI_DIR").is_err() {
@@ -51,6 +51,7 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
             ai_opponents: true,
             ai_level: None,
             ai_factions: None,
+            human_seat: None,
         }),
     )
     .await

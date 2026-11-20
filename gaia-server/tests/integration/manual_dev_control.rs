@@ -30,6 +30,7 @@ async fn manual_dev_controller_places_every_mine_and_passes_every_seat_across_si
             ai_opponents: false,
             ai_level: None,
             ai_factions: None,
+            human_seat: None,
         }),
     )
     .await
