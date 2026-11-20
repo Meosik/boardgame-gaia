@@ -269,6 +269,31 @@ pub fn build_game_state_with_factions(
     Ok(state)
 }
 
+/// Moves the human of a fixed-table game to `seat` in the turn order (1 = first, 4 = last); the
+/// other seats keep their order among themselves. Only right after the factions were seated
+/// (`build_game_state_with_factions`): the starting placements and starting boosters then follow
+/// the new order. The same engine call the lab's `@order=` seeds use, so `state.players` stays
+/// as it was built and only the turn order moves.
+pub fn seat_human_at(state: &mut GameState, human: PlayerId, seat: u8) -> ServerResult<()> {
+    let mut order: Vec<PlayerId> = state
+        .turn_order
+        .iter()
+        .copied()
+        .filter(|player| *player != human)
+        .collect();
+    let index = usize::from(seat)
+        .checked_sub(1)
+        .filter(|index| *index <= order.len() && order.len() < state.turn_order.len())
+        .ok_or_else(|| {
+            ServerError::InvalidAction(format!(
+                "human_seat must be 1 to {}",
+                state.turn_order.len()
+            ))
+        })?;
+    order.insert(index, human);
+    RuleEngine::reorder_turns_before_placement(state, &order).map_err(dev_setup_error)
+}
+
 /// DEV games skip the actual bidding screen, so give the four seats a plausible bid result.
 /// The room code makes the order vary between rooms while keeping one room stable on reconnect.
 fn assign_simulated_dev_bids(state: &mut GameState, room_code: &str) {
@@ -897,6 +922,63 @@ mod tests {
             GamePhase::Setup(SetupPhase::StartingStructures { .. })
         ));
         assert!(state.players.iter().all(|player| player.setup_bid_vp == 0));
+    }
+
+    #[test]
+    fn the_human_of_a_fixed_table_can_sit_at_any_turn() {
+        let setup = Randomizer::generate_setup("dev-game-test")
+            .unwrap_or_else(|error| panic!("setup should be generated: {error}"));
+        let built = super::build_game_state_with_factions(
+            "DEV001",
+            "dev-game-test",
+            7,
+            &[8, 9, 10],
+            &setup,
+            FactionId::Terrans,
+            vec![FactionId::Geodens, FactionId::Taklons, FactionId::HadschHallas],
+            false,
+        )
+        .unwrap_or_else(|error| panic!("ai game should be built: {error}"));
+        assert_eq!(built.turn_order, vec![7, 8, 9, 10]);
+
+        for (seat, order) in [
+            (1, [7, 8, 9, 10]),
+            (2, [8, 7, 9, 10]),
+            (3, [8, 9, 7, 10]),
+            (4, [8, 9, 10, 7]),
+        ] {
+            let mut state = built.clone();
+            super::seat_human_at(&mut state, 7, seat)
+                .unwrap_or_else(|error| panic!("seat {seat} should be allowed: {error}"));
+            assert_eq!(state.turn_order, order, "seat {seat}");
+            // The first starting mine is placed by whoever is first now (no faction here
+            // places out of turn), and the seats keep their factions.
+            assert!(
+                matches!(
+                    state.phase,
+                    GamePhase::Setup(SetupPhase::StartingStructures { active_player, placement_index: 0, .. })
+                        if active_player == order[0]
+                ),
+                "seat {seat}: {:?}",
+                state.phase
+            );
+            let players = |state: &gaia_engine::GameState| {
+                state
+                    .players
+                    .iter()
+                    .map(|player| (player.player_id, player.faction))
+                    .collect::<Vec<_>>()
+            };
+            assert_eq!(players(&state), players(&built), "seat {seat}");
+        }
+        for seat in [0, 5] {
+            let mut state = built.clone();
+            assert!(super::seat_human_at(&mut state, 7, seat).is_err(), "seat {seat}");
+            assert_eq!(state.turn_order, built.turn_order, "seat {seat}");
+        }
+        // A player who is not at the table is not seated.
+        let mut state = built.clone();
+        assert!(super::seat_human_at(&mut state, 99, 2).is_err());
     }
 
     #[test]

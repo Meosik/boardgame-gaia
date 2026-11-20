@@ -89,6 +89,11 @@ pub struct CreateDevGameRequest {
     /// Naming these or `faction` skips the setup auction, see `dev_game::ai_game_setup`.
     #[serde(default)]
     pub ai_factions: Option<Vec<FactionId>>,
+    /// The human's place in the turn order (1 = first, the default, to 4) of an `ai_opponents`
+    /// game with fixed factions; the AI seats keep their order. The setup auction decides the
+    /// order itself, so the two do not go together.
+    #[serde(default)]
+    pub human_seat: Option<u8>,
 }
 
 #[derive(Serialize)]
@@ -255,6 +260,16 @@ pub async fn create_dev_game(
         None
     };
     let ai_bidding = ai_game_request && ai_fixed_factions.is_none();
+    if req.human_seat.is_some() && ai_fixed_factions.is_none() {
+        return Err(ServerError::InvalidAction(
+            "human_seat needs an AI game with fixed factions (setup_mode sequential)".into(),
+        ));
+    }
+    if req.human_seat.is_some_and(|seat| !(1..=4).contains(&seat)) {
+        return Err(ServerError::InvalidAction(
+            "human_seat must be 1 to 4".into(),
+        ));
+    }
     let setup_mode = if req.full_setup {
         req.setup_mode.unwrap_or(SetupMode::Bidding)
     } else if ai_bidding {
@@ -293,7 +308,7 @@ pub async fn create_dev_game(
         MapEngine::init_game_state_with_bidding(&code, &seed, &players, &setup)
             .map_err(|error| ServerError::Internal(format!("AI bidding setup: {error}")))?
     } else if let Some(bot_factions) = ai_bot_factions {
-        crate::services::dev_game::build_game_state_with_factions(
+        let mut state = crate::services::dev_game::build_game_state_with_factions(
             &code,
             &seed,
             player_id,
@@ -302,7 +317,11 @@ pub async fn create_dev_game(
             faction,
             bot_factions,
             false,
-        )?
+        )?;
+        if let Some(seat) = req.human_seat {
+            crate::services::dev_game::seat_human_at(&mut state, player_id, seat)?;
+        }
+        state
     } else {
         build_dev_game_state(&code, &seed, player_id, &bot_player_ids, &setup, faction)?
     };
