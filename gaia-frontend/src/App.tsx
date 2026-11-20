@@ -271,6 +271,8 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   const [recentActionIndex, setRecentActionIndex] = useState<number | null>(null);
   const [rangePreviewQic, setRangePreviewQic] = useState(0);
   const [gameNotice, setGameNotice] = useState<string | null>(null);
+  /** The research lab picked for the Firaks planetary-institute action; the track comes next. */
+  const [firaksLab, setFiraksLab] = useState<HexCoord | null>(null);
   const [suppressTerraformOreConfirmation, setSuppressTerraformOreConfirmation] = useState(false);
   const [devPowerChargeTargeting, setDevPowerChargeTargeting] = useState(false);
   const [boardArtifactId, setBoardArtifactId] = useState<number | null>(null);
@@ -646,6 +648,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     setSpaceshipPopup(null);
     setTechUpgradeFlow(null);
     setTwilightRangeMode(false);
+    setFiraksLab(null);
   }
 
   function handleOwnedStructureClick(hex: Hex, anchor: { x: number; y: number }) {
@@ -853,6 +856,26 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     hex: Hex,
     anchor: { x: number; y: number },
   ): boolean {
+    // Faction planetary-institute actions picked on the action shelf: the map click is their target.
+    if (selectedAction === 'FiraksDowngradeResearchLab') {
+      if (!hex.structures.some(({ owner, kind }) => owner === myId && kind === 'ResearchLab')) {
+        setGameNotice('교역소로 되돌릴 내 연구소를 선택하세요. 행동 선택은 유지됩니다.');
+        return true;
+      }
+      setFiraksLab(hex.coord);
+      setGameNotice('연구소를 골랐습니다. 올릴 연구 트랙을 선택하세요.');
+      scrollToGameBoard('game-research');
+      return true;
+    }
+    if (selectedAction === 'IvitsPlaceSpaceStation') {
+      if (hex.planet || hex.structures.some(({ kind }) => kind === 'SpaceStation')) {
+        setGameNotice('우주정거장은 행성과 다른 우주정거장이 없는 우주 칸에만 놓을 수 있습니다. 행동 선택은 유지됩니다.');
+        return true;
+      }
+      setGameNotice(null);
+      gameActions.sendAction({ type: 'IvitsPlaceSpaceStation', coord: hex.coord });
+      return true;
+    }
     const replayBuild = (selectedAction === 'TwilightReplayFederationToken' || (selectedAction === 'ExamineArtifact' && boardArtifactId === 10))
       && (replayFederationKind === 14 || replayFederationKind === 15);
     if (!selectedAction || (!MAP_TARGET_SPACESHIP_ACTIONS.has(selectedAction) && !replayBuild)) {
@@ -1106,6 +1129,9 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       gameActions.sendAction({ type: 'BescodsLowestResearchAdvance', track });
     } else if (selectedAction === 'EclipseResearchBoost') {
       gameActions.sendAction({ type: 'EclipseResearchBoost', track });
+    } else if (selectedAction === 'FiraksDowngradeResearchLab') {
+      if (!isMyActionTurn || !firaksLab || !selectableStandardTechResearchTracks.includes(track)) return;
+      gameActions.sendAction({ type: 'FiraksDowngradeResearchLab', coord: firaksLab, track });
     } else if (techUpgradeFlow?.stage === 'track') {
       finishStandardTechChoice(techUpgradeFlow.tile, track);
     } else if (techUpgradeFlow?.stage === 'advanced-track') {
@@ -1469,7 +1495,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             players={gameState.players}
             validTargets={coach ? coach.targets : isMyLostPlanetPlacement ? lostPlanetTargets : bonusMineTargets}
             federationSelectableHexes={federationSelectableHexes}
-            selectedCoord={isMyLostPlanetPlacement ? activePlanet : null}
+            selectedCoord={isMyLostPlanetPlacement ? activePlanet : firaksLab}
             onHexClick={
               coach ? coach.onHex : isMyLostPlanetPlacement
                 ? gameActions.selectPlanet
@@ -1522,7 +1548,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               />
             </div>
           </article>
-          <article className={`game-table-card game-table-research-card${selectedAction === 'BescodsLowestResearchAdvance' ? ' is-bescods-research' : ''}`} id="game-research">
+          <article className={`game-table-card game-table-research-card${selectedAction === 'BescodsLowestResearchAdvance' || firaksLab ? ' is-bescods-research' : ''}`} id="game-research">
             <h2>연구 트랙</h2>
             <ResearchBoard
               players={gameState.players}
@@ -1537,7 +1563,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               techSelectionMode={
                 coach ? coach.techMode : techUpgradeFlow?.stage === 'tile'
                   ? 'tile'
-                  : techUpgradeFlow?.stage === 'track' || (!!gameState.tutorial && techUpgradeFlow?.stage === 'advanced-track') || selectedAction === 'EclipseResearchBoost' || selectedAction === 'BescodsLowestResearchAdvance'
+                  : techUpgradeFlow?.stage === 'track' || (!!gameState.tutorial && techUpgradeFlow?.stage === 'advanced-track') || selectedAction === 'EclipseResearchBoost' || selectedAction === 'BescodsLowestResearchAdvance' || (selectedAction === 'FiraksDowngradeResearchLab' && firaksLab !== null)
                     ? 'track'
                     : null
               }
@@ -1581,6 +1607,29 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               if (!isMyActionTurn || mainActionLocked) return;
               closeBoardContext();
               setGameNotice(null);
+              if (action === 'FiraksDowngradeResearchLab') {
+                // Firaks planetary institute: downgrade a research lab to a trading station, then
+                // advance one research track (engine `validate_firaks_downgrade_research_lab`).
+                const labs = me.structures.filter(({ kind }) => kind === 'ResearchLab');
+                if (labs.length === 0) {
+                  setGameNotice('교역소로 되돌릴 연구소가 없습니다. 행동은 선택되지 않았습니다.');
+                  return;
+                }
+                if (me.structures.filter(({ kind }) => kind === 'TradingStation').length >= 4) {
+                  setGameNotice('교역소 4개가 모두 놓여 있어 연구소를 되돌릴 수 없습니다. 행동은 선택되지 않았습니다.');
+                  return;
+                }
+                gameActions.selectAction(action);
+                if (labs.length === 1) {
+                  setFiraksLab(labs[0].hex);
+                  setGameNotice('올릴 연구 트랙을 선택하세요.');
+                  scrollToGameBoard('game-research');
+                } else {
+                  setGameNotice('교역소로 되돌릴 연구소를 선택하세요.');
+                  scrollToGameBoard('game-map');
+                }
+                return;
+              }
               gameActions.selectAction(action);
               scrollToGameBoard('game-map');
             }}
@@ -1752,7 +1801,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       </aside>
       <GameCommandControls blocked={commandBlocked}>
       {!replay && mainActionLocked && (
-        <ActionCancelButton anchor={selectedAction === 'BescodsLowestResearchAdvance' ? document.getElementById('game-research') : actionAnchorRef.current} onCancel={cancelCurrentAction} />
+        <ActionCancelButton anchor={selectedAction === 'BescodsLowestResearchAdvance' || firaksLab ? document.getElementById('game-research') : actionAnchorRef.current} onCancel={cancelCurrentAction} />
       )}
       {popupState && popupMode && (
         <StructureActionPopup

@@ -261,11 +261,58 @@ describe('App spaceship-board action flow', () => {
     const state = gameState();
     state.players[0].faction = faction;
     state.players[0].structures = [{ hex: { q: 0, r: 0 }, kind: 'PlanetaryInstitute' }];
+    if (faction === 'Firaks') state.players[0].structures.push({ hex: { q: 0, r: 1 }, kind: 'ResearchLab' });
     useGameStore.setState({ gameState: state });
     render(<App />);
     fireEvent.click(screen.getByText('테스트 게임 입장'));
     fireEvent.click(screen.getByRole('button', { name: faction === 'Firaks' ? '파이락 연구소 강등 + 무료 연구' : '하이브 우주정거장 배치' }));
     expect(useGameStore.getState().selectedAction).toBe(faction === 'Firaks' ? 'FiraksDowngradeResearchLab' : 'IvitsPlaceSpaceStation');
+  });
+
+  it('sends the Firaks institute action once its only research lab is picked and a track is chosen', () => {
+    const state = gameState();
+    state.players[0].faction = 'Firaks';
+    state.players[0].structures = [
+      { hex: { q: 0, r: 0 }, kind: 'PlanetaryInstitute' },
+      { hex: { q: 0, r: 1 }, kind: 'ResearchLab' },
+    ];
+    useGameStore.setState({ gameState: state });
+    const sendAction = vi.spyOn(useGameStore.getState().actions, 'sendAction').mockReturnValue(null);
+    render(<App />);
+    fireEvent.click(screen.getByText('테스트 게임 입장'));
+    fireEvent.click(screen.getByRole('button', { name: '파이락 연구소 강등 + 무료 연구' }));
+    expect(sendAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Navigation 보드 선택'));
+    expect(sendAction).toHaveBeenCalledWith({ type: 'FiraksDowngradeResearchLab', coord: { q: 0, r: 1 }, track: 'Navigation' });
+    sendAction.mockRestore();
+  });
+
+  it('does not select the Firaks institute action without a research lab', () => {
+    const state = gameState();
+    state.players[0].faction = 'Firaks';
+    state.players[0].structures = [{ hex: { q: 0, r: 0 }, kind: 'PlanetaryInstitute' }];
+    useGameStore.setState({ gameState: state });
+    render(<App />);
+    fireEvent.click(screen.getByText('테스트 게임 입장'));
+    fireEvent.click(screen.getByRole('button', { name: '파이락 연구소 강등 + 무료 연구' }));
+    expect(useGameStore.getState().selectedAction).toBeNull();
+    expect(screen.getByText('교역소로 되돌릴 연구소가 없습니다. 행동은 선택되지 않았습니다.')).toBeInTheDocument();
+  });
+
+  it('keeps the Ivits space station action selected and sends nothing when a planet hex is clicked', () => {
+    const state = gameState();
+    state.players[0].faction = 'Ivits';
+    state.players[0].structures = [{ hex: { q: 0, r: 0 }, kind: 'PlanetaryInstitute' }];
+    useGameStore.setState({ gameState: state });
+    const sendAction = vi.spyOn(useGameStore.getState().actions, 'sendAction').mockReturnValue(null);
+    render(<App />);
+    fireEvent.click(screen.getByText('테스트 게임 입장'));
+    fireEvent.click(screen.getByRole('button', { name: '하이브 우주정거장 배치' }));
+    // The mocked board's only target is a planet hex.
+    fireEvent.click(screen.getByText('테스트 테라포밍 행성'));
+    expect(sendAction).not.toHaveBeenCalled();
+    expect(useGameStore.getState().selectedAction).toBe('IvitsPlaceSpaceStation');
+    sendAction.mockRestore();
   });
 
   it('selects Bescods lowest research directly on the board without a popup', () => {
