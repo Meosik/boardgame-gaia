@@ -333,6 +333,11 @@ export function ResearchBoard({
           const selectable = techSelectionMode !== 'track'
             || selectableResearchTracks === undefined
             || selectableResearchTracks.includes(track);
+          // The box also covers this column's advanced tech tile, so its tooltip carries the tile's text.
+          const advancedTileId = board?.advanced_tech_tiles[index] ?? null;
+          const advancedTileNote = advancedTileId !== null && ADVANCED_TECH_TILE_LABELS[advancedTileId]
+            ? ` · 고급 기술 타일: ${ADVANCED_TECH_TILE_LABELS[advancedTileId]}`
+            : '';
           return (
             <button
               key={`research-track-choice-${track}`}
@@ -355,7 +360,7 @@ export function ResearchBoard({
                 techSelectionMode === 'track'
                   ? selectable ? '선택' : '더 이상 상승할 수 없음'
                   : '연구 — 지식 4'
-              }`}
+              }${advancedTileNote}`}
             />
           );
         })}

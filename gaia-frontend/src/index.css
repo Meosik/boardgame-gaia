@@ -1939,8 +1939,8 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .research-board-track-hotspot {
   position: absolute;
   z-index: 9;
-  top: 18%;
-  height: 43%;
+  top: 0.5%;
+  height: 60.5%;
   padding: 0;
   border: 1px solid rgba(125, 246, 255, 0.72);
   border-radius: 8px;
