@@ -137,23 +137,74 @@ def strength(rows):
     return total
 
 
+def without_order(seed):
+    """`seed` without an `@order=` suffix; `@factions=` and `@tiles=` stay, since they change the table."""
+    head, *suffixes = seed.split('@')
+    return '@'.join([head] + [suffix for suffix in suffixes if not suffix.startswith('order=')])
+
+
 def order_for(seed):
     from gaia_rl import Environment
-    env = Environment(seed.split('@')[0], 2000)
+    env = Environment(without_order(seed), 2000)
     state = json.loads(env.snapshot_json())['state']
     rows = features(state)
     total = strength(rows)
     return sorted(rows, key=lambda s: (total[s], s)), rows, total
 
 
+# The two sides of each faction board (gaia-engine FactionId::other_board_side): a table never holds both.
+BOARDS = (('Terrans', 'Lantids'), ('Xenos', 'Gleens'), ('Taklons', 'Ambas'), ('HadschHallas', 'Ivits'),
+          ('Geodens', 'BalTaks'), ('Firaks', 'Bescods'), ('Nevlas', 'Itars'), ('Tinkeroids', 'Darkanians'),
+          ('Moweyds', 'SpaceGiants'))
+
+
+def orders_table(seed):
+    """The turn order of every table of four factions on one fixed map (`seed`'s map and tiles).
+
+    For a caller that seats any four factions on that map without running Python (the game server's AI test).
+    A seat's features are not its own faction's alone — a Lost Fleet faction's cheap planets and ships change
+    with the other homes in play (quartet-e-88365: Tinkeroids planets 5 or 4, ships 2 or 1) — so the order is
+    stored per table instead of rebuilt from eighteen rows: all 2016 tables of four different boards.
+
+    `factions` names the factions; a table's key is its four factions as letters (a = the first name) in that
+    order, its value the same letters weakest first = the turn order. Each table is seated in key order, so a tie
+    in strength goes to the earlier name, as `order_for` breaks ties by seat.
+    """
+    from itertools import combinations, product
+    base = without_order(seed)
+    names = [name for sides in BOARDS for name in sides]
+    letter = {name: chr(ord('a') + index) for index, name in enumerate(names)}
+    orders = {}
+    for boards in combinations(BOARDS, 4):
+        for factions in product(*boards):
+            order, rows, _ = order_for(f"{base}@factions={','.join(factions)}")
+            seated = [rows[seat]['faction'] for seat in sorted(rows)]
+            if seated != list(factions):
+                raise SystemExit(f'{base}: asked for {factions}, the environment seated {seated}')
+            orders[''.join(letter[name] for name in factions)] = ''.join(
+                letter[rows[seat]['faction']] for seat in order)
+    return {'seed': base, 'weights': {key: weight for key, weight in WEIGHTS.items() if weight},
+            'factions': names, 'orders': orders}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('seeds', nargs='+')
     parser.add_argument('--table', action='store_true', help='print the features of every seat')
+    parser.add_argument('--orders-table', metavar='FILE',
+                        help="write, as JSON, the turn order of every table of four factions on the (one) seed's "
+                             'map (orders_table)')
     args = parser.parse_args()
+    if args.orders_table:
+        if len(args.seeds) != 1:
+            parser.error('--orders-table takes one seed')
+        table = orders_table(args.seeds[0])
+        Path(args.orders_table).write_text(json.dumps(table, separators=(',', ':')) + '\n')
+        print(f"{table['seed']}: {len(table['orders'])} tables -> {args.orders_table}")
+        return
     for seed in args.seeds:
         order, rows, total = order_for(seed)
-        print(f"{seed.split('@')[0]}@order={','.join(str(s) for s in order)}")
+        print(f"{without_order(seed)}@order={','.join(str(s) for s in order)}")
         if args.table:
             for s in order:
                 r = rows[s]
