@@ -4447,6 +4447,44 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   white-space: nowrap;
 }
 
+.planet-action-special-costs {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.planet-action-special-costs > small {
+  color: #94a3b8;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.planet-action-special-cost {
+  min-height: 28px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.planet-action-special-cost--active {
+  border-color: rgba(251, 191, 36, 0.8);
+  background: rgba(120, 53, 15, 0.42);
+  color: #fde68a;
+}
+
+.planet-action-special-cost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .planet-action-gaiaformer-cost img {
   width: 30px;
   height: 26px;

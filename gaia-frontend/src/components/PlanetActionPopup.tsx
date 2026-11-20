@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { GaiaPowerTransfer, ResourceTokens, type DisplayResource } from './ResourceTokens';
 import { TerraformingToken } from './TerraformingToken';
 import { FACTION_STRUCTURE_COLOR, structureImageSrc } from '../assets/structureImages';
+import { FREE_ACTIONS, isFreeActionAvailableToPlayer, maxFreeActionCount } from './freeActions';
 import type {
   BoardState,
   FactionId,
+  FreeActionKind,
   GameAction,
   Hex,
   HexCoord,
@@ -56,6 +58,26 @@ export interface BuildActionPreview {
   waiveMineCost?: boolean;
 }
 
+/** One way to cover the terraforming steps of the planet in the popup: plain ore, a terraforming
+ * power action, or the terraforming round booster. The owner of the popup state switches it. */
+export interface TerraformPaymentOption {
+  key: string;
+  label: string;
+  active?: boolean;
+  disabled?: boolean;
+  onSelect: () => void;
+}
+
+type ShortResource = 'ore' | 'credits' | 'qic';
+
+/** Free conversions (rulebook p.15 and faction abilities) that produce the resource a build is
+ * short of, in the order the buttons appear. `BurnPower` only feeds the power conversions. */
+const SHORTFALL_CONVERSIONS: Record<ShortResource, FreeActionKind[]> = {
+  ore: ['PowerToOre', 'QicToOre', 'CreditsToOre', 'BurnPower'],
+  credits: ['PowerToCredit', 'KnowledgeToCredit', 'BurnPower'],
+  qic: ['PowerToQic', 'CreditsToQic', 'GaiaformerToQic', 'BurnPower'],
+};
+
 interface Props {
   anchor: { x: number; y: number };
   hex: Hex;
@@ -64,6 +86,11 @@ interface Props {
   board: BoardState;
   buildAction?: BuildActionPreview;
   powerAction?: { id: 2 | 6; freeTerraformingSteps: number };
+  /** Other ways to pay the terraforming steps; shown only when the planet needs terraforming. */
+  terraformOptions?: TerraformPaymentOption[];
+  /** Sends one free conversion. When set, the popup offers the conversions that cover a
+   * shortfall of ore, credits or information cubes for this build. */
+  onFreeAction?: (kind: FreeActionKind) => void;
   suppressTerraformOreConfirmation?: boolean;
   onSuppressTerraformOreConfirmation?: () => void;
   onConfirm: (action: GameAction) => void;
@@ -201,6 +228,8 @@ export function PlanetActionPopup({
   board,
   powerAction,
   buildAction,
+  terraformOptions,
+  onFreeAction,
   suppressTerraformOreConfirmation = false,
   onSuppressTerraformOreConfirmation,
   onConfirm,
@@ -218,7 +247,6 @@ export function PlanetActionPopup({
   const actionIcon = actionType === 'GaiaFormation' || target === 'Asteroid' ? 'gaiaformer' : 'mine';
   const width = 252;
   const left = Math.max(12, Math.min(anchor.x + 14, window.innerWidth - width - 12));
-  const top = Math.max(56, Math.min(anchor.y - 32, window.innerHeight - 280));
   const resources = actionType === 'GaiaFormation' ? {} : buildResources(target, player.faction);
   if (buildAction?.waiveMineCost && actionType === 'Build' && target !== 'Asteroid') {
     resources.ore = Math.max(0, (resources.ore ?? 0) - 1);
@@ -282,7 +310,69 @@ export function PlanetActionPopup({
     onConfirm(confirmedAction);
   }
 
+  const paymentOptions = actionType === 'Build' && terraformingStepsUsed > 0 ? terraformOptions ?? [] : [];
+  const qicNeeded = displayedResources.qic ?? 0;
+  const shortfall: Record<ShortResource, number> = {
+    ore: Math.max(0, buildOreNeeded - player.resources.ore),
+    credits: Math.max(0, (resources.credits ?? 0) - player.resources.credits),
+    qic: Math.max(0, qicNeeded - player.resources.qic),
+  };
+  const shortResources = (['ore', 'credits', 'qic'] as const).filter((resource) => shortfall[resource] > 0);
+  const conversionKinds = onFreeAction
+    ? [...new Set(shortResources.flatMap((resource) => SHORTFALL_CONVERSIONS[resource]))]
+    : [];
+  const quickConversions = FREE_ACTIONS.filter((option) => (
+    conversionKinds.includes(option.kind)
+    && isFreeActionAvailableToPlayer(player, option)
+    && maxFreeActionCount(player, option) >= 1
+    // An information cube this build itself needs is not offered as ore.
+    && (option.kind !== 'QicToOre' || player.resources.qic > qicNeeded)
+  ));
+  const specialCostRows = paymentOptions.length + quickConversions.length
+    + Number(paymentOptions.length > 0) + Number(quickConversions.length > 0);
+  const top = Math.max(56, Math.min(anchor.y - 32, window.innerHeight - 280 - specialCostRows * 32));
+
   const structureColor = player.faction ? FACTION_STRUCTURE_COLOR[player.faction] : 'gray';
+  const specialCosts = specialCostRows > 0 && (
+    <div className="planet-action-special-costs" role="group" aria-label="특수 비용">
+      {paymentOptions.length > 0 && (
+        <>
+          <small>테라포밍 {terraformingStepsUsed}단계 지불 방법</small>
+          {paymentOptions.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              className={`planet-action-special-cost${option.active ? ' planet-action-special-cost--active' : ''}`}
+              aria-pressed={option.active ?? false}
+              disabled={option.disabled}
+              onClick={option.onSelect}
+            >
+              {option.label}
+            </button>
+          ))}
+        </>
+      )}
+      {quickConversions.length > 0 && (
+        <>
+          <small>
+            부족한 자원 바꾸기 ({shortResources
+              .map((resource) => `${RESOURCE_LABEL[resource]} ${shortfall[resource]}`)
+              .join(', ')})
+          </small>
+          {quickConversions.map((option) => (
+            <button
+              key={option.kind}
+              type="button"
+              className="planet-action-special-cost"
+              onClick={() => onFreeAction?.(option.kind)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </>
+      )}
+    </div>
+  );
   const costSummary = (
     <div className="planet-action-cost-summary">
       {Object.keys(displayedResources).length > 0 && (
@@ -415,6 +505,7 @@ export function PlanetActionPopup({
             </button>
           </>
         )}
+        {!confirmingTerraformOre && specialCosts}
       </aside>
     </>
   );

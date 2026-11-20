@@ -36,7 +36,9 @@ import {
   PlanetActionPopup,
   rangeRequirementNotice,
   type BuildActionPreview,
+  type TerraformPaymentOption,
 } from './components/PlanetActionPopup';
+import { spendablePower } from './components/freeActions';
 import { selectableFederationHexes, validateFederationSelection } from './components/federationSelection';
 import { GameLog } from './components/GameLog';
 import { SidebarTurnControls } from './components/SidebarTurnControls';
@@ -71,6 +73,8 @@ interface BoardPlanetPopupState {
   anchor: { x: number; y: number };
   powerActionId?: 2 | 6;
   buildAction?: BuildActionPreview;
+  /** The power action or booster was picked inside the popup, so closing the popup drops it. */
+  quickPayment?: boolean;
 }
 
 interface BoardSpaceshipPopupState {
@@ -660,7 +664,6 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       ? selectedPowerActionId
       : undefined;
     if ((mainActionLocked && powerActionId === undefined)
-      || (!devGameRequested && !gameState?.tutorial && powerActionId === undefined)
       || !hex.planet
       || hex.structures.length > 0
       || !isMyActionTurn) return;
@@ -794,6 +797,56 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       return;
     }
     setPlanetPopup({ hex, anchor, buildAction: preview });
+  }
+
+  /** Ways to pay the terraforming of the planet in the popup besides ore: the two terraforming
+   * power actions (rulebook Appendix III: 5 power for 2 steps, 3 power for 1 step) and the
+   * terraforming round booster. Each button switches the popup in place. */
+  function terraformPaymentOptions(popup: BoardPlanetPopupState): TerraformPaymentOption[] {
+    const boosterBuild = popup.buildAction?.action.type === 'RoundBoosterTerraformBuild';
+    // Every other special build (faction, ship or tile action) already fixes how the steps are paid.
+    if (popup.buildAction && !boosterBuild) return [];
+    const { hex, anchor } = popup;
+    const options: TerraformPaymentOption[] = [];
+    const power = spendablePower(me);
+    for (const [id, cost, steps] of [[2, 5, 2], [6, 3, 1]] as const) {
+      if (usedPowerActions.includes(id)) continue;
+      options.push({
+        key: `power-${id}`,
+        label: `파워 ${cost} → 테라포밍 ${steps}단계 무료${power < cost ? ' (파워 부족)' : ''}`,
+        active: popup.powerActionId === id,
+        disabled: power < cost,
+        onSelect: () => {
+          gameActions.selectPowerAction(id);
+          setPlanetPopup({ hex, anchor, powerActionId: id, quickPayment: true });
+        },
+      });
+    }
+    if (me.booster === 12 && !me.round_booster_special_action_used_this_round) {
+      options.push({
+        key: 'booster',
+        label: '부스터 → 테라포밍 1단계 무료',
+        active: boosterBuild,
+        onSelect: () => {
+          gameActions.selectAction('RoundBoosterTerraformBuild');
+          setPlanetPopup({
+            hex, anchor, quickPayment: true,
+            buildAction: { action: { type: 'RoundBoosterTerraformBuild', coord: hex.coord }, freeTerraformingSteps: 1 },
+          });
+        },
+      });
+    }
+    if (options.length === 0) return [];
+    options.unshift({
+      key: 'ore',
+      label: '광석으로 지불',
+      active: popup.powerActionId === undefined && !boosterBuild,
+      onSelect: () => {
+        gameActions.selectAction(null);
+        setPlanetPopup({ hex, anchor });
+      },
+    });
+    return options;
   }
 
   function handleSelectedShipActionHex(
@@ -1429,9 +1482,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               isMyActionTurn && !mainActionLocked ? handleOwnedStructureClick : undefined
             }
             onPlanetClick={
-              isMyActionTurn && (devGameRequested || !!gameState.tutorial || selectedTerraformingPowerAction)
-                ? handlePlanetClick
-                : undefined
+              isMyActionTurn ? handlePlanetClick : undefined
             }
             onSpaceshipClick={
               isMyActionTurn && !mainActionLocked ? handleSpaceshipClick : undefined
@@ -1730,6 +1781,10 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             id: planetPopup.powerActionId,
             freeTerraformingSteps: planetPopup.powerActionId === 2 ? 2 : 1,
           }}
+          terraformOptions={gameState.tutorial ? undefined : terraformPaymentOptions(planetPopup)}
+          onFreeAction={gameState.tutorial ? undefined : (kind) => {
+            gameActions.sendAction({ type: 'FreeAction', kind, count: 1 });
+          }}
           suppressTerraformOreConfirmation={suppressTerraformOreConfirmation}
           onSuppressTerraformOreConfirmation={() => setSuppressTerraformOreConfirmation(true)}
           onConfirm={(action) => {
@@ -1737,7 +1792,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             setRangePreviewQic(0);
           }}
           onClose={() => {
-            if (planetPopup.buildAction) cancelCurrentAction();
+            if (planetPopup.buildAction || planetPopup.quickPayment) cancelCurrentAction();
             else { setRangePreviewQic(0); closeBoardContext(); }
           }}
         />

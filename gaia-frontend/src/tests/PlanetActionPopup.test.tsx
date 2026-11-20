@@ -327,6 +327,63 @@ describe('PlanetActionPopup', () => {
     expect(rangeRequirementNotice(2, 1)).toContain('정보 큐브를 1개 더 추가하세요');
     expect(rangeRequirementNotice(2, 2)).toBeNull();
   });
+
+  it('offers the other terraforming payments only on a planet that needs terraforming', () => {
+    const pick = vi.fn();
+    const me = player();
+    const options = [
+      { key: 'ore', label: '광석으로 지불', active: true, onSelect: vi.fn() },
+      { key: 'power-6', label: '파워 3 → 테라포밍 1단계 무료', onSelect: pick },
+      { key: 'power-2', label: '파워 5 → 테라포밍 2단계 무료 (파워 부족)', disabled: true, onSelect: vi.fn() },
+    ];
+    const oxide = { ...planetHex('Oxide'), coord: { q: 1, r: 0 } };
+    const { unmount } = render(<PlanetActionPopup anchor={{ x: 100, y: 100 }} hex={oxide}
+      player={me} players={[me]} board={{ ...board, hexes: { ...board.hexes, '1,0': oxide } }}
+      terraformOptions={options} onConfirm={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByRole('group', { name: '특수 비용' })).toBeInTheDocument();
+    expect(screen.getByText('테라포밍 1단계 지불 방법')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '광석으로 지불' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '파워 5 → 테라포밍 2단계 무료 (파워 부족)' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: '파워 3 → 테라포밍 1단계 무료' }));
+    expect(pick).toHaveBeenCalledTimes(1);
+    unmount();
+
+    const terra = { ...planetHex('Terra'), coord: { q: 1, r: 0 } };
+    render(<PlanetActionPopup anchor={{ x: 100, y: 100 }} hex={terra}
+      player={me} players={[me]} board={{ ...board, hexes: { ...board.hexes, '1,0': terra } }}
+      terraformOptions={options} onFreeAction={vi.fn()} onConfirm={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.queryByRole('group', { name: '특수 비용' })).not.toBeInTheDocument();
+  });
+
+  it('offers the free conversions that cover a resource shortfall', () => {
+    const onFreeAction = vi.fn();
+    const me = player({
+      resources: {
+        ...player().resources,
+        ore: 0,
+        power: { bowl1: 0, bowl2: 4, bowl3: 3, gaia_bowl: 0, gaia_forming: 0 },
+      },
+    });
+    const terra = { ...planetHex('Terra'), coord: { q: 1, r: 0 } };
+    const props = {
+      anchor: { x: 100, y: 100 }, hex: terra, player: me, players: [me],
+      board: { ...board, hexes: { ...board.hexes, '1,0': terra } },
+      onConfirm: vi.fn(), onClose: vi.fn(),
+    };
+    const { unmount } = render(<PlanetActionPopup {...props} onFreeAction={onFreeAction} />);
+    expect(screen.getByText('부족한 자원 바꾸기 (광석 1)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '정보 큐브 1 → 광석 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '파워 희생: 2단계 2개 → 3단계 1개' })).toBeInTheDocument();
+    // Hadsch Hallas only.
+    expect(screen.queryByRole('button', { name: '크레딧 3 → 광석 1 (하드쉬 할라)' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '파워 3 → 광석 1' }));
+    expect(onFreeAction).toHaveBeenCalledWith('PowerToOre');
+    unmount();
+
+    // Without the callback (tutorial) the popup stays as it was.
+    render(<PlanetActionPopup {...props} />);
+    expect(screen.queryByRole('group', { name: '특수 비용' })).not.toBeInTheDocument();
+  });
 });
 
 describe('ship action prerequisites', () => {
