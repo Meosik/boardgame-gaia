@@ -59,6 +59,9 @@ pub struct AiConfig {
     pub workers: usize,
     pub level: String,
     pub timeout: Duration,
+    /// Minimum time between two AI moves of one room (`GAIA_AI_MOVE_PAUSE_MS`, default 1500),
+    /// so a human can follow what the AI seats did. 0 = no pause.
+    pub move_pause: Duration,
     /// Folder of promoted teacher versions (`GAIA_AI_TEACHERS_DIR`); `None` = image teacher only.
     pub teachers: Option<PathBuf>,
     /// Hash of the engine sources this image's native module was built from
@@ -72,6 +75,7 @@ impl AiConfig {
     /// `GAIA_AI_WORKERS` (default 6), `GAIA_AI_LEVEL` (`normal` or `easy`),
     /// `GAIA_AI_TIMEOUT_SECS` (default 30, a hung-worker guard; the teacher caps itself at 5 s;
     /// the "hard" level gets at least 60 s, see `guard_timeout`),
+    /// `GAIA_AI_MOVE_PAUSE_MS` (default 1500, minimum time between two AI moves of a room),
     /// `GAIA_AI_TEACHERS_DIR` (optional, see the module comment).
     pub fn from_env() -> Option<Self> {
         let dir = PathBuf::from(
@@ -107,6 +111,7 @@ impl AiConfig {
             workers,
             level,
             timeout,
+            move_pause: move_pause_from(std::env::var("GAIA_AI_MOVE_PAUSE_MS").ok().as_deref()),
             teachers,
             engine_fingerprint,
         })
@@ -153,6 +158,16 @@ fn guard_timeout(configured: Duration, level: &str) -> Duration {
     } else {
         configured
     }
+}
+
+const DEFAULT_MOVE_PAUSE: Duration = Duration::from_millis(1500);
+
+/// `GAIA_AI_MOVE_PAUSE_MS` parsed; missing or unparsable = the default.
+fn move_pause_from(value: Option<&str>) -> Duration {
+    value
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .map(Duration::from_millis)
+        .unwrap_or(DEFAULT_MOVE_PAUSE)
 }
 
 struct Worker {
@@ -599,6 +614,8 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
 async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
     // A full game has a few hundred decisions; this only guards against a logic loop.
     let mut rejected_in_a_row = 0;
+    let pause = pool.config.move_pause;
+    let mut last_move = std::time::Instant::now();
     for _ in 0..2000 {
         let Some(turn) = next_ai_turn(app, room_code).await else {
             return;
@@ -617,6 +634,11 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 .await
             }
         };
+        // Keep every AI move on screen for a moment: the teacher often answers in milliseconds.
+        let wait = pause.saturating_sub(last_move.elapsed());
+        if !wait.is_zero() {
+            tokio::time::sleep(wait).await;
+        }
         let mut used_fallback = false;
         let applied = coordinator::apply_server_transition(app, room_code, |room| {
             if room.revision != turn.revision {
@@ -659,6 +681,7 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                     pool.fallbacks.fetch_add(1, Ordering::Relaxed);
                 }
                 coordinator::broadcast_snapshot(app, room_code, outcome.revision).await;
+                last_move = std::time::Instant::now();
                 if let Err(error) = TurnManagementService::maybe_end_round(app, room_code).await {
                     log::error!("maybe_end_round failed for room {room_code}: {error}");
                     return;
@@ -810,6 +833,14 @@ fn apply_decision(
 mod tests {
     use super::*;
 
+    #[test]
+    fn move_pause_defaults_and_parses() {
+        assert_eq!(move_pause_from(None), Duration::from_millis(1500));
+        assert_eq!(move_pause_from(Some("abc")), Duration::from_millis(1500));
+        assert_eq!(move_pause_from(Some("0")), Duration::ZERO);
+        assert_eq!(move_pause_from(Some(" 800 ")), Duration::from_millis(800));
+    }
+
     /// An AI game at revision 5 and the seat it waits for, made the room's human seat.
     fn ai_room_waiting_for_its_human() -> (Room, PlayerId) {
         use gaia_engine::{game_state::FactionId, Randomizer};
@@ -938,6 +969,7 @@ mod tests {
             workers: 1,
             level: "normal".into(),
             timeout: Duration::from_secs(30),
+            move_pause: Duration::ZERO,
             teachers: None,
             engine_fingerprint: None,
         });
@@ -1053,6 +1085,7 @@ mod tests {
             workers: 2,
             level: "normal".into(),
             timeout: Duration::from_secs(30),
+            move_pause: Duration::ZERO,
             teachers,
             engine_fingerprint: engine.map(str::to_string),
         })
