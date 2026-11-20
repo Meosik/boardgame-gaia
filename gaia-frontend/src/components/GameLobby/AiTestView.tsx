@@ -6,7 +6,10 @@ import { factionBoardImageSrc } from '../../assets/factionBoardImages';
 import {
   AI_TEST_MAP_SEED,
   drawAiTestFactions,
+  drawAiTestSeat,
+  readSeatCounts,
   readShownCounts,
+  recordSeat,
   recordShown,
 } from '../../aiTestDraw';
 import type { FactionId } from '../../types/game';
@@ -17,10 +20,13 @@ interface Props {
 }
 
 /** The AI test: the lab's fixed map, four factions dealt evenly over the games, the player picks
- * one of them and three hard AI seats take the rest. No auction, no room title or password. */
+ * one of them and three hard AI seats take the rest. The player's turn-order seat is dealt evenly
+ * over the games too (least played first) and shown before the pick. No auction, no room title
+ * or password. */
 export function AiTestView({ onGameCreated, onBack }: Props) {
   const [nickname, setNickname] = useState(() => readRecentRoom()?.nickname ?? '');
   const [factions] = useState(() => drawAiTestFactions(readShownCounts()));
+  const [seat] = useState(() => drawAiTestSeat(readSeatCounts()));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const createAiGame = useRoomStore((s) => s.actions.createAiGame);
@@ -37,8 +43,10 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
         seed: AI_TEST_MAP_SEED,
         faction,
         aiFactions: factions.filter((other) => other !== faction),
+        seat,
       });
       recordShown(factions);
+      recordSeat(seat);
       onGameCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 테스트를 시작하지 못했습니다');
@@ -61,6 +69,7 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
           placeholder="닉네임 입력"
         />
       </div>
+      <p className="ai-test-seat">이번 판 내 순서: <strong>{seat}번</strong> (4명 중 — 1번이 첫 턴)</p>
       <fieldset className="ai-test-factions">
         <legend>이번 판 종족 — 하나를 고르면 바로 시작합니다</legend>
         {factions.map((faction) => {

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   AI_TEST_FACTIONS,
   drawAiTestFactions,
+  drawAiTestSeat,
   otherBoardSide,
+  type SeatCounts,
   type ShownCounts,
 } from '../aiTestDraw';
 
@@ -50,5 +52,36 @@ describe('AI test faction draw', () => {
     const fresh = ['Terrans', 'Xenos', 'Ivits', 'Moweyds'] as const;
     for (const faction of fresh) counts[faction] = 1;
     expect([...drawAiTestFactions(counts, seeded(7))].sort()).toEqual([...fresh].sort());
+  });
+});
+
+describe('AI test seat draw', () => {
+  it('deals one of the four seats from empty counts', () => {
+    for (let seed = 1; seed <= 20; seed += 1) {
+      expect([1, 2, 3, 4]).toContain(drawAiTestSeat({}, seeded(seed)));
+    }
+  });
+
+  it('deals all four seats within four games and each twice in eight', () => {
+    for (let seed = 1; seed <= 50; seed += 1) {
+      const random = seeded(seed);
+      const counts: SeatCounts = {};
+      for (let game = 1; game <= 8; game += 1) {
+        const seat = drawAiTestSeat(counts, random);
+        counts[seat] = (counts[seat] ?? 0) + 1;
+        if (game === 4) {
+          for (const each of [1, 2, 3, 4]) {
+            expect(counts[each] ?? 0, `seed ${seed}: seat ${each}`).toBe(1);
+          }
+        }
+      }
+      for (const each of [1, 2, 3, 4]) {
+        expect(counts[each] ?? 0, `seed ${seed}: seat ${each}`).toBe(2);
+      }
+    }
+  });
+
+  it('deals the least played seat first', () => {
+    expect(drawAiTestSeat({ 1: 2, 2: 2, 3: 1, 4: 2 }, seeded(7))).toBe(3);
   });
 });

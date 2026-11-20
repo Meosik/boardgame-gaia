@@ -76,3 +76,48 @@ export function recordShown(factions: FactionId[]): void {
     // Storage denied: the game still starts, the next draw is just less even.
   }
 }
+
+export const AI_TEST_SEATS = [1, 2, 3, 4] as const;
+
+/** How many AI test games the player started from each turn-order seat, on this browser. */
+export type SeatCounts = Partial<Record<number, number>>;
+
+const SEAT_STORAGE_KEY = 'gaia-ai-test-seats';
+
+/** The player's turn-order seat for one game: the least played seat first (ties in random
+ * order), so the four seats come up evenly — all four within four games. */
+export function drawAiTestSeat(
+  counts: SeatCounts,
+  random: () => number = Math.random,
+): number {
+  const order = AI_TEST_SEATS
+    .map((seat) => ({ seat, played: counts[seat] ?? 0, tie: random() }))
+    .sort((a, b) => a.played - b.played || a.tie - b.tie);
+  return order[0].seat;
+}
+
+export function readSeatCounts(): SeatCounts {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(SEAT_STORAGE_KEY) ?? '{}');
+    if (!value || typeof value !== 'object') return {};
+    const counts: SeatCounts = {};
+    for (const seat of AI_TEST_SEATS) {
+      const played = (value as Record<string, unknown>)[seat];
+      if (typeof played === 'number' && Number.isInteger(played) && played > 0) counts[seat] = played;
+    }
+    return counts;
+  } catch {
+    return {};
+  }
+}
+
+/** Count a started game's seat, so the next draw prefers the others. */
+export function recordSeat(seat: number): void {
+  try {
+    const counts = readSeatCounts();
+    counts[seat] = (counts[seat] ?? 0) + 1;
+    localStorage.setItem(SEAT_STORAGE_KEY, JSON.stringify(counts));
+  } catch {
+    // Storage denied: the game still starts, the next draw is just less even.
+  }
+}

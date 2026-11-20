@@ -23,6 +23,8 @@ export interface AiGameTable {
   faction?: FactionId;
   /** The three AI seats' factions: all three or none. */
   aiFactions?: FactionId[];
+  /** The human's place in the turn order, 1 (first) to 4; left out = first. */
+  seat?: number;
 }
 
 /** The teacher's move for one position: `decision` is `{ phase, action }` as the engine names it. */
@@ -85,6 +87,7 @@ export const api = {
               seed: table.seed,
               faction: table.faction,
               ai_factions: table.aiFactions,
+              human_seat: table.seat,
             }
           : {}),
       }),
