@@ -6,6 +6,8 @@ export const ACTION_CROPS = {
   // Shared one-QIC art from Hadsch Hallas, excluding the surrounding building slot.
   'academy-qic': { width: 2323, height: 1489, points: [[1438,775],[1407,807],[1407,849],[1438,880],[1493,880],[1525,849],[1525,807],[1493,775]] },
   'faction-Firaks-downgrade': { width: 2323, height: 1489, points: [[553,670],[513,729],[513,823],[556,893],[777,903],[820,839],[820,752],[785,687]] },
+  // Read off the normalized Ambas board by eye (orange swap octagon), not with the calibration tool.
+  'faction-Ambas-swap': { width: 2323, height: 1489, points: [[545,688],[507,742],[507,853],[545,907],[775,907],[812,853],[812,742],[775,688]] },
   'faction-Ivits-space-station': { width: 2323, height: 1489, points: [[556,676],[518,737],[499,821],[548,888],[769,898],[820,833],[818,752],[774,684]] },
   'exploration-Gleens-range': { width: 884, height: 1778, points: [[361,474],[288,550],[280,649],[367,726],[511,725],[602,651],[600,546],[517,467]] },
   'exploration-SpaceGiants-build-mine': { width: 916, height: 1717, points: [[375,455],[298,533],[289,636],[379,717],[520,717],[607,640],[612,531],[525,449]] },

@@ -5391,6 +5391,18 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 .action-toast-text { font-size: 0.8rem; font-weight: 700; }
 .action-toast-details { color: #cbd5e1; font-size: 0.7rem; font-weight: 600; }
 
+.action-review {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: rgba(2, 6, 23, 0.58);
+}
+.action-review-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+.action-review-position { min-width: 2.6rem; text-align: center; font-size: 0.72rem; font-weight: 800; }
+.action-review-note { margin: 0; color: #fde68a; font-size: 0.68rem; }
+
 .recent-actions {
   display: grid;
   gap: 0.35rem;

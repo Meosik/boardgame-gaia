@@ -49,6 +49,7 @@ import { GameOverScreen } from './components/GameOverScreen';
 import { TurnBanner } from './components/TurnBanner';
 import { ActionToast } from './components/ActionToast';
 import { RecentActions } from './components/RecentActions';
+import { ActionReview } from './components/ActionReview';
 import { liveActionEntries, liveHighlight, turnStatus } from './liveActivity';
 import { ReplayHighlightContext } from './replay/highlight';
 import { recentActionHex, scrollBoardIntoView } from './boardScroll';
@@ -56,7 +57,7 @@ import { FACTION_STRUCTURE_COLOR, STRUCTURE_COLOR_HEX } from './assets/structure
 import { useGameStore, type FinalResult } from './store/gameStore';
 import { useRoomStore } from './store/roomStore';
 import { GaiaWebSocket } from './api/websocket';
-import type { FederationTokenChoice, GameAction, Hex, HexCoord, ResearchTrack, ServerMessage, SpaceshipId, StructureType, TechTileChoice } from './types/game';
+import type { FederationTokenChoice, GameAction, GameState, Hex, HexCoord, ResearchTrack, ServerMessage, SpaceshipId, StructureType, TechTileChoice } from './types/game';
 import { activeActionPlayerId, isGameState, pendingDecisionPlayerId } from './types/game';
 import { factionDisplayName } from './displayNames';
 
@@ -126,6 +127,23 @@ const IMMEDIATE_SPACESHIP_ACTIONS = new Set<GameAction['type']>([
   'TFMarsTechBonus',
   'EclipsePlanetTypeBonus',
 ]);
+
+/** How many received positions the move review keeps (a round of three AI seats is well under this). */
+const REVIEW_POSITIONS = 40;
+
+/** Who made the last logged action of a position, and which action (the server closes every
+ * action's events with an `ActionLog` marker). */
+function lastLoggedAction(state: GameState): { player: number; action: string } | null {
+  const events = state.event_log ?? [];
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const marker = (events[index] as Record<string, unknown>).ActionLog;
+    if (marker && typeof marker === 'object') {
+      const { player, action } = marker as { player?: unknown; action?: unknown };
+      return typeof player === 'number' ? { player, action: typeof action === 'string' ? action : '' } : null;
+    }
+  }
+  return null;
+}
 
 const MAP_TARGET_SPACESHIP_ACTIONS = new Set<GameAction['type']>([
   'GleensBuildMine',
@@ -273,6 +291,8 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   const [gameNotice, setGameNotice] = useState<string | null>(null);
   /** The research lab picked for the Firaks planetary-institute action; the track comes next. */
   const [firaksLab, setFiraksLab] = useState<HexCoord | null>(null);
+  /** Positions received in this room (oldest first) and the one on screen; `at: null` = live. */
+  const [timeline, setTimeline] = useState<{ items: GameState[]; at: number | null }>({ items: [], at: null });
   const [suppressTerraformOreConfirmation, setSuppressTerraformOreConfirmation] = useState(false);
   const [devPowerChargeTargeting, setDevPowerChargeTargeting] = useState(false);
   const [boardArtifactId, setBoardArtifactId] = useState<number | null>(null);
@@ -307,7 +327,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   );
 
   const {
-    gameState,
+    gameState: liveGameState,
     myPlayerId,
     activePlanet,
     selectedHexes,
@@ -330,6 +350,25 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     }),
     shallow,
   );
+
+  // Move review: the positions received while watching, so the player can step back through
+  // what the other seats just did. While an older position is shown, the whole screen renders
+  // it read-only (`reviewing` blocks every command) and the live game keeps arriving behind it.
+  useEffect(() => {
+    setTimeline({ items: [], at: null });
+  }, [roomCode]);
+  useEffect(() => {
+    if (replay || !liveGameState) return;
+    setTimeline(({ items, at }) => {
+      if (items[items.length - 1] === liveGameState) return { items, at };
+      const next = [...items, liveGameState];
+      const drop = Math.max(0, next.length - REVIEW_POSITIONS);
+      return { items: next.slice(drop), at: at === null ? null : Math.max(0, at - drop) };
+    });
+  }, [replay, liveGameState]);
+  const reviewedState = !replay && timeline.at !== null ? timeline.items[timeline.at] ?? null : null;
+  const reviewing = reviewedState !== null && reviewedState !== liveGameState;
+  const gameState = reviewing ? reviewedState : liveGameState;
 
   useEffect(() => {
     if (view !== 'game' || !gameState?.tutorial) return;
@@ -586,7 +625,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       : (gameState.players.find((player) => player.player_id === personalBoardPlayerId) ?? null);
   const activePlayerId = activeActionPlayerId(gameState);
   const undoPending = gameState.undo_state?.pending_request ?? null;
-  const commandBlocked = !replay && wsClient !== null && (!connectionReady || commandPending);
+  const commandBlocked = !replay && (reviewing || (wsClient !== null && (!connectionReady || commandPending)));
   const isMyActionTurn = !replay && !commandBlocked && activePlayerId === myId && undoPending === null;
   const hasServerFreeActions = gameState.undo_state?.open_turn?.player === myId
     && (gameState.undo_state.open_turn.free_action_revisions.length ?? 0) > 0;
@@ -595,7 +634,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     typeof gameState.phase === 'object' && 'LostPlanetPlacementPending' in gameState.phase
       ? gameState.phase.LostPlanetPlacementPending
       : null;
-  const isMyLostPlanetPlacement = !replay && lostPlanetPending?.player === myId;
+  const isMyLostPlanetPlacement = !replay && !reviewing && lostPlanetPending?.player === myId;
   const spaceshipHexes = new Set(Object.values(gameState.board.spaceship_tiles).map(({ q, r }) => `${q},${r}`));
   const lostPlanetTargets = isMyLostPlanetPlacement
     ? Object.values(gameState.board.hexes)
@@ -610,11 +649,18 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     : [];
   const pendingDecisionPlayer = pendingDecisionPlayerId(gameState.phase);
   const latestAction = actionEntries[actionEntries.length - 1] ?? null;
-  const toastAction = !replay && latestAction?.index === recentActionIndex ? latestAction : null;
+  // A reviewed position keeps the action that led to it marked for as long as it is on screen.
+  const toastAction = !replay && (reviewing || latestAction?.index === recentActionIndex) ? latestAction : null;
   const activityHighlight = liveHighlight(gameState.event_log, toastAction);
   const unseenActions = replay ? 0 : Math.max(0, actionEntries.length - seenActionCount);
   const recentEntries = actionEntries.slice(-3).reverse();
-  const turnBannerStatus = replay ? null : turnStatus(gameState, myId);
+  const reviewPosition = (timeline.at ?? timeline.items.length - 1) + 1;
+  const liveTurnStatus = replay || !liveGameState ? null : turnStatus(liveGameState, myId);
+  const turnBannerStatus = !reviewing ? liveTurnStatus : {
+    text: `다시 보기 ${reviewPosition}/${timeline.items.length} — 실제 대국: ${liveTurnStatus?.text ?? '진행 중'}`,
+    mine: liveTurnStatus?.mine ?? false,
+    hint: '수를 두려면 「지금으로」를 누르세요.',
+  };
   const mainActionLocked =
     !!replay ||
     selectedAction !== null ||
@@ -865,6 +911,15 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       setFiraksLab(hex.coord);
       setGameNotice('연구소를 골랐습니다. 올릴 연구 트랙을 선택하세요.');
       scrollToGameBoard('game-research');
+      return true;
+    }
+    if (selectedAction === 'AmbasSwapPlanetaryInstitute') {
+      if (!hex.structures.some(({ owner, kind }) => owner === myId && kind === 'Mine')) {
+        setGameNotice('의회와 자리를 바꿀 내 광산을 선택하세요. 행동 선택은 유지됩니다.');
+        return true;
+      }
+      setGameNotice(null);
+      gameActions.sendAction({ type: 'AmbasSwapPlanetaryInstitute', mine_coord: hex.coord });
       return true;
     }
     if (selectedAction === 'IvitsPlaceSpaceStation') {
@@ -1222,6 +1277,26 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       bonus_tech_tile: null,
       bonus_research_track: null,
     }));
+  }
+
+  /** Moves the reviewed position. Leaving the live position drops any half-chosen action first. */
+  function stepReview(to: 'back' | 'forward' | 'live' | 'mine') {
+    if (timeline.at === null && to !== 'live') cancelCurrentAction();
+    setTimeline(({ items, at }) => {
+      const last = items.length - 1;
+      const current = at ?? last;
+      let next = last;
+      if (to === 'back') next = Math.max(0, current - 1);
+      else if (to === 'forward') next = Math.min(last, current + 1);
+      else if (to === 'mine') {
+        // The position right after my own last move; a charge answer during another seat's turn is not one.
+        for (let index = last; index >= 0; index -= 1) {
+          const logged = lastLoggedAction(items[index]);
+          if (logged?.player === myId && !logged.action.includes('ChargePower')) { next = index; break; }
+        }
+      }
+      return { items, at: next >= last ? null : next };
+    });
   }
 
   function cancelCurrentAction() {
@@ -1630,6 +1705,16 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
                 }
                 return;
               }
+              if (action === 'AmbasSwapPlanetaryInstitute') {
+                if (!me.structures.some(({ kind }) => kind === 'Mine')) {
+                  setGameNotice('의회와 자리를 바꿀 광산이 없습니다. 행동은 선택되지 않았습니다.');
+                  return;
+                }
+                gameActions.selectAction(action);
+                setGameNotice('의회와 자리를 바꿀 내 광산을 선택하세요.');
+                scrollToGameBoard('game-map');
+                return;
+              }
               gameActions.selectAction(action);
               scrollToGameBoard('game-map');
             }}
@@ -1743,6 +1828,14 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             role="tabpanel"
             aria-labelledby="game-sidebar-info-tab"
           >
+            {!replay && !coach && !gameState.tutorial && (
+              <ActionReview
+                position={reviewPosition}
+                total={timeline.items.length}
+                reviewing={reviewing}
+                onStep={stepReview}
+              />
+            )}
             <RecentActions entries={recentEntries} onOpenLog={() => setSidebarTab('log')} />
             <OpponentPanels
               players={orderedPlayers}
@@ -1868,7 +1961,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
           />
         );
       })()}
-      {!replay && undoPending === null && pendingDecisionPlayer === myId && (
+      {!replay && !reviewing && undoPending === null && pendingDecisionPlayer === myId && (
         <section className="pending-decision-popup" role="dialog" aria-modal="false" aria-label="필수 게임 결정">
           <ActionPanel gameState={gameState} myPlayerId={myId} />
         </section>

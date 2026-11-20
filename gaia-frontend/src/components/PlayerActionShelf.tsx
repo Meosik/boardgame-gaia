@@ -14,6 +14,12 @@ import {
 } from '../assets/federationTokenImages';
 import type { GameAction, PlayerState } from '../types/game';
 
+/** Planetary-institute special actions whose target is picked on the map after the tile. */
+export type FactionInstituteAction =
+  | 'FiraksDowngradeResearchLab'
+  | 'IvitsPlaceSpaceStation'
+  | 'AmbasSwapPlanetaryInstitute';
+
 const STANDARD_SPECIAL_ACTION_TILES = new Set([10]);
 const ADVANCED_SPECIAL_ACTION_TILES = new Set([20, 21, 22]);
 
@@ -29,7 +35,7 @@ interface Props {
   onSelectExplorationAction?: (action: 'GleensBuildMine' | 'SpaceGiantsBuildMine') => void;
   onSelectTinkeringTile?: () => void;
   onSelectBescodsResearch?: () => void;
-  onSelectFactionAction?: (action: 'FiraksDowngradeResearchLab' | 'IvitsPlaceSpaceStation') => void;
+  onSelectFactionAction?: (action: FactionInstituteAction) => void;
   onSelectBoosterAction?: (booster: 5 | 8 | 12) => void;
 }
 
@@ -40,7 +46,7 @@ interface ActionTile {
   cropId?: ActionCropId;
   used: boolean;
   action?: GameAction;
-  factionAction?: 'FiraksDowngradeResearchLab' | 'IvitsPlaceSpaceStation';
+  factionAction?: FactionInstituteAction;
 }
 
 function tutorialActionTarget(tile: ActionTile): string {
@@ -143,6 +149,19 @@ export function PlayerActionShelf({
       cropId: firaks ? 'faction-Firaks-downgrade' : 'faction-Ivits-space-station',
       used: player.faction_special_action_used_this_round ?? false,
       factionAction: firaks ? 'FiraksDowngradeResearchLab' : 'IvitsPlaceSpaceStation',
+    });
+  }
+
+  if (player.faction === 'Ambas'
+    && player.structures.some(({ kind }) => kind === 'PlanetaryInstitute')) {
+    const imageSrc = factionBoardImageSrc(player.faction);
+    if (imageSrc) actionTiles.push({
+      key: 'faction-pi',
+      label: '앰바스 의회와 광산 자리 교환',
+      imageSrc,
+      cropId: 'faction-Ambas-swap',
+      used: player.faction_special_action_used_this_round ?? false,
+      factionAction: 'AmbasSwapPlanetaryInstitute',
     });
   }
 

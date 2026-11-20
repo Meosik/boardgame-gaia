@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { App } from '../App';
 import { useGameStore } from '../store/gameStore';
 import { useRoomStore } from '../store/roomStore';
@@ -58,6 +58,11 @@ vi.mock('../components/GameBoard', () => ({
       planet: { planet_type: 'Oxide', is_gaia_formed: false, owner: null },
       space_tile_kind: null, structures: [], satellites: [],
     }, { x: 100, y: 100 })}>테스트 테라포밍 행성</button>
+    <button type="button" onClick={() => onSelectedActionHexClick?.({
+      coord: { q: 2, r: 0 },
+      planet: { planet_type: 'Swamp', is_gaia_formed: false, owner: 0 },
+      space_tile_kind: null, structures: [{ owner: 0, kind: 'Mine' }], satellites: [],
+    }, { x: 100, y: 100 })}>테스트 내 광산</button>
     <button
       type="button"
       onClick={() => onOwnedStructureClick?.({
@@ -393,5 +398,46 @@ describe('App spaceship-board action flow', () => {
     expect(powerAction).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: '테스트 내 구조물' }));
     expect(powerAction).toBeDisabled();
+  });
+
+  it('swaps the Ambas institute with the clicked own mine and ignores other hexes', () => {
+    const state = gameState();
+    state.players[0].faction = 'Ambas';
+    state.players[0].structures = [
+      { hex: { q: 0, r: 0 }, kind: 'PlanetaryInstitute' },
+      { hex: { q: 2, r: 0 }, kind: 'Mine' },
+    ];
+    useGameStore.setState({ gameState: state });
+    const sendAction = vi.spyOn(useGameStore.getState().actions, 'sendAction').mockReturnValue(null);
+    render(<App />);
+    fireEvent.click(screen.getByText('테스트 게임 입장'));
+    fireEvent.click(screen.getByRole('button', { name: '앰바스 의회와 광산 자리 교환' }));
+    expect(useGameStore.getState().selectedAction).toBe('AmbasSwapPlanetaryInstitute');
+    fireEvent.click(screen.getByText('테스트 테라포밍 행성'));
+    expect(sendAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('테스트 내 광산'));
+    expect(sendAction).toHaveBeenCalledWith({ type: 'AmbasSwapPlanetaryInstitute', mine_coord: { q: 2, r: 0 } });
+    sendAction.mockRestore();
+  });
+
+  it('reviews an earlier position read-only and returns to the live one', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('테스트 게임 입장'));
+    const powerAction = screen.getByRole('button', { name: '테스트 파워 행동' });
+    expect(screen.getByRole('button', { name: '한 수 전으로' })).toBeDisabled();
+
+    const next = gameState();
+    next.round = 2;
+    act(() => { useGameStore.setState({ gameState: next }); });
+    expect(screen.getByText('지금')).toBeInTheDocument();
+    expect(powerAction).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: '한 수 전으로' }));
+    expect(screen.getByText('1/2')).toBeInTheDocument();
+    expect(powerAction).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: '지금으로' }));
+    expect(screen.getByText('지금')).toBeInTheDocument();
+    expect(powerAction).toBeEnabled();
   });
 });
