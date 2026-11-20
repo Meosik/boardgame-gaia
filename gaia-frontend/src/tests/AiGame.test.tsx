@@ -5,7 +5,7 @@ import { CreateRoomView } from '../components/GameLobby/CreateRoomView';
 import { LobbyHomeView } from '../components/GameLobby/LobbyHomeView';
 import { api } from '../api/rest';
 import { useRoomStore } from '../store/roomStore';
-import { AI_TEST_FACTIONS, otherBoardSide, readSeatCounts, readShownCounts } from '../aiTestDraw';
+import { AI_TEST_FACTIONS, aiTestTurnOrder, otherBoardSide, readShownCounts } from '../aiTestDraw';
 import type { FactionId } from '../types/game';
 
 function dealtButtons(): HTMLElement[] {
@@ -49,16 +49,19 @@ describe('AI test', () => {
     render(<AiTestView onGameCreated={onGameCreated} onBack={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
     const dealt = dealtFactions();
+    const order = aiTestTurnOrder(dealt);
+    const picked = dealt[1];
+    dealt.forEach((faction, index) => {
+      expect(dealtButtons()[index]).toHaveTextContent(`${order.indexOf(faction) + 1}번 차례`);
+    });
     fireEvent.click(dealtButtons()[1]);
     await waitFor(() => expect(onGameCreated).toHaveBeenCalled());
     expect(createAiGame).toHaveBeenCalledWith('나', 'hard', {
       seed: 'quartet-e-88365',
-      faction: dealt[1],
-      aiFactions: [dealt[0], dealt[2], dealt[3]],
-      seat: expect.any(Number),
+      faction: picked,
+      aiFactions: order.filter((f) => f !== picked),
+      seat: order.indexOf(picked) + 1,
     });
-    expect(screen.getByText(/이번 판 내 순서/)).toBeInTheDocument();
-    expect(Object.values(readSeatCounts())).toEqual([1]);
     const room = useRoomStore.getState();
     expect(room.roomCode).toBe('AI1234');
     expect(room.playerId).toBe(5);
@@ -77,7 +80,6 @@ describe('AI test', () => {
     expect(createAiGame).not.toHaveBeenCalled();
     expect(screen.getByText('닉네임을 입력해주세요')).toBeInTheDocument();
     expect(readShownCounts()).toEqual({});
-    expect(readSeatCounts()).toEqual({});
   });
 
   it('sends setup_mode sequential with a fixed table and nothing extra without one', async () => {

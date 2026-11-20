@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   AI_TEST_FACTIONS,
+  AI_TEST_MAP_SEED,
+  aiTestTurnOrder,
   drawAiTestFactions,
-  drawAiTestSeat,
   otherBoardSide,
-  type SeatCounts,
   type ShownCounts,
 } from '../aiTestDraw';
+import orderTable from '../aiTestOrder.json';
 
 /** A small deterministic generator, so a failing seed can be replayed. */
 function seeded(seed: number): () => number {
@@ -55,33 +56,32 @@ describe('AI test faction draw', () => {
   });
 });
 
-describe('AI test seat draw', () => {
-  it('deals one of the four seats from empty counts', () => {
-    for (let seed = 1; seed <= 20; seed += 1) {
-      expect([1, 2, 3, 4]).toContain(drawAiTestSeat({}, seeded(seed)));
-    }
+describe('AI test turn order', () => {
+  it('puts the weakest faction first whatever order the table is given in', () => {
+    const expected = ['Taklons', 'Xenos', 'Terrans', 'HadschHallas'];
+    expect(aiTestTurnOrder(['Terrans', 'Xenos', 'Taklons', 'HadschHallas'])).toEqual(expected);
+    expect(aiTestTurnOrder(['HadschHallas', 'Taklons', 'Xenos', 'Terrans'])).toEqual(expected);
   });
 
-  it('deals all four seats within four games and each twice in eight', () => {
+  it('puts the strongest faction last', () => {
+    expect(aiTestTurnOrder(['Terrans', 'Xenos', 'Darkanians', 'SpaceGiants'])).toEqual([
+      'SpaceGiants',
+      'Darkanians',
+      'Xenos',
+      'Terrans',
+    ]);
+  });
+
+  it('orders every dealt table as a permutation of its four factions', () => {
     for (let seed = 1; seed <= 50; seed += 1) {
-      const random = seeded(seed);
-      const counts: SeatCounts = {};
-      for (let game = 1; game <= 8; game += 1) {
-        const seat = drawAiTestSeat(counts, random);
-        counts[seat] = (counts[seat] ?? 0) + 1;
-        if (game === 4) {
-          for (const each of [1, 2, 3, 4]) {
-            expect(counts[each] ?? 0, `seed ${seed}: seat ${each}`).toBe(1);
-          }
-        }
-      }
-      for (const each of [1, 2, 3, 4]) {
-        expect(counts[each] ?? 0, `seed ${seed}: seat ${each}`).toBe(2);
-      }
+      const dealt = drawAiTestFactions({}, seeded(seed));
+      const order = aiTestTurnOrder(dealt);
+      expect(order, `seed ${seed}`).toHaveLength(4);
+      expect([...order].sort(), `seed ${seed}`).toEqual([...dealt].sort());
     }
   });
 
-  it('deals the least played seat first', () => {
-    expect(drawAiTestSeat({ 1: 2, 2: 2, 3: 1, 4: 2 }, seeded(7))).toBe(3);
+  it('holds the order of the fixed map seed', () => {
+    expect(orderTable.seed).toBe(AI_TEST_MAP_SEED);
   });
 });
