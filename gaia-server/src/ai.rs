@@ -6,7 +6,11 @@
 //!
 //! AI moves never run inside a room lock: the driver reads the state, asks a worker, then
 //! applies the reply through `coordinator::apply_server_transition` only if the room has not
-//! moved on meanwhile. A failed or slow worker falls back to the DEV bots' simple legal move.
+//! moved on meanwhile. When the teacher gives no usable move (the worker failed, timed out or
+//! declined, or the engine refused its move) it is asked once more; after that nothing is
+//! played for the seat: the room's AI seats stop (`Room::ai_stalled`, shown on the game
+//! screen) until the player asks for another try (`retry`). No other bot ever moves an AI
+//! seat, so every AI move of such a game is the teacher's.
 //!
 //! Teacher versions (optional, `GAIA_AI_TEACHERS_DIR`): a folder outside the image holding one
 //! sub-folder per promoted teacher (`tools/teacher_version.py`), each mirroring the repository
@@ -40,9 +44,9 @@ use tokio::sync::{watch, Mutex};
 
 use crate::{
     coordinator::{self, CommandError},
-    room::manager::{Room, RoomState},
+    room::manager::{AiStall, AiStallReason, Room, RoomState},
     services::{
-        dev_game::{fallback_step, required_player},
+        dev_game::required_player,
         game_action::apply_logged_action,
         turn_management::TurnManagementService,
     },
@@ -205,9 +209,8 @@ pub struct AiPool {
     /// Versions whose worker started and answered a ping in this server process.
     started_versions: Mutex<HashSet<String>>,
     driving: std::sync::Mutex<HashSet<String>>,
-    /// Committed AI moves and how many of them used the DEV fallback instead of the teacher.
+    /// Committed AI moves.
     moves: AtomicUsize,
-    fallbacks: AtomicUsize,
     /// Teacher hints for the human seat (`hint`), by (room, revision, player): one teacher run
     /// per position however often the player asks, and the answer stays until the room moves on.
     hints: std::sync::Mutex<HashMap<HintKey, HintRun>>,
@@ -233,7 +236,6 @@ impl AiPool {
             started_versions: Mutex::new(HashSet::new()),
             driving: std::sync::Mutex::new(HashSet::new()),
             moves: AtomicUsize::new(0),
-            fallbacks: AtomicUsize::new(0),
             hints: std::sync::Mutex::new(HashMap::new()),
         }
     }
@@ -295,7 +297,7 @@ impl AiPool {
     /// Starts one worker of the image teacher and pings it, the way AI games will start it: a
     /// worker resolves its `teacher_patches` factory (`GAIA_AI_TEACHER`) before it reads the
     /// first request, so a mistyped name or a broken import fails here instead of in every
-    /// move of a game (each of which the fallback bot would then play). `Err` = why not.
+    /// move of a game (each of which would then stop the game's AI seats). `Err` = why not.
     pub async fn check_image_teacher(&self) -> Result<(), String> {
         let ping = async {
             let mut worker = self.spawn_worker(None)?;
@@ -325,19 +327,16 @@ impl AiPool {
         match self.check_image_teacher().await {
             Ok(()) => log::info!("AI teacher check passed ({named})"),
             Err(reason) => log::error!(
-                "AI teacher check FAILED ({named}): {reason}. Until this is fixed every AI move \
-                 is played by the fallback bot, not the teacher; the worker's own error is in \
-                 the lines above."
+                "AI teacher check FAILED ({named}): {reason}. Until this is fixed the AI seats \
+                 of every AI game stop at their first move; the worker's own error is in the \
+                 lines above."
             ),
         }
     }
 
-    /// (committed AI moves, of which fallback moves) since the pool started.
-    pub fn move_counts(&self) -> (usize, usize) {
-        (
-            self.moves.load(Ordering::Relaxed),
-            self.fallbacks.load(Ordering::Relaxed),
-        )
+    /// Committed AI moves since the pool started.
+    pub fn move_count(&self) -> usize {
+        self.moves.load(Ordering::Relaxed)
     }
 
     /// The `gaia-rl` folder of a promoted version, or why this server must not run it. A
@@ -617,7 +616,6 @@ pub fn spawn_driver(app: AppState, room_code: String) {
 struct Turn {
     revision: u64,
     player: PlayerId,
-    human: PlayerId,
     state: GameState,
     level: Option<String>,
     teacher: Option<String>,
@@ -644,16 +642,55 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
     Some(Turn {
         revision: room.revision,
         player,
-        human,
         state: state.clone(),
         level: room.ai_level.clone(),
         teacher: room.ai_teacher.clone(),
     })
 }
 
+/// How often the teacher is asked again for a position it gave no usable move for, before the
+/// room's AI seats stop and wait for the player's retry request (`retry`).
+const TEACHER_RETRIES: u32 = 1;
+
+/// Whether a position the teacher failed at `failures` times in a row is given up.
+fn gives_up(failures: u32) -> bool {
+    failures > TEACHER_RETRIES
+}
+
+/// Marks the room's AI seats as waiting at the position of `turn` and tells the clients. No
+/// move is played for the seat: a move the teacher did not choose would make the game
+/// something other than the teacher's play. `false` = the room has moved on since `turn` was
+/// read, so nothing was marked and the caller reads the room again.
+async fn stall(app: &AppState, room_code: &str, turn: &Turn, reason: AiStallReason) -> bool {
+    {
+        let mut rooms = app.rooms.write().await;
+        let Some(room) = rooms.get_room_mut(room_code) else {
+            return true;
+        };
+        if room.revision != turn.revision {
+            return false;
+        }
+        room.ai_stalled = Some(AiStall {
+            revision: turn.revision,
+            player: turn.player,
+            reason,
+        });
+    }
+    log::error!(
+        "AI seat {} of room {room_code} has no usable teacher move ({reason:?}); \
+         the AI seats wait for a retry request",
+        turn.player
+    );
+    if let Ok(revision) = gaia_protocol::Revision::new(turn.revision) {
+        coordinator::broadcast_snapshot(app, room_code, revision).await;
+    }
+    true
+}
+
 async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
     // A full game has a few hundred decisions; this only guards against a logic loop.
-    let mut rejected_in_a_row = 0;
+    let mut conflicts_in_a_row = 0;
+    let mut teacher_failures = 0;
     let pause = pool.config.move_pause;
     let mut last_move = std::time::Instant::now();
     for _ in 0..2000 {
@@ -674,12 +711,23 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 .await
             }
         };
+        let Some(decision) = decision else {
+            // The pool has logged why (the worker failed, timed out or declined).
+            teacher_failures += 1;
+            if gives_up(teacher_failures) {
+                if stall(app, room_code, &turn, AiStallReason::NoAnswer).await {
+                    return;
+                }
+                teacher_failures = 0;
+            }
+            continue;
+        };
         // Keep every AI move on screen for a moment: the teacher often answers in milliseconds.
         let wait = pause.saturating_sub(last_move.elapsed());
         if !wait.is_zero() {
             tokio::time::sleep(wait).await;
         }
-        let mut used_fallback = false;
+        let mut rejected = None;
         let applied = coordinator::apply_server_transition(app, room_code, |room| {
             if room.revision != turn.revision {
                 return Err(RuleError::ActionNotAllowed(
@@ -691,18 +739,14 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 return Err(RuleError::NotYourTurn);
             }
             let mut probe = state.clone();
-            let (events, fallback) = match apply_decision(&mut probe, turn.player, decision.clone())
-            {
-                Ok(events) => {
-                    *state = probe;
-                    (events, false)
-                }
+            let events = match apply_decision(&mut probe, turn.player, decision.clone()) {
+                Ok(events) => events,
                 Err(error) => {
-                    log::warn!("AI move rejected in room {room_code} ({error}); using fallback");
-                    (fallback_step(state, turn.player, turn.human)?, true)
+                    rejected = Some(error.to_string());
+                    return Err(error);
                 }
             };
-            used_fallback = fallback;
+            *state = probe;
             state.event_log.extend(events);
             if state.phase == GamePhase::Setup(SetupPhase::Complete) {
                 room.state = RoomState::InGame;
@@ -710,20 +754,14 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 let events = RuleEngine::start_first_round(state)?;
                 state.event_log.extend(events);
             }
-            if fallback {
-                // Part of the same commit as the move, so the next snapshot already says so.
-                room.note_ai_fallback(turn.player);
-            }
             Ok(())
         })
         .await;
         match applied {
             Ok(outcome) => {
-                rejected_in_a_row = 0;
+                conflicts_in_a_row = 0;
+                teacher_failures = 0;
                 pool.moves.fetch_add(1, Ordering::Relaxed);
-                if used_fallback {
-                    pool.fallbacks.fetch_add(1, Ordering::Relaxed);
-                }
                 coordinator::broadcast_snapshot(app, room_code, outcome.revision).await;
                 last_move = std::time::Instant::now();
                 if let Err(error) = TurnManagementService::maybe_end_round(app, room_code).await {
@@ -731,13 +769,27 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                     return;
                 }
             }
-            // The human or another transition changed the room first: re-read and continue.
-            // Repeated rejections of an unchanged room mean even the fallback cannot move.
             Err(CommandError::Rule(_)) | Err(CommandError::RevisionConflict { .. }) => {
-                rejected_in_a_row += 1;
-                if rejected_in_a_row >= 3 {
-                    log::error!("AI seat in room {room_code} cannot move; stopping the driver");
-                    return;
+                let give_up = match rejected {
+                    // The engine refused the teacher's move: ask the teacher once more.
+                    Some(error) => {
+                        log::warn!("AI move rejected in room {room_code} ({error})");
+                        teacher_failures += 1;
+                        gives_up(teacher_failures)
+                    }
+                    // The human or another transition changed the room first: re-read and
+                    // continue. Repeats on an unchanged room mean the seat cannot move at all.
+                    None => {
+                        conflicts_in_a_row += 1;
+                        conflicts_in_a_row >= 3
+                    }
+                };
+                if give_up {
+                    if stall(app, room_code, &turn, AiStallReason::Rejected).await {
+                        return;
+                    }
+                    conflicts_in_a_row = 0;
+                    teacher_failures = 0;
                 }
             }
             Err(error) => {
@@ -746,6 +798,35 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
             }
         }
     }
+}
+
+/// The player's request to let the AI seats try again after they stopped (`Room::ai_stalled`).
+/// Only the human seat of an AI game may ask. It clears the mark and starts the driver, which
+/// asks the teacher for the same position again; harmless when the seats were not stalled.
+pub async fn retry(app: &AppState, room_code: &str, player: PlayerId) -> Result<(), HintError> {
+    if app.ai.is_none() {
+        return Err(HintError::NotAnAiGame);
+    }
+    let cleared = {
+        let mut rooms = app.rooms.write().await;
+        let room = rooms
+            .get_room_mut(room_code)
+            .ok_or(HintError::NotAnAiGame)?;
+        if !is_ai_room(room) || room.dev_human_player != Some(player) {
+            return Err(HintError::NotAnAiGame);
+        }
+        let current = room.current_ai_stall().is_some();
+        room.ai_stalled = None;
+        current.then_some(room.revision)
+    };
+    // The stopped banner goes away at once; the teacher's move follows when it has one.
+    if let Some(revision) = cleared.and_then(|revision| gaia_protocol::Revision::new(revision).ok())
+    {
+        coordinator::broadcast_snapshot(app, room_code, revision).await;
+    }
+    log::info!("AI retry asked in room {room_code} by seat {player}");
+    spawn_driver(app.clone(), room_code.to_string());
+    Ok(())
 }
 
 /// A room whose other seats are played by the teacher workers: the same test `next_ai_turn`
@@ -864,12 +945,11 @@ pub async fn hint(
 fn apply_decision(
     state: &mut GameState,
     player: PlayerId,
-    decision: Option<AiDecision>,
+    decision: AiDecision,
 ) -> Result<Vec<gaia_engine::game_state::GameEvent>, RuleError> {
     match decision {
-        Some(AiDecision::Game(action)) => apply_logged_action(state, player, action),
-        Some(AiDecision::Setup(action)) => RuleEngine::apply_setup_action(state, player, action),
-        None => Err(RuleError::ActionNotAllowed("no AI decision".into())),
+        AiDecision::Game(action) => apply_logged_action(state, player, action),
+        AiDecision::Setup(action) => RuleEngine::apply_setup_action(state, player, action),
     }
 }
 
@@ -920,7 +1000,7 @@ mod tests {
             dev_bot_action_round: 0,
             ai_level: Some("hard".into()),
             ai_teacher: None,
-            ai_fallback: None,
+            ai_stalled: None,
         };
         (room, to_move)
     }
@@ -1036,18 +1116,33 @@ mod tests {
     }
 
     #[test]
-    fn a_snapshot_says_how_many_ai_moves_the_fallback_bot_played() {
+    fn a_snapshot_says_the_ai_seats_stopped_only_at_the_revision_they_stopped_at() {
         let (mut room, _) = ai_room_waiting_for_its_human();
         let view = coordinator::room_snapshot_view(&room);
-        assert!(view.get("ai_fallback").is_none());
+        assert!(view.get("ai_stalled").is_none());
         assert!(view.get("players").is_some());
-        room.note_ai_fallback(8);
-        room.note_ai_fallback(9);
+        room.ai_stalled = Some(AiStall {
+            revision: 5,
+            player: 9,
+            reason: AiStallReason::NoAnswer,
+        });
         let view = coordinator::room_snapshot_view(&room);
         assert_eq!(
-            view["ai_fallback"],
-            serde_json::json!({"moves": 2, "last_player": 9})
+            view["ai_stalled"],
+            serde_json::json!({"revision": 5, "player": 9, "reason": "no_answer"})
         );
+        // Any committed move ends the stall: the mark of an earlier revision is not sent.
+        room.revision = 6;
+        assert_eq!(room.current_ai_stall(), None);
+        assert!(coordinator::room_snapshot_view(&room)
+            .get("ai_stalled")
+            .is_none());
+    }
+
+    #[test]
+    fn the_teacher_is_asked_once_more_before_the_ai_seats_stop() {
+        assert!(!gives_up(1));
+        assert!(gives_up(2));
     }
 
     /// Waits until the scripted worker has read `count` requests.

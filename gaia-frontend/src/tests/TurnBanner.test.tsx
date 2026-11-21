@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { TurnBanner } from '../components/TurnBanner';
 
 describe('TurnBanner', () => {
@@ -18,15 +18,31 @@ describe('TurnBanner', () => {
   });
 
   it('shows a warning line under the turn sentence, and alone when there is no sentence', () => {
-    const warning = '⚠ AI 교사 응답 없음 — 대체 봇이 3수를 뒀습니다 (교사의 대국이 아님)';
-    const { unmount } = render(<TurnBanner status={{ text: '내 차례입니다', mine: true }} warning={warning} />);
-    expect(screen.getByRole('status')).toHaveTextContent('내 차례입니다');
+    const warning = '⚠ AI 교사 응답 없음 — 영희 차례에서 멈춤 (교사가 답하지 못함)';
+    const { unmount } = render(<TurnBanner status={{ text: '영희님 차례 — 기다리는 중', mine: false }} warning={warning} />);
+    expect(screen.getByRole('status')).toHaveTextContent('영희님 차례 — 기다리는 중');
     expect(screen.getByRole('status')).toHaveTextContent(warning);
+    expect(screen.queryByRole('button')).toBeNull();
     unmount();
 
     render(<TurnBanner status={null} warning={warning} />);
     expect(screen.getByRole('status')).toHaveTextContent(warning);
     expect(screen.getByRole('status')).not.toHaveClass('turn-banner--mine');
+  });
+
+  it('offers the action that answers the warning, disabled while it runs', () => {
+    const onClick = vi.fn();
+    const warning = '⚠ AI 교사 응답 없음 — 영희 차례에서 멈춤 (교사가 답하지 못함)';
+    const { rerender } = render(
+      <TurnBanner status={null} warning={warning} warningAction={{ label: '다시 시도', onClick }} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <TurnBanner status={null} warning={warning} warningAction={{ label: '교사 부르는 중…', busy: true, onClick }} />,
+    );
+    expect(screen.getByRole('button', { name: '교사 부르는 중…' })).toBeDisabled();
   });
 
   it("shows another player's turn without the own-turn styling", () => {

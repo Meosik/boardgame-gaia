@@ -148,6 +148,15 @@ export const api = {
     });
   },
 
+  /** Asks the teacher again after the AI seats of an AI game stopped (`GameState.ai_stalled`).
+   * The move, if the teacher has one now, arrives as an ordinary snapshot. */
+  aiRetry(code: string, sessionToken: string): Promise<{ ok: boolean }> {
+    return request(`${BASE}/rooms/${code}/ai-retry`, {
+      method: 'POST',
+      body: JSON.stringify({ session_token: sessionToken }),
+    });
+  },
+
   listRooms(): Promise<RoomSummary[]> {
     return request(`${BASE}/rooms`);
   },

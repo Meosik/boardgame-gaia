@@ -543,6 +543,30 @@ pub async fn ai_hint(
     }
 }
 
+#[derive(Deserialize)]
+pub struct AiRetryRequest {
+    pub session_token: String,
+}
+
+/// Lets the AI seats of an AI game try again after they stopped because the teacher gave no
+/// usable move (`crate::ai::retry`). Asked by the game's human seat; the move, if the teacher
+/// has one now, arrives as an ordinary snapshot.
+pub async fn ai_retry(
+    State(app): State<AppState>,
+    Path(code): Path<String>,
+    Json(req): Json<AiRetryRequest>,
+) -> ServerResult<Json<serde_json::Value>> {
+    let (player, session_room) = ReconnectService::validate_session(&app, &req.session_token).await?;
+    if session_room != code {
+        return Err(ServerError::InvalidSession);
+    }
+    app.ensure_room_loaded(&code).await?;
+    crate::ai::retry(&app, &code, player).await.map_err(|_| {
+        ServerError::InvalidAction("only the human seat of an AI game restarts its AI seats".into())
+    })?;
+    Ok(Json(serde_json::json!({ "ok": true })))
+}
+
 /// Read-only preview of the board/tiles the current `room.setup`/`room.seed` would produce if the
 /// game started right now — lets the waiting room show the randomized layout (and let the host
 /// reroll via the existing `regenerate_setup` seed controls) before anyone readies up. Reuses

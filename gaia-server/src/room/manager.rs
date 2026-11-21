@@ -79,30 +79,37 @@ pub struct Room {
     /// Teacher version this AI game is pinned to, read from `GAIA_AI_TEACHERS_DIR/current`
     /// when the game was created (`crate::ai`); `None` = the teacher built into the image.
     pub ai_teacher: Option<String>,
-    /// AI moves of this game that the simple fallback bot played because the teacher gave no
-    /// usable answer; `None` = none so far. Kept in memory only (a restart forgets it) and sent
-    /// with every snapshot as `ai_fallback`, so the screen can say the game is not the teacher's.
-    pub ai_fallback: Option<AiFallback>,
+    /// Set when the teacher gave no usable move for an AI seat (`crate::ai::drive`): nothing is
+    /// played for that seat and the AI seats wait until the player asks for another try. It
+    /// holds only for the revision it names, is kept in memory only, and is sent with the
+    /// snapshots of that revision as `ai_stalled`.
+    pub ai_stalled: Option<AiStall>,
 }
 
-/// See `Room::ai_fallback`.
+/// See `Room::ai_stalled`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-pub struct AiFallback {
-    /// Fallback moves so far in this game.
-    pub moves: u32,
-    /// The seat of the latest one.
-    pub last_player: PlayerId,
+pub struct AiStall {
+    /// The room revision the AI seats stopped at.
+    pub revision: u64,
+    /// The seat the teacher gave no move for.
+    pub player: PlayerId,
+    pub reason: AiStallReason,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AiStallReason {
+    /// The worker failed, timed out or declined the position.
+    NoAnswer,
+    /// The engine refused the move the teacher answered.
+    Rejected,
 }
 
 impl Room {
-    /// Counts one AI move of `player` played by the fallback bot.
-    pub fn note_ai_fallback(&mut self, player: PlayerId) {
-        let seen = self.ai_fallback.get_or_insert(AiFallback {
-            moves: 0,
-            last_player: player,
-        });
-        seen.moves += 1;
-        seen.last_player = player;
+    /// The stall of the position the room is at now; one left from an earlier revision no
+    /// longer counts.
+    pub fn current_ai_stall(&self) -> Option<AiStall> {
+        self.ai_stalled.filter(|stall| stall.revision == self.revision)
     }
 
 
@@ -291,7 +298,7 @@ impl RoomManager {
             dev_bot_action_round: 0,
             ai_level: None,
             ai_teacher: None,
-            ai_fallback: None,
+            ai_stalled: None,
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aiFallbackWarning, liveActionEntries, liveHighlight, turnStatus } from '../liveActivity';
+import { aiStallWarning, liveActionEntries, liveHighlight, turnStatus } from '../liveActivity';
 import type { GameEvent, GameState, PlayerState } from '../types/game';
 
 const players = [
@@ -71,13 +71,16 @@ describe('liveHighlight', () => {
   });
 });
 
-describe('aiFallbackWarning', () => {
-  it('speaks only once the server reports fallback moves', () => {
-    expect(aiFallbackWarning(null)).toBeNull();
-    expect(aiFallbackWarning(state())).toBeNull();
-    expect(aiFallbackWarning(state({ ai_fallback: { moves: 0, last_player: 1 } }))).toBeNull();
-    expect(aiFallbackWarning(state({ ai_fallback: { moves: 3, last_player: 1 } }))).toBe(
-      '⚠ AI 교사 응답 없음 — 대체 봇이 3수를 뒀습니다 (교사의 대국이 아님)',
+describe('aiStallWarning', () => {
+  it('speaks only while the server reports that the AI seats stopped', () => {
+    expect(aiStallWarning(null)).toBeNull();
+    expect(aiStallWarning(state())).toBeNull();
+    expect(aiStallWarning(state({ ai_stalled: null }))).toBeNull();
+    expect(aiStallWarning(state({ ai_stalled: { revision: 7, player: 1, reason: 'no_answer' } }))).toBe(
+      '⚠ AI 교사 응답 없음 — 영희 차례에서 멈춤 (교사가 답하지 못함)',
+    );
+    expect(aiStallWarning(state({ ai_stalled: { revision: 7, player: 9, reason: 'rejected' } }))).toBe(
+      '⚠ AI 교사 응답 없음 — 플레이어 9 차례에서 멈춤 (교사가 낸 수를 엔진이 거부함)',
     );
   });
 });

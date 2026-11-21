@@ -28,7 +28,7 @@ async fn main() {
     log::info!("migrations applied");
 
     let app_state = AppState::new(pool);
-    // A mistyped teacher name used to show only as fallback moves in every AI game.
+    // A mistyped teacher name otherwise shows only when the first AI game stops at its first move.
     if let Some(ai) = app_state.ai.clone() {
         tokio::spawn(async move { ai.log_image_teacher_check().await });
     }

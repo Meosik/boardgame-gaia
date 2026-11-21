@@ -132,8 +132,9 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
             player.vp
         );
     }
-    let (moves, fallbacks) = app.ai.as_ref().expect("pool").move_counts();
-    println!("AI moves {moves}, fallback moves {fallbacks}");
+    let moves = app.ai.as_ref().expect("pool").move_count();
+    println!("AI moves {moves}");
+    // Only the teacher moves an AI seat: had it failed, the seats would have stopped and the
+    // wait above would have reported "AI seats stalled".
     assert!(ai_actions > 30, "AI seats must have played the game");
-    assert_eq!(fallbacks, 0, "every AI move must come from the teacher");
 }

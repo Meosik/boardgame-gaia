@@ -414,9 +414,10 @@ export interface TutorialState {
 export interface GameState {
   tutorial?: TutorialState | null;
   dev_controller?: PlayerId | null;
-  /** Added by the server to a live snapshot (not game state): AI moves of this game that its
-   * fallback bot played instead of the teacher. Absent while there are none. */
-  ai_fallback?: { moves: number; last_player: PlayerId } | null;
+  /** Added by the server to a live snapshot (not game state) while the AI seats of an AI game
+   * wait at this position: the teacher gave no usable move for `player` and nothing was played
+   * for it. Absent otherwise; `api.aiRetry` asks the teacher again. */
+  ai_stalled?: { revision: number; player: PlayerId; reason: 'no_answer' | 'rejected' } | null;
   players: PlayerState[];
   board: BoardState;
   research_board: ResearchBoard;

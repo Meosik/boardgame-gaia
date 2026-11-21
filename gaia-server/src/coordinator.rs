@@ -377,9 +377,9 @@ pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
         return lobby_view(room);
     };
     let mut view = game_state.serialize();
-    // Not part of the game state: the room's count of AI moves the fallback bot played.
-    if let (Some(fallback), Some(fields)) = (room.ai_fallback, view.as_object_mut()) {
-        fields.insert("ai_fallback".into(), json!(fallback));
+    // Not part of the game state: the AI seats wait at this position (`Room::ai_stalled`).
+    if let (Some(stall), Some(fields)) = (room.current_ai_stall(), view.as_object_mut()) {
+        fields.insert("ai_stalled".into(), json!(stall));
     }
     view
 }

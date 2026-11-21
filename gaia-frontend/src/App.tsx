@@ -50,13 +50,14 @@ import { TurnBanner } from './components/TurnBanner';
 import { ActionToast } from './components/ActionToast';
 import { RecentActions } from './components/RecentActions';
 import { ActionReview } from './components/ActionReview';
-import { aiFallbackWarning, liveActionEntries, liveHighlight, turnStatus } from './liveActivity';
+import { aiStallWarning, liveActionEntries, liveHighlight, turnStatus } from './liveActivity';
 import { ReplayHighlightContext } from './replay/highlight';
 import { recentActionHex, scrollBoardIntoView } from './boardScroll';
 import { FACTION_STRUCTURE_COLOR, STRUCTURE_COLOR_HEX } from './assets/structureImages';
 import { useGameStore, type FinalResult } from './store/gameStore';
 import { useRoomStore } from './store/roomStore';
 import { GaiaWebSocket } from './api/websocket';
+import { api } from './api/rest';
 import type { FederationTokenChoice, GameAction, GameState, Hex, HexCoord, ResearchTrack, ServerMessage, SpaceshipId, StructureType, TechTileChoice } from './types/game';
 import { activeActionPlayerId, isGameState, pendingDecisionPlayerId } from './types/game';
 import { factionDisplayName } from './displayNames';
@@ -289,6 +290,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   const [recentActionIndex, setRecentActionIndex] = useState<number | null>(null);
   const [rangePreviewQic, setRangePreviewQic] = useState(0);
   const [gameNotice, setGameNotice] = useState<string | null>(null);
+  const [aiRetrying, setAiRetrying] = useState(false);
   /** The research lab picked for the Firaks planetary-institute action; the track comes next. */
   const [firaksLab, setFiraksLab] = useState<HexCoord | null>(null);
   /** Positions received in this room (oldest first) and the one on screen; `at: null` = live. */
@@ -360,7 +362,16 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   useEffect(() => {
     if (replay || !liveGameState) return;
     setTimeline(({ items, at }) => {
-      if (items[items.length - 1] === liveGameState) return { items, at };
+      const last = items[items.length - 1];
+      if (last === liveGameState) return { items, at };
+      // A snapshot that only sets or clears the AI-stall mark is the same position again.
+      if (
+        last
+        && (last.event_log?.length ?? 0) === (liveGameState.event_log?.length ?? 0)
+        && JSON.stringify(last.ai_stalled ?? null) !== JSON.stringify(liveGameState.ai_stalled ?? null)
+      ) {
+        return { items: [...items.slice(0, -1), liveGameState], at };
+      }
       const next = [...items, liveGameState];
       const drop = Math.max(0, next.length - REVIEW_POSITIONS);
       return { items: next.slice(drop), at: at === null ? null : Math.max(0, at - drop) };
@@ -661,6 +672,19 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     mine: liveTurnStatus?.mine ?? false,
     hint: '수를 두려면 「지금으로」를 누르세요.',
   };
+  // The AI seats stopped because the teacher gave no usable move; the player asks it again.
+  const aiStallText = replay ? null : aiStallWarning(liveGameState);
+  async function retryAiSeats() {
+    if (!roomCode || !sessionToken || aiRetrying) return;
+    setAiRetrying(true);
+    try {
+      await api.aiRetry(roomCode, sessionToken);
+    } catch (e) {
+      setGameNotice(e instanceof Error ? e.message : 'AI 교사를 다시 부르지 못했습니다.');
+    } finally {
+      setAiRetrying(false);
+    }
+  }
   const mainActionLocked =
     !!replay ||
     selectedAction !== null ||
@@ -1446,7 +1470,17 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       }
     }}>
       {!replay && <RewardMotion batch={rewardBatch} />}
-      {!replay && <TurnBanner status={turnBannerStatus} warning={aiFallbackWarning(liveGameState)} />}
+      {!replay && (
+        <TurnBanner
+          status={turnBannerStatus}
+          warning={aiStallText}
+          warningAction={aiStallText ? {
+            label: aiRetrying ? '교사 부르는 중…' : '다시 시도',
+            busy: aiRetrying,
+            onClick: () => void retryAiSeats(),
+          } : null}
+        />
+      )}
       {!replay && <ActionToast entry={toastAction} myPlayerId={myId} />}
       {!replay && (lastError || gameNotice) && (
         <div
