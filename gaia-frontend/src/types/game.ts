@@ -414,6 +414,9 @@ export interface TutorialState {
 export interface GameState {
   tutorial?: TutorialState | null;
   dev_controller?: PlayerId | null;
+  /** Added by the server to a live snapshot (not game state): AI moves of this game that its
+   * fallback bot played instead of the teacher. Absent while there are none. */
+  ai_fallback?: { moves: number; last_player: PlayerId } | null;
   players: PlayerState[];
   board: BoardState;
   research_board: ResearchBoard;

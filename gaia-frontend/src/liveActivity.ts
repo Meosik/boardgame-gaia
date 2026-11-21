@@ -174,6 +174,14 @@ function setupLabel(setup: Extract<GamePhase, { Setup: unknown }>['Setup']): {
   return null;
 }
 
+/** The banner's warning line once the server has let its simple fallback bot play an AI seat
+ * (the teacher gave no usable answer): such a game is no longer the teacher's play. */
+export function aiFallbackWarning(state: GameState | null | undefined): string | null {
+  const moves = state?.ai_fallback?.moves ?? 0;
+  if (moves <= 0) return null;
+  return `⚠ AI 교사 응답 없음 — 대체 봇이 ${moves}수를 뒀습니다 (교사의 대국이 아님)`;
+}
+
 /** One sentence for the banner: who acts now, and what the viewing player must do. */
 export function turnStatus(state: GameState, myPlayerId: PlayerId): TurnStatus | null {
   const nameOf = (id: PlayerId) =>

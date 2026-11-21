@@ -79,9 +79,33 @@ pub struct Room {
     /// Teacher version this AI game is pinned to, read from `GAIA_AI_TEACHERS_DIR/current`
     /// when the game was created (`crate::ai`); `None` = the teacher built into the image.
     pub ai_teacher: Option<String>,
+    /// AI moves of this game that the simple fallback bot played because the teacher gave no
+    /// usable answer; `None` = none so far. Kept in memory only (a restart forgets it) and sent
+    /// with every snapshot as `ai_fallback`, so the screen can say the game is not the teacher's.
+    pub ai_fallback: Option<AiFallback>,
+}
+
+/// See `Room::ai_fallback`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub struct AiFallback {
+    /// Fallback moves so far in this game.
+    pub moves: u32,
+    /// The seat of the latest one.
+    pub last_player: PlayerId,
 }
 
 impl Room {
+    /// Counts one AI move of `player` played by the fallback bot.
+    pub fn note_ai_fallback(&mut self, player: PlayerId) {
+        let seen = self.ai_fallback.get_or_insert(AiFallback {
+            moves: 0,
+            last_player: player,
+        });
+        seen.moves += 1;
+        seen.last_player = player;
+    }
+
+
     /// Show all locally controlled seats without treating them as separate authenticated members.
     pub fn display_players(&self) -> Vec<(PlayerId, String, bool)> {
         if let Some(state) = self
@@ -267,6 +291,7 @@ impl RoomManager {
             dev_bot_action_round: 0,
             ai_level: None,
             ai_teacher: None,
+            ai_fallback: None,
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))

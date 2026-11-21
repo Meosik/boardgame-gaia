@@ -373,10 +373,15 @@ pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
     if room.state == crate::room::manager::RoomState::Lobby {
         return lobby_view(room);
     }
-    room.game_state
-        .as_ref()
-        .map(|gs| gs.serialize())
-        .unwrap_or_else(|| lobby_view(room))
+    let Some(game_state) = room.game_state.as_ref() else {
+        return lobby_view(room);
+    };
+    let mut view = game_state.serialize();
+    // Not part of the game state: the room's count of AI moves the fallback bot played.
+    if let (Some(fallback), Some(fields)) = (room.ai_fallback, view.as_object_mut()) {
+        fields.insert("ai_fallback".into(), json!(fallback));
+    }
+    view
 }
 
 fn lobby_view(room: &Room) -> serde_json::Value {

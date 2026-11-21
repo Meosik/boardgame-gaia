@@ -99,6 +99,7 @@ impl AppState {
             dev_bot_action_round: 0,
             ai_level: None,
             ai_teacher: None,
+            ai_fallback: None,
         };
 
         let mut rooms = self.rooms.write().await;

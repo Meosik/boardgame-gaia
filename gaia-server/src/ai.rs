@@ -292,6 +292,46 @@ impl AiPool {
         }
     }
 
+    /// Starts one worker of the image teacher and pings it, the way AI games will start it: a
+    /// worker resolves its `teacher_patches` factory (`GAIA_AI_TEACHER`) before it reads the
+    /// first request, so a mistyped name or a broken import fails here instead of in every
+    /// move of a game (each of which the fallback bot would then play). `Err` = why not.
+    pub async fn check_image_teacher(&self) -> Result<(), String> {
+        let ping = async {
+            let mut worker = self.spawn_worker(None)?;
+            exchange(&mut worker, &serde_json::json!({"op": "ping"})).await
+        };
+        match tokio::time::timeout(VERSION_START_TIMEOUT, ping).await {
+            Ok(Ok(Reply { ok: true, .. })) => Ok(()),
+            Ok(Ok(reply)) => Err(format!(
+                "it refused a ping ({})",
+                reply.error.unwrap_or_default()
+            )),
+            Ok(Err(error)) => Err(format!("it does not start ({error})")),
+            Err(_) => Err(format!(
+                "it did not answer a ping in {} s",
+                VERSION_START_TIMEOUT.as_secs()
+            )),
+        }
+    }
+
+    /// `check_image_teacher` once at server start, written to the log. The server keeps
+    /// running either way: only the AI seats depend on the teacher.
+    pub async fn log_image_teacher_check(&self) {
+        let named = match std::env::var("GAIA_AI_TEACHER") {
+            Ok(name) if !name.trim().is_empty() => format!("GAIA_AI_TEACHER={name}"),
+            _ => "the worker's default factory".to_string(),
+        };
+        match self.check_image_teacher().await {
+            Ok(()) => log::info!("AI teacher check passed ({named})"),
+            Err(reason) => log::error!(
+                "AI teacher check FAILED ({named}): {reason}. Until this is fixed every AI move \
+                 is played by the fallback bot, not the teacher; the worker's own error is in \
+                 the lines above."
+            ),
+        }
+    }
+
     /// (committed AI moves, of which fallback moves) since the pool started.
     pub fn move_counts(&self) -> (usize, usize) {
         (
@@ -670,6 +710,10 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 let events = RuleEngine::start_first_round(state)?;
                 state.event_log.extend(events);
             }
+            if fallback {
+                // Part of the same commit as the move, so the next snapshot already says so.
+                room.note_ai_fallback(turn.player);
+            }
             Ok(())
         })
         .await;
@@ -876,6 +920,7 @@ mod tests {
             dev_bot_action_round: 0,
             ai_level: Some("hard".into()),
             ai_teacher: None,
+            ai_fallback: None,
         };
         (room, to_move)
     }
@@ -974,6 +1019,35 @@ mod tests {
             engine_fingerprint: None,
         });
         (Arc::new(pool), dir)
+    }
+
+    #[tokio::test]
+    async fn the_start_check_tells_a_worker_that_answers_from_one_that_exits() {
+        let (pool, dir) = pool_with_scripted_worker("start-check");
+        assert_eq!(pool.check_image_teacher().await, Ok(()));
+        // What a mistyped GAIA_AI_TEACHER does: the worker ends before it reads a request.
+        std::fs::write(dir.join("tools/ai_worker.py"), "exit 3\n").unwrap();
+        let reason = pool
+            .check_image_teacher()
+            .await
+            .expect_err("a worker that exits must fail the check");
+        assert!(reason.contains("does not start"), "{reason}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_snapshot_says_how_many_ai_moves_the_fallback_bot_played() {
+        let (mut room, _) = ai_room_waiting_for_its_human();
+        let view = coordinator::room_snapshot_view(&room);
+        assert!(view.get("ai_fallback").is_none());
+        assert!(view.get("players").is_some());
+        room.note_ai_fallback(8);
+        room.note_ai_fallback(9);
+        let view = coordinator::room_snapshot_view(&room);
+        assert_eq!(
+            view["ai_fallback"],
+            serde_json::json!({"moves": 2, "last_player": 9})
+        );
     }
 
     /// Waits until the scripted worker has read `count` requests.

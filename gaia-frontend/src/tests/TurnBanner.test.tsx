@@ -17,6 +17,18 @@ describe('TurnBanner', () => {
     expect(banner).toHaveClass('turn-banner--mine');
   });
 
+  it('shows a warning line under the turn sentence, and alone when there is no sentence', () => {
+    const warning = '⚠ AI 교사 응답 없음 — 대체 봇이 3수를 뒀습니다 (교사의 대국이 아님)';
+    const { unmount } = render(<TurnBanner status={{ text: '내 차례입니다', mine: true }} warning={warning} />);
+    expect(screen.getByRole('status')).toHaveTextContent('내 차례입니다');
+    expect(screen.getByRole('status')).toHaveTextContent(warning);
+    unmount();
+
+    render(<TurnBanner status={null} warning={warning} />);
+    expect(screen.getByRole('status')).toHaveTextContent(warning);
+    expect(screen.getByRole('status')).not.toHaveClass('turn-banner--mine');
+  });
+
   it("shows another player's turn without the own-turn styling", () => {
     render(<TurnBanner status={{ text: '영희님 차례 — 기다리는 중', mine: false }} />);
 

@@ -50,7 +50,7 @@ import { TurnBanner } from './components/TurnBanner';
 import { ActionToast } from './components/ActionToast';
 import { RecentActions } from './components/RecentActions';
 import { ActionReview } from './components/ActionReview';
-import { liveActionEntries, liveHighlight, turnStatus } from './liveActivity';
+import { aiFallbackWarning, liveActionEntries, liveHighlight, turnStatus } from './liveActivity';
 import { ReplayHighlightContext } from './replay/highlight';
 import { recentActionHex, scrollBoardIntoView } from './boardScroll';
 import { FACTION_STRUCTURE_COLOR, STRUCTURE_COLOR_HEX } from './assets/structureImages';
@@ -1446,7 +1446,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       }
     }}>
       {!replay && <RewardMotion batch={rewardBatch} />}
-      {!replay && <TurnBanner status={turnBannerStatus} />}
+      {!replay && <TurnBanner status={turnBannerStatus} warning={aiFallbackWarning(liveGameState)} />}
       {!replay && <ActionToast entry={toastAction} myPlayerId={myId} />}
       {!replay && (lastError || gameNotice) && (
         <div
