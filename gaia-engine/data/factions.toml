@@ -240,8 +240,12 @@ starting_ore = 4
 starting_credits = 15
 starting_knowledge = 3
 starting_qic = 0
+# Printed on the faction board (gaia-frontend/src/assets/faction_boards/bal_taks.png): 2 tokens
+# in Area I, 4 in Area II. The Lost Fleet exploration board (exploration_boards/bal_taks.png)
+# carries no power override, unlike the Ivits one. This file said 2/2 from its first commit
+# without a source, which left Bal T'aks two tokens short of a level-1 Gaia Project.
 starting_bowl1 = 2
-starting_bowl2 = 2
+starting_bowl2 = 4
 starting_bowl3 = 0
 gaiaformers = 3
 # Academy(Qic) action grants 4 credits instead of 1 QIC.

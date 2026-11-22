@@ -181,6 +181,27 @@ fn setup_completion_seeds_starting_resources() {
     assert_eq!(terrans.gaiaformers_total, 1);
 }
 
+/// The starting power split is read off the printed boards. Bal T'aks start with 2 tokens in
+/// Area I and 4 in Area II like most factions (faction_boards/bal_taks.png) — six tokens, which
+/// is what a Gaia Project costs at their starting level 1. Only the Ivits are changed by the
+/// Lost Fleet exploration board (2 and 2).
+#[test]
+fn starting_power_bowls_follow_the_printed_boards() {
+    let factions = gaia_engine::data::load_factions().factions;
+    let bowls = |id: FactionId| {
+        let data = factions
+            .iter()
+            .find(|data| data.faction_id() == Some(id))
+            .unwrap_or_else(|| panic!("{id:?} is in factions.toml"));
+        (data.starting_bowl1, data.starting_bowl2, data.starting_bowl3)
+    };
+    assert_eq!(bowls(FactionId::BalTaks), (2, 4, 0));
+    assert_eq!(bowls(FactionId::Geodens), (2, 4, 0));
+    assert_eq!(bowls(FactionId::Ivits), (2, 2, 0));
+    assert_eq!(bowls(FactionId::Terrans), (4, 4, 0));
+    assert_eq!(bowls(FactionId::Lantids), (4, 0, 0));
+}
+
 #[test]
 fn setup_completion_seeds_moweyds_and_tinkeroids_starting_tracks() {
     // Moweyds pairs with SpaceGiants and Tinkeroids pairs with Darkanians
