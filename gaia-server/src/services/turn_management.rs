@@ -1,4 +1,7 @@
-use gaia_engine::{RuleEngine, ScoringEngine};
+use gaia_engine::{
+    game_state::{GamePhase, GameState},
+    RuleEngine, ScoringEngine,
+};
 
 use crate::{
     coordinator,
@@ -9,6 +12,18 @@ use crate::{
 };
 
 pub struct TurnManagementService;
+
+/// Whether the round is over and still has to be ended: every player passed and the game sits
+/// in `RoundScoring`, the phase the last pass leaves. The `passed` flags alone do not say so —
+/// they stay set through the pauses of the round change (the income order, the Gaia decisions,
+/// the Tinkeroids' tile choice) until the next round opens, and ending the round again from one
+/// of those pauses is an engine error (`advance_to_next_round` takes `RoundScoring` only). That
+/// error stopped the AI driver after an AI seat answered such a pause, leaving the next seat's
+/// answer unplayed.
+fn round_is_over(state: &GameState) -> bool {
+    matches!(state.phase, GamePhase::RoundScoring { .. })
+        && state.players.iter().all(|player| player.passed)
+}
 
 impl TurnManagementService {
     /// Called after every action to check if the round has ended.
@@ -22,8 +37,7 @@ impl TurnManagementService {
                 .game_state
                 .as_ref()
                 .ok_or_else(|| ServerError::Internal("no game state".into()))?;
-            let all = gs.players.iter().all(|p| p.passed);
-            (all, gs.round)
+            (round_is_over(gs), gs.round)
         };
 
         if all_passed {
@@ -101,5 +115,43 @@ impl TurnManagementService {
         crate::ai::spawn_driver(state.clone(), room_code.to_string());
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gaia_engine::{
+        game_state::{GamePhase, PendingIncomeOrder},
+        test_utils::builders::GameStateBuilder,
+    };
+
+    use super::round_is_over;
+
+    #[test]
+    fn a_round_is_over_only_in_round_scoring_with_everyone_passed() {
+        let mut state = GameStateBuilder::new()
+            .with_player_fn(0, |_| {})
+            .with_player_fn(1, |_| {})
+            .build();
+        state.phase = GamePhase::RoundScoring { round: 1 };
+        assert!(!round_is_over(&state), "nobody passed yet");
+        for player in &mut state.players {
+            player.passed = true;
+        }
+        assert!(round_is_over(&state));
+
+        // The round change pauses for an income-order answer with the `passed` flags still set
+        // (they are cleared when the next round opens): that round was already ended.
+        state.phase = GamePhase::IncomeOrderPending {
+            queue: vec![PendingIncomeOrder {
+                player: 1,
+                charge_amount: 4,
+                bonus_tokens: 1,
+            }],
+            round: 1,
+        };
+        assert!(!round_is_over(&state));
+        state.phase = GamePhase::TinkeroidsTileSelectionPending { player: 1, round: 1 };
+        assert!(!round_is_over(&state));
     }
 }
