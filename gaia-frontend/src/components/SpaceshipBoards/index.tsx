@@ -334,11 +334,16 @@ export function SpaceshipBoards({
                     key={`${id}-action-space-${space.id}`}
                     data-tutorial-target={`action:${space.primaryActionType}`}
                     data-replay-highlight={!!replay && space.actionTypes.some(type => type === replay.actionType) || undefined}
+                    data-last-move={lastMoves?.shipAction.has(space.id) || undefined}
                     type="button"
                     className={`board-action-hotspot spaceship-board-action-space board-action-hotspot--${
                       used ? 'used' : available ? 'available' : 'locked'
                     }${selected ? ' board-action-hotspot--selected' : ''}`}
-                    style={{ left: `${space.x}%`, top: `${space.y}%` }}
+                    style={{
+                      left: `${space.x}%`,
+                      top: `${space.y}%`,
+                      ...lastMoveStyle(lastMoves?.shipAction.get(space.id)),
+                    }}
                     disabled={!available}
                     onClick={() => onActionSelect(space.primaryActionType, space.actionTypes)}
                     aria-label={`${label} — ${space.label}: ${reason}`}

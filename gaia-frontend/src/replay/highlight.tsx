@@ -32,6 +32,10 @@ export interface LastMoveMarks {
   booster: ReadonlyMap<number, string>;
   /** `<player id>:<ship id>`: the mover's shuttle on the ship it explored. */
   ship: ReadonlyMap<string, string>;
+  /** Shared power-action space id (1–7) on the research board. */
+  powerAction: ReadonlyMap<number, string>;
+  /** Action space id on a ship board (`SPACESHIP_ACTION_SPACES`; the ids are unique across ships). */
+  shipAction: ReadonlyMap<number, string>;
 }
 export const LastMoveMarksContext = createContext<LastMoveMarks | null>(null);
 export const useLastMoveMarks = () => useContext(LastMoveMarksContext);

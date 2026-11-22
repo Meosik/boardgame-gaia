@@ -1,6 +1,7 @@
 import { activeActionPlayerId, pendingDecisionPlayerId } from './types/game';
 import type {
   BoardState,
+  GameAction,
   GameEvent,
   GamePhase,
   GameState,
@@ -11,6 +12,7 @@ import type {
 } from './types/game';
 import type { ReplayHighlight } from './replay/highlight';
 import { gameLogEntries, type GameLogEntry } from './components/GameLog';
+import { SPACESHIP_ACTION_SLOT_BY_TYPE } from './components/boardActionSpaces';
 
 /** Keys `ResearchBoard` marks tokens with (`ResearchTracks` fields), not the wire track names. */
 const RESEARCH_HIGHLIGHT_KEY: Record<ResearchTrack, string> = {
@@ -89,9 +91,15 @@ export function liveHighlight(
   const advancedTech = new Set<number>();
   let ship: string | null = null;
   let booster: number | null = null;
-  // The event log records a power action's effects but not which board slot was taken, so that
-  // marker stays off in live play; the replay feed sets it from the action itself.
-  const powerAction = null;
+  // A power action's events record its effects but not which board space was taken; the server
+  // names the space on the action's `ActionLog` marker. Logs saved before it did leave it off.
+  // Only an entry made from a marker (`entry.action`) owns the next marker in the log.
+  const markerEvent = events
+    .slice(entry.index)
+    .find((event) => payloadFor(event, 'ActionLog') !== null);
+  const marker = markerEvent ? payloadFor(markerEvent, 'ActionLog') : null;
+  const space = entry.action === 'PowerAction' ? marker?.power_action : null;
+  const powerAction = typeof space === 'number' ? space : null;
 
   for (const event of group) {
     const tag = Object.keys(event)[0] ?? '';
@@ -167,6 +175,10 @@ export interface LastMove {
   research: Set<string>;
   booster: number | null;
   ship: string | null;
+  /** The shared power-action space (1–7) the move took on the research board. */
+  powerAction: number | null;
+  /** The action space the move took on a ship board (`SPACESHIP_ACTION_SPACES` id). */
+  shipAction: number | null;
 }
 
 /**
@@ -197,6 +209,8 @@ export function opponentLastMoves(
       research: touched?.research ?? new Set<string>(),
       booster: touched?.booster ?? null,
       ship: touched?.ship ?? null,
+      powerAction: touched?.powerAction ?? null,
+      shipAction: SPACESHIP_ACTION_SLOT_BY_TYPE[entry.action as GameAction['type']] ?? null,
     });
   }
   return moves;

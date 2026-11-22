@@ -586,6 +586,8 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     const research = new Map<string, string>();
     const booster = new Map<number, string>();
     const ship = new Map<string, string>();
+    const powerAction = new Map<number, string>();
+    const shipAction = new Map<number, string>();
     for (const move of lastMoves.values()) {
       const faction = gameState?.players.find((player) => player.player_id === move.player)?.faction;
       if (!faction) continue;
@@ -595,8 +597,10 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       for (const track of move.research) research.set(`${move.player}:${track}`, color);
       if (move.booster !== null) booster.set(move.booster, color);
       if (move.ship !== null) ship.set(`${move.player}:${move.ship}`, color);
+      if (move.powerAction !== null) powerAction.set(move.powerAction, color);
+      if (move.shipAction !== null) shipAction.set(move.shipAction, color);
     }
-    return { hexes, standardTech, research, booster, ship };
+    return { hexes, standardTech, research, booster, ship, powerAction, shipAction };
   }, [lastMoves, gameState?.players]);
   const latestActionIndex = actionEntries.length > 0
     ? actionEntries[actionEntries.length - 1].index

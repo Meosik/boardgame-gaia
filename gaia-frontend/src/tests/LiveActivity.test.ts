@@ -66,6 +66,20 @@ describe('liveHighlight', () => {
     expect(liveHighlight(events, entries[1])?.booster).toBe(7);
   });
 
+  it('reads the power-action space from the action marker', () => {
+    const events: GameEvent[] = [
+      { ResourceChanged: { player: 1, delta: { credits: 7 } } },
+      { ActionLog: { player: 1, action: 'PowerAction', event_count: 1, power_action: 4 } },
+      // A log saved before the server named the space: nothing to mark.
+      { ResourceChanged: { player: 1, delta: { credits: 7 } } },
+      { ActionLog: { player: 1, action: 'PowerAction', event_count: 1 } },
+    ];
+    const entries = liveActionEntries(events, players);
+
+    expect(liveHighlight(events, entries[0])?.powerAction).toBe(4);
+    expect(liveHighlight(events, entries[1])?.powerAction).toBeNull();
+  });
+
   it('has nothing to highlight without a recent action', () => {
     expect(liveHighlight(buildMine, null)).toBeNull();
   });
@@ -105,6 +119,25 @@ describe('opponentLastMoves', () => {
     expect(moves.get(1)?.research.size).toBe(0);
     expect(moves.get(1)?.booster).toBe(7);
     expect(moves.has(0)).toBe(false);
+  });
+
+  it('keeps the action space the move took: a power action and a ship action', () => {
+    const power: GameEvent[] = [
+      { ResourceChanged: { player: 1, delta: { credits: 7 } } },
+      { ActionLog: { player: 1, action: 'PowerAction', event_count: 1, power_action: 4 } },
+    ];
+    const powerMove = opponentLastMoves(power, liveActionEntries(power, players), 0).get(1);
+    expect(powerMove?.powerAction).toBe(4);
+    expect(powerMove?.shipAction).toBeNull();
+
+    // The ship space comes from the action's name (`SPACESHIP_ACTION_SPACES`): Rebellion's space 4.
+    const ship: GameEvent[] = [
+      { ResourceChanged: { player: 1, delta: { credits: 2, qic: 1 } } },
+      { ActionLog: { player: 1, action: 'RebellionCreditsAndQic', event_count: 1 } },
+    ];
+    const shipMove = opponentLastMoves(ship, liveActionEntries(ship, players), 0).get(1);
+    expect(shipMove?.shipAction).toBe(4);
+    expect(shipMove?.powerAction).toBeNull();
   });
 
   it.each([

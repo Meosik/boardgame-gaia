@@ -386,11 +386,12 @@ export function ResearchBoard({
             <button
               key={`power-action-space-${id}`}
               data-replay-highlight={replay?.powerAction === id || undefined}
+              data-last-move={lastMoves?.powerAction.has(id) || undefined}
               type="button"
               className={`board-action-hotspot research-board-action-space board-action-hotspot--${
                 used ? 'used' : available ? 'available' : 'locked'
               }${selected ? ' board-action-hotspot--selected' : ''}`}
-              style={{ left: `${x}%`, top: `${y}%` }}
+              style={{ left: `${x}%`, top: `${y}%`, ...lastMoveStyle(lastMoves?.powerAction.get(id)) }}
               disabled={!available}
               data-tutorial-target={`power:${id}`}
               onClick={() => onPowerAction(id)}
