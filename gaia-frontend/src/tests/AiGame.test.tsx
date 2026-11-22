@@ -5,6 +5,7 @@ import { CreateRoomView } from '../components/GameLobby/CreateRoomView';
 import { LobbyHomeView } from '../components/GameLobby/LobbyHomeView';
 import { api } from '../api/rest';
 import { useRoomStore } from '../store/roomStore';
+import { useGameStore } from '../store/gameStore';
 import { AI_TEST_FACTIONS, aiTestTurnOrder, otherBoardSide, readShownCounts } from '../aiTestDraw';
 import type { FactionId } from '../types/game';
 
@@ -71,6 +72,22 @@ describe('AI test', () => {
     const shown = readShownCounts();
     expect(Object.keys(shown).sort()).toEqual([...dealt].sort());
     expect(Object.values(shown)).toEqual([1, 1, 1, 1]);
+  });
+
+  it('keeps the setup position the create response carries, so the first screen is the starting placement', async () => {
+    const state = { phase: { Setup: 'x' } } as never;
+    vi.spyOn(api, 'createAiGame').mockResolvedValue({
+      room_code: 'AI1234',
+      player_id: 5,
+      session_token: 'token',
+      game_setup: null as never,
+      game_state: state,
+      players: [{ player_id: 5, nickname: '나', ready: true }] as never,
+      host_player_id: 5,
+    });
+    await useRoomStore.getState().actions.createAiGame('나', 'hard');
+    expect(useGameStore.getState().gameState).toBe(state);
+    useGameStore.getState().actions.reset();
   });
 
   it('asks for a nickname before starting and counts nothing', () => {

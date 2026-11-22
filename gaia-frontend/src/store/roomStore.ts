@@ -129,6 +129,9 @@ export const useRoomStore = createWithEqualityFn<RoomStore>()(
             hostPlayerId: res.host_player_id,
             roomState: 'faction_selection',
           });
+          // The response already holds the setup position: with it the first screen is the
+          // starting placement, not the every-faction pick list shown while no state is known.
+          if (res.game_state) useGameStore.getState().actions.setGameState(res.game_state);
           rememberRoom({ roomCode: res.room_code, playerId: res.player_id, sessionToken: res.session_token,
             nickname, manualControl: false });
         },
