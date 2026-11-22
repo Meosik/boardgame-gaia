@@ -8755,6 +8755,22 @@ fn validate_choose_income_order(
     Ok(())
 }
 
+/// The PlanetaryInstitute charge and bonus power token of `entry` in one of
+/// the two orders.
+fn apply_income_order(
+    power: &mut crate::game_state::PowerCycle,
+    entry: &PendingIncomeOrder,
+    charge_first: bool,
+) {
+    if charge_first {
+        apply_power_charge(power, entry.charge_amount);
+        power.bowl1 = power.bowl1.saturating_add(entry.bonus_tokens);
+    } else {
+        power.bowl1 = power.bowl1.saturating_add(entry.bonus_tokens);
+        apply_power_charge(power, entry.charge_amount);
+    }
+}
+
 /// Applies this round's PlanetaryInstitute charge and bonus power token in
 /// the chosen order — `charge_first` sweeps the fresh token into bowl2 along
 /// with whatever the charge already moves; choosing to gain the token first
@@ -8771,21 +8787,7 @@ fn apply_choose_income_order(
     };
 
     if let Some(player) = state.player_mut(player_id) {
-        if charge_first {
-            apply_power_charge(&mut player.resources.power, entry.charge_amount);
-            player.resources.power.bowl1 = player
-                .resources
-                .power
-                .bowl1
-                .saturating_add(entry.bonus_tokens);
-        } else {
-            player.resources.power.bowl1 = player
-                .resources
-                .power
-                .bowl1
-                .saturating_add(entry.bonus_tokens);
-            apply_power_charge(&mut player.resources.power, entry.charge_amount);
-        }
+        apply_income_order(&mut player.resources.power, &entry, charge_first);
     }
 
     let mut completed_round = None;
@@ -9123,7 +9125,8 @@ fn continue_round_transition_after_income(state: &mut GameState, round: u8) -> V
 /// Returns the players who must choose an order for this round's
 /// PlanetaryInstitute charge vs. bonus power token (see
 /// `planetary_institute_income`) — every other income effect above is
-/// already applied by the time this returns. An empty result means the
+/// already applied by the time this returns, and so is a charge-and-token
+/// pair whose two orders end in the same bowls. An empty result means the
 /// round can finish immediately; a non-empty one means the caller must
 /// enter `GamePhase::IncomeOrderPending` and wait for
 /// `GameAction::ChooseIncomeOrder` from each queued player before finishing.
@@ -9280,6 +9283,31 @@ fn apply_income_phase(
             });
         }
     }
+    // The order is a choice only when it changes the bowls (rulebook p.10:
+    // "You choose the order in which you charge and gain power"). When both
+    // orders end in the same power cycle — the charge fits in what Area I
+    // already holds — the income is applied here and the player is not asked.
+    // GAIA_INCOME_ORDER_ALWAYS_ASKED=1 keeps the old pause, for replaying
+    // decision logs recorded before this (every such choice was a decision).
+    let always_asked =
+        std::env::var_os("GAIA_INCOME_ORDER_ALWAYS_ASKED").is_some_and(|value| value == "1");
+    pending_income_orders.retain(|entry| {
+        if always_asked {
+            return true;
+        }
+        let Some(player) = state.player_mut(entry.player) else {
+            return true;
+        };
+        let mut charge_first = player.resources.power.clone();
+        apply_income_order(&mut charge_first, entry, true);
+        let mut tokens_first = player.resources.power.clone();
+        apply_income_order(&mut tokens_first, entry, false);
+        if charge_first != tokens_first {
+            return true;
+        }
+        player.resources.power = charge_first;
+        false
+    });
     (pending_income_orders, events)
 }
 

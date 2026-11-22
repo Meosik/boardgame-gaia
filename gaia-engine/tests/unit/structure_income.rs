@@ -209,6 +209,57 @@ fn bonus_token_first_lets_it_get_charged_alongside_existing_tokens() {
 }
 
 #[test]
+fn an_income_order_that_changes_nothing_is_not_asked() {
+    // Area I already holds more than the charge of 4, so the bonus token stays
+    // in Area I in either order: 6 → 2 after the charge, +1 token = 3.
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| {
+            p.faction = Some(FactionId::Terrans);
+            p.resources.power.bowl1 = 6;
+            p.resources.power.bowl2 = 0;
+            p.resources.power.bowl3 = 0;
+            p.structures = vec![structure(StructureType::PlanetaryInstitute)];
+        })
+        .build();
+    state.phase = GamePhase::RoundScoring { round: 1 };
+
+    RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|e| panic!("{e}"));
+
+    assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 0 });
+    let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
+    assert_eq!(player.resources.power.bowl1, 3);
+    assert_eq!(player.resources.power.bowl2, 4);
+    assert_eq!(player.resources.power.bowl3, 0);
+}
+
+#[test]
+fn an_income_order_that_changes_the_bowls_is_still_asked() {
+    // Area I holds 3, one short of the charge of 4: charge first leaves the
+    // token in Area I (1/2/1), token first charges it too (0/4/0).
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |p| {
+            p.faction = Some(FactionId::Terrans);
+            p.resources.power.bowl1 = 3;
+            p.resources.power.bowl2 = 0;
+            p.resources.power.bowl3 = 0;
+            p.structures = vec![structure(StructureType::PlanetaryInstitute)];
+        })
+        .build();
+    state.phase = GamePhase::RoundScoring { round: 1 };
+
+    RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|e| panic!("{e}"));
+
+    assert!(
+        matches!(&state.phase, GamePhase::IncomeOrderPending { queue, .. } if queue.len() == 1),
+        "phase is {:?}",
+        state.phase
+    );
+    let player = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
+    assert_eq!(player.resources.power.bowl1, 3);
+    assert_eq!(player.resources.power.bowl2, 0);
+}
+
+#[test]
 fn firaks_research_lab_base_is_two_knowledge() {
     let state = GameStateBuilder::new()
         .with_player_fn(0, |p| {

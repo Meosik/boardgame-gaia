@@ -354,6 +354,10 @@ fn income_resolves_before_terrans_planetary_institute_gaia_decision() {
                 kind: StructureType::PlanetaryInstitute,
             });
             player.resources.power.gaia_forming = 4;
+            // Area I empty: the order of the charge and the bonus token changes
+            // the bowls, so the income order is asked (it is skipped otherwise).
+            player.resources.power.bowl1 = 0;
+            player.resources.power.bowl2 = 5;
         })
         .with_phase(GamePhase::RoundScoring { round: 1 })
         .build();
