@@ -4485,6 +4485,8 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
   gap: 0.35rem;
   margin-top: 0.35rem;
 }
+/* The information cubes a build out of range adds to its price. */
+.planet-action-range-note { margin-right: auto; color: #7dd3fc; font-size: 0.78rem; }
 
 .planet-action-gaiaformer-cost {
   display: inline-flex;

@@ -328,6 +328,28 @@ describe('PlanetActionPopup', () => {
     expect(rangeRequirementNotice(2, 2)).toBeNull();
   });
 
+  it('names the information cubes a build out of range adds to its price', () => {
+    const me = player();
+    const terra = (q: number): Hex => ({ ...planetHex('Terra'), coord: { q, r: 0 } });
+    const line = {
+      ...board,
+      hexes: {
+        ...board.hexes,
+        '1,0': terra(1),
+        '2,0': { ...board.hexes['2,0'], planet: null },
+        '3,0': terra(3),
+      },
+    };
+    const far = render(<PlanetActionPopup anchor={{ x: 100, y: 100 }} hex={terra(3)}
+      player={me} players={[me]} board={line} onConfirm={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByText('사거리 +2: 정보 큐브 1개 사용')).toBeInTheDocument();
+    far.unmount();
+
+    render(<PlanetActionPopup anchor={{ x: 100, y: 100 }} hex={terra(1)}
+      player={me} players={[me]} board={line} onConfirm={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.queryByText(/사거리 \+/)).not.toBeInTheDocument();
+  });
+
   it('offers the other terraforming payments only on a planet that needs terraforming', () => {
     const pick = vi.fn();
     const me = player();

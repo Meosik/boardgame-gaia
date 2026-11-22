@@ -791,10 +791,12 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       || !isMyActionTurn) return;
     const occupiedByOther = hex.planet.owner !== null && !(hex.planet.owner === myId && hex.planet.is_gaia_formed);
     if (occupiedByOther) return;
-    const rangeNotice = rangeRequirementNotice(
-      informationCubesNeededForRange(gameState!.board, me, hex.coord),
-      rangePreviewQic,
-    );
+    // A planet out of range is not a stop: the popup adds the information cubes the range needs
+    // to the price, names them, and offers conversions when the player is short (the engine
+    // spends them with the build). Only a range that cannot be computed is refused here.
+    const rangeNotice = informationCubesNeededForRange(gameState!.board, me, hex.coord) === null
+      ? rangeRequirementNotice(null, 0)
+      : null;
     if (rangeNotice && !gameState?.tutorial) {
       setGameNotice(rangeNotice);
       return;
@@ -2064,7 +2066,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             spaceshipBoard={spaceshipBoard}
             board={gameState.board}
             player={me}
-            selectedRangeQic={gameState.tutorial ? informationCubesNeededForRange(gameState.board, me, gameState.board.spaceship_tiles[spaceshipPopup.ship]!) ?? 0 : rangePreviewQic}
+            selectedRangeQic={Math.max(rangePreviewQic, informationCubesNeededForRange(gameState.board, me, gameState.board.spaceship_tiles[spaceshipPopup.ship]!) ?? 0)}
             onConfirm={() => {
               gameActions.sendAction({ type: 'ExploreSpaceship', ship: spaceshipPopup.ship });
               setRangePreviewQic(0);

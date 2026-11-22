@@ -375,6 +375,11 @@ export function PlanetActionPopup({
   );
   const costSummary = (
     <div className="planet-action-cost-summary">
+      {(rangeQic ?? 0) > 0 && (
+        <small className="planet-action-range-note">
+          사거리 +{(rangeQic ?? 0) * 2}: 정보 큐브 {rangeQic}개 사용
+        </small>
+      )}
       {Object.keys(displayedResources).length > 0 && (
         <ResourceTokens
           compact

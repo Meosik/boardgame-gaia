@@ -203,7 +203,7 @@ export function SidebarTurnControls({
         <p className="sidebar-range-help">
           {rangePreviewQic > 0
             ? `현재 +${rangePreviewQic * 2} 사거리 · 정보 큐브 ${rangePreviewQic}개 선택`
-            : '사거리가 부족하면 필요한 만큼 눌러 추가하세요'}
+            : '먼 행성·함선은 그냥 누르면 필요한 정보 큐브가 비용에 더해집니다'}
         </p>
         {showDevPowerChargeTest && (
           <div className="sidebar-dev-test-actions">
