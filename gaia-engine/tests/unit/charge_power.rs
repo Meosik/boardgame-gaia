@@ -207,13 +207,40 @@ fn charge_amount_capped_by_available_vp() {
 }
 
 #[test]
-fn charge_amount_capped_by_movable_power_tokens() {
+fn charge_amount_capped_by_what_moves_every_token_to_area_three() {
+    // Rulebook p.17, first exception and its example: with one token left in Area II the
+    // Planetary Institute's 3 power charges only 1, for 0 VP.
     let mut state = base_builder(Some((
         HexCoord::new(3, 0),
         StructureType::PlanetaryInstitute,
     )))
     .build();
-    // Only 1 token available to move (rest already sitting in bowl3).
+    state.players[1].resources.power.bowl1 = 0;
+    state.players[1].resources.power.bowl2 = 1;
+    state.players[1].resources.power.bowl3 = 5;
+    state.players[1].vp = 10;
+
+    RuleEngine::apply_action(&mut state, 0, build_target())
+        .unwrap_or_else(|e| panic!("build should be valid: {e}"));
+    RuleEngine::apply_action(&mut state, 1, GameAction::ChargePower { accept: true })
+        .unwrap_or_else(|e| panic!("charge power should be valid: {e}"));
+
+    let opponent = state.player(1).unwrap_or_else(|| panic!("player 1 exists"));
+    assert_eq!(opponent.resources.power.bowl1, 0);
+    assert_eq!(opponent.resources.power.bowl2, 0);
+    assert_eq!(opponent.resources.power.bowl3, 6);
+    assert_eq!(opponent.vp, 10); // charged only 1 power → cost 0 VP
+}
+
+#[test]
+fn a_token_in_area_one_takes_two_power_of_a_charge() {
+    // One token in Area I is not "1 power left": moving it to Area III takes 2 power, so the
+    // Planetary Institute's 3 power charges 2 for 1 VP (the cap is power, not tokens).
+    let mut state = base_builder(Some((
+        HexCoord::new(3, 0),
+        StructureType::PlanetaryInstitute,
+    )))
+    .build();
     state.players[1].resources.power.bowl1 = 1;
     state.players[1].resources.power.bowl2 = 0;
     state.players[1].resources.power.bowl3 = 5;
@@ -226,9 +253,34 @@ fn charge_amount_capped_by_movable_power_tokens() {
 
     let opponent = state.player(1).unwrap_or_else(|| panic!("player 1 exists"));
     assert_eq!(opponent.resources.power.bowl1, 0);
-    assert_eq!(opponent.resources.power.bowl2, 1);
-    assert_eq!(opponent.resources.power.bowl3, 5);
-    assert_eq!(opponent.vp, 10); // charged only 1 power → cost 0 VP
+    assert_eq!(opponent.resources.power.bowl2, 0);
+    assert_eq!(opponent.resources.power.bowl3, 6);
+    assert_eq!(opponent.vp, 9); // charged 2 power → cost 1 VP
+}
+
+#[test]
+fn two_tokens_spread_over_areas_one_and_two_take_the_full_three_power() {
+    // Two tokens outside Area III (one each in I and II) take 3 power in all.
+    let mut state = base_builder(Some((
+        HexCoord::new(3, 0),
+        StructureType::PlanetaryInstitute,
+    )))
+    .build();
+    state.players[1].resources.power.bowl1 = 1;
+    state.players[1].resources.power.bowl2 = 1;
+    state.players[1].resources.power.bowl3 = 4;
+    state.players[1].vp = 10;
+
+    RuleEngine::apply_action(&mut state, 0, build_target())
+        .unwrap_or_else(|e| panic!("build should be valid: {e}"));
+    RuleEngine::apply_action(&mut state, 1, GameAction::ChargePower { accept: true })
+        .unwrap_or_else(|e| panic!("charge power should be valid: {e}"));
+
+    let opponent = state.player(1).unwrap_or_else(|| panic!("player 1 exists"));
+    assert_eq!(opponent.resources.power.bowl1, 0);
+    assert_eq!(opponent.resources.power.bowl2, 0);
+    assert_eq!(opponent.resources.power.bowl3, 6);
+    assert_eq!(opponent.vp, 8); // charged 3 power → cost 2 VP
 }
 
 #[test]

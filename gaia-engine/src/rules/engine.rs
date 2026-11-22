@@ -8640,16 +8640,16 @@ fn taklons_pi_is_active(player: &PlayerState) -> bool {
 }
 
 fn passive_charge_amount(player: &PlayerState, entry: &PendingCharge) -> u8 {
-    let movable = movable_power_tokens(&player.resources.power);
+    let chargeable = chargeable_power(&player.resources.power);
     let affordable = player.vp.max(0) as u32 + 1;
-    u32::from(entry.max_power).min(movable).min(affordable) as u8
+    u32::from(entry.max_power).min(chargeable).min(affordable) as u8
 }
 
 /// All-or-nothing (rulebook p.17): the player cannot pick a partial amount.
-/// Accepting charges `min(structure's power value, movable power tokens,
-/// affordable VP + 1)` — reduced automatically by the two documented
-/// exceptions (not enough tokens left to move; not enough VP) rather than
-/// rejected outright.
+/// Accepting charges `min(structure's power value, power that moves every
+/// token to Area III, affordable VP + 1)` — reduced automatically by the two
+/// documented exceptions (the power cycle cannot take that much; not enough
+/// VP) rather than rejected outright.
 fn apply_charge_power(state: &mut GameState, player_id: PlayerId, accept: bool) -> Vec<GameEvent> {
     let entry = match ensure_charge_power_phase(state, player_id) {
         Ok(entry) => entry,
@@ -9540,13 +9540,19 @@ fn planetary_institute_income(
     Some((charge, bonus_tokens))
 }
 
-fn movable_power_tokens(power: &PowerCycle) -> u32 {
-    u32::from(power.bowl1)
+/// The most power a charge can take: what moves every token of the power cycle to Area III
+/// (rulebook p.17, first exception: "more than you would need to move all of the tokens in
+/// your power cycle to area III") — two power for a token in Area I, one for a token in
+/// Area II, the Brainstone counting as a token. Not the number of tokens outside Area III: one
+/// token in Area I takes two power.
+fn chargeable_power(power: &PowerCycle) -> u32 {
+    2 * u32::from(power.bowl1)
         + u32::from(power.bowl2)
-        + u32::from(matches!(
-            power.brainstone,
-            Some(BrainstoneLocation::Area1 | BrainstoneLocation::Area2)
-        ))
+        + match power.brainstone {
+            Some(BrainstoneLocation::Area1) => 2,
+            Some(BrainstoneLocation::Area2) => 1,
+            _ => 0,
+        }
 }
 
 fn active_power_tokens(power: &PowerCycle) -> u8 {

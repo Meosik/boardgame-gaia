@@ -461,8 +461,11 @@ fn moweyds_ring_charge_matrix_including_six_power_and_vp_payment() {
                 GameAction::ChargePower { accept: true },
             )
             .unwrap_or_else(|error| panic!("test action should succeed: {error}"));
-            assert_eq!(limited_capacity.players[1].resources.power.bowl2, 2);
-            assert_eq!(limited_capacity.players[1].vp, 19);
+            // Two tokens in Area I take 4 power (both to Area III), not 2: rulebook p.17 caps a
+            // charge at what moves every token to Area III.
+            assert_eq!(limited_capacity.players[1].resources.power.bowl2, 0);
+            assert_eq!(limited_capacity.players[1].resources.power.bowl3, 2);
+            assert_eq!(limited_capacity.players[1].vp, 17);
 
             let mut limited_vp = state.clone();
             limited_vp.players[1].vp = 2;
