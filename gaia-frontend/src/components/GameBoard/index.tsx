@@ -96,6 +96,10 @@ interface Props {
   /** During federation formation, only these owned buildings and route hexes may be added.
    * Already-selected hexes remain clickable so the player can always remove them. */
   federationSelectableHexes?: HexCoord[];
+  /** During federation formation, hexes that are part of the selection without being chosen:
+   * the Hive's one federation, which every new hex is connected to. Drawn as selected; a
+   * click neither adds nor removes them. */
+  federationIncludedHexes?: HexCoord[];
   selectedCoord?: HexCoord | null;
   onHexClick?: (coord: HexCoord) => void;
   /** Opens a contextual action popup only for a structure owned by this player. */
@@ -151,6 +155,7 @@ export function GameBoard({
   players = [],
   validTargets = [],
   federationSelectableHexes = [],
+  federationIncludedHexes = [],
   selectedCoord = null,
   onHexClick,
   interactivePlayerId,
@@ -184,6 +189,9 @@ export function GameBoard({
   const selectedHexSet = new Set(selectedHexes.map((c) => hexKey(c.q, c.r)));
   const federationSelectableSet = new Set(
     federationSelectableHexes.map((c) => hexKey(c.q, c.r)),
+  );
+  const federationIncludedSet = new Set(
+    federationIncludedHexes.map((c) => hexKey(c.q, c.r)),
   );
 
   // Stable star field — generated once on mount
@@ -254,6 +262,9 @@ export function GameBoard({
     if (multiSelect) {
       const selectedKey = hexKey(coord.q, coord.r);
       const alreadySelected = selectedHexSet.has(selectedKey);
+      // An included hex (the Hive's existing federation) is not the player's to toggle; one
+      // that got into the selection anyway can still be taken out.
+      if (!alreadySelected && federationIncludedSet.has(selectedKey)) return;
       if (!alreadySelected && !federationSelectableSet.has(selectedKey)) return;
       actions.toggleHex(coord);
       return;
@@ -602,7 +613,7 @@ export function GameBoard({
           const isSelected = onHexClick
             ? selectedCoord !== null && selectedCoord.q === q && selectedCoord.r === r
             : multiSelect
-              ? selectedHexSet.has(key)
+              ? selectedHexSet.has(key) || federationIncludedSet.has(key)
               : activePlanet !== null && activePlanet.q === q && activePlanet.r === r;
           const isPrintedOnSectorArt = printedHexKeys.has(key);
           const standardSector = standardSectorByHexKey.get(key);

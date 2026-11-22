@@ -187,6 +187,17 @@ describe('Ivits federation growth', () => {
     expect(two.reason).toBe('빼도 되는 건물이나 위성이 포함되어 있습니다.');
   });
 
+  it('treats the existing federation as already included, not as a wrong choice', () => {
+    const state = grownFederation(['PlanetaryInstitute', academy, academy, 'TradingStation', 'TradingStation', 'Mine']);
+    // A hex of the federation in the selection is left out of what is sent, not refused.
+    const status = validateFederationSelection(state, 0, [{ q: 0, r: 0 }, { q: 6, r: 0 }]);
+    expect(status.valid).toBe(true);
+    expect(status.planetHexes).toEqual([{ q: 6, r: 0 }]);
+    // With nothing added yet the player is asked for what to attach.
+    expect(validateFederationSelection(state, 0, [{ q: 0, r: 0 }]).reason)
+      .toBe('기존 연방에 붙일 내 건물을 선택하세요.');
+  });
+
   it('counts the tech tile that makes large buildings worth four', () => {
     // 3+2+2+2+2+1 = 12, +1 new Mine = 13: one short without the tile, 14 with it.
     const state = grownFederation(['PlanetaryInstitute', 'TradingStation', 'TradingStation', 'TradingStation', 'TradingStation', 'Mine']);

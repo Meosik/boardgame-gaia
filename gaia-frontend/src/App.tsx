@@ -1444,6 +1444,12 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   const federationSelection = selectedAction === 'FormFederation'
     ? validateFederationSelection(gameState, myId, selectedHexes)
     : null;
+  // The Hive has one federation and every later Form a Federation action grows it, so that
+  // federation is part of the selection from the start: the map draws it as selected and the
+  // player picks only what is added.
+  const federationIncludedHexes = selectedAction === 'FormFederation' && me.faction === 'Ivits'
+    ? me.federated_hexes ?? []
+    : [];
 
   function handleFederationTokenChoice(choice: FederationTokenChoice) {
     setFederationTokenChoice(choice);
@@ -1656,6 +1662,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             players={gameState.players}
             validTargets={coach ? coach.targets : isMyLostPlanetPlacement ? lostPlanetTargets : bonusMineTargets}
             federationSelectableHexes={federationSelectableHexes}
+            federationIncludedHexes={federationIncludedHexes}
             selectedCoord={isMyLostPlanetPlacement ? activePlanet : firaksLab}
             onHexClick={
               coach ? coach.onHex : isMyLostPlanetPlacement

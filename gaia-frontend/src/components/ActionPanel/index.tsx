@@ -1822,11 +1822,19 @@ export function ActionPanel({
             자동 분류됩니다 (위성 1개당 {currentPlayer?.faction === 'Ivits' ? '정보 큐브 1개' : '파워 토큰 1개'} 소모, 다른 연방에 재사용 불가).
           </p>
           {currentPlayer?.faction === 'Ivits' && (currentPlayer.federated_hexes?.length ?? 0) > 0 && (
-            <p className="action-hint">
-              하이브는 하나의 연방만 계속 확장합니다: 새로 선택한 헥스는 기존 연방과 연결되어야
-              하며, 누적 파워가 7 × (보유 연방 토큰 수 + 1) 이상이어야 합니다. 이번 확장에 쓰는
-              위성은 파워 대신 정보 큐브 1개씩 소모합니다.
-            </p>
+            <>
+              <p className="action-hint">
+                하이브는 하나의 연방만 계속 확장합니다: 기존 연방은 자동으로 포함되어 지도에 선택된
+                것으로 표시됩니다. 새로 붙일 건물과 위성 칸만 고르세요. 기존 연방과 연결되어야
+                하며, 누적 파워가 7 × (보유 연방 토큰 수 + 1) 이상이어야 합니다. 이번 확장에 쓰는
+                위성은 파워 대신 정보 큐브 1개씩 소모합니다.
+              </p>
+              <div className="action-buttons">
+                <span className="federation-selected-hex">
+                  기존 연방 {currentPlayer.federated_hexes?.length ?? 0}칸 (자동 포함)
+                </span>
+              </div>
+            </>
           )}
           {selectedHexes.length > 0 && (
             <div className="action-buttons">

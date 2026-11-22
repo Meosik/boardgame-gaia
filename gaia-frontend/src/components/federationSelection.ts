@@ -224,7 +224,7 @@ function minimumSatelliteCount(
 export function validateFederationSelection(
   gameState: GameState,
   playerId: PlayerId,
-  selectedHexes: HexCoord[],
+  chosenHexes: HexCoord[],
 ): FederationSelectionStatus {
   const player = gameState.players.find(({ player_id }) => player_id === playerId);
   const empty = {
@@ -237,13 +237,21 @@ export function validateFederationSelection(
   } satisfies FederationSelectionStatus;
   if (!player) return empty;
 
+  const isIvitsGrowth = player.faction === 'Ivits' && (player.federated_hexes?.length ?? 0) > 0;
+  // The Hive's existing federation is always part of what is formed (the action grows it), so
+  // a hex of it in the selection is not an error: it is already included and only the added
+  // hexes are counted as chosen and sent.
+  const selectedHexes = isIvitsGrowth
+    ? chosenHexes.filter((coord) => !player.federated_hexes?.some(
+      ({ q, r }) => q === coord.q && r === coord.r,
+    ))
+    : chosenHexes;
   const planetHexes = selectedHexes.filter((coord) => (
     ownsColonizedHex(gameState.board.hexes[hexKey(coord.q, coord.r)], playerId)
   ));
   const satelliteHexes = selectedHexes.filter((coord) => (
     !ownsColonizedHex(gameState.board.hexes[hexKey(coord.q, coord.r)], playerId)
   ));
-  const isIvitsGrowth = player.faction === 'Ivits' && (player.federated_hexes?.length ?? 0) > 0;
   const minimumPower = isIvitsGrowth
     ? FEDERATION_MIN_POWER * (Math.max(0,
       player.federation_tokens.length + (player.gray_federation_tokens?.length ?? 0)
@@ -261,7 +269,9 @@ export function validateFederationSelection(
     minimumPower,
   });
 
-  if (planetHexes.length === 0) return status(false, '내 건물을 선택하세요.');
+  if (planetHexes.length === 0) {
+    return status(false, isIvitsGrowth ? '기존 연방에 붙일 내 건물을 선택하세요.' : '내 건물을 선택하세요.');
+  }
   if (selectedHexes.some((coord) => player.federated_hexes?.some(
     ({ q, r }) => q === coord.q && r === coord.r,
   ))) return status(false, '이미 다른 연방에 사용한 칸은 다시 선택할 수 없습니다.');
