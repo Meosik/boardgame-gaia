@@ -361,6 +361,13 @@ pub async fn create_dev_game(
             "AI room {code}: teacher {}",
             ai_teacher.as_deref().unwrap_or("built into the image")
         );
+        // Saved with every snapshot of the game: a room loaded again after a server restart
+        // takes its human seat, level and teacher from it (`AppState::ensure_room_loaded`).
+        game_state.ai_game = Some(gaia_engine::game_state::AiGameMark {
+            human: player_id,
+            level: req.ai_level.clone(),
+            teacher: ai_teacher.clone(),
+        });
     }
 
     let (players, host_player_id) = {

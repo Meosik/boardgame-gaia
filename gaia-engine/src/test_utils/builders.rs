@@ -70,6 +70,7 @@ impl GameStateBuilder {
         GameState {
             tutorial: None,
             dev_controller: None,
+            ai_game: None,
             room_code: RoomCode("TEST".into()),
             created_at: 0,
             version: 1,

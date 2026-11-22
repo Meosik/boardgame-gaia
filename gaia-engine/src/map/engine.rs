@@ -782,6 +782,7 @@ impl MapEngine {
         GameState {
             tutorial: None,
             dev_controller: None,
+            ai_game: None,
             room_code: RoomCode(room_code.to_string()),
             created_at,
             version: 0,

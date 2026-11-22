@@ -1353,6 +1353,22 @@ pub struct UndoState {
 
 // ── GameState ─────────────────────────────────────────────────────────────────
 
+/// The server's note that the other seats of a game are played by its AI teacher. It is kept
+/// in the game state only so that it is saved with every snapshot: a room loaded again after a
+/// server restart knows from it which seat is the human's and how the AI seats were set up.
+/// The rules never read it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AiGameMark {
+    /// The one seat a person plays.
+    pub human: PlayerId,
+    /// Difficulty chosen when the game was created; `None` = the server's default.
+    #[serde(default)]
+    pub level: Option<String>,
+    /// Teacher version the game is pinned to; `None` = the teacher built into the image.
+    #[serde(default)]
+    pub teacher: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1360,6 +1376,10 @@ pub struct GameState {
     /// Server-created local test controller; ordinary games never set this field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dev_controller: Option<PlayerId>,
+    /// Written by the server when it creates a game against AI seats; ordinary games, lab
+    /// games and games saved before this field existed have none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ai_game: Option<AiGameMark>,
     pub room_code: RoomCode,
     pub created_at: u64,
     pub version: u64,
