@@ -1087,7 +1087,16 @@ pub struct FactionAssignment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GameEvent {
     /// Presentation-only boundary for the preceding events from one server action.
-    ActionLog { player: PlayerId, action: String, event_count: usize },
+    /// `power_action` is the shared power-action space (1–7) a `PowerAction` took: the action's
+    /// events carry its effects but not the space, and a client marks the space with it. Absent
+    /// for every other action and in logs saved before the field existed.
+    ActionLog {
+        player: PlayerId,
+        action: String,
+        event_count: usize,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        power_action: Option<u8>,
+    },
     FactionSelected {
         player: PlayerId,
         faction: FactionId,

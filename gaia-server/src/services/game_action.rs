@@ -128,11 +128,16 @@ pub(crate) fn apply_logged_action(
                 .map(str::to_owned)
         })
         .unwrap_or_else(|| "Action".to_owned());
+    let power_action = match &action {
+        GameAction::PowerAction { id, .. } => Some(*id),
+        _ => None,
+    };
     let mut events = RuleEngine::apply_action(state, player, action)?;
     events.push(GameEvent::ActionLog {
         player,
         action: action_name,
         event_count: events.len(),
+        power_action,
     });
     Ok(events)
 }
@@ -221,9 +226,13 @@ mod tests {
                 .unwrap_or_else(|error| panic!("test value should serialize: {error}"))
         );
         assert!(
-            matches!(events.last(), Some(GameEvent::ActionLog { player: 0, action, event_count })
+            matches!(events.last(), Some(GameEvent::ActionLog { player: 0, action, event_count, power_action: None })
             if action == "FreeAction" && *event_count == expected.len())
         );
+        // Not a power action: the marker's JSON has no `power_action` key at all.
+        assert!(!serde_json::to_string(&events.last())
+            .unwrap_or_else(|error| panic!("test value should serialize: {error}"))
+            .contains("power_action"));
         let before = state.serialize();
         assert!(super::apply_logged_action(&mut state, 0, action).is_err());
         assert_eq!(state.serialize(), before);
@@ -237,6 +246,28 @@ mod tests {
             serde_json::to_value(events)
                 .unwrap_or_else(|error| panic!("test value should serialize: {error}"))
         );
+    }
+
+    #[test]
+    fn action_log_names_the_power_action_space_taken() {
+        use gaia_engine::game_state::GameEvent;
+        let mut state = GameStateBuilder::new()
+            .with_player_fn(0, |p| p.resources.power.bowl3 = 4)
+            .build();
+        // Space 4: 4 power for 7 credits.
+        let action = GameAction::PowerAction { id: 4, coord: None };
+        let events = super::apply_logged_action(&mut state, 0, action)
+            .unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+        assert!(matches!(
+            events.last(),
+            Some(GameEvent::ActionLog { action, power_action: Some(4), .. }) if action == "PowerAction"
+        ));
+        // A log saved before the field existed still loads, without a space.
+        let old: GameEvent = serde_json::from_str(
+            r#"{"ActionLog":{"player":0,"action":"PowerAction","event_count":1}}"#,
+        )
+        .unwrap_or_else(|error| panic!("saved value should deserialize: {error}"));
+        assert!(matches!(old, GameEvent::ActionLog { power_action: None, .. }));
     }
 
     #[test]
