@@ -162,6 +162,11 @@ export interface LastMove {
   text: string;
   /** `q,r` keys of the map hexes the move touched; empty for a pass, a research step and the like. */
   hexes: Set<string>;
+  /** What the move touched off the map, as `liveHighlight` reads it from the move's events. */
+  standardTech: Set<number>;
+  research: Set<string>;
+  booster: number | null;
+  ship: string | null;
 }
 
 /**
@@ -183,10 +188,15 @@ export function opponentLastMoves(
   }
   const moves = new Map<PlayerId, LastMove>();
   for (const [player, entry] of latest) {
+    const touched = liveHighlight(events, entry);
     moves.set(player, {
       player,
       text: entry.text,
-      hexes: liveHighlight(events, entry)?.hexes ?? new Set<string>(),
+      hexes: touched?.hexes ?? new Set<string>(),
+      standardTech: touched?.standardTech ?? new Set<number>(),
+      research: touched?.research ?? new Set<string>(),
+      booster: touched?.booster ?? null,
+      ship: touched?.ship ?? null,
     });
   }
   return moves;

@@ -60,7 +60,7 @@ export function HexCell({
 }: Props) {
   const replay = useReplayHighlight();
   const lastMove = replay?.hexes.has(`${hex.coord.q},${hex.coord.r}`);
-  const opponentMoveColor = useLastMoveMarks()?.get(`${hex.coord.q},${hex.coord.r}`);
+  const opponentMoveColor = useLastMoveMarks()?.hexes.get(`${hex.coord.q},${hex.coord.r}`);
   const points = hexCorners(cx, cy, size);
   const planet = hex.planet;
   const hasMutedBackground = mutePrintedBackground && planet === null;

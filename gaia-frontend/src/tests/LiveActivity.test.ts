@@ -87,6 +87,9 @@ describe('opponentLastMoves', () => {
     expect([...moves.keys()]).toEqual([1]);
     expect(moves.get(1)?.text).toContain('광산 건설');
     expect(moves.get(1)?.hexes.has('1,-1')).toBe(true);
+    // What the move touched off the map is kept too: the research step that came with it.
+    expect([...(moves.get(1)?.research ?? [])]).toEqual(['ai']);
+    expect(moves.get(1)?.booster).toBeNull();
   });
 
   it('replaces the move when the opponent moves again and leaves out the viewing player', () => {
@@ -99,6 +102,8 @@ describe('opponentLastMoves', () => {
 
     expect(moves.get(1)?.text).toContain('패스');
     expect(moves.get(1)?.hexes.size).toBe(0);
+    expect(moves.get(1)?.research.size).toBe(0);
+    expect(moves.get(1)?.booster).toBe(7);
     expect(moves.has(0)).toBe(false);
   });
 

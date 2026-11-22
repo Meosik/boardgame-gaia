@@ -1,4 +1,4 @@
-import { useReplayHighlight } from '../../replay/highlight';
+import { lastMoveStyle, useLastMoveMarks, useReplayHighlight } from '../../replay/highlight';
 import { roundBoosterImageSrc } from '../../assets/roundBoosterImages';
 import { FACTION_VISUAL } from '../GameLobby/FactionBadge';
 import { SatelliteToken } from '../PlayerDashboard/SatelliteToken';
@@ -26,6 +26,7 @@ export function RoundBoosters({
   onSelectBooster,
 }: Props) {
   const replay = useReplayHighlight();
+  const lastMoves = useLastMoveMarks();
   const ownerByBooster = new Map<number, PlayerState>();
   for (const player of players) {
     if (player.booster != null) ownerByBooster.set(player.booster, player);
@@ -41,10 +42,14 @@ export function RoundBoosters({
         if (!src) return null;
         const owner = ownerByBooster.get(id);
         const selectable = selectionMode && !owner && availableBoosters.includes(id) && !!onSelectBooster;
+        // The booster an opponent took with its last move (a pass).
+        const lastMoveColor = lastMoves?.booster.get(id);
         return (
           <figure
             key={id}
             data-replay-highlight={replay?.booster === id || undefined}
+            data-last-move={lastMoveColor ? true : undefined}
+            style={lastMoveStyle(lastMoveColor)}
             className={`round-booster-tile${selectable ? ' round-booster-tile--selectable' : ''}`}
           >
             {selectable ? (

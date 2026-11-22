@@ -1,4 +1,4 @@
-import { useReplayHighlight } from '../../replay/highlight';
+import { lastMoveStyle, useLastMoveMarks, useReplayHighlight } from '../../replay/highlight';
 import { ADVANCED_TECH_TILE_LABELS } from '../advancedTechDescriptions';
 import { researchBoardImageSrc } from '../../assets/researchBoardImage';
 import { FACTION_VISUAL } from '../GameLobby/FactionBadge';
@@ -139,6 +139,7 @@ export function ResearchBoard({
   tutorialIncomeResearch,
 }: Props) {
   const replay = useReplayHighlight();
+  const lastMoves = useLastMoveMarks();
   const active = players.filter((p) => p.faction);
   const lostPlanetAvailable = !active.some((player) => player.research_tracks.navigation >= 5);
 
@@ -234,7 +235,8 @@ export function ResearchBoard({
               <img
                 className="research-board-standard-tech"
                 data-replay-highlight={replay?.standardTech.has(tileId) || undefined}
-                style={style}
+                data-last-move={lastMoves?.standardTech.has(tileId) || undefined}
+                style={{ ...style, ...lastMoveStyle(lastMoves?.standardTech.get(tileId)) }}
                 src={src}
                 alt={`표준 기술 타일 ${tileId}`}
               />
@@ -317,8 +319,13 @@ export function ResearchBoard({
                 data-research-level={level}
                 data-tutorial-target={player.player_id === tutorialIncomeResearch?.playerId && track === tutorialIncomeResearch.track ? 'income:research' : undefined}
                 data-replay-highlight={replay?.player === player.player_id && replay.research.has(key) || undefined}
+                data-last-move={lastMoves?.research.has(`${player.player_id}:${key}`) || undefined}
                 className={`research-board-token${chooseTrack ? ' research-board-token--clickable' : ''}`}
-                style={{ top: `${yPct}%`, left: `${xPct + fanOffset}%` }}
+                style={{
+                  top: `${yPct}%`,
+                  left: `${xPct + fanOffset}%`,
+                  ...lastMoveStyle(lastMoves?.research.get(`${player.player_id}:${key}`)),
+                }}
                 aria-label={tooltip}
                 title={tooltip}
                 onClick={chooseTrack ? () => chooseTrack(track) : undefined}

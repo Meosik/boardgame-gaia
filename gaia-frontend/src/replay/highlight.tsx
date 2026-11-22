@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import type { CSSProperties } from 'react';
 import type { ReplayFrame } from './records';
 import { ACTION_NAMES } from './records';
 
@@ -17,10 +18,28 @@ export interface ReplayHighlight {
 }
 export const ReplayHighlightContext = createContext<ReplayHighlight | null>(null);
 export const useReplayHighlight = () => useContext(ReplayHighlightContext);
-/** Live play only: map hex (`q,r`) → the piece colour of the opponent whose last move touched it.
- * Stays until that opponent moves again, unlike the few-second highlight above. */
-export const LastMoveMarksContext = createContext<ReadonlyMap<string, string> | null>(null);
+/** Live play only: what each opponent's last move touched → that opponent's piece colour. Stays
+ * until that opponent moves again, unlike the few-second highlight above. The map hexes get a
+ * ring; the pieces off the map get a fainter dashed outline (`lastMoveStyle`). */
+export interface LastMoveMarks {
+  /** Map hex `q,r`. */
+  hexes: ReadonlyMap<string, string>;
+  /** Standard tech tile id (the pile the tile was taken from, on the research board or a ship). */
+  standardTech: ReadonlyMap<number, string>;
+  /** `<player id>:<research highlight key>`: the mover's own token on the track it advanced. */
+  research: ReadonlyMap<string, string>;
+  /** Round booster id taken with a pass. */
+  booster: ReadonlyMap<number, string>;
+  /** `<player id>:<ship id>`: the mover's shuttle on the ship it explored. */
+  ship: ReadonlyMap<string, string>;
+}
+export const LastMoveMarksContext = createContext<LastMoveMarks | null>(null);
 export const useLastMoveMarks = () => useContext(LastMoveMarksContext);
+/** The inline style of a piece marked with `data-last-move`: the opponent's colour for the
+ * stylesheet's outline (`[data-last-move="true"]` in index.css). Empty without a colour. */
+export function lastMoveStyle(color: string | undefined): CSSProperties {
+  return color ? ({ '--last-move-color': color } as CSSProperties) : {};
+}
 const BUILDINGS: Record<string, string> = {
   Mine: '광산', TradingStation: '교역소', ResearchLab: '연구소', PlanetaryInstitute: '행성의회', Academy: '아카데미', GaiaFormer: '가이아포머',
 };

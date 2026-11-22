@@ -1,4 +1,4 @@
-import { useReplayHighlight } from '../../replay/highlight';
+import { lastMoveStyle, useLastMoveMarks, useReplayHighlight } from '../../replay/highlight';
 import { ARTIFACT_LABELS } from '../artifactDescriptions';
 import { spaceshipBoardImageSrc } from '../../assets/spaceshipBoardImages';
 import { explorationShuttleImageSrc } from '../../assets/explorationShuttleImages';
@@ -145,6 +145,7 @@ export function SpaceshipBoards({
   onTechTileSelect,
 }: Props) {
   const replay = useReplayHighlight();
+  const lastMoves = useLastMoveMarks();
   const factionByPlayer = new Map(players.map((p) => [p.player_id, p.faction]));
   const myExploredShips = new Set(
     players.find((player) => player.player_id === myPlayerId)?.explored_ships ?? [],
@@ -184,7 +185,8 @@ export function SpaceshipBoards({
                       type="button"
                       className="spaceship-board-tech-tile spaceship-board-tech-tile--button"
                       data-replay-highlight={replay?.standardTech.has(tileId) || undefined}
-                      style={slot}
+                      data-last-move={lastMoves?.standardTech.has(tileId) || undefined}
+                      style={{ ...slot, ...lastMoveStyle(lastMoves?.standardTech.get(tileId)) }}
                       disabled={!selectable}
                       onClick={() => onTechTileSelect(tileId)}
                       aria-label={`${label} 표준 기술 타일 ${tileId} 선택`}
@@ -203,7 +205,8 @@ export function SpaceshipBoards({
                   <span
                     className="spaceship-board-tech-tile"
                     data-replay-highlight={replay?.standardTech.has(tileId) || undefined}
-                    style={slot}
+                    data-last-move={lastMoves?.standardTech.has(tileId) || undefined}
+                    style={{ ...slot, ...lastMoveStyle(lastMoves?.standardTech.get(tileId)) }}
                   >
                     <img
                       className="spaceship-board-tech-source"
@@ -293,7 +296,12 @@ export function SpaceshipBoards({
                     data-replay-highlight={replay?.ship === id
                       && replay.player === playerId
                       && replay.actionType.endsWith('ExploreSpaceship') || undefined}
-                    style={{ left: `${x}%`, top: `${y}%` }}
+                    data-last-move={lastMoves?.ship.has(`${playerId}:${id}`) || undefined}
+                    style={{
+                      left: `${x}%`,
+                      top: `${y}%`,
+                      ...lastMoveStyle(lastMoves?.ship.get(`${playerId}:${id}`)),
+                    }}
                     aria-label={`탐사 셔틀 ${i + 1} 슬롯 탐사 완료`}
                   >
                     <img

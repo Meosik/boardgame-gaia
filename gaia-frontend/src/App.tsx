@@ -52,6 +52,7 @@ import { RecentActions } from './components/RecentActions';
 import { ActionReview } from './components/ActionReview';
 import { aiStallWarning, liveActionEntries, liveHighlight, opponentLastMoves, turnStatus } from './liveActivity';
 import { LastMoveMarksContext, ReplayHighlightContext } from './replay/highlight';
+import type { LastMoveMarks } from './replay/highlight';
 import { recentActionHex, scrollBoardIntoView } from './boardScroll';
 import { FACTION_STRUCTURE_COLOR, STRUCTURE_COLOR_HEX } from './assets/structureImages';
 import { useGameStore, type FinalResult } from './store/gameStore';
@@ -250,8 +251,8 @@ function scrollToGameBoard(id: string) {
  * mode the surrounding `AiReplay` already provides its own value, which this must not override. */
 function LiveHighlightScope({ highlight, marks, enabled, children }: {
   highlight: ReturnType<typeof liveHighlight>;
-  /** Map hex → piece colour of the opponent whose last move touched it (see `opponentLastMoves`). */
-  marks: ReadonlyMap<string, string>;
+  /** What each opponent's last move touched → that opponent's piece colour (`opponentLastMoves`). */
+  marks: LastMoveMarks;
   enabled: boolean;
   children: ReactNode;
 }) {
@@ -579,14 +580,23 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     () => opponentLastMoves(gameState?.event_log, actionEntries, myPlayerId ?? 0),
     [gameState?.event_log, actionEntries, myPlayerId],
   );
-  const lastMoveMarks = useMemo(() => {
-    const marks = new Map<string, string>();
+  const lastMoveMarks = useMemo<LastMoveMarks>(() => {
+    const hexes = new Map<string, string>();
+    const standardTech = new Map<number, string>();
+    const research = new Map<string, string>();
+    const booster = new Map<number, string>();
+    const ship = new Map<string, string>();
     for (const move of lastMoves.values()) {
       const faction = gameState?.players.find((player) => player.player_id === move.player)?.faction;
       if (!faction) continue;
-      for (const hex of move.hexes) marks.set(hex, STRUCTURE_COLOR_HEX[FACTION_STRUCTURE_COLOR[faction]]);
+      const color = STRUCTURE_COLOR_HEX[FACTION_STRUCTURE_COLOR[faction]];
+      for (const hex of move.hexes) hexes.set(hex, color);
+      for (const tile of move.standardTech) standardTech.set(tile, color);
+      for (const track of move.research) research.set(`${move.player}:${track}`, color);
+      if (move.booster !== null) booster.set(move.booster, color);
+      if (move.ship !== null) ship.set(`${move.player}:${move.ship}`, color);
     }
-    return marks;
+    return { hexes, standardTech, research, booster, ship };
   }, [lastMoves, gameState?.players]);
   const latestActionIndex = actionEntries.length > 0
     ? actionEntries[actionEntries.length - 1].index
