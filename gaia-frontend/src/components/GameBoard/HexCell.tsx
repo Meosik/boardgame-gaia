@@ -1,5 +1,5 @@
 import moweydsPowerRing from '../../assets/structures/special/moweyds-power-ring.png';
-import { useReplayHighlight } from '../../replay/highlight';
+import { useLastMoveMarks, useReplayHighlight } from '../../replay/highlight';
 import { hexCorners } from './hex-utils';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { PlanetHex } from './PlanetHex';
@@ -60,6 +60,7 @@ export function HexCell({
 }: Props) {
   const replay = useReplayHighlight();
   const lastMove = replay?.hexes.has(`${hex.coord.q},${hex.coord.r}`);
+  const opponentMoveColor = useLastMoveMarks()?.get(`${hex.coord.q},${hex.coord.r}`);
   const points = hexCorners(cx, cy, size);
   const planet = hex.planet;
   const hasMutedBackground = mutePrintedBackground && planet === null;
@@ -305,6 +306,20 @@ export function HexCell({
           style={{ pointerEvents: 'none' }}
         />
       ))}
+      {/* An opponent's last move: a dashed ring in that opponent's piece colour, inside the yellow
+          ring of the action that has just happened, so both can show on one hex. */}
+      {opponentMoveColor && (
+        <g className="last-move-mark" pointerEvents="none" aria-label="상대의 마지막 수">
+          <polygon points={hexCorners(cx, cy, size * 0.78)} fill="none" stroke="#111827" strokeWidth="6" />
+          <polygon
+            points={hexCorners(cx, cy, size * 0.78)}
+            fill="none"
+            stroke={opponentMoveColor}
+            strokeWidth="3.5"
+            strokeDasharray="9 5"
+          />
+        </g>
+      )}
       {lastMove && (
         <g className="replay-hex-highlight" pointerEvents="none" aria-label={`직전 행동: ${replay?.label}`}>
           <polygon points={hexCorners(cx, cy, size * 0.91)} fill="none" stroke="#111827" strokeWidth="6" />

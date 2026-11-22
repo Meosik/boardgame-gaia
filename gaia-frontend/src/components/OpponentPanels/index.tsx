@@ -12,6 +12,7 @@ import type {
   GameEvent,
   PlayerState,
 } from '../../types/game';
+import type { LastMove } from '../../liveActivity';
 
 interface Props {
   players: PlayerState[];
@@ -20,6 +21,8 @@ interface Props {
   events?: GameEvent[];
   round?: number;
   economyResearchTileSide?: EconomyResearchTileSide;
+  /** Each opponent's most recent move (`opponentLastMoves`), shown as one line on that card. */
+  lastMoves?: ReadonlyMap<number, LastMove>;
   onPlayerSelect?: (player: PlayerState) => void;
 }
 
@@ -30,6 +33,7 @@ export function OpponentPanels({
   myPlayerId,
   activePlayerId = null,
   economyResearchTileSide = 'Power',
+  lastMoves,
   onPlayerSelect,
 }: Props) {
   if (players.length === 0) return null;
@@ -42,6 +46,10 @@ export function OpponentPanels({
           ? STRUCTURE_COLOR_HEX[FACTION_STRUCTURE_COLOR[player.faction]]
           : '#64748b';
         const power = player.resources.power;
+        // The log wording starts with the actor's name, which the card already shows.
+        const lastMove = lastMoves?.get(player.player_id)?.text ?? null;
+        const actorPrefix = `${player.nickname}: `;
+        const lastMoveText = lastMove?.startsWith(actorPrefix) ? lastMove.slice(actorPrefix.length) : lastMove;
 
         return (
           <button
@@ -93,6 +101,12 @@ export function OpponentPanels({
               <PowerBowl label="II" value={power.bowl2} tone="two" brainstone={power.brainstone === 'Area2'} />
               <PowerBowl label="III" value={power.bowl3} tone="three" brainstone={power.brainstone === 'Area3'} />
             </span>
+            {lastMoveText && (
+              <span className="opponent-last-move" title={`마지막 수: ${lastMoveText}`}>
+                <b>마지막 수</b>
+                {lastMoveText}
+              </span>
+            )}
             <span className="opponent-footer">
               <span className="opponent-income-power">예상 수입 충전 {income?.power_charge ?? 0}</span>
               {player.passed && <span className="passed-badge">패스</span>}

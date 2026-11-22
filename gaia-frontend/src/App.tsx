@@ -50,8 +50,8 @@ import { TurnBanner } from './components/TurnBanner';
 import { ActionToast } from './components/ActionToast';
 import { RecentActions } from './components/RecentActions';
 import { ActionReview } from './components/ActionReview';
-import { aiStallWarning, liveActionEntries, liveHighlight, turnStatus } from './liveActivity';
-import { ReplayHighlightContext } from './replay/highlight';
+import { aiStallWarning, liveActionEntries, liveHighlight, opponentLastMoves, turnStatus } from './liveActivity';
+import { LastMoveMarksContext, ReplayHighlightContext } from './replay/highlight';
 import { recentActionHex, scrollBoardIntoView } from './boardScroll';
 import { FACTION_STRUCTURE_COLOR, STRUCTURE_COLOR_HEX } from './assets/structureImages';
 import { useGameStore, type FinalResult } from './store/gameStore';
@@ -248,14 +248,18 @@ function scrollToGameBoard(id: string) {
 
 /** Live play reuses the replay highlight markers to show what the last action touched. In replay
  * mode the surrounding `AiReplay` already provides its own value, which this must not override. */
-function LiveHighlightScope({ highlight, enabled, children }: {
+function LiveHighlightScope({ highlight, marks, enabled, children }: {
   highlight: ReturnType<typeof liveHighlight>;
+  /** Map hex → piece colour of the opponent whose last move touched it (see `opponentLastMoves`). */
+  marks: ReadonlyMap<string, string>;
   enabled: boolean;
   children: ReactNode;
 }) {
   if (!enabled) return <>{children}</>;
   return (
-    <ReplayHighlightContext.Provider value={highlight}>{children}</ReplayHighlightContext.Provider>
+    <ReplayHighlightContext.Provider value={highlight}>
+      <LastMoveMarksContext.Provider value={marks}>{children}</LastMoveMarksContext.Provider>
+    </ReplayHighlightContext.Provider>
   );
 }
 
@@ -556,6 +560,22 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     () => (replay ? [] : liveActionEntries(gameState?.event_log, gameState?.players ?? [], gameState?.board)),
     [replay, gameState?.event_log, gameState?.players, gameState?.board],
   );
+  // Each opponent's last move stays marked until that opponent moves again: a ring in the
+  // opponent's piece colour on the map hexes it touched and one line on the opponent's card.
+  // Charging power and other responses are not moves and leave the mark alone.
+  const lastMoves = useMemo(
+    () => opponentLastMoves(gameState?.event_log, actionEntries, myPlayerId ?? 0),
+    [gameState?.event_log, actionEntries, myPlayerId],
+  );
+  const lastMoveMarks = useMemo(() => {
+    const marks = new Map<string, string>();
+    for (const move of lastMoves.values()) {
+      const faction = gameState?.players.find((player) => player.player_id === move.player)?.faction;
+      if (!faction) continue;
+      for (const hex of move.hexes) marks.set(hex, STRUCTURE_COLOR_HEX[FACTION_STRUCTURE_COLOR[faction]]);
+    }
+    return marks;
+  }, [lastMoves, gameState?.players]);
   const latestActionIndex = actionEntries.length > 0
     ? actionEntries[actionEntries.length - 1].index
     : null;
@@ -1449,7 +1469,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   }
 
   return (
-    <LiveHighlightScope highlight={activityHighlight} enabled={!replay}>
+    <LiveHighlightScope highlight={activityHighlight} marks={lastMoveMarks} enabled={!replay}>
     <div className={`app app--game app--game-table${gameState.tutorial ? ' app--tutorial' : ''}`} onClickCapture={(event) => {
       const target = event.target;
       if (gameState.tutorial && target instanceof Element) {
@@ -1878,6 +1898,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               events={gameState.event_log ?? []}
               round={gameState.round}
               economyResearchTileSide={gameState.research_board.economy_research_tile_side}
+              lastMoves={lastMoves}
               onPlayerSelect={(player) => setPersonalBoardPlayerId(player.player_id)}
             />
             <GameCommandControls blocked={commandBlocked}>

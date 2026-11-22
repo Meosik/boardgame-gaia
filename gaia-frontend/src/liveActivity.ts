@@ -136,6 +136,56 @@ export function liveHighlight(
   };
 }
 
+/** Server actions that answer another player's move or a phase prompt, or cost no turn. The log
+ * lists them per player like any action, but they are not that player's move: an opponent who
+ * built a mine and then charged power off someone else's building still last played the mine. */
+const NOT_A_MOVE = new Set([
+  'ChargePower',
+  'TaklonsChargePower',
+  'ChooseIncomeOrder',
+  'TerransGaiaConversion',
+  'ItarsGaiaTechChoice',
+  'FinishGaiaDecision',
+  'SelectTinkeringTile',
+  'FreeAction',
+]);
+
+export interface LastMove {
+  player: PlayerId;
+  /** The log panel's wording for the move, actor prefix included. */
+  text: string;
+  /** `q,r` keys of the map hexes the move touched; empty for a pass, a research step and the like. */
+  hexes: Set<string>;
+}
+
+/**
+ * Each other player's most recent move, kept until that player moves again — unlike
+ * `liveHighlight`, which marks only the single latest action for a few seconds. Entries without
+ * an `ActionLog` marker (setup, income, round scoring) and the responses in `NOT_A_MOVE` never
+ * replace a move. `entries` is `liveActionEntries` output, in play order.
+ */
+export function opponentLastMoves(
+  events: GameEvent[] | undefined,
+  entries: GameLogEntry[],
+  myPlayerId: PlayerId | null | undefined,
+): Map<PlayerId, LastMove> {
+  const latest = new Map<PlayerId, GameLogEntry>();
+  for (const entry of entries) {
+    if (entry.player === null || entry.player === myPlayerId) continue;
+    if (!entry.action || NOT_A_MOVE.has(entry.action)) continue;
+    latest.set(entry.player, entry);
+  }
+  const moves = new Map<PlayerId, LastMove>();
+  for (const [player, entry] of latest) {
+    moves.set(player, {
+      player,
+      text: entry.text,
+      hexes: liveHighlight(events, entry)?.hexes ?? new Set<string>(),
+    });
+  }
+  return moves;
+}
+
 interface PendingLabel {
   text: string;
   hint?: string;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aiStallWarning, liveActionEntries, liveHighlight, turnStatus } from '../liveActivity';
+import { aiStallWarning, liveActionEntries, liveHighlight, opponentLastMoves, turnStatus } from '../liveActivity';
 import type { GameEvent, GameState, PlayerState } from '../types/game';
 
 const players = [
@@ -68,6 +68,38 @@ describe('liveHighlight', () => {
 
   it('has nothing to highlight without a recent action', () => {
     expect(liveHighlight(buildMine, null)).toBeNull();
+  });
+});
+
+describe('opponentLastMoves', () => {
+  // The opponent (1) builds a mine, the viewing player (0) builds, the opponent charges off it.
+  const events: GameEvent[] = [
+    ...buildMine,
+    { StructureBuilt: { player: 0, hex: '0,0', kind: 'Mine' } },
+    { ActionLog: { player: 0, action: 'Build', event_count: 1 } },
+    { ResourceChanged: { player: 1, delta: { credits: -1 } } },
+    { ActionLog: { player: 1, action: 'ChargePower', event_count: 1 } },
+  ];
+
+  it("keeps an opponent's move when that opponent then only charges power", () => {
+    const moves = opponentLastMoves(events, liveActionEntries(events, players), 0);
+
+    expect([...moves.keys()]).toEqual([1]);
+    expect(moves.get(1)?.text).toContain('광산 건설');
+    expect(moves.get(1)?.hexes.has('1,-1')).toBe(true);
+  });
+
+  it('replaces the move when the opponent moves again and leaves out the viewing player', () => {
+    const later: GameEvent[] = [
+      ...events,
+      { PlayerPassed: { player: 1, booster: 7 } },
+      { ActionLog: { player: 1, action: 'Pass', event_count: 1 } },
+    ];
+    const moves = opponentLastMoves(later, liveActionEntries(later, players), 0);
+
+    expect(moves.get(1)?.text).toContain('패스');
+    expect(moves.get(1)?.hexes.size).toBe(0);
+    expect(moves.has(0)).toBe(false);
   });
 });
 

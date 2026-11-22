@@ -270,6 +270,9 @@ interface LogEntry {
   index: number;
   /** Actor of the grouped action, for live UI that treats own and opponents' moves differently. */
   player: number | null;
+  /** The server action's name from its `ActionLog` marker; absent for events logged outside one
+   * (setup, income, old snapshots). Lets live UI tell a move from a charge response. */
+  action?: string | null;
   text: string;
   details: string[];
 }
@@ -322,7 +325,8 @@ function makeEntry(events: GameEvent[], index: number, players: PlayerState[], a
   const text = primary?.text ?? fallback;
   if (!text) return null;
   const actor = action?.player ?? eventPlayer(primary?.event ?? events[0]);
-  return { index, player: typeof actor === 'number' ? actor : null, text,
+  return { index, player: typeof actor === 'number' ? actor : null,
+    action: typeof action?.action === 'string' ? action.action : null, text,
     details: formatted.filter(item => item !== primary && (primary || action)).map(item => item.text) };
 }
 

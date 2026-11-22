@@ -17,6 +17,10 @@ export interface ReplayHighlight {
 }
 export const ReplayHighlightContext = createContext<ReplayHighlight | null>(null);
 export const useReplayHighlight = () => useContext(ReplayHighlightContext);
+/** Live play only: map hex (`q,r`) → the piece colour of the opponent whose last move touched it.
+ * Stays until that opponent moves again, unlike the few-second highlight above. */
+export const LastMoveMarksContext = createContext<ReadonlyMap<string, string> | null>(null);
+export const useLastMoveMarks = () => useContext(LastMoveMarksContext);
 const BUILDINGS: Record<string, string> = {
   Mine: '광산', TradingStation: '교역소', ResearchLab: '연구소', PlanetaryInstitute: '행성의회', Academy: '아카데미', GaiaFormer: '가이아포머',
 };
