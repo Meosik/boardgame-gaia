@@ -30,6 +30,9 @@ export interface TurnStatus {
   /** True when the viewing player is the one who has to act. */
   mine: boolean;
   hint?: string;
+  /** The other player the game is waiting on, when it is one player's answer or move that is
+   * awaited (not a phase that runs by itself). The banner counts the wait for these. */
+  waitingFor?: PlayerId;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -259,7 +262,7 @@ export function turnStatus(state: GameState, myPlayerId: PlayerId): TurnStatus |
       if (setup && setup.player !== null) {
         return setup.player === myPlayerId
           ? { text: `내 차례: ${setup.text}`, mine: true }
-          : { text: `${nameOf(setup.player)}님 ${setup.text} 중 — 기다리는 중`, mine: false };
+          : { text: `${nameOf(setup.player)}님 ${setup.text} 중 — 기다리는 중`, mine: false, waitingFor: setup.player };
       }
     }
   }
@@ -269,7 +272,7 @@ export function turnStatus(state: GameState, myPlayerId: PlayerId): TurnStatus |
     const label = pendingLabel(phase);
     return pending === myPlayerId
       ? { text: `내 차례: ${label.text}`, mine: true, hint: label.hint }
-      : { text: `${nameOf(pending)}님이 ${label.text} 중 — 기다리는 중`, mine: false };
+      : { text: `${nameOf(pending)}님이 ${label.text} 중 — 기다리는 중`, mine: false, waitingFor: pending };
   }
 
   const active = activeActionPlayerId(state);
@@ -280,5 +283,5 @@ export function turnStatus(state: GameState, myPlayerId: PlayerId): TurnStatus |
       mine: true,
       hint: '주요 행동 1개를 고르면 차례가 넘어갑니다. 자유 행동(자원 교환)은 그 전에 여러 번 할 수 있어요.',
     }
-    : { text: `${nameOf(active)}님 차례 — 기다리는 중`, mine: false };
+    : { text: `${nameOf(active)}님 차례 — 기다리는 중`, mine: false, waitingFor: active };
 }

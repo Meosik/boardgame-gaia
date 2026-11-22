@@ -23,8 +23,13 @@ interface Props {
   economyResearchTileSide?: EconomyResearchTileSide;
   /** Each opponent's most recent move (`opponentLastMoves`), shown as one line on that card. */
   lastMoves?: ReadonlyMap<number, LastMove>;
+  /** Players in the order they passed this round — the turn order of the next round. */
+  passOrder?: number[];
   onPlayerSelect?: (player: PlayerState) => void;
 }
+
+/** After the last round nobody takes another turn, so its pass order orders nothing. */
+const FINAL_ROUND = 6;
 
 /** BGA-style always-open player status cards. The caller supplies the players
  * in turn order, including the controlled player. */
@@ -32,8 +37,10 @@ export function OpponentPanels({
   players,
   myPlayerId,
   activePlayerId = null,
+  round = 0,
   economyResearchTileSide = 'Power',
   lastMoves,
+  passOrder,
   onPlayerSelect,
 }: Props) {
   if (players.length === 0) return null;
@@ -50,6 +57,8 @@ export function OpponentPanels({
         const lastMove = lastMoves?.get(player.player_id)?.text ?? null;
         const actorPrefix = `${player.nickname}: `;
         const lastMoveText = lastMove?.startsWith(actorPrefix) ? lastMove.slice(actorPrefix.length) : lastMove;
+        // 1-based place in next round's turn order, 0 while the player has not passed.
+        const nextRoundPlace = round < FINAL_ROUND ? (passOrder?.indexOf(player.player_id) ?? -1) + 1 : 0;
 
         return (
           <button
@@ -110,6 +119,11 @@ export function OpponentPanels({
             <span className="opponent-footer">
               <span className="opponent-income-power">예상 수입 충전 {income?.power_charge ?? 0}</span>
               {player.passed && <span className="passed-badge">패스</span>}
+              {nextRoundPlace > 0 && (
+                <span className="opponent-next-order" title="패스한 순서가 다음 라운드의 행동 순서입니다">
+                  다음 {nextRoundPlace}번째
+                </span>
+              )}
               <span className="opponent-board-link" aria-hidden>
                 개인 보드 ›
               </span>

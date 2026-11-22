@@ -385,6 +385,18 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   const reviewing = reviewedState !== null && reviewedState !== liveGameState;
   const gameState = reviewing ? reviewedState : liveGameState;
 
+  // The AI seats can take a minute between the player's turns. The tab title says when the game
+  // is waiting on the player, so a glance at the tab bar is enough after looking away.
+  const baseTitle = useRef(typeof document === 'undefined' ? '' : document.title);
+  const waitingOnMe = !replay && view === 'game' && liveGameState != null
+    && turnStatus(liveGameState, myPlayerId ?? 0)?.mine === true;
+  useEffect(() => {
+    if (replay) return undefined;
+    const base = baseTitle.current;
+    document.title = waitingOnMe ? `● 내 차례 — ${base}` : base;
+    return () => { document.title = base; };
+  }, [replay, waitingOnMe]);
+
   useEffect(() => {
     if (view !== 'game' || !gameState?.tutorial) return;
     closeBoardContext();
@@ -1493,6 +1505,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       {!replay && (
         <TurnBanner
           status={turnBannerStatus}
+          waitKey={reviewing ? null : String(liveGameState?.event_log?.length ?? 0)}
           warning={aiStallText}
           warningAction={aiStallText ? {
             label: aiRetrying ? '교사 부르는 중…' : '다시 시도',
@@ -1899,6 +1912,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               round={gameState.round}
               economyResearchTileSide={gameState.research_board.economy_research_tile_side}
               lastMoves={lastMoves}
+              passOrder={gameState.pass_order}
               onPlayerSelect={(player) => setPersonalBoardPlayerId(player.player_id)}
             />
             <GameCommandControls blocked={commandBlocked}>

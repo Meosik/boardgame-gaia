@@ -5390,6 +5390,10 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 }
 .turn-banner-text { font-size: 0.82rem; font-weight: 800; }
 .turn-banner-hint { color: #cbd5e1; font-size: 0.72rem; font-weight: 600; }
+/* Seconds the game has waited on another seat; fixed-width digits so the banner does not jitter. */
+.turn-banner-elapsed { color: #94a3b8; font-size: 0.72rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* Next round's turn order, known once a player has passed. */
+.opponent-next-order { color: var(--color-text); font-size: 0.64rem; font-weight: 700; white-space: nowrap; }
 .turn-banner-warning { color: #fde68a; font-size: 0.72rem; font-weight: 800; }
 .turn-banner-warning-action { margin-left: 0.5rem; }
 

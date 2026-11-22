@@ -80,6 +80,19 @@ describe('OpponentPanels', () => {
     expect([...heading.children].map((child) => child.textContent)).toEqual(['1', 'P1', '파이락', '나', '-0점', '10']);
   });
 
+  it("shows a passed player's place in the next round, but not after the last round", () => {
+    const players = [
+      mockPlayer({ player_id: 1, nickname: 'P1' }),
+      mockPlayer({ player_id: 2, nickname: 'P2', passed: true }),
+    ];
+    const { rerender } = render(<OpponentPanels players={players} round={3} passOrder={[2]} />);
+    expect(screen.getByRole('button', { name: 'P2 개인 보드 보기' })).toHaveTextContent('다음 1번째');
+    expect(screen.getByRole('button', { name: 'P1 개인 보드 보기' })).not.toHaveTextContent('다음');
+
+    rerender(<OpponentPanels players={players} round={6} passOrder={[2]} />);
+    expect(screen.getByRole('button', { name: 'P2 개인 보드 보기' })).not.toHaveTextContent('다음');
+  });
+
   it('renders nothing when there are no opponents', () => {
     const { container } = render(<OpponentPanels players={[]} />);
     expect(container).toBeEmptyDOMElement();

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TurnBanner } from '../components/TurnBanner';
 
@@ -51,5 +51,44 @@ describe('TurnBanner', () => {
     const banner = screen.getByRole('status');
     expect(banner).toHaveTextContent('영희님 차례 — 기다리는 중');
     expect(banner).not.toHaveClass('turn-banner--mine');
+  });
+
+  it('counts the seconds the game has waited on another seat, and not beside a stall warning', () => {
+    vi.useFakeTimers();
+    try {
+      const status = { text: '영희님 차례 — 기다리는 중', mine: false, waitingFor: 1 };
+      const { rerender } = render(<TurnBanner status={status} waitKey="10" />);
+      expect(screen.getByRole('status')).not.toHaveTextContent('경과');
+
+      act(() => { vi.advanceTimersByTime(5000); });
+      expect(screen.getByRole('status')).toHaveTextContent('5초 경과');
+
+      // The game moved on: the count starts again.
+      rerender(<TurnBanner status={status} waitKey="11" />);
+      expect(screen.getByRole('status')).not.toHaveTextContent('경과');
+
+      act(() => { vi.advanceTimersByTime(4000); });
+      expect(screen.getByRole('status')).toHaveTextContent('4초 경과');
+      rerender(<TurnBanner status={status} waitKey="11" warning="⚠ AI 교사 응답 없음" />);
+      expect(screen.getByRole('status')).not.toHaveTextContent('경과');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows no count for a turn of the viewing player or without a wait key', () => {
+    vi.useFakeTimers();
+    try {
+      const { unmount } = render(<TurnBanner status={{ text: '내 차례입니다', mine: true }} waitKey="10" />);
+      act(() => { vi.advanceTimersByTime(5000); });
+      expect(screen.getByRole('status')).not.toHaveTextContent('경과');
+      unmount();
+
+      render(<TurnBanner status={{ text: '영희님 차례 — 기다리는 중', mine: false, waitingFor: 1 }} />);
+      act(() => { vi.advanceTimersByTime(5000); });
+      expect(screen.getByRole('status')).not.toHaveTextContent('경과');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
