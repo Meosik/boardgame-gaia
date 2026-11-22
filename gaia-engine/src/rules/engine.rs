@@ -8589,18 +8589,21 @@ fn experimental_engine_fixes_enabled() -> bool {
     std::env::var_os("GAIA_ENGINE_FIXES_2").is_none_or(|value| value != "0")
 }
 
-/// Returns a copy of the queue-front entry if `player_id` is next up to decide during either
-/// ordinary Action-Phase charging or the Lost Planet's phase-preserving charge queue.
+/// Returns a copy of the first queued offer of `player_id` during either ordinary Action-Phase
+/// charging or the Lost Planet's phase-preserving charge queue. The queued players answer in
+/// any order: an offer depends only on its own player's bowls and VP, so nobody waits for a
+/// seat ahead of them. A player's own offers are still answered front to back.
 fn ensure_charge_power_phase(
     state: &GameState,
     player_id: PlayerId,
 ) -> Result<PendingCharge, RuleError> {
     match &state.phase {
         GamePhase::ChargePowerPending { queue, .. }
-        | GamePhase::LostPlanetChargePowerPending { queue, .. } => match queue.first() {
-            Some(entry) if entry.player == player_id => Ok(entry.clone()),
-            _ => Err(RuleError::NotYourTurn),
-        },
+        | GamePhase::LostPlanetChargePowerPending { queue, .. } => queue
+            .iter()
+            .find(|entry| entry.player == player_id)
+            .cloned()
+            .ok_or(RuleError::NotYourTurn),
         _ => Err(RuleError::WrongPhase),
     }
 }
@@ -8666,7 +8669,7 @@ fn apply_charge_power(state: &mut GameState, player_id: PlayerId, accept: bool) 
         }
     }
 
-    finish_pending_charge(state);
+    finish_pending_charge(state, player_id);
 
     vec![]
 }
@@ -8695,18 +8698,20 @@ fn apply_taklons_charge_power(
         }
     }
 
-    finish_pending_charge(state);
+    finish_pending_charge(state, player_id);
     vec![]
 }
 
-fn finish_pending_charge(state: &mut GameState) {
+/// Takes the answered offer (the first one of `player_id`) off the charge queue and resumes
+/// the interrupted phase once the queue is empty.
+fn finish_pending_charge(state: &mut GameState, player_id: PlayerId) {
     if let GamePhase::ChargePowerPending {
         queue,
         resume_active_player,
     } = &mut state.phase
     {
-        if !queue.is_empty() {
-            queue.remove(0);
+        if let Some(position) = queue.iter().position(|entry| entry.player == player_id) {
+            queue.remove(position);
         }
         if queue.is_empty() {
             state.phase = match resume_active_player {
@@ -8722,8 +8727,8 @@ fn finish_pending_charge(state: &mut GameState) {
         resume_phase,
     } = &mut state.phase
     {
-        if !queue.is_empty() {
-            queue.remove(0);
+        if let Some(position) = queue.iter().position(|entry| entry.player == player_id) {
+            queue.remove(position);
         }
         if queue.is_empty() {
             state.phase = *resume_phase.clone();
@@ -8731,17 +8736,19 @@ fn finish_pending_charge(state: &mut GameState) {
     }
 }
 
-/// Returns a copy of the queue-front entry if `player_id` is next up to
-/// decide during `IncomeOrderPending`.
+/// Returns a copy of the queued entry of `player_id` during
+/// `IncomeOrderPending`. The queued players answer in any order (each entry
+/// is that player's own charge and token).
 fn ensure_income_order_phase(
     state: &GameState,
     player_id: PlayerId,
 ) -> Result<PendingIncomeOrder, RuleError> {
     match &state.phase {
-        GamePhase::IncomeOrderPending { queue, .. } => match queue.first() {
-            Some(entry) if entry.player == player_id => Ok(entry.clone()),
-            _ => Err(RuleError::NotYourTurn),
-        },
+        GamePhase::IncomeOrderPending { queue, .. } => queue
+            .iter()
+            .find(|entry| entry.player == player_id)
+            .cloned()
+            .ok_or(RuleError::NotYourTurn),
         _ => Err(RuleError::WrongPhase),
     }
 }
@@ -8792,8 +8799,8 @@ fn apply_choose_income_order(
 
     let mut completed_round = None;
     if let GamePhase::IncomeOrderPending { queue, round } = &mut state.phase {
-        if !queue.is_empty() {
-            queue.remove(0);
+        if let Some(position) = queue.iter().position(|entry| entry.player == player_id) {
+            queue.remove(position);
         }
         if queue.is_empty() {
             completed_round = Some(*round);

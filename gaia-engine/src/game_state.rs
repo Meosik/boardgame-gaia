@@ -945,9 +945,11 @@ pub enum GamePhase {
         resume_phase: Box<GamePhase>,
     },
     /// Rulebook p.16-17, "Passive Action: Charge Power" — `ActionPhase` is
-    /// paused right after a Build/Upgrade while eligible opponents decide,
-    /// in clockwise order, whether to charge power. `queue.front()` is the
-    /// player who must submit `GameAction::ChargePower` next. `resume`
+    /// paused right after a Build/Upgrade while eligible opponents decide
+    /// whether to charge power. The queue is in clockwise order, but any
+    /// queued player may submit `GameAction::ChargePower` (an offer depends
+    /// only on that player's own bowls and VP); `queue.front()` is the one a
+    /// sequential driver (`RuleEngine::decision_player`) asks next. `resume`
     /// is `Some(active_player)` to reopen `ActionPhase`, or `None` if every
     /// other player had already passed (so the round ends once the queue
     /// drains).

@@ -300,6 +300,65 @@ fn passed_opponent_is_still_eligible() {
     }
 }
 
+/// Three seats with two charge offers queued (seat 1 ahead of seat 2) after a build of seat 0.
+fn two_queued_offers() -> gaia_engine::game_state::GameState {
+    let mut state = GameStateBuilder::new()
+        .with_player(0)
+        .with_player_fn(1, |p| {
+            p.resources.power.bowl1 = 4;
+            p.resources.power.bowl2 = 0;
+            p.resources.power.bowl3 = 0;
+            p.vp = 10;
+        })
+        .with_player_fn(2, |p| {
+            p.resources.power.bowl1 = 4;
+            p.resources.power.bowl2 = 0;
+            p.resources.power.bowl3 = 0;
+            p.vp = 10;
+        })
+        .build();
+    let offer = |player| gaia_engine::game_state::PendingCharge {
+        player,
+        hex: HexCoord::new(1, 0),
+        max_power: 2,
+    };
+    state.phase = GamePhase::ChargePowerPending {
+        queue: vec![offer(1), offer(2)],
+        resume_active_player: Some(1),
+    };
+    state
+}
+
+#[test]
+fn a_queued_player_answers_a_charge_offer_before_the_seat_ahead() {
+    let mut state = two_queued_offers();
+
+    RuleEngine::apply_action(&mut state, 2, GameAction::ChargePower { accept: true })
+        .unwrap_or_else(|e| panic!("the second queued seat may answer first: {e}"));
+
+    // Seat 2 charged its own offer; seat 1's offer is untouched and still waits.
+    let second = state.player(2).unwrap_or_else(|| panic!("player 2 exists"));
+    assert_eq!(second.resources.power.bowl2, 2);
+    assert_eq!(second.vp, 9);
+    let first = state.player(1).unwrap_or_else(|| panic!("player 1 exists"));
+    assert_eq!(first.resources.power.bowl2, 0);
+    match &state.phase {
+        GamePhase::ChargePowerPending { queue, .. } => {
+            assert_eq!(queue.len(), 1);
+            assert_eq!(queue[0].player, 1);
+        }
+        other => panic!("expected ChargePowerPending, got {other:?}"),
+    }
+
+    // A seat that has answered has nothing left to answer.
+    let again = RuleEngine::apply_action(&mut state, 2, GameAction::ChargePower { accept: true });
+    assert!(matches!(again, Err(RuleError::NotYourTurn)));
+
+    RuleEngine::apply_action(&mut state, 1, GameAction::ChargePower { accept: false })
+        .unwrap_or_else(|e| panic!("the remaining seat answers: {e}"));
+    assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 1 });
+}
+
 #[test]
 fn out_of_turn_charge_power_is_rejected() {
     let mut state = base_builder(Some((HexCoord::new(2, 0), StructureType::Mine))).build();

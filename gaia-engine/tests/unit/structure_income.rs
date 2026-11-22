@@ -209,6 +209,58 @@ fn bonus_token_first_lets_it_get_charged_alongside_existing_tokens() {
 }
 
 #[test]
+fn a_queued_player_chooses_the_income_order_before_the_seat_ahead() {
+    // Both seats have an empty Area I, so both are asked; seat 1 is queued second.
+    let asked = |p: &mut gaia_engine::game_state::PlayerState| {
+        p.faction = Some(FactionId::Terrans);
+        p.resources.power.bowl1 = 0;
+        p.resources.power.bowl2 = 5;
+        p.resources.power.bowl3 = 0;
+        p.structures = vec![structure(StructureType::PlanetaryInstitute)];
+    };
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, asked)
+        .with_player_fn(1, asked)
+        .build();
+    state.phase = GamePhase::RoundScoring { round: 1 };
+    RuleEngine::advance_to_next_round(&mut state).unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        matches!(&state.phase, GamePhase::IncomeOrderPending { queue, .. }
+            if queue.iter().map(|e| e.player).collect::<Vec<_>>() == vec![0, 1]),
+        "phase is {:?}",
+        state.phase
+    );
+
+    RuleEngine::apply_action(
+        &mut state,
+        1,
+        GameAction::ChooseIncomeOrder { charge_first: false },
+    )
+    .unwrap_or_else(|e| panic!("the second queued seat may answer first: {e}"));
+
+    // Seat 1 took its token first (0/3/3); seat 0 is still asked and unchanged.
+    let second = state.player(1).unwrap_or_else(|| panic!("player 1 exists"));
+    assert_eq!(second.resources.power.bowl2, 3);
+    assert_eq!(second.resources.power.bowl3, 3);
+    let first = state.player(0).unwrap_or_else(|| panic!("player 0 exists"));
+    assert_eq!(first.resources.power.bowl2, 5);
+    assert!(
+        matches!(&state.phase, GamePhase::IncomeOrderPending { queue, .. }
+            if queue.len() == 1 && queue[0].player == 0),
+        "phase is {:?}",
+        state.phase
+    );
+
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::ChooseIncomeOrder { charge_first: true },
+    )
+    .unwrap_or_else(|e| panic!("the remaining seat answers: {e}"));
+    assert!(!matches!(state.phase, GamePhase::IncomeOrderPending { .. }));
+}
+
+#[test]
 fn an_income_order_that_changes_nothing_is_not_asked() {
     // Area I already holds more than the charge of 4, so the bonus token stays
     // in Area I in either order: 6 → 2 after the charge, +1 token = 3.
