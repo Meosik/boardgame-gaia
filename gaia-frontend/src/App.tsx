@@ -40,7 +40,7 @@ import {
 } from './components/PlanetActionPopup';
 import { spendablePower } from './components/freeActions';
 import { selectableFederationHexes, validateFederationSelection } from './components/federationSelection';
-import { techSelectionModeForStage } from './techSelection';
+import { canTakeLostFleetAdvancedTile, techSelectionModeForStage } from './techSelection';
 import { GameLog } from './components/GameLog';
 import { SidebarTurnControls } from './components/SidebarTurnControls';
 import { TopPassControl } from './components/TopPassControl';
@@ -1711,7 +1711,18 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
                 onSelect={coach?.enabled && coach.techMode && gameState.research_board.lost_fleet_advanced_tech_tile != null
                   && coach.advancedTiles.includes(gameState.research_board.lost_fleet_advanced_tech_tile)
                   ? () => coach.onTech(gameState.research_board.lost_fleet_advanced_tech_tile!, true)
-                  : gameState.tutorial && techUpgradeFlow?.stage === 'tile' && gameState.research_board.lost_fleet_advanced_tech_tile != null
+                  // In a real game the tile is offered when it can be taken and the choice is part
+                  // of an upgrade (the other tile gains accept Standard tiles only).
+                  : techUpgradeFlow?.stage === 'tile' && gameState.research_board.lost_fleet_advanced_tech_tile != null
+                    && (!!gameState.tutorial || ((techUpgradeFlow.completion.kind === 'Upgrade' || techUpgradeFlow.completion.kind === 'TwilightFreeResearchLab')
+                      && canTakeLostFleetAdvancedTile({
+                        tileId: gameState.research_board.lost_fleet_advanced_tech_tile,
+                        side: gameState.research_board.lost_fleet_advanced_tech_requirement,
+                        vp: me.vp,
+                        exploredShips: me.explored_ships,
+                        greenFederationTokens: greenFederationTokenCount,
+                        uncoveredStandardTiles: ownedUncoveredTechTiles.length,
+                      })))
                     ? () => setTechUpgradeFlow({ ...techUpgradeFlow, stage: 'cover', tile: gameState.research_board.lost_fleet_advanced_tech_tile!, track: 'Science', lostFleet: true })
                     : undefined}
               />
