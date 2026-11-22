@@ -40,6 +40,7 @@ import {
 } from './components/PlanetActionPopup';
 import { spendablePower } from './components/freeActions';
 import { selectableFederationHexes, validateFederationSelection } from './components/federationSelection';
+import { techSelectionModeForStage } from './techSelection';
 import { GameLog } from './components/GameLog';
 import { SidebarTurnControls } from './components/SidebarTurnControls';
 import { TopPassControl } from './components/TopPassControl';
@@ -1729,11 +1730,10 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               allowTechReselection={!!coach?.enabled && coach.techMode !== null}
               onPowerAction={coach ? id => coach.onAction({ type: 'PowerAction', id }) : handleResearchBoardAction}
               techSelectionMode={
-                coach ? coach.techMode : techUpgradeFlow?.stage === 'tile'
-                  ? 'tile'
-                  : techUpgradeFlow?.stage === 'track' || (!!gameState.tutorial && techUpgradeFlow?.stage === 'advanced-track') || selectedAction === 'EclipseResearchBoost' || selectedAction === 'BescodsLowestResearchAdvance' || (selectedAction === 'FiraksDowngradeResearchLab' && firaksLab !== null)
+                coach ? coach.techMode : techSelectionModeForStage(techUpgradeFlow?.stage)
+                  ?? (selectedAction === 'EclipseResearchBoost' || selectedAction === 'BescodsLowestResearchAdvance' || (selectedAction === 'FiraksDowngradeResearchLab' && firaksLab !== null)
                     ? 'track'
-                    : null
+                    : null)
               }
               selectableStandardTiles={coach ? coach.standardTiles : selectableStandardTiles}
               selectableAdvancedTracks={coach ? coach.advancedTracks : selectableAdvancedTracks}
