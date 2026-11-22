@@ -145,4 +145,55 @@ describe('Ivits first federation QIC cost', () => {
     expect(validateFederationSelection(state, 0, selected).reason).toBe('정보 큐브가 부족합니다.');
     expect(selectableFederationHexes(state, 0, [{ q: 0, r: 0 }])).not.toContainEqual({ q: 1, r: 0 });
   });
+  it('bridges through a space that holds only another colour\'s satellite', () => {
+    const state = firstFederation(1, 0);
+    state.board.hexes['1,0'].satellites = [1];
+    expect(validateFederationSelection(state, 0, selected).valid).toBe(true);
+    expect(selectableFederationHexes(state, 0, [{ q: 0, r: 0 }])).toContainEqual({ q: 1, r: 0 });
+    // The player's own satellite does close the space.
+    state.board.hexes['1,0'].satellites = [0];
+    expect(validateFederationSelection(state, 0, selected).valid).toBe(false);
+  });
+});
+
+describe('Ivits federation growth', () => {
+  // One formed federation over (0..5,0) and two more Mines in the same row, all adjacent.
+  function grownFederation(kinds: Hex['structures'][number]['kind'][]): GameState {
+    const player = mockPlayer({
+      faction: 'Ivits',
+      federation_tokens: [3],
+      federated_hexes: [0, 1, 2, 3, 4, 5].map(q => ({ q, r: 0 })),
+    });
+    const hexes: Record<string, Hex> = {};
+    [...kinds, 'Mine' as const, 'Mine' as const].forEach((kind, q) => {
+      hexes[`${q},0`] = mockHex({
+        q,
+        r: 0,
+        planet: { planet_type: 'Oxide' as const, owner: 0, is_gaia_formed: false },
+        structures: [{ owner: 0, kind }],
+      });
+    });
+    return { players: [player], board: { hexes, spaceship_tiles: {} } } as unknown as GameState;
+  }
+  const academy = { Academy: 'Science' as const };
+
+  it('grows by exactly one planet when the federation already has the power', () => {
+    // 3+3+3+2+2+1 = 14, the power of the second token, before anything is connected.
+    const state = grownFederation(['PlanetaryInstitute', academy, academy, 'TradingStation', 'TradingStation', 'Mine']);
+    const one = validateFederationSelection(state, 0, [{ q: 6, r: 0 }]);
+    expect(one.minimumPower).toBe(14);
+    expect(one.valid).toBe(true);
+    const two = validateFederationSelection(state, 0, [{ q: 6, r: 0 }, { q: 7, r: 0 }]);
+    expect(two.reason).toBe('빼도 되는 건물이나 위성이 포함되어 있습니다.');
+  });
+
+  it('counts the tech tile that makes large buildings worth four', () => {
+    // 3+2+2+2+2+1 = 12, +1 new Mine = 13: one short without the tile, 14 with it.
+    const state = grownFederation(['PlanetaryInstitute', 'TradingStation', 'TradingStation', 'TradingStation', 'TradingStation', 'Mine']);
+    expect(validateFederationSelection(state, 0, [{ q: 6, r: 0 }]).power).toBe(13);
+    state.players[0].tech_tiles = [6];
+    const status = validateFederationSelection(state, 0, [{ q: 6, r: 0 }]);
+    expect(status.power).toBe(14);
+    expect(status.valid).toBe(true);
+  });
 });

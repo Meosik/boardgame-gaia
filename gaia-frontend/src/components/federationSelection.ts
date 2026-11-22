@@ -37,8 +37,10 @@ function ownsColonizedHex(hex: Hex | undefined, playerId: PlayerId): boolean {
     || Boolean(hex.planet?.planet_type === 'LostPlanet' && hex.planet.owner === playerId);
 }
 
-function isLegalSatelliteHex(gameState: GameState, hex: Hex | undefined): boolean {
-  if (!hex || hex.planet !== null || hex.structures.length > 0 || hex.satellites.length > 0) {
+/** A space holds one satellite of each colour (rulebook p.14), so only the player's own
+ * satellite closes it — the server's rule (`can_be_satellite_node`). */
+function isLegalSatelliteHex(gameState: GameState, hex: Hex | undefined, playerId: PlayerId): boolean {
+  if (!hex || hex.planet !== null || hex.structures.length > 0 || hex.satellites.includes(playerId)) {
     return false;
   }
   const key = hexKey(hex.coord.q, hex.coord.r);
@@ -72,6 +74,13 @@ function selectedFederationPower(
       && hex.planet.owner === player.player_id) {
       power += 1;
     }
+    // The Tech tile that makes the Planetary Institute and Academies worth 4 counts for the
+    // Hive's growing federation too, on its old and new part (the server's rule).
+    if (activeTechTile(player, 6)) {
+      power += ownStructures.filter(({ kind }) => (
+        kind === 'PlanetaryInstitute' || isAcademy(kind)
+      )).length;
+    }
     if (includeExistingIvitsFederation) continue;
     if (player.faction === 'Bescods'
       && player.structures.some(({ kind }) => kind === 'PlanetaryInstitute')
@@ -82,11 +91,6 @@ function selectedFederationPower(
     if (player.faction === 'Moweyds'
       && player.moweyds_power_ring_hexes?.some(({ q, r }) => hexKey(q, r) === key)) {
       power += 2;
-    }
-    if (activeTechTile(player, 6)) {
-      power += ownStructures.filter(({ kind }) => (
-        kind === 'PlanetaryInstitute' || isAcademy(kind)
-      )).length;
     }
   }
   return power;
@@ -130,7 +134,7 @@ function minimumSatelliteCount(
     }
     const weight = isExistingAnchor || (isOwnedPlanet && !existingKeys.has(key))
       ? 0
-      : isLegalSatelliteHex(gameState, hex) ? 1 : null;
+      : isLegalSatelliteHex(gameState, hex, player.player_id) ? 1 : null;
     if (weight === null) continue;
     coords.push(hex.coord);
     weights.push(weight);
@@ -264,6 +268,7 @@ export function validateFederationSelection(
   if (satelliteHexes.some((coord) => !isLegalSatelliteHex(
     gameState,
     gameState.board.hexes[hexKey(coord.q, coord.r)],
+    playerId,
   ))) return status(false, '위성을 놓을 수 없는 칸이 포함되어 있습니다.');
 
   const alreadyPlaced = Object.values(gameState.board.hexes)
@@ -300,6 +305,9 @@ export function validateFederationSelection(
       gameState.board.hexes[hexKey(coord.q, coord.r)],
       playerId,
     ));
+    // What is left must still connect a planet: a Hive federation that already has the power
+    // for its next token grows by one planet, which is not "one too many" (the server's rule).
+    if (remainingPlanetHexes.length === 0) continue;
     if (selectedFederationPower(gameState, player, remainingPlanetHexes, isIvitsGrowth) >= minimumPower) {
       return status(false, '빼도 되는 건물이나 위성이 포함되어 있습니다.');
     }
@@ -347,7 +355,7 @@ export function selectableFederationHexes(
       // reject it with an explanatory reason, rather than silently omitting it from the clickable
       // set with no feedback at all.
       if (ownsHex) return true;
-      if (!canAddSatellite || !isLegalSatelliteHex(gameState, hex)) return false;
+      if (!canAddSatellite || !isLegalSatelliteHex(gameState, hex, playerId)) return false;
       const routeAnchors = selectedKeys.size > 0 ? selectedKeys : isIvitsGrowth ? existingKeys : new Set<string>();
       return neighboringKeys(hex.coord).some((neighbor) => routeAnchors.has(neighbor));
     })

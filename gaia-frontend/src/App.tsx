@@ -1165,7 +1165,12 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     setFederationBonusTechTile(null);
     setFederationBonusResearchTrack(null);
     gameActions.selectAction('FormFederation');
-    gameActions.toggleHex(coord);
+    // A structure that already belongs to a federation only opens the selection: its hex
+    // cannot be chosen again, and selecting it left every later choice refused ("이미 다른
+    // 연방에 사용한 칸"). For the Hive that is the usual start — its one federation is what
+    // the new hexes connect to.
+    const inFederation = me.federated_hexes?.some(({ q, r }) => q === coord.q && r === coord.r);
+    if (!inFederation) gameActions.toggleHex(coord);
   }
 
   function sendTechUpgrade(choice: TechTileChoice) {
