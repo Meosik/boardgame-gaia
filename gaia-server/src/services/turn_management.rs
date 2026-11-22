@@ -15,11 +15,12 @@ pub struct TurnManagementService;
 
 /// Whether the round is over and still has to be ended: every player passed and the game sits
 /// in `RoundScoring`, the phase the last pass leaves. The `passed` flags alone do not say so —
-/// they stay set through the pauses of the round change (the income order, the Gaia decisions,
-/// the Tinkeroids' tile choice) until the next round opens, and ending the round again from one
-/// of those pauses is an engine error (`advance_to_next_round` takes `RoundScoring` only). That
-/// error stopped the AI driver after an AI seat answered such a pause, leaving the next seat's
-/// answer unplayed.
+/// they stay set through the pauses of the round change (the income order, the Gaia decisions)
+/// until `finish_round_transition` opens the next round, and ending the round again from one of
+/// those pauses is an engine error (`advance_to_next_round` takes `RoundScoring` only). That
+/// error stopped the AI driver after an AI seat answered such a pause while another was still
+/// open, leaving the next seat's answer unplayed. (The Tinkeroids' tile choice comes after the
+/// flags are cleared, so it never was such a pause.)
 fn round_is_over(state: &GameState) -> bool {
     matches!(state.phase, GamePhase::RoundScoring { .. })
         && state.players.iter().all(|player| player.passed)
@@ -151,6 +152,8 @@ mod tests {
             round: 1,
         };
         assert!(!round_is_over(&state));
+        // Not a state of real play (the flags are cleared before this pause), but any phase
+        // other than `RoundScoring` must answer no.
         state.phase = GamePhase::TinkeroidsTileSelectionPending { player: 1, round: 1 };
         assert!(!round_is_over(&state));
     }
