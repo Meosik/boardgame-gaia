@@ -208,7 +208,10 @@ pub struct AiPool {
     workers: Vec<Mutex<Vec<(Option<String>, Worker)>>>,
     /// Versions whose worker started and answered a ping in this server process.
     started_versions: Mutex<HashSet<String>>,
-    driving: std::sync::Mutex<HashSet<String>>,
+    /// Rooms with a running driver. The value is whether a start was asked (`spawn_driver`)
+    /// since that driver last read the room: such a request may be for a state the driver did
+    /// not see, so the driver reads the room once more before it ends (`finish_driving`).
+    driving: std::sync::Mutex<HashMap<String, bool>>,
     /// Committed AI moves.
     moves: AtomicUsize,
     /// Teacher hints for the human seat (`hint`), by (room, revision, player): one teacher run
@@ -234,7 +237,7 @@ impl AiPool {
             config,
             workers,
             started_versions: Mutex::new(HashSet::new()),
-            driving: std::sync::Mutex::new(HashSet::new()),
+            driving: std::sync::Mutex::new(HashMap::new()),
             moves: AtomicUsize::new(0),
             hints: std::sync::Mutex::new(HashMap::new()),
         }
@@ -584,22 +587,59 @@ impl AiPool {
         }
     }
 
+    /// `true` = no driver runs for the room and the caller starts one. With a driver running
+    /// the request is recorded instead, for that driver to answer (`finish_driving`).
     fn try_start_driving(&self, room_code: &str) -> bool {
-        self.driving
-            .lock()
-            .map(|mut rooms| rooms.insert(room_code.to_string()))
-            .unwrap_or(false)
+        let Ok(mut rooms) = self.driving.lock() else {
+            return false;
+        };
+        match rooms.get_mut(room_code) {
+            Some(asked) => {
+                *asked = true;
+                false
+            }
+            None => {
+                rooms.insert(room_code.to_string(), false);
+                true
+            }
+        }
     }
 
-    fn stop_driving(&self, room_code: &str) {
+    /// The driver is about to read the room: that read answers every start asked so far (a
+    /// caller changes the room before it asks). Called before the read, never after it, so a
+    /// request made between the two stays recorded.
+    fn before_room_read(&self, room_code: &str) {
         if let Ok(mut rooms) = self.driving.lock() {
-            rooms.remove(room_code);
+            if let Some(asked) = rooms.get_mut(room_code) {
+                *asked = false;
+            }
+        }
+    }
+
+    /// The driver found nothing more to do. `true` = a start was asked since it last read the
+    /// room, so it stays the room's driver and drives again; otherwise the room has no driver
+    /// from here on. Decided under one lock with `try_start_driving`: a request is either
+    /// answered by this driver or starts a new one, never dropped.
+    fn finish_driving(&self, room_code: &str) -> bool {
+        let Ok(mut rooms) = self.driving.lock() else {
+            return false;
+        };
+        match rooms.get_mut(room_code) {
+            Some(asked) if *asked => {
+                *asked = false;
+                true
+            }
+            _ => {
+                rooms.remove(room_code);
+                false
+            }
         }
     }
 }
 
 /// Plays AI seats of `room_code` until the human must act. Safe to call after every
-/// committed transition; at most one driver runs per room.
+/// committed transition; at most one driver runs per room. A call made while a driver runs
+/// is not lost: that driver looks at the room again before it ends.
 pub fn spawn_driver(app: AppState, room_code: String) {
     let Some(pool) = app.ai.clone() else {
         return;
@@ -608,8 +648,12 @@ pub fn spawn_driver(app: AppState, room_code: String) {
         return;
     }
     tokio::spawn(async move {
-        drive(&app, &pool, &room_code).await;
-        pool.stop_driving(&room_code);
+        loop {
+            drive(&app, &pool, &room_code).await;
+            if !pool.finish_driving(&room_code) {
+                break;
+            }
+        }
     });
 }
 
@@ -694,6 +738,7 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
     let pause = pool.config.move_pause;
     let mut last_move = std::time::Instant::now();
     for _ in 0..2000 {
+        pool.before_room_read(room_code);
         let Some(turn) = next_ai_turn(app, room_code).await else {
             return;
         };
@@ -1240,6 +1285,41 @@ mod tests {
             guard_timeout(Duration::from_secs(90), "hard"),
             Duration::from_secs(90)
         );
+    }
+
+    /// The reconnect race: the driver read a paused room and is about to end when the player
+    /// comes back and asks for a driver. The request must not be dropped.
+    #[test]
+    fn a_start_asked_while_the_driver_ends_makes_it_drive_again() {
+        let pool = pool_with_teachers(None);
+        assert!(pool.try_start_driving("ROOM"));
+        // The driver reads the room (paused) and decides to end ...
+        pool.before_room_read("ROOM");
+        // ... the player reconnects: the room is unpaused and a driver is asked for ...
+        assert!(!pool.try_start_driving("ROOM"));
+        // ... so the ending driver stays and reads the room again,
+        assert!(pool.finish_driving("ROOM"));
+        // once: with nothing asked since, it ends and the next request starts a new driver.
+        pool.before_room_read("ROOM");
+        assert!(!pool.finish_driving("ROOM"));
+        assert!(pool.try_start_driving("ROOM"));
+    }
+
+    /// A request made before the driver's last read of the room was answered by that read
+    /// (every AI move asks for a driver): it does not make the driver go around again.
+    #[test]
+    fn a_start_asked_before_the_last_room_read_does_not_repeat_the_drive() {
+        let pool = pool_with_teachers(None);
+        assert!(pool.try_start_driving("ROOM"));
+        assert!(!pool.try_start_driving("ROOM"));
+        pool.before_room_read("ROOM");
+        assert!(!pool.finish_driving("ROOM"));
+        // Another room's driver is not affected by this room's requests.
+        assert!(pool.try_start_driving("OTHER"));
+        assert!(pool.try_start_driving("ROOM"));
+        assert!(!pool.try_start_driving("ROOM"));
+        assert!(!pool.finish_driving("OTHER"));
+        assert!(pool.finish_driving("ROOM"));
     }
 
     /// A pool whose image was built from engine "engine-a".
