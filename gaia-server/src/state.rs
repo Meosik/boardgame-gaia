@@ -63,9 +63,31 @@ impl AppState {
         };
         let setup = serde_json::from_value(setup_json).ok();
 
-        let Some((revision, game_state)) = repo.load_latest_snapshot(room_code).await? else {
+        let Some((revision, mut game_state)) = repo.load_latest_snapshot(room_code).await? else {
             return Ok(());
         };
+
+        // A game against AI seats saved before `GameState::ai_game` existed has no mark, so its
+        // AI seats would not play on. The owner can name such a room in `GAIA_AI_RESUME_ROOMS`;
+        // the mark is then written here and saved with the game's next snapshots.
+        if let Some(pool) = &self.ai {
+            let unmarked = game_state.ai_game.is_none()
+                && game_state.dev_controller.is_none()
+                && game_state.tutorial.is_none();
+            let named = std::env::var("GAIA_AI_RESUME_ROOMS")
+                .ok()
+                .and_then(|rooms| resumed_ai_mark(&rooms, room_code, host_player));
+            if let (true, Some(mut mark)) = (unmarked, named) {
+                mark.teacher = pool.pin_teacher().await;
+                log::info!(
+                    "AI room {room_code}: resumed from GAIA_AI_RESUME_ROOMS (human seat {}, level {}, teacher {})",
+                    mark.human,
+                    mark.level.as_deref().unwrap_or("server default"),
+                    mark.teacher.as_deref().unwrap_or("built into the image")
+                );
+                game_state.ai_game = Some(mark);
+            }
+        }
 
         let room = rehydrated_room(
             room_code,
@@ -81,6 +103,36 @@ impl AppState {
         rooms.insert_if_absent(room_code.to_string(), room);
         Ok(())
     }
+}
+
+/// The AI-game mark for a room the owner names in `GAIA_AI_RESUME_ROOMS`: a comma-separated
+/// list of `CODE` or `CODE:level` (`crate::ai::LEVELS`; no level = the server's default). It
+/// is for games against AI seats saved before `GameState::ai_game` existed. The human seat is
+/// the room's host, as in every AI game; an entry with an unknown level is ignored.
+fn resumed_ai_mark(
+    rooms: &str,
+    room_code: &str,
+    host_player: gaia_engine::game_state::PlayerId,
+) -> Option<gaia_engine::game_state::AiGameMark> {
+    rooms.split(',').find_map(|entry| {
+        let (code, level) = match entry.trim().split_once(':') {
+            Some((code, level)) => (code.trim(), Some(level.trim())),
+            None => (entry.trim(), None),
+        };
+        if code != room_code {
+            return None;
+        }
+        let level = level.filter(|level| !level.is_empty());
+        if level.is_some_and(|level| !crate::ai::LEVELS.contains(&level)) {
+            log::warn!("GAIA_AI_RESUME_ROOMS: unknown AI level in {entry:?}, room not resumed");
+            return None;
+        }
+        Some(gaia_engine::game_state::AiGameMark {
+            human: host_player,
+            level: level.map(str::to_string),
+            teacher: None,
+        })
+    })
 }
 
 /// The in-memory room of a saved game (`AppState::ensure_room_loaded`).
@@ -211,5 +263,39 @@ mod tests {
         assert_eq!(room.ai_teacher, None);
         assert_eq!(room.players.len(), 4);
         assert!(!crate::ai::is_ai_room(&room));
+    }
+
+    #[test]
+    fn a_room_the_owner_names_gets_the_ai_game_mark() {
+        let mark = resumed_ai_mark("OTHER, AIROOM:hard", "AIROOM", 7);
+        assert_eq!(
+            mark,
+            Some(AiGameMark {
+                human: 7,
+                level: Some("hard".into()),
+                teacher: None,
+            })
+        );
+        // No level = the server's default; other rooms, unknown levels and an empty list: none.
+        assert_eq!(
+            resumed_ai_mark("AIROOM", "AIROOM", 7),
+            Some(AiGameMark {
+                human: 7,
+                level: None,
+                teacher: None,
+            })
+        );
+        assert_eq!(resumed_ai_mark("OTHER:hard", "AIROOM", 7), None);
+        assert_eq!(resumed_ai_mark("AIROOM:godlike", "AIROOM", 7), None);
+        assert_eq!(resumed_ai_mark("", "AIROOM", 7), None);
+
+        // A game saved without the mark, given it, loads like one created with it.
+        let mut game = saved_game(None);
+        game.ai_game = mark;
+        let room = loaded(7, game);
+        assert_eq!(room.dev_human_player, Some(7));
+        assert_eq!(room.ai_level.as_deref(), Some("hard"));
+        assert_eq!(room.players.len(), 1);
+        assert!(crate::ai::is_ai_room(&room));
     }
 }

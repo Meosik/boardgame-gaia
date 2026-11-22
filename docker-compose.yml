@@ -52,6 +52,9 @@ services:
       GAIA_AI_PARALLEL: ${GAIA_AI_PARALLEL:-0}
       # Factory of the teacher built into the image (gaia-rl/tools/ai_worker.py); empty = its default.
       GAIA_AI_TEACHER: ${GAIA_AI_TEACHER:-}
+      # AI games saved before the AI-game mark existed, to play on after a restart:
+      # CODE or CODE:level, comma-separated (gaia-server/src/state.rs `resumed_ai_mark`).
+      GAIA_AI_RESUME_ROOMS: ${GAIA_AI_RESUME_ROOMS:-}
       # Promoted teacher versions (gaia-server/src/ai.rs; made with gaia-rl/tools/teacher_version.py).
       GAIA_AI_TEACHERS_DIR: /opt/gaia-teachers
     # AI replays and live spectating are served from host folders, so new recordings appear
