@@ -121,7 +121,7 @@ export function PlayerActionShelf({
     && !player.tinkeroids_tiles_used?.includes(tinkeringTile)) {
     const imageSrc = tinkeringTileImageSrc(tinkeringTile);
     if (imageSrc) actionTiles.push({
-      key: 'tinkering', label: `팅커로이드 타일 ${tinkeringTile} 사용`, imageSrc, used: false,
+      key: 'tinkering', label: `팅커 타일 ${tinkeringTile} 사용`, imageSrc, used: false,
       action: { type: 'TinkeroidsUseTile', tile: tinkeringTile, coord: null },
     });
   }

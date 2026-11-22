@@ -23,7 +23,7 @@ describe('Korean display names', () => {
       Bescods: '매드 안드로이드',
       Nevlas: '네블라',
       Itars: '아이타',
-      Tinkeroids: '팅커로이드',
+      Tinkeroids: '팅커',
       Darkanians: '다카니안',
       Moweyds: '모웨이드',
       SpaceGiants: '스페이스자이언트',
