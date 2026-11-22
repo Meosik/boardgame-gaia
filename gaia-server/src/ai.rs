@@ -547,6 +547,7 @@ impl AiPool {
             },
         };
         let level = level.unwrap_or(&self.config.level);
+        let state = &asked_as(state, player);
         let request = serde_json::json!({
             "op": "choose", "room": memory, "player": player,
             "level": level, "state": state,
@@ -665,6 +666,56 @@ struct Turn {
     teacher: Option<String>,
 }
 
+/// The seats the room waits for. The offers of a charge queue and the entries of an
+/// income-order queue are answered in any order (the engine takes the answer of any queued
+/// seat: each depends only on that seat's own bowls and VP), so all queued seats are waited
+/// for at once and nobody waits for the seat ahead. Every other phase waits for one seat.
+pub(crate) fn awaited_players(state: &GameState) -> Vec<PlayerId> {
+    let mut players: Vec<PlayerId> = match &state.phase {
+        GamePhase::ChargePowerPending { queue, .. }
+        | GamePhase::LostPlanetChargePowerPending { queue, .. } => {
+            queue.iter().map(|entry| entry.player).collect()
+        }
+        GamePhase::IncomeOrderPending { queue, .. } => {
+            queue.iter().map(|entry| entry.player).collect()
+        }
+        _ => required_player(state).into_iter().collect(),
+    };
+    // A seat with two queued offers is still one seat (first place kept).
+    let mut seen = Vec::new();
+    players.retain(|player| {
+        let first = !seen.contains(player);
+        seen.push(*player);
+        first
+    });
+    players
+}
+
+/// `state` as the teacher is asked about it for `player`. The teacher answers for the front
+/// of a queue (`RuleEngine::decision_player`), so in the phases where any queued seat may
+/// answer (`awaited_players`) the seat's own entry is moved to the front of the copy. The
+/// entries are independent, so the question itself is the same.
+fn asked_as(state: &GameState, player: PlayerId) -> GameState {
+    fn to_front<T>(queue: &mut Vec<T>, is_asked: impl Fn(&T) -> bool) {
+        if let Some(position) = queue.iter().position(is_asked) {
+            let entry = queue.remove(position);
+            queue.insert(0, entry);
+        }
+    }
+    let mut state = state.clone();
+    match &mut state.phase {
+        GamePhase::ChargePowerPending { queue, .. }
+        | GamePhase::LostPlanetChargePowerPending { queue, .. } => {
+            to_front(queue, |entry| entry.player == player);
+        }
+        GamePhase::IncomeOrderPending { queue, .. } => {
+            to_front(queue, |entry| entry.player == player);
+        }
+        _ => {}
+    }
+    state
+}
+
 async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
     let rooms = app.rooms.read().await;
     let room = rooms.get_room(room_code)?;
@@ -679,8 +730,13 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
     {
         return None;
     }
-    let player = required_player(state)?;
-    if player == human || state.undo_state.pending_request.is_some() {
+    // The first AI seat the room waits for: in a charge or income-order queue that is not
+    // only the front, so the AI seats answer while the human still decides (and the human
+    // answers without waiting for them).
+    let player = awaited_players(state)
+        .into_iter()
+        .find(|player| *player != human)?;
+    if state.undo_state.pending_request.is_some() {
         return None;
     }
     Some(Turn {
@@ -808,7 +864,7 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 ));
             }
             let state = room.game_state.as_mut().ok_or(RuleError::WrongPhase)?;
-            if required_player(state) != Some(turn.player) {
+            if !awaited_players(state).contains(&turn.player) {
                 return Err(RuleError::NotYourTurn);
             }
             let mut probe = state.clone();
@@ -950,7 +1006,7 @@ fn hint_position(room: &Room, player: PlayerId, revision: u64) -> Result<&GameSt
     if room.revision != revision {
         return Err(HintError::Stale);
     }
-    if required_player(state) != Some(player) || state.undo_state.pending_request.is_some() {
+    if !awaited_players(state).contains(&player) || state.undo_state.pending_request.is_some() {
         return Err(HintError::NotYourDecision);
     }
     Ok(state)
@@ -1120,6 +1176,50 @@ mod tests {
             hint_position(&room, human, 5).err(),
             Some(HintError::NotAnAiGame)
         );
+    }
+
+    #[test]
+    fn every_seat_of_a_charge_or_income_queue_is_awaited_and_asked_as_its_front() {
+        use gaia_engine::game_state::{HexCoord, PendingCharge, PendingIncomeOrder};
+        let (room, human) = ai_room_waiting_for_its_human();
+        let mut state = room.game_state.expect("the room has a game");
+        // One seat outside a queue: only that seat is awaited, and the copy is unchanged.
+        assert_eq!(awaited_players(&state), vec![human]);
+        assert_eq!(asked_as(&state, human).phase, state.phase);
+
+        let offer = |player| PendingCharge {
+            player,
+            hex: HexCoord::new(0, 0),
+            max_power: 1,
+        };
+        // Seat 8 has two offers (a nested build): one seat, its first offer first.
+        state.phase = GamePhase::ChargePowerPending {
+            queue: vec![offer(8), offer(7), offer(8), offer(9)],
+            resume_active_player: Some(0),
+        };
+        assert_eq!(awaited_players(&state), vec![8, 7, 9]);
+        let asked = asked_as(&state, 9);
+        assert_eq!(RuleEngine::decision_player(&asked).ok().flatten(), Some(9));
+        match &asked.phase {
+            GamePhase::ChargePowerPending { queue, .. } => assert_eq!(
+                queue.iter().map(|entry| entry.player).collect::<Vec<_>>(),
+                vec![9, 8, 7, 8]
+            ),
+            other => panic!("expected ChargePowerPending, got {other:?}"),
+        }
+
+        let order = |player| PendingIncomeOrder {
+            player,
+            charge_amount: 4,
+            bonus_tokens: 1,
+        };
+        state.phase = GamePhase::IncomeOrderPending {
+            queue: vec![order(7), order(10)],
+            round: 2,
+        };
+        assert_eq!(awaited_players(&state), vec![7, 10]);
+        let asked = asked_as(&state, 10);
+        assert_eq!(RuleEngine::decision_player(&asked).ok().flatten(), Some(10));
     }
 
     fn slow_answer() -> AiDecision {
