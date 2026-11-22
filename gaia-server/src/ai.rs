@@ -47,7 +47,7 @@ use crate::{
     room::manager::{AiStall, AiStallReason, Room, RoomState},
     services::{
         dev_game::required_player,
-        game_action::apply_logged_action,
+        game_action::apply_server_seat_action,
         turn_management::TurnManagementService,
     },
     state::AppState,
@@ -868,7 +868,8 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 return Err(RuleError::NotYourTurn);
             }
             let mut probe = state.clone();
-            let events = match apply_decision(&mut probe, turn.player, decision.clone()) {
+            let events =
+                match apply_decision(&mut probe, turn.player, decision.clone(), turn.revision) {
                 Ok(events) => events,
                 Err(error) => {
                     rejected = Some(error.to_string());
@@ -1083,13 +1084,16 @@ pub async fn hint(
     Ok(decision)
 }
 
+/// `revision` is the room revision the decision is applied at: an AI seat's move keeps the undo
+/// history in step with the game (`apply_server_seat_action`).
 fn apply_decision(
     state: &mut GameState,
     player: PlayerId,
     decision: AiDecision,
+    revision: u64,
 ) -> Result<Vec<gaia_engine::game_state::GameEvent>, RuleError> {
     match decision {
-        AiDecision::Game(action) => apply_logged_action(state, player, action),
+        AiDecision::Game(action) => apply_server_seat_action(state, player, action, revision),
         AiDecision::Setup(action) => RuleEngine::apply_setup_action(state, player, action),
     }
 }

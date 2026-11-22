@@ -368,6 +368,8 @@ pub fn auto_advance_dev_actions(
     room: &mut Room,
     human_player: PlayerId,
 ) -> Result<Vec<GameEvent>, RuleError> {
+    // The bots move inside the command or transition that is being applied at this revision.
+    let revision = room.revision;
     let state = room.game_state.as_mut().ok_or(RuleError::WrongPhase)?;
     if state.dev_controller.is_some() {
         return Ok(Vec::new());
@@ -409,10 +411,13 @@ pub fn auto_advance_dev_actions(
                 action,
                 GameAction::Pass { .. } | GameAction::FreeAction { .. }
             );
-        events.extend(super::game_action::apply_logged_action(
+        // A bot's reply can end the human's turn (power-charge answers): keep the undo history
+        // in step, as for AI seats.
+        events.extend(super::game_action::apply_server_seat_action(
             state,
             active_player,
             action,
+            revision,
         )?);
         if is_main_action {
             *room.dev_bot_action_counts.entry(active_player).or_insert(0) += 1;

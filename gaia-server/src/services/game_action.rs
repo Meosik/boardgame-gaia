@@ -114,6 +114,31 @@ pub(crate) fn apply_tracked_action(
     Ok(events)
 }
 
+/// Applies the action of a seat the server plays (an AI seat, a DEV bot). Such a turn is not an
+/// undo checkpoint of its own — a player undoes their own turn and the server's moves after it
+/// go with it — but the undo history has to follow the game all the same: a server seat's reply
+/// is often what ends a human turn (the last power-charge answer to the human's build). Without
+/// this that turn stayed open, the human's next turn was merged into it, and both undo buttons
+/// went back to the start of the earlier turn (2026-11-23: a Gaiaformer gained in between was
+/// gone). `revision` is the room revision the action is applied at.
+pub(crate) fn apply_server_seat_action(
+    state: &mut GameState,
+    player_id: PlayerId,
+    action: GameAction,
+    revision: u64,
+) -> Result<Vec<GameEvent>, RuleError> {
+    let own_turn = action_phase_player(state) == Some(player_id);
+    let events = apply_logged_action(state, player_id, action)?;
+    if own_turn {
+        // A server seat took its own turn, so a turn still open ended before it (rooms saved
+        // before this fix carry such a turn).
+        close_open_turn(state, revision);
+    } else {
+        finalize_completed_turn(state, revision.saturating_add(1), false);
+    }
+    Ok(events)
+}
+
 pub(crate) fn apply_logged_action(
     state: &mut GameState,
     player: PlayerId,
@@ -168,11 +193,14 @@ fn finalize_completed_turn(state: &mut GameState, completed_revision: u64, is_fr
     if phase_keeps_turn_open(state) {
         return;
     }
-    let open_turn = state
-        .undo_state
-        .open_turn
-        .take()
-        .unwrap_or_else(|| unreachable!("open turn was checked above"));
+    close_open_turn(state, completed_revision);
+}
+
+/// Moves the open turn, if there is one, to the completed turns (the last two are kept).
+fn close_open_turn(state: &mut GameState, completed_revision: u64) {
+    let Some(open_turn) = state.undo_state.open_turn.take() else {
+        return;
+    };
     state.undo_state.recent_turns.push(UndoCompletedTurn {
         player: open_turn.player,
         start_revision: open_turn.start_revision,
@@ -390,6 +418,97 @@ mod tests {
         assert_eq!(state.undo_state.recent_turns[0].player, 0);
         assert_eq!(state.undo_state.recent_turns[0].start_revision, 30);
         assert_eq!(state.undo_state.recent_turns[0].completed_revision, 31);
+    }
+
+    /// 2026-11-23, an AI game: the human built next to the AI seats, the AI seats answered the
+    /// power-charge offers, and the human's turn stayed open — so their next turn was merged
+    /// into it and undo went back to the start of the earlier turn.
+    #[test]
+    fn a_server_seats_last_charge_reply_completes_the_humans_turn() {
+        use gaia_engine::game_state::{HexCoord, PendingCharge, UndoOpenTurn};
+        let offer = |player| PendingCharge {
+            player,
+            hex: HexCoord::new(0, 0),
+            max_power: 1,
+        };
+        let mut state = GameStateBuilder::new()
+            .with_player(0)
+            .with_player(1)
+            .with_player(2)
+            .with_phase(GamePhase::ChargePowerPending {
+                queue: vec![offer(1), offer(2)],
+                resume_active_player: Some(1),
+            })
+            .build();
+        // Player 0's turn: a free action at revision 40, the build at 41.
+        state.undo_state.open_turn = Some(UndoOpenTurn {
+            player: 0,
+            start_revision: 40,
+            free_action_revisions: vec![40],
+        });
+
+        super::apply_server_seat_action(&mut state, 1, GameAction::ChargePower { accept: false }, 42)
+            .unwrap_or_else(|error| panic!("the first reply should succeed: {error}"));
+        // One offer is still open: the turn is not over yet.
+        assert!(state.undo_state.open_turn.is_some());
+        assert!(state.undo_state.recent_turns.is_empty());
+
+        super::apply_server_seat_action(&mut state, 2, GameAction::ChargePower { accept: false }, 43)
+            .unwrap_or_else(|error| panic!("the last reply should succeed: {error}"));
+        assert_eq!(state.phase, GamePhase::ActionPhase { active_player: 1 });
+        assert!(state.undo_state.open_turn.is_none());
+        assert_eq!(state.undo_state.recent_turns.len(), 1);
+        assert_eq!(state.undo_state.recent_turns[0].player, 0);
+        assert_eq!(state.undo_state.recent_turns[0].start_revision, 40);
+        assert_eq!(state.undo_state.recent_turns[0].completed_revision, 44);
+    }
+
+    #[test]
+    fn a_server_seats_own_turn_is_no_undo_checkpoint_and_closes_a_turn_left_open() {
+        use gaia_engine::game_state::UndoOpenTurn;
+        let mut state = GameStateBuilder::new()
+            .with_player(0)
+            .with_player_fn(1, |player| player.resources.knowledge = 10)
+            .with_phase(GamePhase::ActionPhase { active_player: 1 })
+            .build();
+        // A room saved before the fix: player 0's turn was never closed.
+        state.undo_state.open_turn = Some(UndoOpenTurn {
+            player: 0,
+            start_revision: 40,
+            free_action_revisions: vec![40],
+        });
+
+        super::apply_server_seat_action(
+            &mut state,
+            1,
+            GameAction::ResearchAdvance {
+                track: ResearchTrack::Science,
+            },
+            45,
+        )
+        .unwrap_or_else(|error| panic!("the server seat's action should succeed: {error}"));
+
+        // Player 0's turn is the one undo goes back to; the server seat's turn left no entry.
+        assert!(state.undo_state.open_turn.is_none());
+        assert_eq!(state.undo_state.recent_turns.len(), 1);
+        assert_eq!(state.undo_state.recent_turns[0].player, 0);
+        assert_eq!(state.undo_state.recent_turns[0].start_revision, 40);
+        assert_eq!(state.undo_state.recent_turns[0].completed_revision, 45);
+
+        // The human's next turn starts a checkpoint of its own.
+        state.phase = GamePhase::ActionPhase { active_player: 0 };
+        state.players[0].resources.knowledge = 10;
+        apply_tracked_action(
+            &mut state,
+            0,
+            GameAction::ResearchAdvance {
+                track: ResearchTrack::Science,
+            },
+            50,
+        )
+        .unwrap_or_else(|error| panic!("the human's action should succeed: {error}"));
+        assert_eq!(state.undo_state.recent_turns.len(), 2);
+        assert_eq!(state.undo_state.recent_turns[1].start_revision, 50);
     }
 
     #[test]
