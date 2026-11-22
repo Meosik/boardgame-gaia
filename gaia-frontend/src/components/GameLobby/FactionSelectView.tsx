@@ -10,6 +10,8 @@ import { ResearchBoard } from '../PlayerDashboard/ResearchBoard';
 import { SpaceshipBoards } from '../SpaceshipBoards';
 import { RoundBoosters } from '../RoundBoosters';
 import { ScoringBoard } from '../ScoringBoard';
+import { PersonalBoardDrawer } from '../PersonalBoardDrawer';
+import { PlayerDashboard } from '../PlayerDashboard';
 import { LostFleetTechRequirementBoard } from '../LostFleetTechRequirementBoard';
 import { FactionBadge } from './FactionBadge';
 import { TerraformingSelectionBoard } from './TerraformingSelectionBoard';
@@ -489,11 +491,10 @@ function StartingStructureSetup({
     (activePlayer?.structures.filter((candidate) => candidate.kind === placement.kind).length ?? 0) + 1;
   return (
     <div className="app app--game setup-game-preview starting-structure-layout">
-      <nav className="game-topbar" aria-label="초기 설정 상태">
-        <span className="game-top-control setup-phase-indicator">
-          {factionDisplayName(activeFaction)} 초기 설정 · {factionPlacementNumber}번째 {structure} · 전체 {placement.placement_index + 1}단계
-        </span>
-      </nav>
+      <SetupTopbar
+        game={game}
+        phaseLabel={`${factionDisplayName(activeFaction)} 초기 설정 · ${factionPlacementNumber}번째 ${structure} · 전체 ${placement.placement_index + 1}단계`}
+      />
       <aside className="game-reference-rail" aria-label="게임 참조 보드">
         {/* What a starting position is chosen against: the boosters dealt into this game and the
             round and final goals. Nobody holds a booster yet, so all of them are in the pool. */}
@@ -632,9 +633,10 @@ function StartingBoosterSetup({
 
   return (
     <div className="app app--game setup-game-preview">
-      <nav className="game-topbar" aria-label="초기 설정 상태">
-        <span className="game-top-control setup-phase-indicator">{factionDisplayName(game.players.find((player) => player.player_id === selection.active_player)?.faction)} 초기 설정 · 부스터 선택</span>
-      </nav>
+      <SetupTopbar
+        game={game}
+        phaseLabel={`${factionDisplayName(game.players.find((player) => player.player_id === selection.active_player)?.faction)} 초기 설정 · 부스터 선택`}
+      />
       <aside className="game-reference-rail" aria-label="게임 참조 보드">
         <section className="game-reference-card">
           <h2>라운드·게임 종료 목표</h2>
@@ -933,6 +935,44 @@ function BiddingSetup({
         })}
       </section>
     </div>
+  );
+}
+
+/** The top bar of the placement and booster screens. Setup has no personal panel, so each seat
+ * gets a button that opens its faction board: the starting resources and power bowls are seeded
+ * as soon as the factions are assigned, which is what a starting position is weighed against. */
+function SetupTopbar({ game, phaseLabel }: { game: GameState; phaseLabel: string }) {
+  const [openPlayerId, setOpenPlayerId] = useState<PlayerId | null>(null);
+  const openPlayer = game.players.find((player) => player.player_id === openPlayerId) ?? null;
+  return (
+    <>
+      <nav className="game-topbar" aria-label="초기 설정 상태">
+        <span className="game-top-control setup-phase-indicator">{phaseLabel}</span>
+        {game.turn_order.map((id) => {
+          const player = game.players.find((candidate) => candidate.player_id === id);
+          if (!player?.faction) return null;
+          return (
+            <button
+              key={id}
+              type="button"
+              className="game-top-control setup-personal-board-control"
+              aria-pressed={openPlayerId === id}
+              onClick={() => setOpenPlayerId((current) => (current === id ? null : id))}
+            >
+              {factionDisplayName(player.faction)} 보드
+            </button>
+          );
+        })}
+      </nav>
+      {openPlayer && (
+        <PersonalBoardDrawer
+          title={`${openPlayer.nickname} · ${factionDisplayName(openPlayer.faction)} · 개인 보드`}
+          onClose={() => setOpenPlayerId(null)}
+        >
+          <PlayerDashboard player={openPlayer} />
+        </PersonalBoardDrawer>
+      )}
+    </>
   );
 }
 

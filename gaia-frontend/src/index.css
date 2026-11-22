@@ -110,6 +110,9 @@ body { min-height: 100vh; }
 }
 .game-top-control:disabled { cursor: default; opacity: 0.42; }
 .game-top-pass-control { flex: 0 0 76px; border-color: var(--color-warning); color: var(--color-warning); }
+/* The per-seat faction-board buttons of the setup top bar: as wide as their label, so the phase
+   indicator keeps the rest of the row. */
+.setup-personal-board-control { flex: 0 1 auto; white-space: nowrap; }
 
 .game-reference-rail {
   grid-area: reference;

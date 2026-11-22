@@ -407,6 +407,7 @@ describe('FactionSelectView bidding interactions', () => {
     expect(screen.getByRole('img', { name: 'P3 · 제노스 · 부스터 #8' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'P9 · 타클론 · 부스터 #4' })).toBeInTheDocument();
     expect(screen.getByText('비딩 -4점')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '테란 보드' })).toBeInTheDocument();
     const confirm = screen.getByRole('button', { name: '부스터 선택 확정' });
     expect(confirm).toBeDisabled();
 
