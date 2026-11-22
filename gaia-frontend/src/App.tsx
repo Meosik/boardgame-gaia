@@ -704,7 +704,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
         )
         .map((hex) => hex.coord)
     : [];
-  const pendingDecisionPlayer = pendingDecisionPlayerId(gameState.phase);
+  const pendingDecisionPlayer = pendingDecisionPlayerId(gameState.phase, myId);
   const latestAction = actionEntries[actionEntries.length - 1] ?? null;
   // A reviewed position keeps the action that led to it marked for as long as it is on screen.
   const toastAction = !replay && (reviewing || latestAction?.index === recentActionIndex) ? latestAction : null;

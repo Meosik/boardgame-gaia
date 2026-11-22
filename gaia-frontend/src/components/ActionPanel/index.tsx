@@ -33,7 +33,7 @@ import type {
   StructureType,
   TechTileChoice,
 } from '../../types/game';
-import { activeActionPlayerId } from '../../types/game';
+import { activeActionPlayerId, queuedEntryFor } from '../../types/game';
 
 interface Props {
   gameState: GameState;
@@ -751,7 +751,8 @@ export function ActionPanel({
         ? phase.LostPlanetChargePowerPending.queue
         : null;
   if (chargeQueue) {
-    const entry = chargeQueue[0];
+    // Any queued player may answer: my own offer when I have one, else the front seat's.
+    const entry = queuedEntryFor(chargeQueue, myPlayerId);
     if (!entry) return <WaitingPanel text="파워 충전 대기열 처리 중..." />;
     if (entry.player !== myPlayerId) {
       const name = gameState.players.find((p) => p.player_id === entry.player)?.nickname ?? '상대';
@@ -819,7 +820,7 @@ export function ActionPanel({
   }
 
   if (typeof phase === 'object' && 'IncomeOrderPending' in phase) {
-    const entry = phase.IncomeOrderPending.queue[0];
+    const entry = queuedEntryFor(phase.IncomeOrderPending.queue, myPlayerId);
     if (!entry) return <WaitingPanel text="수입 순서 결정 대기열 처리 중..." />;
     if (entry.player !== myPlayerId) {
       const name = gameState.players.find((p) => p.player_id === entry.player)?.nickname ?? '상대';

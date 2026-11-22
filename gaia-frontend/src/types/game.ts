@@ -903,16 +903,32 @@ export function activeActionPlayerId(
   return state.turn_order[state.phase.ActionPhase.active_player] ?? null;
 }
 
-/** Resolve the player who must answer a phase-blocking decision before play resumes. */
-export function pendingDecisionPlayerId(phase: GamePhase): PlayerId | null {
+/** The entry of `player` in a charge or income-order queue, else the front entry. The server
+ * takes the answers of such a queue in any order, so a queued player answers their own entry
+ * without waiting for the seats ahead. */
+export function queuedEntryFor<T extends { player: PlayerId }>(
+  queue: readonly T[],
+  player?: PlayerId | null,
+): T | undefined {
+  return (player == null ? undefined : queue.find((entry) => entry.player === player)) ?? queue[0];
+}
+
+/** Resolve the player who must answer a phase-blocking decision before play resumes. In a
+ * charge or income-order queue every queued player may answer: `viewer` is returned when it
+ * is queued, the front of the queue otherwise. */
+export function pendingDecisionPlayerId(phase: GamePhase, viewer?: PlayerId | null): PlayerId | null {
   if (typeof phase !== 'object' || phase === null) return null;
 
   if ('LostPlanetPlacementPending' in phase) return phase.LostPlanetPlacementPending.player;
-  if ('ChargePowerPending' in phase) return phase.ChargePowerPending.queue[0]?.player ?? null;
-  if ('LostPlanetChargePowerPending' in phase) {
-    return phase.LostPlanetChargePowerPending.queue[0]?.player ?? null;
+  if ('ChargePowerPending' in phase) {
+    return queuedEntryFor(phase.ChargePowerPending.queue, viewer)?.player ?? null;
   }
-  if ('IncomeOrderPending' in phase) return phase.IncomeOrderPending.queue[0]?.player ?? null;
+  if ('LostPlanetChargePowerPending' in phase) {
+    return queuedEntryFor(phase.LostPlanetChargePowerPending.queue, viewer)?.player ?? null;
+  }
+  if ('IncomeOrderPending' in phase) {
+    return queuedEntryFor(phase.IncomeOrderPending.queue, viewer)?.player ?? null;
+  }
   if ('GaiaDecisionPending' in phase) return phase.GaiaDecisionPending.queue[0]?.player ?? null;
   if ('TinkeroidsTileSelectionPending' in phase) {
     return phase.TinkeroidsTileSelectionPending.player;

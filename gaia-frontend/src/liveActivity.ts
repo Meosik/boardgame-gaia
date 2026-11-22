@@ -296,7 +296,7 @@ export function turnStatus(state: GameState, myPlayerId: PlayerId): TurnStatus |
     }
   }
 
-  const pending = pendingDecisionPlayerId(phase);
+  const pending = pendingDecisionPlayerId(phase, myPlayerId);
   if (pending !== null) {
     const label = pendingLabel(phase);
     return pending === myPlayerId
