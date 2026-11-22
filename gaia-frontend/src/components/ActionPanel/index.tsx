@@ -2,6 +2,7 @@ import { ADVANCED_TECH_TILE_LABELS } from '../advancedTechDescriptions';
 import { ARTIFACT_LABELS } from '../artifactDescriptions';
 import { ActionCrop } from '../ActionCrop';
 import { academyActionReward } from '../academyAction';
+import { chargeAmount, chargeOfferText } from '../chargeAmount';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { shallow } from 'zustand/shallow';
@@ -759,12 +760,26 @@ export function ActionPanel({
     const hasTaklonsPi =
       currentPlayer?.faction === 'Taklons' &&
       currentPlayer.structures.some((structure) => structure.kind === 'PlanetaryInstitute');
+    // What accepting really charges: the offer is cut down when the power cycle cannot take it
+    // all or the VP run short, so the prompt names that amount and its VP cost, not the offer's.
+    const myPower = currentPlayer?.resources.power;
+    const myVp = currentPlayer?.vp ?? 0;
+    const amount = myPower ? chargeAmount(entry.max_power, myPower, myVp) : entry.max_power;
+    const amountTokenFirst = myPower ? chargeAmount(entry.max_power, myPower, myVp, 1) : entry.max_power;
     return (
       <div className="action-panel">
         <h3 className="action-panel-title">파워 충전</h3>
-        <p className="action-hint">
-          최대 {entry.max_power}까지 충전할 수 있습니다 (승점 {entry.max_power - 1}점 소모). 충전하시겠습니까?
-        </p>
+        {hasTaklonsPi ? (
+          <p className="action-hint">
+            토큰을 먼저 받으면: {chargeOfferText(entry.max_power, amountTokenFirst)}
+            <br />
+            충전을 먼저 하면: {chargeOfferText(entry.max_power, amount)}
+          </p>
+        ) : (
+          <p className="action-hint">
+            {chargeOfferText(entry.max_power, amount)} 충전하시겠습니까?
+          </p>
+        )}
         {hasTaklonsPi ? (
           <>
             <button
@@ -790,7 +805,7 @@ export function ActionPanel({
             data-tutorial-target="charge"
             onClick={() => actions.sendAction({ type: 'ChargePower', accept: true })}
           >
-            충전 ({entry.max_power})
+            충전 ({amount})
           </button>
         )}
         <button
