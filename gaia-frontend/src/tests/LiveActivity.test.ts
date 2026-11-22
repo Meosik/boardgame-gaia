@@ -101,6 +101,28 @@ describe('opponentLastMoves', () => {
     expect(moves.get(1)?.hexes.size).toBe(0);
     expect(moves.has(0)).toBe(false);
   });
+
+  it.each([
+    'ChargePower',
+    'TaklonsChargePower',
+    'ChooseIncomeOrder',
+    'TerransGaiaConversion',
+    'ItarsGaiaTechChoice',
+    'ItarsGaiaTechTile',
+    'FinishGaiaDecision',
+    'SelectTinkeringTile',
+    'FreeAction',
+  ])('does not let a %s response replace the move', (action) => {
+    const answered: GameEvent[] = [
+      ...buildMine,
+      { ResourceChanged: { player: 1, delta: { credits: -1 } } },
+      { ActionLog: { player: 1, action, event_count: 1 } },
+    ];
+    const moves = opponentLastMoves(answered, liveActionEntries(answered, players), 0);
+
+    expect(moves.get(1)?.text).toContain('광산 건설');
+    expect(moves.get(1)?.hexes.has('1,-1')).toBe(true);
+  });
 });
 
 describe('aiStallWarning', () => {

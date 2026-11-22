@@ -145,6 +145,9 @@ const NOT_A_MOVE = new Set([
   'ChooseIncomeOrder',
   'TerransGaiaConversion',
   'ItarsGaiaTechChoice',
+  // The older form of the same Gaia-phase choice; the engine still accepts it and the server
+  // logs whichever name the action came in with.
+  'ItarsGaiaTechTile',
   'FinishGaiaDecision',
   'SelectTinkeringTile',
   'FreeAction',
