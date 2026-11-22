@@ -7,7 +7,6 @@ import type {
   RoomSummary,
   GameSetup,
   PreviewBoard,
-  SeedPreview,
   SetupMode,
 } from '../types/game';
 import { decodeHexCoordinates } from './websocket';
@@ -175,12 +174,6 @@ export const api = {
 
   getPreviewBoard(code: string): Promise<PreviewBoard> {
     return request(`${BASE}/rooms/${code}/preview_board`);
-  },
-
-  /** The map, tiles and four factions' starting positions of a seed, without a room. */
-  getSeedPreview(seed: string, factions: FactionId[]): Promise<SeedPreview> {
-    const query = new URLSearchParams({ seed, factions: factions.join(',') });
-    return request(`${BASE}/preview_seed?${query.toString()}`);
   },
 
   async health(): Promise<void> {

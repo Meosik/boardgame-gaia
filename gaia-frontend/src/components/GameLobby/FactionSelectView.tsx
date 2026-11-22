@@ -90,7 +90,7 @@ type StartingBoosterPhase = Extract<SetupPhase, { StartingBoosters: unknown }>['
 /// server.
 const MAX_BID = 100;
 
-export const HOME_PLANET_BY_FACTION: Record<FactionId, PlanetType> = {
+const HOME_PLANET_BY_FACTION: Record<FactionId, PlanetType> = {
   Terrans: 'Terra',
   Lantids: 'Terra',
   Xenos: 'Desert',
