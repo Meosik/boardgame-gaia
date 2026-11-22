@@ -731,6 +731,34 @@ async fn stall(app: &AppState, room_code: &str, turn: &Turn, reason: AiStallReas
     true
 }
 
+/// Marks the AI seats as stopped at the revision the room is at now and returns that revision.
+/// For a stop that is the server's, not the teacher's (`stall_on_server_error`): the failing
+/// step came after the seat's move was read, so the mark cannot go on the revision of a `Turn`.
+fn mark_server_stall(room: &mut Room, player: PlayerId) -> u64 {
+    room.ai_stalled = Some(AiStall {
+        revision: room.revision,
+        player,
+        reason: AiStallReason::ServerError,
+    });
+    room.revision
+}
+
+/// The driver is about to end on a server error (the round could not be ended after the move
+/// of `player`, or that move could not be saved): say so on the game screen, with the retry
+/// button, instead of leaving the seats silent. `retry` runs the round end again.
+async fn stall_on_server_error(app: &AppState, room_code: &str, player: PlayerId) {
+    let revision = {
+        let mut rooms = app.rooms.write().await;
+        let Some(room) = rooms.get_room_mut(room_code) else {
+            return;
+        };
+        mark_server_stall(room, player)
+    };
+    if let Ok(revision) = gaia_protocol::Revision::new(revision) {
+        coordinator::broadcast_snapshot(app, room_code, revision).await;
+    }
+}
+
 async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
     // A full game has a few hundred decisions; this only guards against a logic loop.
     let mut conflicts_in_a_row = 0;
@@ -811,6 +839,7 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 last_move = std::time::Instant::now();
                 if let Err(error) = TurnManagementService::maybe_end_round(app, room_code).await {
                     log::error!("maybe_end_round failed for room {room_code}: {error}");
+                    stall_on_server_error(app, room_code, turn.player).await;
                     return;
                 }
             }
@@ -839,6 +868,7 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
             }
             Err(error) => {
                 log::error!("AI move could not be committed in room {room_code}: {error}");
+                stall_on_server_error(app, room_code, turn.player).await;
                 return;
             }
         }
@@ -852,7 +882,7 @@ pub async fn retry(app: &AppState, room_code: &str, player: PlayerId) -> Result<
     if app.ai.is_none() {
         return Err(HintError::NotAnAiGame);
     }
-    let cleared = {
+    let (cleared, stopped_seat) = {
         let mut rooms = app.rooms.write().await;
         let room = rooms
             .get_room_mut(room_code)
@@ -860,9 +890,12 @@ pub async fn retry(app: &AppState, room_code: &str, player: PlayerId) -> Result<
         if !is_ai_room(room) || room.dev_human_player != Some(player) {
             return Err(HintError::NotAnAiGame);
         }
-        let current = room.current_ai_stall().is_some();
+        let current = room.current_ai_stall();
         room.ai_stalled = None;
-        current.then_some(room.revision)
+        (
+            current.map(|_| room.revision),
+            current.map_or(player, |stall| stall.player),
+        )
     };
     // The stopped banner goes away at once; the teacher's move follows when it has one.
     if let Some(revision) = cleared.and_then(|revision| gaia_protocol::Revision::new(revision).ok())
@@ -870,6 +903,13 @@ pub async fn retry(app: &AppState, room_code: &str, player: PlayerId) -> Result<
         coordinator::broadcast_snapshot(app, room_code, revision).await;
     }
     log::info!("AI retry asked in room {room_code} by seat {player}");
+    // A stop on a failed round end leaves no seat to move, so the driver alone would find
+    // nothing to do: run that step again first (it does nothing unless the round is over).
+    if let Err(error) = TurnManagementService::maybe_end_round(app, room_code).await {
+        log::error!("maybe_end_round failed for room {room_code}: {error}");
+        stall_on_server_error(app, room_code, stopped_seat).await;
+        return Ok(());
+    }
     spawn_driver(app.clone(), room_code.to_string());
     Ok(())
 }
@@ -1182,6 +1222,17 @@ mod tests {
         assert!(coordinator::room_snapshot_view(&room)
             .get("ai_stalled")
             .is_none());
+    }
+
+    #[test]
+    fn a_server_error_stop_is_marked_at_the_revision_the_room_is_at() {
+        let (mut room, _) = ai_room_waiting_for_its_human();
+        room.revision = 8;
+        assert_eq!(mark_server_stall(&mut room, 2), 8);
+        assert_eq!(
+            coordinator::room_snapshot_view(&room)["ai_stalled"],
+            serde_json::json!({"revision": 8, "player": 2, "reason": "server_error"})
+        );
     }
 
     #[test]

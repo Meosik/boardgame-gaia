@@ -417,7 +417,7 @@ export interface GameState {
   /** Added by the server to a live snapshot (not game state) while the AI seats of an AI game
    * wait at this position: the teacher gave no usable move for `player` and nothing was played
    * for it. Absent otherwise; `api.aiRetry` asks the teacher again. */
-  ai_stalled?: { revision: number; player: PlayerId; reason: 'no_answer' | 'rejected' } | null;
+  ai_stalled?: { revision: number; player: PlayerId; reason: 'no_answer' | 'rejected' | 'server_error' } | null;
   players: PlayerState[];
   board: BoardState;
   research_board: ResearchBoard;

@@ -103,6 +103,8 @@ pub enum AiStallReason {
     NoAnswer,
     /// The engine refused the move the teacher answered.
     Rejected,
+    /// Not the teacher: the server could not save the seat's move or end the round after it.
+    ServerError,
 }
 
 impl Room {

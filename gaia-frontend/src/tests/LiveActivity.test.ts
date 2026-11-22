@@ -174,6 +174,10 @@ describe('aiStallWarning', () => {
     expect(aiStallWarning(state({ ai_stalled: { revision: 7, player: 9, reason: 'rejected' } }))).toBe(
       '⚠ AI 교사 응답 없음 — 플레이어 9 차례에서 멈춤 (교사가 낸 수를 엔진이 거부함)',
     );
+    // The server's own failure, not the teacher's: a different line, the same retry button.
+    expect(aiStallWarning(state({ ai_stalled: { revision: 7, player: 1, reason: 'server_error' } }))).toBe(
+      '⚠ AI 진행 멈춤 — 영희의 수 뒤에 서버가 다음 단계로 넘어가지 못함',
+    );
   });
 });
 

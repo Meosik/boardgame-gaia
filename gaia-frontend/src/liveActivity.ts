@@ -255,12 +255,17 @@ function setupLabel(setup: Extract<GamePhase, { Setup: unknown }>['Setup']): {
 }
 
 /** The banner's warning line while the AI seats of an AI game wait: the teacher gave no usable
- * move for a seat, and the server plays nothing in its place until the player asks again. */
+ * move for a seat, and the server plays nothing in its place until the player asks again. A
+ * `server_error` stop is the server's own: it could not save that seat's move or end the round
+ * after it. */
 export function aiStallWarning(state: GameState | null | undefined): string | null {
   const stall = state?.ai_stalled;
   if (!stall) return null;
   const seat = state.players.find((player) => player.player_id === stall.player)?.nickname
     ?? `플레이어 ${stall.player}`;
+  if (stall.reason === 'server_error') {
+    return `⚠ AI 진행 멈춤 — ${seat}의 수 뒤에 서버가 다음 단계로 넘어가지 못함`;
+  }
   const why = stall.reason === 'rejected' ? '교사가 낸 수를 엔진이 거부함' : '교사가 답하지 못함';
   return `⚠ AI 교사 응답 없음 — ${seat} 차례에서 멈춤 (${why})`;
 }
