@@ -4941,8 +4941,9 @@ fn federation_submission_has_redundant_hex(
 /// adjacent to planets or satellites from any of your existing federations." Applies only when
 /// forming a genuinely new, separate federation — not to Ivits' single ever-growing federation,
 /// which is expected to touch its own existing hexes. The related "colonizing a planet directly
-/// adjacent to an existing federation enlarges it for free" mechanic (automatic, silent growth
-/// via `Build`, distinct from this action) isn't modeled — deliberately out of scope, see README.
+/// adjacent to an existing federation enlarges it for free" mechanic is modeled where the mine is
+/// placed (`apply_build_impl_with_options`, `apply_lost_planet_placement`): the new hex joins
+/// `federated_hexes`. A Hive space station placed next to the federation does not join it.
 fn federation_touches_an_existing_federation(
     state: &GameState,
     player_id: PlayerId,
