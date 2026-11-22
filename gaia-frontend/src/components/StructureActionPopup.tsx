@@ -94,7 +94,9 @@ function targetPieceAvailable(player: PlayerState, to: StructureType): boolean {
     return !player.structures.some(({ kind }) => kind === 'PlanetaryInstitute');
   }
   if (typeof to === 'object') {
-    return player.structures.filter(({ kind }) => typeof kind === 'object').length < 2;
+    // The two academies are two different pieces (rulebook p.13): the one already built is
+    // not on the faction board any more, the other one still is.
+    return !player.structures.some(({ kind }) => typeof kind === 'object' && kind.Academy === to.Academy);
   }
   return true;
 }
@@ -168,6 +170,8 @@ export function StructureActionPopup({
               const asset = structureAssetName(to);
               const color = mode.faction ? FACTION_STRUCTURE_COLOR[mode.faction] : 'gray';
               if (!asset) return null;
+              // An academy that is already built is not offered at all.
+              if (player && typeof to === 'object' && !targetPieceAvailable(player, to)) return null;
               const mineHasOpponentNeighbor = mode.structure === 'Mine' && player && board
                 ? Object.values(board.hexes).some((hex) => (
                     axialDistance(hex.coord, coord) <= 2

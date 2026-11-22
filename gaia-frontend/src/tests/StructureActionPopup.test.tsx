@@ -108,4 +108,37 @@ describe('StructureActionPopup', () => {
     if (researchLab) fireEvent.click(researchLab);
     expect(onUpgrade).not.toHaveBeenCalled();
   });
+
+  it('does not offer an academy that is already built', () => {
+    const player = {
+      player_id: 0,
+      faction: 'Terrans',
+      resources: { ore: 20, credits: 20 },
+      structures: [
+        { hex: { q: 0, r: 0 }, kind: 'ResearchLab' },
+        { hex: { q: 1, r: 0 }, kind: { Academy: 'Science' } },
+      ],
+    } as PlayerState;
+    const board = {
+      sectors: [],
+      hexes: {},
+      lost_planet: null,
+      spaceship_tiles: {},
+    } as BoardState;
+    render(
+      <StructureActionPopup
+        anchor={{ x: 100, y: 100 }}
+        coord={{ q: 0, r: 0 }}
+        mode={{ kind: 'structure', structure: 'ResearchLab', faction: 'Terrans' }}
+        player={player}
+        board={board}
+        onUpgrade={vi.fn()}
+        onStartFederation={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('과학 아카데미')).not.toBeInTheDocument();
+    expect(screen.getByText('정보 큐브 아카데미').closest('button')).toBeEnabled();
+  });
 });
