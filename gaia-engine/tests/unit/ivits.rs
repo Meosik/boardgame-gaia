@@ -312,6 +312,107 @@ fn ivits_second_federation_requires_7x_and_connects_to_the_existing_network() {
     }
 }
 
+fn grow(hexes: Vec<HexCoord>) -> GameAction {
+    GameAction::FormFederation {
+        hexes,
+        satellite_hexes: vec![],
+        token: FederationTokenChoice::Supply { kind: 2 },
+        bonus_build_coord: None,
+        bonus_tech_tile: None,
+        bonus_research_track: None,
+    }
+}
+
+/// The chain's first federation `a`-`b`-`c` (power 7) is formed and it is the Ivits' turn again.
+fn ivits_state_after_the_first_federation() -> gaia_engine::game_state::GameState {
+    let mut state = ivits_federation_state();
+    RuleEngine::apply_action(
+        &mut state,
+        0,
+        GameAction::FormFederation {
+            hexes: vec![
+                HexCoord::new(0, 0),
+                HexCoord::new(1, 0),
+                HexCoord::new(2, 0),
+            ],
+            satellite_hexes: vec![],
+            token: FederationTokenChoice::Supply { kind: 1 },
+            bonus_build_coord: None,
+            bonus_tech_tile: None,
+            bonus_research_track: None,
+        },
+    )
+    .unwrap_or_else(|e| panic!("first federation should succeed: {e}"));
+    state.phase = GamePhase::ActionPhase { active_player: 0 };
+    state
+}
+
+#[test]
+fn ivits_federation_that_already_has_the_power_grows_by_exactly_one_planet() {
+    use gaia_engine::game_state::AcademyType;
+    let mut state = ivits_state_after_the_first_federation();
+    // The federation now reaches `f` and two of its Trading Stations became Academies:
+    // 3+2+2 + 1 + 3+3 = 14, the power of the second token, before anything is connected.
+    for q in 3..=5 {
+        state.players[0].federated_hexes.push(HexCoord::new(q, 0));
+    }
+    for q in 4..=5 {
+        let hex = state.board.hexes.get_mut(&HexCoord::new(q, 0));
+        hex.unwrap_or_else(|| panic!("hex exists")).structures[0].kind =
+            StructureType::Academy(AcademyType::Science);
+    }
+    let h = HexCoord::new(7, 0);
+    state.board.hexes.insert(h, structure_hex(h, 0, StructureType::Mine));
+
+    // Two planets where one is enough: the Mine at `h` can be left out.
+    let both = RuleEngine::apply_action(&mut state, 0, grow(vec![HexCoord::new(6, 0), h]));
+    assert!(both.is_err(), "one planet is enough: {both:?}");
+
+    // One connected planet is a Form a Federation action, although the power was there.
+    RuleEngine::apply_action(&mut state, 0, grow(vec![HexCoord::new(6, 0)]))
+        .unwrap_or_else(|e| panic!("connecting one planet should succeed: {e}"));
+    assert_eq!(state.players[0].federation_tokens.len(), 2);
+}
+
+#[test]
+fn ivits_growth_counts_the_tech_tile_that_makes_large_buildings_worth_four() {
+    use gaia_engine::game_state::TechTile;
+    // `d`+`e`+`f` add 1+2+2 = 5 to the first federation's 7: 12, two short of 14.
+    let growth = || {
+        grow(vec![
+            HexCoord::new(3, 0),
+            HexCoord::new(4, 0),
+            HexCoord::new(5, 0),
+        ])
+    };
+    let mut state = ivits_state_after_the_first_federation();
+    let short = RuleEngine::apply_action(&mut state, 0, growth());
+    assert!(short.is_err(), "12 power is not 14: {short:?}");
+
+    // With the tile the Planetary Institute in the old part counts 4 (13) — still short.
+    state.players[0].tech_tiles.push(TechTile(6));
+    let short = RuleEngine::apply_action(&mut state, 0, growth());
+    assert!(short.is_err(), "13 power is not 14: {short:?}");
+
+    // An Academy in the new part counts 4 as well. With `e` an Academy and `f` a Mine the
+    // total is 4+2+2 + 1+4+1 = 14 only when the tile counts on the new part too (13 if not).
+    use gaia_engine::game_state::AcademyType;
+    let mut set_kind = |q: i32, kind: StructureType| {
+        state
+            .board
+            .hexes
+            .get_mut(&HexCoord::new(q, 0))
+            .unwrap_or_else(|| panic!("hex exists"))
+            .structures[0]
+            .kind = kind;
+    };
+    set_kind(4, StructureType::Academy(AcademyType::Science));
+    set_kind(5, StructureType::Mine);
+    RuleEngine::apply_action(&mut state, 0, growth())
+        .unwrap_or_else(|e| panic!("14 power with the tile should succeed: {e}"));
+    assert_eq!(state.players[0].federation_tokens.len(), 2);
+}
+
 #[test]
 fn ivits_second_federation_rejects_when_disconnected_from_the_existing_network() {
     let mut state = ivits_federation_state();

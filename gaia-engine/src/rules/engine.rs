@@ -4847,8 +4847,20 @@ fn federation_power_total(
         u32::from(included && player_has_untracked_lost_planet_mine(state, player_id))
     });
     if is_ivits_growth {
+        // The whole federation counts, old part and new: "the total power value of that
+        // federation" (Appendix I, Ivits), with "all other rules for forming a federation" —
+        // so the Tech tile that makes the Planetary Institute and Academies worth 4 counts on
+        // both parts, as it does for a first federation.
         MapEngine::federation_power(&state.board, player_id, federated_hexes)
             .saturating_add(MapEngine::federation_power(&state.board, player_id, hexes))
+            .saturating_add(tech_tile_large_building_power_bonus_for_hexes(
+                state,
+                player_id,
+                federated_hexes,
+            ))
+            .saturating_add(tech_tile_large_building_power_bonus_for_hexes(
+                state, player_id, hexes,
+            ))
             .saturating_add(lost_planet_power)
     } else {
         MapEngine::federation_power(&state.board, player_id, hexes)
@@ -4886,6 +4898,13 @@ fn federation_submission_has_redundant_hex(
             .copied()
             .filter(|&h| h != dropped)
             .collect();
+        // What is left must still be a Form a Federation action: it connects at least one
+        // planet. Without this an Ivits federation that already has the power for its next
+        // token (its structures were upgraded since) could never grow — dropping the one new
+        // planet left the old federation alone, which passed as "valid with one fewer".
+        if remaining_hexes.is_empty() {
+            continue;
+        }
         let mut connected: Vec<HexCoord> = remaining_hexes
             .iter()
             .chain(remaining_satellites.iter())
