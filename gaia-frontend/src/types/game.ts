@@ -533,6 +533,13 @@ export interface PreviewBoard {
   research_board?: ResearchBoard;
 }
 
+/** `GET /api/preview_seed`: what a seed deals before any room exists, with the starting position
+ * of each of four named factions as the engine seeds it. */
+export interface SeedPreview extends PreviewBoard {
+  boosters: number[];
+  starts: { faction: FactionId; resources: Resources; research_tracks: ResearchTracks }[];
+}
+
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 export type SetupAction =

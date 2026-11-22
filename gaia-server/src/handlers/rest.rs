@@ -611,6 +611,79 @@ pub async fn preview_board(
     })))
 }
 
+#[derive(Deserialize)]
+pub struct SeedPreviewQuery {
+    pub seed: String,
+    /// Four faction names, comma separated.
+    pub factions: String,
+}
+
+/// Read-only preview of the game a seed and four factions produce, before any room exists. The
+/// AI test deals four factions on a fixed map and the player picks one of them, which needs the
+/// map and each faction's starting position on screen. Built the way the AI game itself is
+/// (`build_game_state_with_factions`: the seed's setup, then the four faction selections), so
+/// the starting resources and research levels are the engine's own. Pure computation.
+pub async fn preview_seed(
+    axum::extract::Query(query): axum::extract::Query<SeedPreviewQuery>,
+) -> ServerResult<Json<serde_json::Value>> {
+    let seed = query.seed.trim();
+    if seed.is_empty() || seed.len() > 64 {
+        return Err(ServerError::InvalidAction(
+            "seed must be 1 to 64 characters".into(),
+        ));
+    }
+    let factions = query
+        .factions
+        .split(',')
+        .map(|name| {
+            serde_json::from_value::<FactionId>(serde_json::Value::String(name.trim().to_owned()))
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| ServerError::InvalidAction("unknown faction name".into()))?;
+    let [first, rest @ ..] = factions.as_slice() else {
+        return Err(ServerError::InvalidAction("factions must name four factions".into()));
+    };
+    if rest.len() != 3 {
+        return Err(ServerError::InvalidAction(
+            "factions must name four factions".into(),
+        ));
+    }
+
+    let setup = gaia_engine::Randomizer::generate_setup(seed)?;
+    let state = crate::services::dev_game::build_game_state_with_factions(
+        "PREVIEW",
+        seed,
+        0,
+        &[1, 2, 3],
+        &setup,
+        *first,
+        rest.to_vec(),
+        false,
+    )?;
+    let starts: Vec<serde_json::Value> = state
+        .players
+        .iter()
+        .map(|player| {
+            serde_json::json!({
+                "faction": player.faction,
+                "resources": player.resources,
+                "research_tracks": player.research_tracks,
+            })
+        })
+        .collect();
+
+    Ok(Json(serde_json::json!({
+        "seed": seed,
+        "board": state.board,
+        "round_tiles": state.round_tiles,
+        "final_scoring_tiles": state.final_scoring_tiles,
+        "spaceship_boards": state.spaceship_boards,
+        "research_board": state.research_board,
+        "boosters": state.boosters,
+        "starts": starts,
+    })))
+}
+
 pub async fn regenerate_setup(
     State(app): State<AppState>,
     Path(code): Path<String>,
@@ -677,4 +750,56 @@ fn lobby_players(room: &crate::room::manager::Room) -> Vec<LobbyPlayer> {
             ready: *ready,
         })
         .collect()
+}
+
+#[cfg(test)]
+mod preview_seed_tests {
+    use super::{preview_seed, SeedPreviewQuery};
+    use axum::{extract::Query, Json};
+
+    fn query(seed: &str, factions: &str) -> Query<SeedPreviewQuery> {
+        Query(SeedPreviewQuery {
+            seed: seed.to_owned(),
+            factions: factions.to_owned(),
+        })
+    }
+
+    #[tokio::test]
+    async fn previews_the_map_and_each_faction_start_for_a_seed() {
+        let Json(body) = preview_seed(query("preview-test", "BalTaks,Terrans,Xenos,Nevlas"))
+            .await
+            .unwrap_or_else(|error| panic!("preview: {error}"));
+
+        let starts = body["starts"]
+            .as_array()
+            .unwrap_or_else(|| panic!("starts is a list"));
+        assert_eq!(starts.len(), 4);
+        assert_eq!(starts[0]["faction"], "BalTaks");
+        assert_eq!(starts[0]["resources"]["power"]["bowl1"], 2);
+        assert_eq!(starts[0]["resources"]["power"]["bowl2"], 4);
+        assert_eq!(starts[1]["faction"], "Terrans");
+        assert_eq!(starts[1]["research_tracks"]["gaia"], 1);
+        assert!(body["board"]["hexes"].as_object().is_some_and(|hexes| !hexes.is_empty()));
+        assert!(body["boosters"].as_array().is_some_and(|boosters| !boosters.is_empty()));
+        assert_eq!(body["seed"], "preview-test");
+    }
+
+    #[tokio::test]
+    async fn the_same_seed_previews_the_same_map() {
+        let Json(first) = preview_seed(query("preview-test", "BalTaks,Terrans,Xenos,Nevlas"))
+            .await
+            .unwrap_or_else(|error| panic!("preview: {error}"));
+        let Json(second) = preview_seed(query("preview-test", "Itars,Gleens,Firaks,Ambas"))
+            .await
+            .unwrap_or_else(|error| panic!("preview: {error}"));
+        assert_eq!(first["board"], second["board"]);
+        assert_eq!(first["boosters"], second["boosters"]);
+    }
+
+    #[tokio::test]
+    async fn rejects_an_unknown_faction_a_wrong_count_and_an_empty_seed() {
+        assert!(preview_seed(query("preview-test", "BalTaks,Terrans,Xenos,Nobody")).await.is_err());
+        assert!(preview_seed(query("preview-test", "BalTaks,Terrans,Xenos")).await.is_err());
+        assert!(preview_seed(query(" ", "BalTaks,Terrans,Xenos,Nevlas")).await.is_err());
+    }
 }

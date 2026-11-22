@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { AiTestView } from '../components/GameLobby/AiTestView';
+import { AiTestView, startLine } from '../components/GameLobby/AiTestView';
 import { CreateRoomView } from '../components/GameLobby/CreateRoomView';
 import { LobbyHomeView } from '../components/GameLobby/LobbyHomeView';
 import { api } from '../api/rest';
@@ -71,6 +71,21 @@ describe('AI test', () => {
     const shown = readShownCounts();
     expect(Object.keys(shown).sort()).toEqual([...dealt].sort());
     expect(Object.values(shown)).toEqual([1, 1, 1, 1]);
+  });
+
+  it('writes what a faction starts with as one line', () => {
+    expect(startLine({
+      faction: 'BalTaks',
+      resources: {
+        ore: 4,
+        credits: 15,
+        knowledge: 3,
+        qic: 0,
+        power: { bowl1: 2, bowl2: 4, bowl3: 0, gaia_bowl: 0, gaia_forming: 0 },
+        spent_gaia_formers: 0,
+      },
+      research_tracks: { terraforming: 0, navigation: 0, ai: 0, gaia: 1, economy: 0, science: 0 },
+    })).toBe('광석 4 · 크레딧 15 · 지식 3 · QIC 0 · 파워 2/4/0 · 시작 연구 가이아 1');
   });
 
   it('asks for a nickname before starting and counts nothing', () => {
