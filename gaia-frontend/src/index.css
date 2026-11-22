@@ -5682,10 +5682,11 @@ button.lobby-entry { font: inherit; text-align: left; cursor: pointer; }
    Same spot, different weight, so the tile does not read as if both were lost. */
 .research-board-spent-gaiaformer--spent { opacity: 0.55; filter: grayscale(0.5) drop-shadow(0 1px 2px #000); }
 .research-board-spent-gaiaformer--deployed { outline: 1px solid rgba(125, 211, 252, 0.9); outline-offset: 1px; border-radius: 50%; }
-/* Teacher hint (AI games): a button above the action shelf and the move it answers with. */
+/* Teacher hint (AI games): a button above the turn controls in the sidebar and the move it
+   answers with, in a green box that matches the dashed green ring on the map. */
 .teacher-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem 0; }
 .teacher-hint-note { color: var(--color-muted); font-size: 0.78rem; }
-.teacher-hint-move { margin: 0; font-size: 0.9rem; }
+.teacher-hint-move { flex-basis: 100%; margin: 0; padding: 0.45rem 0.6rem; border-left: 3px solid #4ade80; border-radius: 4px; background: rgba(74, 222, 128, 0.12); font-size: 1.05rem; line-height: 1.4; }
 
 /* AI test: the four dealt factions are the start buttons. */
 .ai-test-factions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin: 0 0 1rem; padding: 0; border: 0; }

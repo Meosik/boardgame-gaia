@@ -299,6 +299,8 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   const [aiRetrying, setAiRetrying] = useState(false);
   /** The research lab picked for the Firaks planetary-institute action; the track comes next. */
   const [firaksLab, setFiraksLab] = useState<HexCoord | null>(null);
+  /** Hexes of the teacher hint on screen ("교사 수 보기"), marked on the map; set by TeacherHint. */
+  const [teacherHintHexes, setTeacherHintHexes] = useState<HexCoord[]>([]);
   /** Positions received in this room (oldest first) and the one on screen; `at: null` = live. */
   const [timeline, setTimeline] = useState<{ items: GameState[]; at: number | null }>({ items: [], at: null });
   const [suppressTerraformOreConfirmation, setSuppressTerraformOreConfirmation] = useState(false);
@@ -1662,6 +1664,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             tutorialChargeCue={gameState.tutorial?.step === 3}
             players={gameState.players}
             validTargets={coach ? coach.targets : isMyLostPlanetPlacement ? lostPlanetTargets : bonusMineTargets}
+            teacherHintHexes={teacherHintHexes}
             federationSelectableHexes={federationSelectableHexes}
             federationIncludedHexes={federationIncludedHexes}
             selectedCoord={isMyLostPlanetPlacement ? activePlanet : firaksLab}
@@ -1697,10 +1700,6 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
           />
         </section>
 
-        {/* Outside the research row: that row is a grid with named areas. */}
-        {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && (
-          <TeacherHint roomCode={roomCode} sessionToken={sessionToken} state={gameState} />
-        )}
         <section className="game-table-section game-table-research-row" id="game-research-section">
           <article className="game-table-card game-table-tech-requirement-card">
             <h2>고급 기술 조건</h2>
@@ -1952,6 +1951,16 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               passOrder={gameState.pass_order}
               onPlayerSelect={(player) => setPersonalBoardPlayerId(player.player_id)}
             />
+            {/* Right above the turn controls, where the player acts; the move is also marked on
+                the map (teacherHintHexes). */}
+            {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && (
+              <TeacherHint
+                roomCode={roomCode}
+                sessionToken={sessionToken}
+                state={gameState}
+                onHexes={setTeacherHintHexes}
+              />
+            )}
             <GameCommandControls blocked={commandBlocked}>
             <SidebarTurnControls
               player={me}

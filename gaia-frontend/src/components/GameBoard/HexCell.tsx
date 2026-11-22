@@ -33,6 +33,7 @@ interface Props {
   navigationRangeColor?: string;
   emphasizeStructure?: boolean;
   isInspectable?: boolean;
+  isTeacherHint?: boolean;
   onClick: (event: ReactMouseEvent<SVGGElement>) => void;
 }
 
@@ -56,6 +57,7 @@ export function HexCell({
   navigationRangeColor = STRUCTURE_COLOR_HEX.cyan,
   emphasizeStructure = false,
   isInspectable = false,
+  isTeacherHint = false,
   onClick,
 }: Props) {
   const replay = useReplayHighlight();
@@ -331,6 +333,14 @@ export function HexCell({
           <polygon points={hexCorners(cx, cy, size * 0.91)} fill="none" stroke="#111827" strokeWidth="6" />
           <polygon points={hexCorners(cx, cy, size * 0.91)} fill="none" stroke="#fde047" strokeWidth="3" />
 
+        </g>
+      )}
+      {/* The teacher's hint ("교사 수 보기"): a dashed green ring inside the last-move ring, drawn
+          last so pieces do not cover it. A mark only — it does not change what a click does. */}
+      {isTeacherHint && (
+        <g className="teacher-hint-mark" pointerEvents="none" aria-label="교사가 고른 칸">
+          <polygon points={hexCorners(cx, cy, size * 0.66)} fill="none" stroke="#111827" strokeWidth="6" strokeOpacity="0.55" />
+          <polygon points={hexCorners(cx, cy, size * 0.66)} fill="none" stroke="#4ade80" strokeWidth="3.5" strokeDasharray="7 4" />
         </g>
       )}
     </g>

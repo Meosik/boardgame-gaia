@@ -93,6 +93,9 @@ interface Props {
   board: BoardState;
   players?: PlayerState[];
   validTargets?: HexCoord[];
+  /** Hexes of the move the teacher hint names ("교사 수 보기"). Marked only: unlike
+   * `validTargets` they never change which hexes can be clicked. */
+  teacherHintHexes?: HexCoord[];
   /** During federation formation, only these owned buildings and route hexes may be added.
    * Already-selected hexes remain clickable so the player can always remove them. */
   federationSelectableHexes?: HexCoord[];
@@ -154,6 +157,7 @@ export function GameBoard({
   tutorialChargeCue = false,
   players = [],
   validTargets = [],
+  teacherHintHexes = [],
   federationSelectableHexes = [],
   federationIncludedHexes = [],
   selectedCoord = null,
@@ -186,6 +190,7 @@ export function GameBoard({
   const multiSelect = selectedAction === 'FormFederation';
 
   const validSet = new Set(validTargets.map((c) => hexKey(c.q, c.r)));
+  const teacherHintSet = new Set(teacherHintHexes.map((c) => hexKey(c.q, c.r)));
   const selectedHexSet = new Set(selectedHexes.map((c) => hexKey(c.q, c.r)));
   const federationSelectableSet = new Set(
     federationSelectableHexes.map((c) => hexKey(c.q, c.r)),
@@ -673,6 +678,7 @@ export function GameBoard({
                   selectedHexSet.has(key) || federationSelectableSet.has(key)
                 ))
               }
+              isTeacherHint={teacherHintSet.has(key)}
               onClick={(event) => handleHexClick(hex, event)}
             />
           );
