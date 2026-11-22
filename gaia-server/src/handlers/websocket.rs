@@ -178,6 +178,12 @@ async fn handle_socket(mut socket: WebSocket, room_code: String, app: AppState) 
                     if let Some(paused_msg) = update_presence(&app, &room_code, pid, true).await {
                         app.event_bus.broadcast(&room_code, paused_msg).await;
                     }
+                    // The AI seats' driver ends as soon as the room pauses (`ai::next_ai_turn`)
+                    // and only a committed move starts it again. A player who dropped while an
+                    // AI seat was to move would come back to a game that never moves, so the
+                    // returning seat starts it. A no-op for rooms without AI seats, when it is
+                    // the player's own turn, and while a driver is still running.
+                    crate::ai::spawn_driver(app.clone(), room_code.clone());
 
                     pid
                 }
