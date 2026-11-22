@@ -1690,10 +1690,10 @@ input:focus, textarea:focus { outline: none; border-color: var(--color-accent); 
 }
 .opponent-last-move b { margin-right: 0.35rem; color: var(--color-muted); font-weight: 600; }
 /* What an opponent's last move touched off the map (a tech tile, the opponent's research token, a
-   round booster, a shuttle on a ship): a thin dashed outline in that opponent's piece colour
+   round booster, a shuttle on a ship): a thin faint solid outline in that opponent's piece colour
    (`lastMoveStyle`), fainter than the ring on the map hexes. */
 [data-last-move="true"] {
-  outline: 2px dashed color-mix(in srgb, var(--last-move-color) 60%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--last-move-color) 60%, transparent);
   outline-offset: 2px;
 }
 .research-board-token[data-last-move="true"],

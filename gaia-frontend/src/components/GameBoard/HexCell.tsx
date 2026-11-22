@@ -306,17 +306,23 @@ export function HexCell({
           style={{ pointerEvents: 'none' }}
         />
       ))}
-      {/* An opponent's last move: a dashed ring in that opponent's piece colour, inside the yellow
-          ring of the action that has just happened, so both can show on one hex. */}
+      {/* An opponent's last move: a faint solid ring in that opponent's piece colour, inside the
+          yellow ring of the action that has just happened, so both can show on one hex. */}
       {opponentMoveColor && (
         <g className="last-move-mark" pointerEvents="none" aria-label="상대의 마지막 수">
-          <polygon points={hexCorners(cx, cy, size * 0.78)} fill="none" stroke="#111827" strokeWidth="6" />
+          <polygon
+            points={hexCorners(cx, cy, size * 0.78)}
+            fill="none"
+            stroke="#111827"
+            strokeWidth="5"
+            strokeOpacity="0.3"
+          />
           <polygon
             points={hexCorners(cx, cy, size * 0.78)}
             fill="none"
             stroke={opponentMoveColor}
-            strokeWidth="3.5"
-            strokeDasharray="9 5"
+            strokeWidth="3"
+            strokeOpacity="0.65"
           />
         </g>
       )}
