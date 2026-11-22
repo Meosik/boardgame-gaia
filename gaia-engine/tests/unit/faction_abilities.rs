@@ -1426,6 +1426,57 @@ fn bescods_use_the_swapped_academy_and_pi_upgrade_paths() {
     assert_eq!(state.players[0].resources.credits, 14);
 }
 
+/// Rulebook p.13: the two academies of a faction board are two different pieces ("decide which
+/// of the academies on your faction board to upgrade to"), so the one already built cannot be
+/// built again; the other one still can.
+#[test]
+fn an_academy_that_is_already_built_cannot_be_built_again() {
+    use gaia_engine::game_state::AcademyType;
+    let academy = HexCoord::new(0, 0);
+    let research_lab = HexCoord::new(1, 0);
+    let structures = [
+        (
+            academy,
+            PlanetType::Terra,
+            StructureType::Academy(AcademyType::Science),
+        ),
+        (research_lab, PlanetType::Terra, StructureType::ResearchLab),
+    ];
+    let state = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.faction = Some(FactionId::Terrans);
+            player.resources.ore = 20;
+            player.resources.credits = 20;
+            player.structures = structures
+                .iter()
+                .map(|(hex, _, kind)| Structure {
+                    hex: *hex,
+                    kind: *kind,
+                })
+                .collect();
+        })
+        .with_player(1)
+        .with_board(board_with_faction_structures(&structures, &[]))
+        .build();
+    let upgrade_to = |kind| GameAction::Upgrade {
+        tech_tile_choice: None,
+        coord: research_lab,
+        to: StructureType::Academy(kind),
+    };
+
+    assert!(matches!(
+        RuleEngine::validate_action(&state, 0, &upgrade_to(AcademyType::Science)),
+        Err(RuleError::StructureLimit(StructureType::Academy(
+            AcademyType::Science
+        )))
+    ));
+    let other = RuleEngine::validate_action(&state, 0, &upgrade_to(AcademyType::Qic));
+    assert!(
+        !matches!(other, Err(RuleError::StructureLimit(_))),
+        "the other academy is still on the faction board: {other:?}"
+    );
+}
+
 #[test]
 fn gleens_replace_qic_gains_with_ore_until_the_qic_academy_is_built() {
     let mut state = GameStateBuilder::new()

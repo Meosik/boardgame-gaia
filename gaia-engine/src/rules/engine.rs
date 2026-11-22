@@ -2313,6 +2313,13 @@ fn validate_upgrade_impl(
             }
         }
         StructureType::Academy(_) => {
+            // Rulebook p.13: "decide which of the academies on your faction board to upgrade
+            // to. One academy grants you an income of two knowledge each round, and the other
+            // academy gives you an action to gain one Q.I.C." — two different pieces, so each
+            // academy is built at most once.
+            if player.structures.iter().any(|s| s.kind == to) {
+                return Err(RuleError::StructureLimit(to));
+            }
             let count = player
                 .structures
                 .iter()
