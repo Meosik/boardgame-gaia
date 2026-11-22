@@ -107,14 +107,14 @@ describe('PlayerActionShelf', () => {
     const onAction = vi.fn();
     const ready = player({ faction: 'Tinkeroids', tinkeroids_selected_tile: 2, tinkeroids_tiles_used: [] });
     const { rerender } = render(<PlayerActionShelf player={ready} isMyTurn onAction={onAction} />);
-    const button = screen.getByRole('button', { name: '팅커 타일 2 사용' });
+    const button = screen.getByRole('button', { name: '팅커로이드 타일 2 사용' });
     expect(button.querySelector('img')).not.toBeNull();
     expect(button.querySelector('.action-crop')).toBeNull();
     fireEvent.click(button);
     expect(onAction).toHaveBeenCalledWith({ type: 'TinkeroidsUseTile', tile: 2, coord: null });
     expect(button).toBeInTheDocument();
     rerender(<PlayerActionShelf player={{ ...ready, tinkeroids_tiles_used: [2] }} isMyTurn onAction={onAction} />);
-    expect(screen.queryByRole('button', { name: '팅커 타일 2 사용' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '팅커로이드 타일 2 사용' })).not.toBeInTheDocument();
   });
 
   it.each([5, 8, 12] as const)('includes cropped booster %i and closes it after use', (booster) => {

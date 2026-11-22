@@ -31,7 +31,7 @@ export function TerraformingSelectionBoard({ colorOrder, allocations = [] }: Pro
       <img
         className="terraforming-selection-board-image"
         src={terraformingSelectionBoardImageSrc}
-        alt="모웨이드와 팅커 테라포밍 색상 순서 보드"
+        alt="모웨이드와 팅커로이드 테라포밍 색상 순서 보드"
       />
       {colorOrder.map((planetType, index) => {
         const color = TERRAFORMING_SATELLITE_COLOR[planetType];

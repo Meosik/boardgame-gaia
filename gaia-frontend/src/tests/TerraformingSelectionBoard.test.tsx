@@ -10,7 +10,7 @@ describe('TerraformingSelectionBoard', () => {
       />,
     );
 
-    expect(screen.getByAltText('모웨이드와 팅커 테라포밍 색상 순서 보드')).toHaveAttribute(
+    expect(screen.getByAltText('모웨이드와 팅커로이드 테라포밍 색상 순서 보드')).toHaveAttribute(
       'src',
       expect.stringContaining('terraforming_selection_board'),
     );
@@ -38,9 +38,9 @@ describe('TerraformingSelectionBoard', () => {
         { faction: 'Tinkeroids', colors: ['Oxide', 'Desert', 'Titanium'] },
       ]}
     />);
-    const shared = screen.getByTitle('티타늄: 모웨이드 · 팅커 테라포밍 3단계');
+    const shared = screen.getByTitle('티타늄: 모웨이드 · 팅커로이드 테라포밍 3단계');
     expect(shared.textContent).toContain('모웨이드');
-    expect(shared.textContent).toContain('팅커');
+    expect(shared.textContent).toContain('팅커로이드');
     expect(shared.style.borderTopColor).not.toBe(shared.style.borderRightColor);
     expect(screen.getAllByAltText(/번 .* 색상 위성/)).toHaveLength(7);
     rerender(<TerraformingSelectionBoard colorOrder={[...colorOrder]} />);

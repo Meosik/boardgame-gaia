@@ -406,7 +406,7 @@ describe('ActionPanel — free actions', () => {
     });
     render(<ActionPanel gameState={state} myPlayerId={0} />);
 
-    fireEvent.click(screen.getByText('팅커 팅커링 타일 사용'));
+    fireEvent.click(screen.getByText('팅커로이드 팅커링 타일 사용'));
     const selectedTile = screen.getByRole('img', { name: '팅커링 타일 2' });
     expect(screen.queryByRole('img', { name: '팅커링 타일 1' })).not.toBeInTheDocument();
     fireEvent.click(selectedTile.closest('button')!);

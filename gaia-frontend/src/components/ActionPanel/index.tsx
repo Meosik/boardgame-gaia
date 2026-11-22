@@ -76,7 +76,7 @@ const ACTION_BUTTONS: { label: string; actionType: ActionKind; shortcut?: string
   { label: '파이락 연구소 강등 + 무료 연구', actionType: 'FiraksDowngradeResearchLab' },
   { label: '매드 안드로이드 최저 연구 무료 상승', actionType: 'BescodsLowestResearchAdvance' },
   { label: '하이브 우주 정거장 건설', actionType: 'IvitsPlaceSpaceStation' },
-  { label: '팅커 팅커링 타일 사용', actionType: 'TinkeroidsUseTile' },
+  { label: '팅커로이드 팅커링 타일 사용', actionType: 'TinkeroidsUseTile' },
   { label: '모웨이드 파워 링 설치', actionType: 'MoweydsPlacePowerRing' },
   { label: '함선 탐사', actionType: 'ExploreSpaceship', shortcut: 'X' },
   { label: '아티팩트 조사', actionType: 'ExamineArtifact', shortcut: 'A' },
