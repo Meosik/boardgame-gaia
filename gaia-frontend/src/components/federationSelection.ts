@@ -302,7 +302,16 @@ export function validateFederationSelection(
   const connected = isIvitsGrowth
     ? [...selectedHexes, ...(player.federated_hexes ?? [])]
     : selectedHexes;
-  if (!isConnected(connected)) return status(false, '선택한 건물과 위성 경로가 연결되지 않았습니다.');
+  if (!isConnected(connected)) {
+    // Further route spaces stop being clickable once the satellites' payment is used up
+    // (`selectableFederationHexes`), so the reason says it: the Hive pays one Q.I.C. per
+    // satellite, not power.
+    const outOfPayment = satelliteHexes.length >= satelliteResource;
+    const payment = player.faction === 'Ivits'
+      ? ' 위성을 더 놓을 정보 큐브가 없습니다(하이브는 위성 1개에 정보 큐브 1개).'
+      : ' 위성을 더 놓을 파워가 없습니다.';
+    return status(false, `선택한 건물과 위성 경로가 연결되지 않았습니다.${outOfPayment ? payment : ''}`);
+  }
   if (power < minimumPower) return status(false, `연방 파워가 ${minimumPower - power} 부족합니다.`);
 
   for (let dropped = 0; dropped < selectedHexes.length; dropped += 1) {
@@ -366,7 +375,9 @@ export function selectableFederationHexes(
       // set with no feedback at all.
       if (ownsHex) return true;
       if (!canAddSatellite || !isLegalSatelliteHex(gameState, hex, playerId)) return false;
-      const routeAnchors = selectedKeys.size > 0 ? selectedKeys : isIvitsGrowth ? existingKeys : new Set<string>();
+      // The Hive's route may be laid from either end: next to a chosen hex or next to the
+      // federation it grows, also after a building has been chosen.
+      const routeAnchors = isIvitsGrowth ? new Set([...selectedKeys, ...existingKeys]) : selectedKeys;
       return neighboringKeys(hex.coord).some((neighbor) => routeAnchors.has(neighbor));
     })
     .map(({ coord }) => coord);

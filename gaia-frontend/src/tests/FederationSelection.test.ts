@@ -207,4 +207,42 @@ describe('Ivits federation growth', () => {
     expect(status.power).toBe(14);
     expect(status.valid).toBe(true);
   });
+
+  // The federation is the Institute at (0,0); a Mine at (3,0) is two empty spaces away.
+  function distantMine(qic: number): GameState {
+    const player = mockPlayer({
+      faction: 'Ivits',
+      federation_tokens: [3],
+      federated_hexes: [{ q: 0, r: 0 }],
+    });
+    player.resources.qic = qic;
+    const hexes: Record<string, Hex> = {};
+    for (const q of [0, 1, 2, 3]) {
+      const kind = q === 0 ? 'PlanetaryInstitute' : 'Mine';
+      hexes[`${q},0`] = mockHex({ q, r: 0, ...(q === 0 || q === 3 ? {
+        planet: { planet_type: 'Oxide' as const, owner: 0, is_gaia_formed: false },
+        structures: [{ owner: 0, kind }],
+      } : {}) });
+    }
+    return { players: [player], board: { hexes, spaceship_tiles: {} } } as unknown as GameState;
+  }
+
+  it('lets the route start at the federation when a building is already chosen', () => {
+    const selectable = selectableFederationHexes(distantMine(2), 0, [{ q: 3, r: 0 }]);
+    expect(selectable).toContainEqual({ q: 1, r: 0 });
+    expect(selectable).toContainEqual({ q: 2, r: 0 });
+  });
+
+  it('says that the Q.I.C. ran out when the route cannot be finished', () => {
+    const chosen = [{ q: 3, r: 0 }, { q: 2, r: 0 }];
+    const state = distantMine(1);
+    expect(validateFederationSelection(state, 0, chosen).reason)
+      .toBe('선택한 건물과 위성 경로가 연결되지 않았습니다. 위성을 더 놓을 정보 큐브가 없습니다(하이브는 위성 1개에 정보 큐브 1개).');
+    expect(selectableFederationHexes(state, 0, chosen)).not.toContainEqual({ q: 1, r: 0 });
+    // With a Q.I.C. left the plain reason stays and the last space can be chosen.
+    const funded = distantMine(2);
+    expect(validateFederationSelection(funded, 0, chosen).reason)
+      .toBe('선택한 건물과 위성 경로가 연결되지 않았습니다.');
+    expect(selectableFederationHexes(funded, 0, chosen)).toContainEqual({ q: 1, r: 0 });
+  });
 });
