@@ -8,6 +8,8 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 import { GameBoard } from '../GameBoard';
 import { ResearchBoard } from '../PlayerDashboard/ResearchBoard';
 import { SpaceshipBoards } from '../SpaceshipBoards';
+import { RoundBoosters } from '../RoundBoosters';
+import { ScoringBoard } from '../ScoringBoard';
 import { LostFleetTechRequirementBoard } from '../LostFleetTechRequirementBoard';
 import { FactionBadge } from './FactionBadge';
 import { TerraformingSelectionBoard } from './TerraformingSelectionBoard';
@@ -493,6 +495,20 @@ function StartingStructureSetup({
         </span>
       </nav>
       <aside className="game-reference-rail" aria-label="게임 참조 보드">
+        {/* What a starting position is chosen against: the boosters dealt into this game and the
+            round and final goals. Nobody holds a booster yet, so all of them are in the pool. */}
+        <section className="game-reference-card setup-reference-boosters">
+          <h2>라운드 부스터</h2>
+          <RoundBoosters availableBoosters={game.boosters} players={game.players} />
+        </section>
+        <section className="game-reference-card">
+          <h2>라운드·게임 종료 목표</h2>
+          <ScoringBoard
+            roundTiles={game.round_tiles}
+            finalScoringTiles={game.final_scoring_tiles}
+            currentRound={game.round}
+          />
+        </section>
         <section className="game-reference-card">
           <h2>연구 트랙</h2>
           <ResearchBoard players={game.players} board={game.research_board} />
@@ -620,6 +636,14 @@ function StartingBoosterSetup({
         <span className="game-top-control setup-phase-indicator">{factionDisplayName(game.players.find((player) => player.player_id === selection.active_player)?.faction)} 초기 설정 · 부스터 선택</span>
       </nav>
       <aside className="game-reference-rail" aria-label="게임 참조 보드">
+        <section className="game-reference-card">
+          <h2>라운드·게임 종료 목표</h2>
+          <ScoringBoard
+            roundTiles={game.round_tiles}
+            finalScoringTiles={game.final_scoring_tiles}
+            currentRound={game.round}
+          />
+        </section>
         <section className="game-reference-card">
           <h2>연구 트랙</h2>
           <ResearchBoard players={game.players} board={game.research_board} />

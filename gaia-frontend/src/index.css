@@ -132,6 +132,8 @@ body { min-height: 100vh; }
   text-transform: uppercase;
 }
 .game-reference-card .research-board { margin: 0; }
+/* The boosters in the setup rail: a little larger than the default 64px tile so the art reads. */
+.setup-reference-boosters .round-booster-tile { width: 76px; }
 
 .game-ship-list {
   margin-top: 0.25rem;
