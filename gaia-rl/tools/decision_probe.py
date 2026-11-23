@@ -86,7 +86,7 @@ def install_front(front, watch=(), log_path=None):
     p.interleave_families = interleave_families
 
 
-_inside = {'depth': 0, 'select': 0.0, 'selects': 0, 'rank': 0.0, 'ranks': 0, 'candidates': 0}
+_inside = {'depth': 0, 'select': 0.0, 'selects': 0, 'rank': 0.0, 'ranks': 0, 'candidates': 0, 'own': None}
 
 
 def _keep_flags(wrapper, inner, tree=False):
@@ -115,13 +115,68 @@ def rollout_record(result):
                         for step in result.get('actions') or ()]}
 
 
+def decision_record(snapshot, scores, index):
+    """One decision of the acting seat inside a rollout: the round, the candidates by action type, the chosen
+    candidate (None when index is None), the unblocked top-scored one, the federation candidates (count, blocked
+    count, best) and the best Pass. An entry is {'index', 'type', 'score' (None when blocked), 'blocked',
+    'reason'} (a FormFederation also has 'satellites', 'hexes', 'token'). A candidate is blocked when its reason
+    starts with 'conservation blocked: '. Best = the highest-scored unblocked one (ties: lowest index), else the
+    highest-scored blocked one."""
+    candidates = snapshot.get('candidates') or ()
+
+    def entry(i):
+        action = candidates[i].get('action') or {}
+        score, reason = scores[i][0], scores[i][1]
+        blocked = str(reason).startswith('conservation blocked: ')
+        row = {'index': i, 'type': action.get('type'), 'score': None if blocked else score, 'blocked': blocked,
+               'reason': str(reason)[:200]}
+        if action.get('type') == 'FormFederation':
+            row.update(satellites=len(action.get('satellite_hexes') or ()), hexes=action.get('hexes'),
+                       token=action.get('token'))
+        return row
+
+    def best(rows):
+        free = [row for row in rows if not row['blocked']]
+        pool = free or rows
+        return max(pool, key=lambda row: (row['score'] if free else scores[row['index']][0], -row['index']),
+                   default=None)
+    rows = [entry(i) for i in range(len(candidates))]
+    by_type = {}
+    for row in rows:
+        by_type[row['type']] = by_type.get(row['type'], 0)+1
+    federations = [row for row in rows if row['type'] == 'FormFederation']
+    return {'round': (snapshot.get('state') or {}).get('round'), 'candidates': len(rows), 'by_type': by_type,
+            'chosen': None if index is None else rows[index],
+            'top': best([row for row in rows if not row['blocked']]),
+            'federations': len(federations), 'federations_blocked': sum(row['blocked'] for row in federations),
+            'best_federation': best(federations),
+            'best_pass': best([row for row in rows if row['type'] == 'Pass'])}
+
+
+def decision_line(item):
+    """One printed line for a `decision_record` item (or its error item)."""
+    if 'error' in item:
+        return f"        decide: record error {str(item['error'])[:150]}"
+
+    def kind(row):
+        return '-' if not row else f"{row.get('type')} ({row.get('score')})"
+    fed, passed = item.get('best_federation'), item.get('best_pass')
+    fed_text = '-' if not fed else (f"{fed.get('score')}/{fed.get('satellites')} sat "
+                                    f"{str(fed.get('reason'))[:60]}")
+    return (f"        decide R{item.get('round')}: chose {kind(item.get('chosen'))} | top {kind(item.get('top'))} | "
+            f"{item.get('candidates')} candidates, FormFederation {item.get('federations')} "
+            f"(blocked {item.get('federations_blocked')}) | best fed {fed_text} | "
+            f"best pass {'-' if not passed else passed.get('score')}")[:230]
+
+
 def install_timing(log_path):
     """Time one comparison's two parts, in whichever process computes it (the pool workers are forked after the
     factory, so they carry these wrappers): preparation.select_goal (the first move of a goal without one) and
     preparation.rollout (the continuation to the horizon). Each top-level call writes an 'start' and an 'end'
     line (a start without an end = cut by the cap). A rollout's end line also has its simulated decisions and
     what it spent inside: Policies.rank calls (seconds, count, candidates ranked) and select_goal calls. The
-    rollout's end line also carries `rollout_record` (value, goal attainment, the acting seat's actions). Timing
+    rollout's end line also carries `rollout_record` (value, goal attainment, the acting seat's actions) and
+    `own_decisions` (one `decision_record` per select_goal call inside the rollout). Timing
     and recording only: every call returns what the wrapped function returns."""
     import four_factions.preparation as p
     if getattr(p.rollout, '_probe_timing', False):
@@ -143,11 +198,19 @@ def install_timing(log_path):
         def select_goal(env, snapshot, scores, goal, policies, deadline):
             tick = time.monotonic()
             if _inside['depth']:
+                chosen, done = None, False
                 try:
-                    return function(env, snapshot, scores, goal, policies, deadline)
+                    chosen = function(env, snapshot, scores, goal, policies, deadline)
+                    done = True
+                    return chosen
                 finally:
                     _inside['select'] += time.monotonic()-tick
                     _inside['selects'] += 1
+                    if done and isinstance(_inside.get('own'), list):
+                        try:
+                            _inside['own'].append(decision_record(snapshot, scores, chosen))
+                        except Exception as exc:
+                            _inside['own'].append({'error': repr(exc)[:200]})
             head = {'call': 'select_goal', 'goal': str(getattr(goal, 'name', goal)), 'pid': os.getpid()}
             _write(log_path, {'event': 'start', **head, 'at': time.time()})
             first = error = None
@@ -170,7 +233,7 @@ def install_timing(log_path):
             return inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
         head = {'call': 'rollout', 'goal': str(getattr(goal, 'name', goal)), 'first': first, 'pid': os.getpid()}
         _write(log_path, {'event': 'start', **head, 'at': time.time()})
-        _inside.update(depth=1, select=0.0, selects=0, rank=0.0, ranks=0, candidates=0)
+        _inside.update(depth=1, select=0.0, selects=0, rank=0.0, ranks=0, candidates=0, own=[])
         tick, result, error = time.monotonic(), None, None
         try:
             result = inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
@@ -187,6 +250,7 @@ def install_timing(log_path):
                               'rank_seconds': round(_inside['rank'], 3), 'rank_calls': _inside['ranks'],
                               'ranked_candidates': _inside['candidates'],
                               'select_seconds': round(_inside['select'], 3), 'select_calls': _inside['selects'],
+                              'own_decisions': list(_inside.get('own') or ()),
                               **rollout_record(result)})
 
     # `__wrapped__` is the tree's own function by the patches' convention. A pool worker takes the first move
@@ -484,6 +548,8 @@ def main():
                 for step in part['actions']:
                     print(f"        R{step.get('round')} vp {step.get('vp_before')}→{step.get('vp_after')} "
                           f"{short(step.get('action'), 100)}")
+            for item in part.get('own_decisions') or ():
+                print(decision_line(item))
         for front in row.get('front_comparisons', ()):
             print(f"    front move [{front['index']}]: started {front['started']}, finished {front['finished']}, "
                   f"compared {front['compared']}")

@@ -179,6 +179,13 @@ class ComparisonTimesTest(unittest.TestCase):
         self.assertNotIn('event', rows[0])
         self.assertNotIn('at', rows[0])
 
+    def test_own_decisions_of_the_end_line_reach_the_row(self):
+        own = [{'round': 5, 'candidates': 2}]
+        lines = [{'event': 'start', 'call': 'rollout', 'goal': 'g', 'first': 1, 'pid': 1, 'at': 101.0},
+                 {'event': 'end', 'call': 'rollout', 'goal': 'g', 'first': 1, 'pid': 1, 'at': 102.0,
+                  'own_decisions': own}]
+        self.assertEqual(decision_probe.comparison_times(lines, 100.0)[0]['own_decisions'], own)
+
     def test_a_start_with_no_end_is_not_finished(self):
         lines = [{'event': 'start', 'call': 'rollout', 'goal': 'root-7', 'first': 7, 'pid': 11, 'at': 101.0}]
         rows = decision_probe.comparison_times(lines, 100.0)
@@ -286,6 +293,49 @@ class InstallTimingTest(unittest.TestCase):
             self.module.rollout(None, {}, 7, self.goal, None, 0)
         self.assertNotIn('actions', self.lines()[-1])
 
+    def test_own_decisions_hold_one_record_per_inner_select_and_the_return_is_unchanged(self):
+        returned = []
+
+        def rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs):
+            returned.append(self.module.select_goal(
+                None, snap(*[{'type': 'Build'}]*6), [(1, 'a')]*6, goal, None, 0))
+            return self.result
+        self.module.rollout = rollout
+        decision_probe.install_timing(str(self.log))
+        self.module.rollout(None, {}, 7, self.goal, None, 0)
+        self.assertEqual(returned, [5])
+        own = self.lines()[-1]['own_decisions']
+        self.assertEqual(len(own), 1)
+        self.assertEqual(own[0]['round'], 5)
+
+    def test_own_decisions_chosen_matches_the_returned_index(self):
+        self.module.select_goal = lambda env, snapshot, scores, goal, policies, deadline: 1
+        returned = []
+
+        def rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs):
+            returned.append(self.module.select_goal(
+                None, snap({'type': 'Build'}, {'type': 'Pass'}), [(1, 'a'), (2, 'b')], goal, None, 0))
+            return self.result
+        self.module.rollout = rollout
+        decision_probe.install_timing(str(self.log))
+        self.module.rollout(None, {}, 7, self.goal, None, 0)
+        own = self.lines()[-1]['own_decisions']
+        self.assertEqual((returned, own[0]['chosen']['index'], own[0]['chosen']['type']), ([1], 1, 'Pass'))
+
+    def test_a_malformed_scores_still_returns_the_index_and_records_an_error(self):
+        returned = []
+
+        def rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs):
+            returned.append(self.module.select_goal(None, snap({'type': 'Pass'}), None, goal, None, 0))
+            return self.result
+        self.module.rollout = rollout
+        decision_probe.install_timing(str(self.log))
+        self.module.rollout(None, {}, 7, self.goal, None, 0)
+        self.assertEqual(returned, [5])
+        own = self.lines()[-1]['own_decisions']
+        self.assertEqual(len(own), 1)
+        self.assertEqual(list(own[0]), ['error'])
+
     def test_a_top_level_select_goal_logs_start_and_end_with_the_first_move(self):
         decision_probe.install_timing(str(self.log))
         self.assertEqual(self.module.select_goal(None, {}, [], self.goal, None, 0), 5)
@@ -341,6 +391,61 @@ class RolloutRecordTest(unittest.TestCase):
 
     def test_a_result_without_actions_gives_an_empty_list(self):
         self.assertEqual(decision_probe.rollout_record({'value': 1.0})['actions'], [])
+
+
+BLOCK = 'conservation blocked: no'
+
+
+def snap(*actions, round_=5):
+    return {'state': {'round': round_}, 'candidates': [{'action': action} for action in actions]}
+
+
+class DecisionRecordTest(unittest.TestCase):
+    def test_counts_by_type_and_the_chosen_and_top_entries(self):
+        snapshot = snap({'type': 'Build'}, {'type': 'Pass'}, {'type': 'Build'}, {'type': 'Build'})
+        scores = [(3, 'a'), (2, 'b'), (7, BLOCK), (3, 'c')]
+        record = decision_probe.decision_record(snapshot, scores, 1)
+        self.assertEqual(record['round'], 5)
+        self.assertEqual(record['candidates'], 4)
+        self.assertEqual(record['by_type'], {'Build': 3, 'Pass': 1})
+        self.assertEqual(record['chosen'], {'index': 1, 'type': 'Pass', 'score': 2, 'blocked': False, 'reason': 'b'})
+        self.assertEqual(record['top']['index'], 0)
+        self.assertEqual(record['best_pass']['score'], 2)
+        self.assertEqual(record['federations'], 0)
+
+    def test_federation_candidates_pick_the_best_unblocked_and_count_the_blocked(self):
+        fed = {'type': 'FormFederation', 'satellite_hexes': [1, 2, 3], 'hexes': [[0, 0]], 'token': 'Credits'}
+        small = {'type': 'FormFederation', 'satellite_hexes': [1], 'hexes': [[1, 1]], 'token': 'Ore'}
+        snapshot = snap({'type': 'Pass'}, small, fed, dict(fed))
+        scores = [[1, 'p'], [4, 'small'], [9, BLOCK], [6, 'big']]
+        record = decision_probe.decision_record(snapshot, scores, 0)
+        self.assertEqual(record['federations'], 3)
+        self.assertEqual(record['federations_blocked'], 1)
+        best = record['best_federation']
+        self.assertEqual((best['index'], best['score'], best['satellites']), (3, 6, 3))
+        self.assertEqual((best['hexes'], best['token']), ([[0, 0]], 'Credits'))
+        self.assertEqual(record['top']['index'], 3)
+        blocked = decision_probe.decision_record(snapshot, scores, 2)['chosen']
+        self.assertIsNone(blocked['score'])
+        self.assertIs(blocked['blocked'], True)
+
+    def test_all_blocked_federations_give_the_blocked_best_and_none_when_absent(self):
+        snapshot = snap({'type': 'Build'}, {'type': 'FormFederation'}, {'type': 'FormFederation'})
+        scores = [(1, 'x'), (2, BLOCK), (5, BLOCK)]
+        record = decision_probe.decision_record(snapshot, scores, 0)
+        self.assertEqual(record['best_federation']['index'], 2)
+        self.assertIs(record['best_federation']['blocked'], True)
+        self.assertEqual(record['federations_blocked'], 2)
+        self.assertIsNone(record['best_pass'])
+        plain = decision_probe.decision_record(snap({'type': 'Build'}), [(1, 'x')], 0)
+        self.assertIsNone(plain['best_federation'])
+        self.assertIsNone(plain['best_pass'])
+        none_top = decision_probe.decision_record(snap({'type': 'Pass'}), [(1, BLOCK)], None)
+        self.assertIsNone(none_top['top'])
+
+    def test_a_none_index_gives_no_chosen(self):
+        record = decision_probe.decision_record(snap({'type': 'Pass'}), [(1, 'x')], None)
+        self.assertIsNone(record['chosen'])
 
 
 class InstallTaskLogTest(unittest.TestCase):
