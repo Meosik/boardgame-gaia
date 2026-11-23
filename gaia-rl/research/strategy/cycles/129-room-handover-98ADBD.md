@@ -142,8 +142,17 @@ legality was checked for the first move only.
   14, 42) finished one comparison only — the teacher's own default move, no alternative at all (412–1066 candidates;
   at decision 5 the first comparison result came at 17.5 s). The plan menu pool at decision 5 holds station-federation,
   track and colony plans, no academy upgrade. Where comparisons finished, values mostly tie (136.73).
-- Cause per parting decision (E264 classes): the first three Ivits actions = ② cut by the cap, with a share of ① (the
-  academy is not a menu plan); the Rebellion exploration (decision 37, 4 of 4 comparisons, 137.73 against 136.73) = ③.
+- Cause per parting decision (E264 classes; corrected after debate 1/1 by choosing decision 5 again without the cap,
+  `lab/scratch_r5_explain.py`, work-tree build, 138 s alone): with all four comparisons finished the list is the default
+  move (Twilight, "1 ore + 3 knowledge" tile) 131.46, the menu plan station-then-extend-federation (first move: space
+  station -1,3) 138.6 — selected, the second-ranked root move (the same Twilight action with another tile) 131.46, and a
+  colony plan whose first move is the QIC academy upgrade at -2,4 (with the "3 VP per Gaia mine" tile) 125.83. So the cap
+  only turned the first move from the station plan into the default move. The academy line was on the waiting list in
+  one variant and valued 6–13 points lower = ③; the user's exact move (the same academy with the "institute/academy power
+  value +1" tile) is rank 247 of 412 in the root ranking (best academy variant: rank 52) and not on the list = ①.
+  Decisions 10, 14, 42: only "no alternative compared" is known, their waiting lists were not looked at. The Rebellion
+  exploration (decision 37, 4 of 4 comparisons, 137.73 against 136.73) = ③. A rerun alone or a larger cap would therefore
+  not make the teacher pick the academy; whether the academy line is in fact better is only answered by proposal (ㄴ).
 - Not known: which line is better (no game continues the user's move with the teacher on the same engine and opponents),
   whether the cap bites less without the load of four arms at once, the teacher's VP at the round-6 start.
 
@@ -151,4 +160,4 @@ Proposals (nothing queued): (ㄱ) rerun the round-5 arm alone (`--rounds 5 --job
 Ivits decisions of round 5, completed comparisons, whether the first three actions change, Ivits final as a reference);
 (ㄴ) an option in `room_handover.py` that plays the user's first N Ivits moves from the room record before the teacher
 takes over; (ㄷ) rebuild the work-tree engine (owner command); (ㄹ) a larger cap (the user's number).
-Bot recommendation: (ㄱ), then (ㄴ).
+Bot recommendation (corrected after debate 1/1): (ㄴ) first; (ㄱ) only as a side check.
