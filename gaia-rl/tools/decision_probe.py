@@ -86,14 +86,155 @@ def install_front(front, watch=(), log_path=None):
     p.interleave_families = interleave_families
 
 
+_inside = {'depth': 0, 'select': 0.0, 'selects': 0, 'rank': 0.0, 'ranks': 0, 'candidates': 0}
+
+
+def _keep_flags(wrapper, inner, tree=False):
+    """The bool flags of the wrappers underneath (their idempotence checks) and `__wrapped__`: the wrapped
+    function, or with tree=True what it exposes as the tree's own (as parallel_search does for rollout)."""
+    for name, value in vars(inner).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(wrapper, name, value)
+    wrapper.__wrapped__ = getattr(inner, '__wrapped__', inner) if tree else inner
+
+
+def _write(log_path, row):
+    with open(log_path, 'a') as f:        # one short line per write: safe from several processes
+        f.write(json.dumps(row)+'\n')
+
+
+def install_timing(log_path):
+    """Time one comparison's two parts, in whichever process computes it (the pool workers are forked after the
+    factory, so they carry these wrappers): preparation.select_goal (the first move of a goal without one) and
+    preparation.rollout (the continuation to the horizon). Each top-level call writes an 'start' and an 'end'
+    line (a start without an end = cut by the cap). A rollout's end line also has its simulated decisions and
+    what it spent inside: Policies.rank calls (seconds, count, candidates ranked) and select_goal calls. Timing
+    only: every call returns what the wrapped function returns."""
+    import four_factions.preparation as p
+    if getattr(p.rollout, '_probe_timing', False):
+        return
+    inner_select, inner_rollout, inner_rank = p.select_goal, p.rollout, p.Policies.rank
+
+    def rank(self, env, snapshot):
+        if not _inside['depth']:
+            return inner_rank(self, env, snapshot)
+        tick = time.monotonic()
+        try:
+            return inner_rank(self, env, snapshot)
+        finally:
+            _inside['rank'] += time.monotonic()-tick
+            _inside['ranks'] += 1
+            _inside['candidates'] += len(snapshot.get('candidates', ()))
+
+    def timed_select(function):
+        def select_goal(env, snapshot, scores, goal, policies, deadline):
+            tick = time.monotonic()
+            if _inside['depth']:
+                try:
+                    return function(env, snapshot, scores, goal, policies, deadline)
+                finally:
+                    _inside['select'] += time.monotonic()-tick
+                    _inside['selects'] += 1
+            head = {'call': 'select_goal', 'goal': str(getattr(goal, 'name', goal)), 'pid': os.getpid()}
+            _write(log_path, {'event': 'start', **head, 'at': time.time()})
+            first = error = None
+            _inside['depth'] += 1
+            try:
+                first = function(env, snapshot, scores, goal, policies, deadline)
+                return first
+            except BaseException as caught:
+                error = type(caught).__name__
+                raise
+            finally:
+                _inside['depth'] -= 1
+                _write(log_path, {'event': 'end', **head, 'at': time.time(), 'first': first, 'error': error,
+                                  'seconds': round(time.monotonic()-tick, 3)})
+        return select_goal
+    select_goal = timed_select(inner_select)
+
+    def rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs):
+        if _inside['depth']:
+            return inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
+        head = {'call': 'rollout', 'goal': str(getattr(goal, 'name', goal)), 'first': first, 'pid': os.getpid()}
+        _write(log_path, {'event': 'start', **head, 'at': time.time()})
+        _inside.update(depth=1, select=0.0, selects=0, rank=0.0, ranks=0, candidates=0)
+        tick, result, error = time.monotonic(), None, None
+        try:
+            result = inner_rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs)
+            return result
+        except BaseException as caught:
+            error = type(caught).__name__
+            raise
+        finally:
+            _inside['depth'] = 0
+            _write(log_path, {'event': 'end', **head, 'at': time.time(), 'error': error,
+                              'seconds': round(time.monotonic()-tick, 3),
+                              'complete': None if result is None else bool(result.get('complete')),
+                              'decisions': None if result is None else result.get('decisions'),
+                              'rank_seconds': round(_inside['rank'], 3), 'rank_calls': _inside['ranks'],
+                              'ranked_candidates': _inside['candidates'],
+                              'select_seconds': round(_inside['select'], 3), 'select_calls': _inside['selects']})
+
+    # `__wrapped__` is the tree's own function by the patches' convention. A pool worker takes the first move
+    # with select_goal.__wrapped__ when there is one (parallel_search._compute), so that one is timed too and
+    # the worker calls what it called without this wrapper.
+    _keep_flags(rank, inner_rank, tree=True)
+    _keep_flags(select_goal, inner_select)
+    select_goal.__wrapped__ = (timed_select(inner_select.__wrapped__) if hasattr(inner_select, '__wrapped__')
+                               else select_goal)
+    _keep_flags(rollout, inner_rollout, tree=True)
+    rollout._probe_timing = True
+    p.Policies.rank, p.select_goal, p.rollout = rank, select_goal, rollout
+
+
+def install_task_log(log_path):
+    """Log the comparison order parallel_search predicts for a decision (the same construction as the search):
+    one 'tasks' line with the number of tasks and the first twelve as [name, family, first move]."""
+    import parallel_search
+    inner = parallel_search._planned_tasks
+    if getattr(inner, '_probe_tasks', False):
+        return
+
+    def _planned_tasks(*args, **kwargs):
+        tasks, capture = inner(*args, **kwargs)
+        _write(log_path, {'event': 'tasks', 'planned': len(tasks),
+                          'order': [[str(goal.name), goal.family, goal.first] for goal in tasks[:12]]})
+        return tasks, capture
+    _planned_tasks._probe_tasks = True
+    parallel_search._planned_tasks = _planned_tasks
+
+
+def comparison_times(lines, started_at):
+    """The timing lines of one ask as rows, in start order: {'call', 'goal', 'first', 'pid', 'started' (seconds
+    after the choice was asked), 'finished' (False = a start with no end: cut by the cap), then the end line's
+    fields}. A start is matched with the next end of the same call, goal and process."""
+    rows, open_rows = [], {}
+    for line in lines:
+        key = (line.get('call'), line.get('goal'), line.get('pid'))
+        if line.get('event') == 'start':
+            row = {'call': line['call'], 'goal': line['goal'], 'first': line.get('first'), 'pid': line['pid'],
+                   'started': round(line['at']-started_at, 3), 'finished': False}
+            rows.append(row)
+            open_rows[key] = row
+        elif line.get('event') == 'end' and key in open_rows:
+            row = open_rows.pop(key)
+            row.update({k: v for k, v in line.items() if k not in ('event', 'call', 'goal', 'pid', 'at')},
+                       finished=True)
+    return rows
+
+
 def factory(seed, **kwargs):
     """Teacher spec factory `decision_probe:factory`: the real factory (GAIA_PROBE_FACTORY), then install_front
-    with GAIA_PROBE_FRONT / GAIA_PROBE_WATCH (JSON lists of candidate indices) and GAIA_PROBE_LOG."""
+    with GAIA_PROBE_FRONT / GAIA_PROBE_WATCH (JSON lists of candidate indices) and, with GAIA_PROBE_LOG,
+    install_timing and install_task_log."""
     from importlib import import_module
     module, _, attribute = os.environ[FACTORY_ENV].partition(':')
     teacher = getattr(import_module(module), attribute)(seed, **kwargs)
-    install_front(json.loads(os.environ.get(FRONT_ENV, '[]')), json.loads(os.environ.get(WATCH_ENV, '[]')),
-                  os.environ.get(LOG_ENV))
+    log_path = os.environ.get(LOG_ENV)
+    install_front(json.loads(os.environ.get(FRONT_ENV, '[]')), json.loads(os.environ.get(WATCH_ENV, '[]')), log_path)
+    if log_path:
+        install_timing(log_path)
+        install_task_log(log_path)
     return teacher
 
 
@@ -175,7 +316,7 @@ def run_ask(ask, teacher, seed, state_path, start, prefix, snapshot, indices, ou
             for decision, index, after in prefix:
                 if worker.request({'op': 'step', 'decision_id': decision, 'index': index}, 300).get('digest') != after:
                     raise RuntimeError('the worker diverged while watching the prefix')
-            tick = time.monotonic()
+            tick, asked_at = time.monotonic(), time.time()
             reply = worker.request({'op': 'choose', 'digest': teacher_ab.digest(snapshot)}, timeout)
             row['wall_seconds'] = round(time.monotonic()-tick, 3)
             if 'index' not in reply:
@@ -197,8 +338,21 @@ def run_ask(ask, teacher, seed, state_path, start, prefix, snapshot, indices, ou
                          for plan in reply.get('compared', [])])
     if log_path.exists():
         lines = [json.loads(line) for line in log_path.read_text().splitlines() if line.strip()]
-        if lines:
-            row.update(roots=lines[-1]['roots'], move_ranks=lines[-1]['rank'])
+        roots = [line for line in lines if 'roots' in line]
+        if roots:
+            row.update(roots=roots[-1]['roots'], move_ranks=roots[-1]['rank'])
+        tasks = [line for line in lines if line.get('event') == 'tasks']
+        if tasks:
+            row.update(planned_tasks=tasks[-1]['planned'], task_order=tasks[-1]['order'])
+        row['comparison_times'] = comparison_times(lines, asked_at)
+        # Was each front move's root comparison started / finished within this ask (the cap may cut it)?
+        row['front_comparisons'] = [
+            {'index': index,
+             'started': any(t['call'] == 'rollout' and t['goal'] == f'root-{index}' for t in row['comparison_times']),
+             'finished': any(t['call'] == 'rollout' and t['goal'] == f'root-{index}' and t['finished']
+                             and t.get('complete') for t in row['comparison_times']),
+             'compared': any(plan.get('goal') == f'root-{index}' for plan in row['compared'])}
+            for index in row['front_indices']]
     return row
 
 
@@ -299,6 +453,18 @@ def main():
             print(f"    {str(plan.get('goal'))[:44]:<44} {'' if value is None else format(value, '8.2f'):>8} "
                   f"{'done' if plan.get('complete') else 'open'} [{plan.get('first')}]"
                   f"{'' if plan.get('move') is None else ' = move '+str(plan['move'])} {short(plan.get('action'), 70)}")
+        if row.get('task_order'):
+            print(f"    task order ({row['planned_tasks']} planned): " + ' | '.join(name for name, _, _ in row['task_order']))
+        for part in row.get('comparison_times', ()):
+            tail = 'not finished (cut)' if not part['finished'] else f"{part.get('seconds')} s"
+            if part['call'] == 'rollout' and part['finished']:
+                tail += (f", {part.get('decisions')} decisions, rank {part.get('rank_seconds')} s in {part.get('rank_calls')} "
+                         f"calls ({part.get('ranked_candidates')} candidates), select_goal {part.get('select_seconds')} s "
+                         f"in {part.get('select_calls')} calls")
+            print(f"    {part['call']:<11} {part['goal'][:40]:<40} started {part['started']:>7} s: {tail}")
+        for front in row.get('front_comparisons', ()):
+            print(f"    front move [{front['index']}]: started {front['started']}, finished {front['finished']}, "
+                  f"compared {front['compared']}")
 
 
 if __name__ == '__main__':

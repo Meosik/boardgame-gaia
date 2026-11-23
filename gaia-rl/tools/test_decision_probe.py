@@ -167,5 +167,173 @@ class InstallFrontTest(unittest.TestCase):
         self.assertIs(self.module.interleave_families, wrapper)
 
 
+class ComparisonTimesTest(unittest.TestCase):
+    def test_a_start_and_its_end_give_one_finished_row_with_the_end_fields(self):
+        lines = [{'event': 'start', 'call': 'rollout', 'goal': 'root-7', 'first': 7, 'pid': 11, 'at': 105.12345},
+                 {'event': 'end', 'call': 'rollout', 'goal': 'root-7', 'first': 7, 'pid': 11, 'at': 109.0,
+                  'seconds': 3.9, 'decisions': 7, 'complete': True, 'error': None}]
+        rows = decision_probe.comparison_times(lines, 100.0)
+        self.assertEqual(rows, [{'call': 'rollout', 'goal': 'root-7', 'first': 7, 'pid': 11, 'started': 5.123,
+                                 'finished': True, 'seconds': 3.9, 'decisions': 7, 'complete': True,
+                                 'error': None}])
+        self.assertNotIn('event', rows[0])
+        self.assertNotIn('at', rows[0])
+
+    def test_a_start_with_no_end_is_not_finished(self):
+        lines = [{'event': 'start', 'call': 'rollout', 'goal': 'root-7', 'first': 7, 'pid': 11, 'at': 101.0}]
+        rows = decision_probe.comparison_times(lines, 100.0)
+        self.assertEqual(len(rows), 1)
+        self.assertIs(rows[0]['finished'], False)
+        self.assertNotIn('seconds', rows[0])
+
+    def test_interleaved_rollouts_of_different_goals_and_pids_are_matched_and_kept_in_start_order(self):
+        lines = [{'event': 'start', 'call': 'rollout', 'goal': 'A', 'first': 1, 'pid': 1, 'at': 101.0},
+                 {'event': 'start', 'call': 'rollout', 'goal': 'B', 'first': 2, 'pid': 2, 'at': 102.0},
+                 {'event': 'end', 'call': 'rollout', 'goal': 'B', 'first': 2, 'pid': 2, 'at': 103.0, 'seconds': 1.0},
+                 {'event': 'end', 'call': 'rollout', 'goal': 'A', 'first': 1, 'pid': 1, 'at': 104.0, 'seconds': 3.0}]
+        rows = decision_probe.comparison_times(lines, 100.0)
+        self.assertEqual([row['goal'] for row in rows], ['A', 'B'])
+        self.assertEqual([row['seconds'] for row in rows], [3.0, 1.0])
+        self.assertEqual([row['finished'] for row in rows], [True, True])
+        self.assertEqual([row['started'] for row in rows], [1.0, 2.0])
+
+    def test_lines_without_an_event_and_tasks_lines_are_ignored(self):
+        lines = [{'roots': 3, 'rank': {}},
+                 {'event': 'tasks', 'planned': 2, 'order': []},
+                 {'event': 'start', 'call': 'select_goal', 'goal': 'g', 'pid': 1, 'at': 101.0}]
+        rows = decision_probe.comparison_times(lines, 100.0)
+        self.assertEqual([row['goal'] for row in rows], ['g'])
+
+
+class InstallTimingTest(unittest.TestCase):
+    def setUp(self):
+        decision_probe._inside['depth'] = 0
+        self.addCleanup(decision_probe._inside.update, depth=0)
+        self.package = types.ModuleType('four_factions')
+        self.module = module = types.ModuleType('four_factions.preparation')
+        self.raises = None
+
+        class Policies:
+            def rank(self, env, snapshot):
+                return [0, 1, 2]
+
+        def select_goal(env, snapshot, scores, goal, policies, deadline):
+            return 5
+
+        def rollout(env, snapshot, first, goal, policies, deadline, *args, **kwargs):
+            module.Policies().rank(None, {'candidates': [1, 2, 3]})
+            module.Policies().rank(None, {'candidates': [1, 2, 3]})
+            module.select_goal(None, {}, [], goal, None, 0)
+            if self.raises:
+                raise self.raises
+            return {'complete': True, 'value': 1.0, 'decisions': 7}
+        module.Policies, module.select_goal, module.rollout = Policies, select_goal, rollout
+        self.package.preparation = module
+        patcher = mock.patch.dict(sys.modules, {'four_factions': self.package,
+                                                'four_factions.preparation': module})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.log = Path(directory.name)/'timing.jsonl'
+        self.goal = types.SimpleNamespace(name='root-7')
+
+    def lines(self):
+        if not self.log.exists():
+            return []
+        return [json.loads(line) for line in self.log.read_text().splitlines()]
+
+    def test_a_top_level_rollout_logs_start_and_end_with_the_inside_counts_and_no_select_lines(self):
+        decision_probe.install_timing(str(self.log))
+        result = self.module.rollout(None, {}, 7, self.goal, None, 0)
+        self.assertEqual(result, {'complete': True, 'value': 1.0, 'decisions': 7})
+        lines = self.lines()
+        self.assertEqual([line['event'] for line in lines], ['start', 'end'])
+        self.assertTrue(all(line['call'] == 'rollout' and line['goal'] == 'root-7' and line['first'] == 7
+                            for line in lines))
+        end = lines[1]
+        self.assertIs(end['complete'], True)
+        self.assertEqual(end['decisions'], 7)
+        self.assertEqual(end['rank_calls'], 2)
+        self.assertEqual(end['ranked_candidates'], 6)
+        self.assertEqual(end['select_calls'], 1)
+        self.assertIsNone(end['error'])
+
+    def test_a_top_level_select_goal_logs_start_and_end_with_the_first_move(self):
+        decision_probe.install_timing(str(self.log))
+        self.assertEqual(self.module.select_goal(None, {}, [], self.goal, None, 0), 5)
+        lines = self.lines()
+        self.assertEqual([line['event'] for line in lines], ['start', 'end'])
+        self.assertTrue(all(line['call'] == 'select_goal' for line in lines))
+        self.assertEqual(lines[1]['first'], 5)
+
+    def test_a_rank_call_outside_a_rollout_passes_through_and_writes_nothing(self):
+        decision_probe.install_timing(str(self.log))
+        self.assertEqual(self.module.Policies().rank(None, {'candidates': [1]}), [0, 1, 2])
+        self.assertFalse(self.log.exists())
+
+    def test_an_exception_propagates_is_logged_and_resets_the_depth(self):
+        decision_probe.install_timing(str(self.log))
+        self.raises = RuntimeError('boom')
+        with self.assertRaises(RuntimeError):
+            self.module.rollout(None, {}, 7, self.goal, None, 0)
+        end = self.lines()[-1]
+        self.assertEqual(end['event'], 'end')
+        self.assertEqual(end['error'], 'RuntimeError')
+        self.assertIsNone(end['complete'])
+        self.assertEqual(decision_probe._inside['depth'], 0)
+
+    def test_the_flag_is_set_and_a_second_install_does_not_wrap_again(self):
+        decision_probe.install_timing(str(self.log))
+        wrapper = self.module.rollout
+        self.assertTrue(wrapper._probe_timing)
+        decision_probe.install_timing(str(self.log))
+        self.assertIs(self.module.rollout, wrapper)
+
+    def test_select_goal_wrapped_is_itself_when_the_original_has_none(self):
+        decision_probe.install_timing(str(self.log))
+        self.assertIs(self.module.select_goal.__wrapped__, self.module.select_goal)
+
+    def test_select_goal_wrapped_is_a_timed_wrapper_of_the_originals_wrapped(self):
+        def other_function(env, snapshot, scores, goal, policies, deadline):
+            return 9
+        self.module.select_goal.__wrapped__ = other_function
+        decision_probe.install_timing(str(self.log))
+        wrapped = self.module.select_goal.__wrapped__
+        self.assertIsNot(wrapped, self.module.select_goal)
+        self.assertIsNot(wrapped, other_function)
+        self.assertEqual(wrapped(None, {}, [], self.goal, None, 0), 9)
+        lines = self.lines()
+        self.assertEqual([line['event'] for line in lines], ['start', 'end'])
+        self.assertEqual(lines[1]['first'], 9)
+
+
+class InstallTaskLogTest(unittest.TestCase):
+    def setUp(self):
+        self.goals = [types.SimpleNamespace(name='root-3', family='roots', first=3),
+                      types.SimpleNamespace(name='plan-x', family='plans', first=None)]
+        self.module = types.ModuleType('parallel_search')
+        self.module._planned_tasks = lambda *args, **kwargs: (self.goals, False)
+        patcher = mock.patch.dict(sys.modules, {'parallel_search': self.module})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.log = Path(directory.name)/'tasks.jsonl'
+
+    def test_the_planned_tasks_are_returned_unchanged_and_logged_once(self):
+        decision_probe.install_task_log(str(self.log))
+        self.assertEqual(self.module._planned_tasks(1, 2), (self.goals, False))
+        lines = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertEqual(lines, [{'event': 'tasks', 'planned': 2,
+                                  'order': [['root-3', 'roots', 3], ['plan-x', 'plans', None]]}])
+
+    def test_a_second_install_does_not_wrap_again(self):
+        decision_probe.install_task_log(str(self.log))
+        wrapper = self.module._planned_tasks
+        decision_probe.install_task_log(str(self.log))
+        self.assertIs(self.module._planned_tasks, wrapper)
+
+
 if __name__ == '__main__':
     unittest.main()
