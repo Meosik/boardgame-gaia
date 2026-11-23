@@ -108,6 +108,10 @@ No code or deployment change. Lab queue empty after this cycle.
   whether each of the user's round-5 moves is legal in the teacher's state on the lab engine at that point, and whether the
   two lines part first at an opponent's move or at an engine difference rather than at an Ivits decision (debate 1/1).
   Decides: what the teacher does not do in round 5 that the user did.
+  Each parting decision is sorted into one cause (user question 2026-11-23, E264): ① the user's move was not among the
+  teacher's candidates, ② it was a candidate but the 60 s cap cut the comparison, ③ it was compared and valued lower.
+  A fix to a round 4–6 decision cannot be read from the A/B verdict (charges in rounds 1–3, HANDOFF 1 ⑤): the verdict
+  stays, and that A/B's queue note pre-registers secondary indicators — candidate included, comparisons completed, late-game effect.
 - (ㄴ) Measure the spread: the same command with `--repeats N` (lab ≈ 1 h per repeat of the four starts). N is the user's
   number.
 - (ㄷ) The same experiment on another room of the user's (another map), once a room export exists.
