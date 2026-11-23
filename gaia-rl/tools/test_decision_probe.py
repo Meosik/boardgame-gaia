@@ -448,6 +448,88 @@ class DecisionRecordTest(unittest.TestCase):
         self.assertIsNone(record['chosen'])
 
 
+def seat(vp, passed=False, ore=1, credits=2, knowledge=3, qic=4):
+    return {'vp': vp, 'passed': passed,
+            'resources': {'ore': ore, 'credits': credits, 'knowledge': knowledge, 'qic': qic}}
+
+
+def seats_snap(*actions, player=1):
+    players = [seat(10, True), seat(20, ore=7), seat(30, True), seat(40)]
+    return {'state': {'round': 5, 'players': players}, 'player': player, 'decision_id': 'd1',
+            'candidates': [{'action': action} for action in actions]}
+
+
+class FakeBranch:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def snapshot_json(self):
+        return json.dumps(self.payload)
+
+
+class FakeEnv:
+    def __init__(self, payload=None, error=None):
+        self.payload, self.error, self.calls = payload, error, []
+
+    def fork(self, decision_id, index):
+        self.calls.append((decision_id, index))
+        if self.error:
+            raise self.error
+        return FakeBranch(self.payload)
+
+
+class DecisionRecordOthersTest(unittest.TestCase):
+    ACTIONS = ({'type': 'Pass'}, {'type': 'Build'}, {'type': 'Pass'}, {'type': 'FormFederation'},
+               {'type': 'Build'}, {'type': 'FormFederation'}, {'type': 'Build'}, {'type': 'Build'})
+    SCORES = [(5, 'a'), (3, 'b'), (9, 'c'), (4, 'd'), (3, 'e'), (8, 'f'), (-1, 'g'), (9, BLOCK)]
+
+    def record(self, env=None):
+        return decision_probe.decision_record(seats_snap(*self.ACTIONS), self.SCORES, 1, env)
+
+    def test_new_keys_without_env(self):
+        record = self.record()
+        self.assertEqual((record['others'], record['others_passed']), (3, 2))
+        self.assertEqual(record['own'], {'vp': 20, 'ore': 7, 'credits': 2, 'knowledge': 3, 'qic': 4})
+        self.assertEqual(record['positive_others'], 4)
+        self.assertEqual([row['index'] for row in record['top_others']], [5, 3, 1])
+        self.assertIsNone(record['pass_after'])
+        self.assertIsNone(record['federation_after'])
+
+    def test_missing_stock_keys_give_none(self):
+        stock = decision_probe.own_stock({'players': [{}]}, 0)
+        self.assertEqual(stock, {'vp': None, 'ore': None, 'credits': None, 'knowledge': None, 'qic': None})
+
+    def test_fork_of_the_best_pass_and_federation(self):
+        after = {'player': 2, 'state': {'round': 5, 'phase': {'Action': {'x': 1}},
+                                        'players': [seat(10, True), seat(21, True, ore=0), seat(30, True), seat(40)]}}
+        env = FakeEnv(after)
+        record = self.record(env)
+        self.assertEqual(env.calls, [('d1', 2), ('d1', 5)])
+        self.assertEqual(record['pass_after'], {'round': 5, 'phase': 'Action', 'player': 2,
+                                                'own': {'vp': 21, 'ore': 0, 'credits': 2, 'knowledge': 3, 'qic': 4},
+                                                'others_passed': 2})
+        self.assertEqual(record['federation_after'],
+                         {'round': 5, 'own': {'vp': 21, 'ore': 0, 'credits': 2, 'knowledge': 3, 'qic': 4}})
+
+    def test_a_string_phase_is_kept(self):
+        env = FakeEnv({'player': 0, 'state': {'round': 6, 'phase': 'Income', 'players': []}})
+        self.assertEqual(self.record(env)['pass_after']['phase'], 'Income')
+
+    def test_a_failing_fork_leaves_the_rest_of_the_record(self):
+        record = self.record(FakeEnv(error=RuntimeError('boom')))
+        self.assertIn('boom', record['pass_after']['error'])
+        self.assertIn('boom', record['federation_after']['error'])
+        self.assertEqual(record['others_passed'], 2)
+        self.assertEqual(record['positive_others'], 4)
+
+    def test_decision_line_shows_the_new_text_and_survives_an_old_item(self):
+        env = FakeEnv({'player': 0, 'state': {'round': 6, 'phase': 'Income', 'players': []}})
+        line = decision_probe.decision_line(self.record(env))
+        self.assertIn(' | others passed 2/3 | after pass R6 | 4 positive', line)
+        old = decision_probe.decision_line({'round': 3, 'candidates': 2, 'federations': 0})
+        self.assertIn('others passed None/None | after pass R- | None positive', old)
+
+
 class InstallTaskLogTest(unittest.TestCase):
     def setUp(self):
         self.goals = [types.SimpleNamespace(name='root-3', family='roots', first=3),

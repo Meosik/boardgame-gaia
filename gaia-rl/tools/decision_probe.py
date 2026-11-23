@@ -115,10 +115,30 @@ def rollout_record(result):
                         for step in result.get('actions') or ()]}
 
 
-def decision_record(snapshot, scores, index):
+def own_stock(state, actor):
+    """{'vp', 'ore', 'credits', 'knowledge', 'qic'} of seat `actor` in `state` (None for what is missing)."""
+    seats = (state or {}).get('players') or ()
+    seat = seats[actor] if isinstance(actor, int) and 0 <= actor < len(seats) else {}
+    resources = seat.get('resources') or {}
+    return {'vp': seat.get('vp'), **{key: resources.get(key) for key in ('ore', 'credits', 'knowledge', 'qic')}}
+
+
+def passed_count(state, actor):
+    """How many seats other than `actor` have passed in `state`."""
+    seats = (state or {}).get('players') or ()
+    return sum(bool(seat.get('passed')) for n, seat in enumerate(seats) if n != actor)
+
+
+def decision_record(snapshot, scores, index, env=None):
     """One decision of the acting seat inside a rollout: the round, the candidates by action type, the chosen
     candidate (None when index is None), the unblocked top-scored one, the federation candidates (count, blocked
-    count, best) and the best Pass. An entry is {'index', 'type', 'score' (None when blocked), 'blocked',
+    count, best) and the best Pass. Also: 'others' (seats besides the acting one) and 'others_passed' (how many
+    of them have passed), 'own' (the acting seat's vp, ore, credits, knowledge, qic), 'positive_others' (unblocked
+    non-Pass candidates with score > 0), 'top_others' (the three highest-scored of those, ties: lowest index),
+    'pass_after' (with `env`: the best unblocked Pass forked like the teacher does, then {'round', 'phase',
+    'player', 'own', 'others_passed'} of the state after it; None without env or such a candidate; {'error'} if
+    the fork fails) and 'federation_after' (the same for the best unblocked FormFederation: {'round', 'own'}).
+    Recording only. An entry is {'index', 'type', 'score' (None when blocked), 'blocked',
     'reason'} (a FormFederation also has 'satellites', 'hexes', 'token'). A candidate is blocked when its reason
     starts with 'conservation blocked: '. Best = the highest-scored unblocked one (ties: lowest index), else the
     highest-scored blocked one."""
@@ -145,12 +165,52 @@ def decision_record(snapshot, scores, index):
     for row in rows:
         by_type[row['type']] = by_type.get(row['type'], 0)+1
     federations = [row for row in rows if row['type'] == 'FormFederation']
-    return {'round': (snapshot.get('state') or {}).get('round'), 'candidates': len(rows), 'by_type': by_type,
+    state = snapshot.get('state') or {}
+    actor = snapshot.get('player')
+    seats = state.get('players') or ()
+    others = [seat for n, seat in enumerate(seats) if n != actor]
+    free_others = [row for row in rows if not row['blocked'] and row['type'] != 'Pass']
+
+    def free_best(kind):
+        free = [row for row in rows if row['type'] == kind and not row['blocked']]
+        return best(free)
+
+    def fork_state(row):
+        branch = env.fork(snapshot['decision_id'], row['index'])
+        return json.loads(branch.snapshot_json())
+
+    pass_after = federation_after = None
+    pass_row, federation_row = free_best('Pass'), free_best('FormFederation')
+    if env is not None and pass_row is not None:
+        try:
+            after = fork_state(pass_row)
+            phase = (after.get('state') or {}).get('phase')
+            if not isinstance(phase, str) and phase is not None:
+                phase = next(iter(phase), None) if isinstance(phase, dict) else str(phase)
+            pass_after = {'round': (after.get('state') or {}).get('round'), 'phase': phase,
+                          'player': after.get('player'), 'own': own_stock(after.get('state'), actor),
+                          'others_passed': passed_count(after.get('state'), actor)}
+        except Exception as exc:
+            pass_after = {'error': repr(exc)[:200]}
+    if env is not None and federation_row is not None:
+        try:
+            after = fork_state(federation_row)
+            federation_after = {'round': (after.get('state') or {}).get('round'),
+                                'own': own_stock(after.get('state'), actor)}
+        except Exception as exc:
+            federation_after = {'error': repr(exc)[:200]}
+    return {'round': state.get('round'), 'candidates': len(rows), 'by_type': by_type,
             'chosen': None if index is None else rows[index],
             'top': best([row for row in rows if not row['blocked']]),
             'federations': len(federations), 'federations_blocked': sum(row['blocked'] for row in federations),
             'best_federation': best(federations),
-            'best_pass': best([row for row in rows if row['type'] == 'Pass'])}
+            'best_pass': best([row for row in rows if row['type'] == 'Pass']),
+            'others': len(others), 'others_passed': sum(bool(seat.get('passed')) for seat in others),
+            'own': own_stock(state, actor),
+            'positive_others': sum(1 for row in free_others if row['score'] is not None and row['score'] > 0),
+            'top_others': sorted(free_others, key=lambda row: (-(row['score'] if row['score'] is not None
+                                                                 else float('-inf')), row['index']))[:3],
+            'pass_after': pass_after, 'federation_after': federation_after}
 
 
 def decision_line(item):
@@ -166,7 +226,10 @@ def decision_line(item):
     return (f"        decide R{item.get('round')}: chose {kind(item.get('chosen'))} | top {kind(item.get('top'))} | "
             f"{item.get('candidates')} candidates, FormFederation {item.get('federations')} "
             f"(blocked {item.get('federations_blocked')}) | best fed {fed_text} | "
-            f"best pass {'-' if not passed else passed.get('score')}")[:230]
+            f"best pass {'-' if not passed else passed.get('score')} | "
+            f"others passed {item.get('others_passed')}/{item.get('others')} | "
+            f"after pass R{(item.get('pass_after') or {}).get('round') or '-'} | "
+            f"{item.get('positive_others')} positive")[:320]
 
 
 def install_timing(log_path):
@@ -208,7 +271,7 @@ def install_timing(log_path):
                     _inside['selects'] += 1
                     if done and isinstance(_inside.get('own'), list):
                         try:
-                            _inside['own'].append(decision_record(snapshot, scores, chosen))
+                            _inside['own'].append(decision_record(snapshot, scores, chosen, env))
                         except Exception as exc:
                             _inside['own'].append({'error': repr(exc)[:200]})
             head = {'call': 'select_goal', 'goal': str(getattr(goal, 'name', goal)), 'pid': os.getpid()}
