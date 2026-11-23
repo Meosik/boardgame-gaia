@@ -99,8 +99,20 @@ def _keep_flags(wrapper, inner, tree=False):
 
 
 def _write(log_path, row):
-    with open(log_path, 'a') as f:        # one short line per write: safe from several processes
-        f.write(json.dumps(row)+'\n')
+    with open(log_path, 'a') as f:        # one line per write call: safe from several processes
+        f.write(json.dumps(row, default=str)+'\n')
+
+
+def rollout_record(result):
+    """What a rollout's result says about its own course, for the end line: the leaf value, whether the goal was
+    reached, what was left of it, the round it ended in and the acting seat's actions in order (round, action,
+    VP before and after; the resources are left out to keep the line short). {} when there is no result."""
+    if not isinstance(result, dict):
+        return {}
+    return {'value': result.get('value'), 'goal_acquired': result.get('goal_acquired'),
+            'remaining_goal': result.get('remaining_goal'), 'end_round': result.get('end_round'),
+            'actions': [{key: step.get(key) for key in ('round', 'action', 'vp_before', 'vp_after')}
+                        for step in result.get('actions') or ()]}
 
 
 def install_timing(log_path):
@@ -108,8 +120,9 @@ def install_timing(log_path):
     factory, so they carry these wrappers): preparation.select_goal (the first move of a goal without one) and
     preparation.rollout (the continuation to the horizon). Each top-level call writes an 'start' and an 'end'
     line (a start without an end = cut by the cap). A rollout's end line also has its simulated decisions and
-    what it spent inside: Policies.rank calls (seconds, count, candidates ranked) and select_goal calls. Timing
-    only: every call returns what the wrapped function returns."""
+    what it spent inside: Policies.rank calls (seconds, count, candidates ranked) and select_goal calls. The
+    rollout's end line also carries `rollout_record` (value, goal attainment, the acting seat's actions). Timing
+    and recording only: every call returns what the wrapped function returns."""
     import four_factions.preparation as p
     if getattr(p.rollout, '_probe_timing', False):
         return
@@ -173,7 +186,8 @@ def install_timing(log_path):
                               'decisions': None if result is None else result.get('decisions'),
                               'rank_seconds': round(_inside['rank'], 3), 'rank_calls': _inside['ranks'],
                               'ranked_candidates': _inside['candidates'],
-                              'select_seconds': round(_inside['select'], 3), 'select_calls': _inside['selects']})
+                              'select_seconds': round(_inside['select'], 3), 'select_calls': _inside['selects'],
+                              **rollout_record(result)})
 
     # `__wrapped__` is the tree's own function by the patches' convention. A pool worker takes the first move
     # with select_goal.__wrapped__ when there is one (parallel_search._compute), so that one is timed too and
@@ -464,6 +478,12 @@ def main():
                          f"calls ({part.get('ranked_candidates')} candidates), select_goal {part.get('select_seconds')} s "
                          f"in {part.get('select_calls')} calls")
             print(f"    {part['call']:<11} {part['goal'][:40]:<40} started {part['started']:>7} s: {tail}")
+            if part['call'] == 'rollout' and part['finished'] and part.get('actions') is not None:
+                print(f"        value {part.get('value')}, goal acquired {part.get('goal_acquired')}, "
+                      f"end round {part.get('end_round')}, {len(part['actions'])} own actions:")
+                for step in part['actions']:
+                    print(f"        R{step.get('round')} vp {step.get('vp_before')}→{step.get('vp_after')} "
+                          f"{short(step.get('action'), 100)}")
         for front in row.get('front_comparisons', ()):
             print(f"    front move [{front['index']}]: started {front['started']}, finished {front['finished']}, "
                   f"compared {front['compared']}")

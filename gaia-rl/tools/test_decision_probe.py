@@ -212,6 +212,7 @@ class InstallTimingTest(unittest.TestCase):
         self.package = types.ModuleType('four_factions')
         self.module = module = types.ModuleType('four_factions.preparation')
         self.raises = None
+        self.result = {'complete': True, 'value': 1.0, 'decisions': 7}
 
         class Policies:
             def rank(self, env, snapshot):
@@ -226,7 +227,7 @@ class InstallTimingTest(unittest.TestCase):
             module.select_goal(None, {}, [], goal, None, 0)
             if self.raises:
                 raise self.raises
-            return {'complete': True, 'value': 1.0, 'decisions': 7}
+            return self.result
         module.Policies, module.select_goal, module.rollout = Policies, select_goal, rollout
         self.package.preparation = module
         patcher = mock.patch.dict(sys.modules, {'four_factions': self.package,
@@ -258,6 +259,32 @@ class InstallTimingTest(unittest.TestCase):
         self.assertEqual(end['ranked_candidates'], 6)
         self.assertEqual(end['select_calls'], 1)
         self.assertIsNone(end['error'])
+
+    def test_the_end_line_records_the_rollouts_course_and_the_result_is_untouched(self):
+        self.result = {'complete': True, 'value': 2.5, 'decisions': 3, 'goal_acquired': True,
+                       'remaining_goal': {'name': 'x'}, 'end_round': 6,
+                       'actions': [{'round': 5, 'action': {'type': 'A'}, 'resources_before': {'o': 1},
+                                    'resources_after': {'o': 0}, 'vp_before': 10, 'vp_after': 12},
+                                   {'round': 6, 'action': {'type': 'B'}, 'resources_before': {'o': 2},
+                                    'resources_after': {'o': 3}, 'vp_before': 12, 'vp_after': 19}]}
+        decision_probe.install_timing(str(self.log))
+        result = self.module.rollout(None, {}, 7, self.goal, None, 0)
+        self.assertIs(result, self.result)
+        self.assertIn('resources_before', result['actions'][0])
+        end = self.lines()[-1]
+        self.assertEqual(end['value'], 2.5)
+        self.assertIs(end['goal_acquired'], True)
+        self.assertEqual(end['remaining_goal'], {'name': 'x'})
+        self.assertEqual(end['end_round'], 6)
+        self.assertEqual(end['actions'], [{'round': 5, 'action': {'type': 'A'}, 'vp_before': 10, 'vp_after': 12},
+                                          {'round': 6, 'action': {'type': 'B'}, 'vp_before': 12, 'vp_after': 19}])
+
+    def test_a_raising_rollout_leaves_no_actions_in_the_end_line(self):
+        decision_probe.install_timing(str(self.log))
+        self.raises = RuntimeError('boom')
+        with self.assertRaises(RuntimeError):
+            self.module.rollout(None, {}, 7, self.goal, None, 0)
+        self.assertNotIn('actions', self.lines()[-1])
 
     def test_a_top_level_select_goal_logs_start_and_end_with_the_first_move(self):
         decision_probe.install_timing(str(self.log))
@@ -306,6 +333,14 @@ class InstallTimingTest(unittest.TestCase):
         lines = self.lines()
         self.assertEqual([line['event'] for line in lines], ['start', 'end'])
         self.assertEqual(lines[1]['first'], 9)
+
+
+class RolloutRecordTest(unittest.TestCase):
+    def test_no_result_gives_an_empty_record(self):
+        self.assertEqual(decision_probe.rollout_record(None), {})
+
+    def test_a_result_without_actions_gives_an_empty_list(self):
+        self.assertEqual(decision_probe.rollout_record({'value': 1.0})['actions'], [])
 
 
 class InstallTaskLogTest(unittest.TestCase):
