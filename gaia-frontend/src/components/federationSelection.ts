@@ -269,6 +269,14 @@ export function validateFederationSelection(
     minimumPower,
   });
 
+  // The Hive's federation that already has the power of its next token takes it with nothing
+  // selected (buildings placed next to the federation are already part of it), and anything
+  // selected on top is more than needed — the server's rule (`validate_federation`).
+  if (isIvitsGrowth && selectedFederationPower(gameState, player, [], true) >= minimumPower) {
+    return selectedHexes.length === 0
+      ? status(true, '기존 연방 파워로 충분합니다. 칸을 고르지 않고 토큰을 고르세요.')
+      : status(false, '기존 연방 파워로 충분합니다. 고른 칸을 빼고 토큰을 고르세요.');
+  }
   if (planetHexes.length === 0) {
     return status(false, isIvitsGrowth ? '기존 연방에 붙일 내 건물을 선택하세요.' : '내 건물을 선택하세요.');
   }

@@ -1175,7 +1175,10 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     // 연방에 사용한 칸"). For the Hive that is the usual start — its one federation is what
     // the new hexes connect to.
     const inFederation = me.federated_hexes?.some(({ q, r }) => q === coord.q && r === coord.r);
-    if (!inFederation) gameActions.toggleHex(coord);
+    // The Hive's federation that already has the power of its next token takes it with nothing
+    // selected: choosing this building would be one too many.
+    const nothingToAdd = validateFederationSelection(gameState!, myId, []).valid;
+    if (!inFederation && !nothingToAdd) gameActions.toggleHex(coord);
   }
 
   function sendTechUpgrade(choice: TechTileChoice) {

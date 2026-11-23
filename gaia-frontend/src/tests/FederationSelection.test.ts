@@ -177,18 +177,26 @@ describe('Ivits federation growth', () => {
   }
   const academy = { Academy: 'Science' as const };
 
-  it('grows by exactly one planet when the federation already has the power', () => {
+  it('takes the token with nothing selected when the federation already has the power', () => {
     // 3+3+3+2+2+1 = 14, the power of the second token, before anything is connected.
     const state = grownFederation(['PlanetaryInstitute', academy, academy, 'TradingStation', 'TradingStation', 'Mine']);
+    const none = validateFederationSelection(state, 0, []);
+    expect(none.minimumPower).toBe(14);
+    expect(none.power).toBe(14);
+    expect(none.valid).toBe(true);
+    expect(none.planetHexes).toEqual([]);
+    expect(none.satelliteHexes).toEqual([]);
+    // A hex of the federation in the selection is not something added.
+    expect(validateFederationSelection(state, 0, [{ q: 0, r: 0 }]).valid).toBe(true);
+    // Anything added on top is more than needed.
     const one = validateFederationSelection(state, 0, [{ q: 6, r: 0 }]);
-    expect(one.minimumPower).toBe(14);
-    expect(one.valid).toBe(true);
-    const two = validateFederationSelection(state, 0, [{ q: 6, r: 0 }, { q: 7, r: 0 }]);
-    expect(two.reason).toBe('빼도 되는 건물이나 위성이 포함되어 있습니다.');
+    expect(one.valid).toBe(false);
+    expect(one.reason).toBe('기존 연방 파워로 충분합니다. 고른 칸을 빼고 토큰을 고르세요.');
   });
 
   it('treats the existing federation as already included, not as a wrong choice', () => {
-    const state = grownFederation(['PlanetaryInstitute', academy, academy, 'TradingStation', 'TradingStation', 'Mine']);
+    // 3+3+2+2+2+1 = 13, one short of the second token: the Mine at (6,0) completes it.
+    const state = grownFederation(['PlanetaryInstitute', academy, 'TradingStation', 'TradingStation', 'TradingStation', 'Mine']);
     // A hex of the federation in the selection is left out of what is sent, not refused.
     const status = validateFederationSelection(state, 0, [{ q: 0, r: 0 }, { q: 6, r: 0 }]);
     expect(status.valid).toBe(true);
