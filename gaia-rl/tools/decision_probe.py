@@ -331,6 +331,7 @@ def run_ask(ask, teacher, seed, state_path, start, prefix, snapshot, indices, ou
                chose_move=indices.index(chosen) if chosen in indices else None,
                selected=reply.get('selected'), completed_comparisons=reply.get('completed_comparisons'),
                unsearched_comparisons=reply.get('unsearched_comparisons'),
+               stop_reason=reply.get('stop_reason'),
                fallback_timeout=reply.get('fallback_timeout'), timing=reply.get('timing'),
                compared=[{**plan, 'action': candidates[plan['first']]['action']
                           if isinstance(plan.get('first'), int) and 0 <= plan['first'] < len(candidates) else None,
@@ -447,7 +448,8 @@ def main():
         timing = row.get('timing') or {}
         print(f"{head} → [{row['index']}] {short(row['action'])} ({row['selected']}; move {row['chose_move']}; "
               f"{row['completed_comparisons']} compared, {row['wall_seconds']} s, capped {timing.get('time_capped')}, "
-              f"published at {timing.get('published_at')}, stages {timing.get('stages')})")
+              f"published at {timing.get('published_at')}, stages {timing.get('stages')}, "
+              f"stop {row.get('stop_reason')!r})")
         for plan in row['compared']:
             value = plan.get('value')
             print(f"    {str(plan.get('goal'))[:44]:<44} {'' if value is None else format(value, '8.2f'):>8} "

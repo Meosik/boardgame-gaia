@@ -308,6 +308,7 @@ def worker(args):
                    'unsearched_comparisons': audit.get('unsearched_comparisons') or 0,
                    'completed_comparisons': len(audit.get('plans') or ()),
                    'selected': audit.get('selected'),
+                   'stop_reason': audit.get('stop_reason'),
                    'compared': compared_plans(audit), 'menu': menu_slots(), 'menu_pool': menu_slots('_menu_pool'),
                    'menu_dropped': menu_slots('_menu_dropped'), 'menu_forgot': audit.get('menu_forgot')})
         elif command['op'] == 'step':
