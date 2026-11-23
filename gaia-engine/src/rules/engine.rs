@@ -7913,6 +7913,10 @@ fn apply_pass(
 ) -> Vec<GameEvent> {
     let mut events = Vec::new();
 
+    if state.round >= 6 && experimental_engine_fixes_enabled() {
+        events.extend(convert_leftovers_before_final_pass(state, player_id));
+    }
+
     let old_booster = state
         .player(player_id)
         .and_then(|player| player.booster.clone());
@@ -7955,6 +7959,39 @@ fn apply_pass(
     events.extend(apply_tech_tile_pass_bonus(state, player_id));
 
     advance_turn(state);
+    events
+}
+
+/// The final-round pass makes the conversions a player would make just before it. Rulebook
+/// p.18 scores 1 VP per 3 credits, ore and knowledge; power in Area III and QIC score only
+/// once converted (p.15: 1 power → 1 credit, 1 QIC → 1 ore), and free actions end at the pass
+/// (p.16) — so this is the last moment. They are applied as ordinary free actions, with their
+/// events, up to the 30-credit and 15-ore limits. Power charged after the pass stays as it is:
+/// the rulebook gives no way to convert it. Area II is not sacrificed for more power.
+/// Owner 2026-11-23 (room 98ADBD ended with 3 power and 1 QIC unconverted).
+fn convert_leftovers_before_final_pass(
+    state: &mut GameState,
+    player_id: PlayerId,
+) -> Vec<GameEvent> {
+    let mut events = Vec::new();
+    for kind in [FreeActionKind::PowerToCredit, FreeActionKind::QicToOre] {
+        let Some(player) = state.player(player_id) else {
+            return events;
+        };
+        let room = match kind {
+            FreeActionKind::PowerToCredit => {
+                crate::game_state::Resources::CREDITS_CAP.saturating_sub(player.resources.credits)
+            }
+            _ => crate::game_state::Resources::ORE_CAP.saturating_sub(player.resources.ore),
+        };
+        // The largest count the free-action rules accept (Nevlas institute, Brainstone).
+        let count = (1..=room.min(MAX_FREE_ACTION_COUNT))
+            .rev()
+            .find(|count| validate_free_action(state, player_id, &kind, *count).is_ok());
+        if let Some(count) = count {
+            events.extend(apply_free_action(state, player_id, kind, count));
+        }
+    }
     events
 }
 
