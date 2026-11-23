@@ -119,6 +119,18 @@ export function spendablePower(player: PlayerState): number {
     + (player.resources.power.brainstone === 'Area3' ? 3 : 0);
 }
 
+// Rulebook p.18: at game end, 1 VP per 3 credits, ore and knowledge in any combination. Bowl-3
+// power and QIC count only once converted (power → credits, QIC → ore), and free actions end
+// at the pass (p.16), so the round-6 pass is the last moment. `vp` is what converting adds.
+export function finalPassConversionGain(
+  player: PlayerState,
+): { power: number; qic: number; vp: number } {
+  const { ore, credits, knowledge, qic } = player.resources;
+  const power = spendablePower(player);
+  const kept = ore + credits + knowledge;
+  return { power, qic, vp: Math.floor((kept + power + qic) / 3) - Math.floor(kept / 3) };
+}
+
 export function maxFreeActionCount(
   player: PlayerState | undefined,
   option: FreeActionOption,
