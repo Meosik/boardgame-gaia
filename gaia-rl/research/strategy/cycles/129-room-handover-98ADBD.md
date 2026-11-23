@@ -146,13 +146,20 @@ legality was checked for the first move only.
   `lab/scratch_r5_explain.py`, work-tree build, 138 s alone): with all four comparisons finished the list is the default
   move (Twilight, "1 ore + 3 knowledge" tile) 131.46, the menu plan station-then-extend-federation (first move: space
   station -1,3) 138.6 — selected, the second-ranked root move (the same Twilight action with another tile) 131.46, and a
-  colony plan whose first move is the QIC academy upgrade at -2,4 (with the "3 VP per Gaia mine" tile) 125.83. So the cap
-  only turned the first move from the station plan into the default move. The academy line was on the waiting list in
+  colony plan whose first move is the QIC academy upgrade at -2,4 (with the "3 VP per Gaia mine" tile) 125.83. What this shows is
+  limited to "on the work-tree engine build, without the cap, the academy is still not chosen": that build differs from
+  the lab's (the replay parts at decision 56), so the effect of the cap alone needs the same build and state (debate 1/1,
+  second correction; the default move's value is 131.46 in both the lab log and this rerun). The academy line was on the waiting list in
   one variant and valued 6–13 points lower = ③; the user's exact move (the same academy with the "institute/academy power
   value +1" tile) is rank 247 of 412 in the root ranking (best academy variant: rank 52) and not on the list = ①.
   Decisions 10, 14, 42: only "no alternative compared" is known, their waiting lists were not looked at. The Rebellion
-  exploration (decision 37, 4 of 4 comparisons, 137.73 against 136.73) = ③. A rerun alone or a larger cap would therefore
-  not make the teacher pick the academy; whether the academy line is in fact better is only answered by proposal (ㄴ).
+  exploration (decision 37, 4 of 4 comparisons, 137.73 against 136.73) = ③. Nothing here suggests that a rerun alone or a
+  larger cap makes the teacher pick the academy (not checked on the lab build). Proposal (ㄴ), forcing the user's whole
+  round 5, reads only as "the effect of the user's round-5 sequence": 125.83 is the plan with the "3 VP per Gaia mine"
+  tile, the user took another tile, and forcing later moves mixes several decisions. The valuation of the first decision
+  is tested by (ㅁ): from the same round-5 start force only the first Ivits move three ways — station -1,3, the valued
+  academy (Gaia-mine tile), the user's academy (power value +1 tile) — plus one unforced control, the same teacher
+  playing on (debate 1/1, second correction).
 - Not known: which line is better (no game continues the user's move with the teacher on the same engine and opponents),
   whether the cap bites less without the load of four arms at once, the teacher's VP at the round-6 start.
 
@@ -160,4 +167,4 @@ Proposals (nothing queued): (ㄱ) rerun the round-5 arm alone (`--rounds 5 --job
 Ivits decisions of round 5, completed comparisons, whether the first three actions change, Ivits final as a reference);
 (ㄴ) an option in `room_handover.py` that plays the user's first N Ivits moves from the room record before the teacher
 takes over; (ㄷ) rebuild the work-tree engine (owner command); (ㄹ) a larger cap (the user's number).
-Bot recommendation (corrected after debate 1/1): (ㄴ) first; (ㄱ) only as a side check.
+Bot recommendation (second correction): (ㅁ) the three forced first moves with a control, then (ㄴ) the whole sequence; (ㄱ) only as a side check.
