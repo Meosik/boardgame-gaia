@@ -15,6 +15,13 @@ teacher starts with an empty plan memory at every start, as the live worker does
   cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:baseline-teacher-20260917:tools .venv/bin/python \\
       tools/room_handover.py --room 98ADBD --rounds 1 4 5 6 --repeats 3 --teacher tools/<spec>.json \\
       --comparisons 4 --fast-copy --output runs/<name>
+
+Testing one decision (HANDOFF E265, one start round only): `--prefix-log <decisions.jsonl.gz of an earlier game from
+the same start> --prefix-steps K` replays that game's first K decisions in every game, so all games reach the
+same state; each `--first-move` then gives one game whose next decision is that action (JSON of the action, or
+the part that names it; it must match exactly one legal candidate) — or `teacher` for the unforced game. From
+there the teacher plays on. Games are written to `round-N/move-I/game-K`, I in the order of the `--first-move`
+values, and `metrics.json` has one `by_first_move` row per value.
 """
 import argparse
 import gzip
@@ -70,6 +77,29 @@ def room_starts(path, rounds):
     return starts, mapping, final, skipped
 
 
+def opening_scripts(prefix_log, prefix_steps, first_moves):
+    """[{'first_move': action or None, 'script': [action, ...]}], one per --first-move value ('teacher' = None).
+
+    The script is what teacher_ab.play plays before any teacher chooses: the first prefix_steps decisions of an
+    earlier game from the same start, then the forced first move if there is one."""
+    prefix = []
+    if prefix_steps:
+        if prefix_log is None:
+            raise SystemExit('--prefix-steps needs --prefix-log')
+        with gzip.open(prefix_log, 'rt') as f:
+            rows = [json.loads(line) for _, line in zip(range(prefix_steps), f)]
+        if [row['step'] for row in rows] != list(range(prefix_steps)):
+            raise SystemExit(f'{prefix_log} does not hold decisions 0..{prefix_steps-1}')
+        prefix = [row['chosen']['action'] for row in rows]
+    variants = []
+    for text in first_moves or ['teacher']:
+        move = None if text == 'teacher' else json.loads(text)
+        if move is not None and not (isinstance(move, dict) and move):
+            raise SystemExit(f'--first-move must be "teacher" or a JSON action object: {text}')
+        variants.append({'first_move': move, 'script': prefix+([] if move is None else [move])})
+    return variants
+
+
 def game_row(game_dir, result, focus):
     """What one handover game shows: scores, the focus seat's rank, federations formed, decision times."""
     row = {'game': game_dir.name, 'complete': result['complete'], 'failure': result.get('failure_kind'),
@@ -108,10 +138,21 @@ def main():
     parser.add_argument('--fast-copy', action='store_true')
     parser.add_argument('--jobs', type=int, default=1)
     parser.add_argument('--max-steps', type=int, help='Stop every game after this many decisions (tool check only)')
+    parser.add_argument('--prefix-log', type=Path,
+                        help='decisions.jsonl.gz of an earlier game from the same start (see --prefix-steps)')
+    parser.add_argument('--prefix-steps', type=int, default=0,
+                        help='Replay the first K decisions of --prefix-log in every game')
+    parser.add_argument('--first-move', action='append',
+                        help='One game per value: the action (JSON) forced as the decision after the prefix, '
+                             'or "teacher" for the unforced game')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.output.exists():
         raise SystemExit('A new output directory is required')
+    scripted = bool(args.prefix_steps or args.first_move)
+    if scripted and len(set(args.rounds)) != 1:
+        raise SystemExit('--prefix-steps / --first-move need exactly one start round')
+    variants = opening_scripts(args.prefix_log, args.prefix_steps, args.first_move)
     teacher = teacher_ab.resolve_teacher(args.teacher)
     problems = teacher_ab.frozen_problems(teacher)
     if problems:
@@ -135,20 +176,25 @@ def main():
         'starts': {str(n): {k: s[k] for k in ('revision', 'player', 'vp')} for n, s in starts.items()},
         'teacher': {**teacher, 'fingerprint': teacher_ab.fingerprint(teacher)}, 'clock': clock,
         'repeats': args.repeats, 'max_steps': args.max_steps, 'jobs': args.jobs,
+        'prefix_log': str(args.prefix_log) if args.prefix_log else None, 'prefix_steps': args.prefix_steps,
+        'first_moves': [v['first_move'] for v in variants] if scripted else None,
         'versions': runtime_versions(), 'training_performed': False})
-    jobs = [(number, k) for number in rounds for k in range(args.repeats)]
+    jobs = [(number, i, k) for number in rounds for i in range(len(variants)) for k in range(args.repeats)]
     lock = threading.Lock()
 
     def play_one(job):
-        number, k = job
-        game_dir = args.output/f'round-{number}'/f'game-{k}'
-        game_dir.parent.mkdir(exist_ok=True)
+        number, i, k = job
+        # The plain run keeps its layout (round-N/game-K); a scripted run has one folder per first move.
+        game_dir = args.output/f'round-{number}'/(f'move-{i}' if scripted else '')/f'game-{k}'
+        game_dir.parent.mkdir(parents=True, exist_ok=True)
         result = teacher_ab.play(game_dir, f'{args.room}-s{k}', {'A': teacher, 'B': teacher}, {0, 1, 2, 3}, clock,
-                                 state=args.output/'states'/f'round-{number}.json', max_steps=args.max_steps)
-        row = {'start_round': number, 'repeat': k, **game_row(game_dir, result, focus)}
+                                 state=args.output/'states'/f'round-{number}.json', max_steps=args.max_steps,
+                                 script=variants[i]['script'])
+        row = {'start_round': number, 'variant': i, 'first_move': variants[i]['first_move'], 'repeat': k,
+               **game_row(game_dir, result, focus)}
         with lock:
-            print(json.dumps({key: row[key] for key in ('start_round', 'repeat', 'complete', 'failure', 'scores',
-                                                        'stopped_at_round', 'max_seconds')}), flush=True)
+            print(json.dumps({key: row[key] for key in ('start_round', 'variant', 'repeat', 'complete', 'failure',
+                                                        'scores', 'stopped_at_round', 'max_seconds')}), flush=True)
         return row
 
     from concurrent.futures import ThreadPoolExecutor
@@ -168,7 +214,16 @@ def main():
                'games_planned': len(jobs), 'games_complete': sum(g['complete'] for g in games),
                'failures': [g for g in games if not g['complete']], 'max_steps': args.max_steps,
                'by_start_round': table, 'games': games}
+    if scripted:
+        metrics['by_first_move'] = [
+            {'variant': i, 'first_move': v['first_move'], 'prefix_steps': args.prefix_steps,
+             'focus_scores': [g['focus_score'] for g in games if g['variant'] == i and 'focus_score' in g],
+             'scores': [g['scores'] for g in games if g['variant'] == i and 'focus_score' in g],
+             'games': sum(g['variant'] == i for g in games)} for i, v in enumerate(variants)]
     teacher_ab.write_json(args.output/'metrics.json', metrics)
+    for row in metrics.get('by_first_move', ()):
+        print(f"first move {row['variant']} {json.dumps(row['first_move']) if row['first_move'] else 'teacher'}: "
+              f"{args.focus} finals {row['focus_scores']}, all seats {row['scores']}")
     print(f"{args.focus} in room {args.room}: the room's own final {metrics['room_focus_final']}")
     for number, row in table.items():
         print(f"start round {number}: VP then {row['start_vp']}, teacher finals {row['focus_scores']} "

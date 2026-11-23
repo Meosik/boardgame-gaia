@@ -412,11 +412,25 @@ class WorkerTimeout(RuntimeError):
 
 # ── One game ────────────────────────────────────────────────────────────────
 
-def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, max_steps=None):
+def scripted_index(candidates, wanted):
+    """Index of the one candidate whose action holds every item of `wanted` (an action, or the part of it that
+    names it). No candidate or several is an error: a scripted move must be legal and unambiguous here."""
+    missing = object()
+    hits = [i for i, c in enumerate(candidates) if isinstance(c.get('action'), dict)
+            and all(c['action'].get(key, missing) == value for key, value in wanted.items())]
+    if len(hits) != 1:
+        raise RuntimeError(f'scripted move {json.dumps(wanted)} matches {len(hits)} of {len(candidates)} candidates')
+    return hits[0]
+
+
+def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, max_steps=None, script=None):
     """One game. With stop_round, the game ends when round stop_round+1 starts and 'scores' are the
     VP held then (user 2026-10-07: A/B is judged by charges in rounds 1-3, later rounds are unused).
     With state (a file holding an engine state, players numbered 0..3), the game starts there instead of
-    at the seed's setup; max_steps ends it after that many decisions (a tool check, not a result)."""
+    at the seed's setup; max_steps ends it after that many decisions (a tool check, not a result).
+    With script (a list of actions), decision k of the game is script[k] for whichever seat is to move, without
+    asking a teacher; the teachers watch those moves and choose from decision len(script) on
+    (tools/room_handover.py --prefix-log / --first-move). The log row of a scripted move has selected 'scripted'."""
     from gaia_rl import Environment
     output.mkdir(parents=True)
     env = (Environment.from_state_json(Path(state).read_text(), MAX_DECISIONS) if state
@@ -445,22 +459,29 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, ma
                     limits = snapshot.get('candidate_generation') or {}
                     tick = time.monotonic()
                     state_digest = digest(snapshot)
-                    reply = workers[arm].request({'op': 'choose', 'digest': state_digest}, decision_budget)
-                    if 'timeout' in reply:
-                        raise WorkerTimeout(reply['timeout'])
-                    if 'error' in reply:
-                        raise RuntimeError(reply['error'])
-                    index = reply['index']
-                    if reply['decision_id'] != snapshot['decision_id'] or not 0 <= index < len(snapshot['candidates']):
-                        raise RuntimeError('teacher returned a decision for another state')
-                    counts = counters[faction][arm]
-                    counts['decisions'] += 1
-                    counts['fallback_timeouts'] += bool(reply['fallback_timeout'])
-                    counts['federation_limit_hits'] += int(limits.get('federation_limit_hits', 0))
-                    counts['unsearched_comparisons'] += int(reply['unsearched_comparisons'])
-                    counts['unsearched_decisions'] += bool(reply['unsearched_comparisons'])
-                    counts['completed_comparisons'] += int(reply.get('completed_comparisons', 0))
-                    counts['search_milliseconds'] += round((time.monotonic()-tick)*1000)
+                    if snapshot['steps'] < len(script or ()):
+                        # Not a teacher's decision: no counters, the log row says 'scripted'.
+                        index = scripted_index(snapshot['candidates'], script[snapshot['steps']])
+                        reply = {'decision_id': snapshot['decision_id'], 'index': index, 'fallback_timeout': False,
+                                 'unsearched_comparisons': 0, 'completed_comparisons': 0, 'selected': 'scripted'}
+                    else:
+                        reply = workers[arm].request({'op': 'choose', 'digest': state_digest}, decision_budget)
+                        if 'timeout' in reply:
+                            raise WorkerTimeout(reply['timeout'])
+                        if 'error' in reply:
+                            raise RuntimeError(reply['error'])
+                        index = reply['index']
+                        if (reply['decision_id'] != snapshot['decision_id']
+                                or not 0 <= index < len(snapshot['candidates'])):
+                            raise RuntimeError('teacher returned a decision for another state')
+                        counts = counters[faction][arm]
+                        counts['decisions'] += 1
+                        counts['fallback_timeouts'] += bool(reply['fallback_timeout'])
+                        counts['federation_limit_hits'] += int(limits.get('federation_limit_hits', 0))
+                        counts['unsearched_comparisons'] += int(reply['unsearched_comparisons'])
+                        counts['unsearched_decisions'] += bool(reply['unsearched_comparisons'])
+                        counts['completed_comparisons'] += int(reply.get('completed_comparisons', 0))
+                        counts['search_milliseconds'] += round((time.monotonic()-tick)*1000)
                     trace.write(json.dumps({'step': snapshot['steps'], 'seat': seat, 'arm': arm,
                                             'round': snapshot['state']['round'], 'digest': state_digest,
                                             'timing': reply.get('timing'),
