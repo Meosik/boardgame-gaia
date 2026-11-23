@@ -207,7 +207,7 @@
  "external_data": {
   "gaia-frontend/src/data/income.json": "cef0dec10195a0161a3bff978d97f25f995cfdc11ebe5a4f0fde4a0f8d6d0742",
   "gaia-rl/research/strategy/bgg-openings-part2.csv": "45d352674e261bc923425bcb0c3b70703a9a46d2c8ba88f2164ddf17d4d121ec",
-  "gaia-engine/data/factions.toml": "011d334827fd580d09e153790a08b74ef9bf6ba382c2c65fcbcbb21174d8d630"
+  "gaia-engine/data/factions.toml": "a374447e8f667840edd85334e4e63b0b8ed44d938a731006a9d5c090a92cb763"
  },
  "versions_at_freeze": {
   "dependencies": "numpy=2.5.3;gymnasium=1.2.2;pettingzoo=1.27.0;ray=2.58.0;torch=2.14.0",
