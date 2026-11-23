@@ -412,25 +412,55 @@ class WorkerTimeout(RuntimeError):
 
 # ── One game ────────────────────────────────────────────────────────────────
 
-def scripted_index(candidates, wanted):
-    """Index of the one candidate whose action holds every item of `wanted` (an action, or the part of it that
-    names it). No candidate or several is an error: a scripted move must be legal and unambiguous here."""
+def scripted_hits(candidates, wanted):
+    """Indexes of the candidates whose action holds every item of `wanted` (an action, or the part that names it)."""
     missing = object()
-    hits = [i for i, c in enumerate(candidates) if isinstance(c.get('action'), dict)
+    return [i for i, c in enumerate(candidates) if isinstance(c.get('action'), dict)
             and all(c['action'].get(key, missing) == value for key, value in wanted.items())]
+
+
+def scripted_index(candidates, wanted):
+    """Index of the one candidate that `wanted` names (scripted_hits). No candidate or several is an error: a
+    scripted move must be legal and unambiguous here."""
+    hits = scripted_hits(candidates, wanted)
     if len(hits) != 1:
         raise RuntimeError(f'scripted move {json.dumps(wanted)} matches {len(hits)} of {len(candidates)} candidates')
     return hits[0]
 
 
-def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, max_steps=None, script=None):
+# Decisions a seat answers out of turn (as faction_teachers/clock.py REACTIONS). A seat's own script holds its
+# turns only: when the other seats play differently, these offers come at other moments than in the recording.
+REACTIONS = {'ChargePower', 'TaklonsChargePower', 'ChooseIncomeOrder'}
+
+
+def seat_script_step(candidates, moves):
+    """What a seat's own script (`moves`, its turns from a recorded game, in order) says at one of its decisions:
+    ('play', index)  the next move is exactly one legal candidate here: it is played;
+    ('wait', None)   the decision is a reaction (REACTIONS): the teacher answers, the script stays;
+    ('stop', n)      the next move matches n != 1 candidates (not legal any more, or ambiguous): the script
+                     ends and the teacher plays from here;
+    ('done', None)   no move is left."""
+    if not moves:
+        return 'done', None
+    if {c['action'].get('type') for c in candidates if isinstance(c.get('action'), dict)} <= REACTIONS:
+        return 'wait', None
+    hits = scripted_hits(candidates, moves[0])
+    return ('play', hits[0]) if len(hits) == 1 else ('stop', len(hits))
+
+
+def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, max_steps=None, script=None,
+         seat_scripts=None):
     """One game. With stop_round, the game ends when round stop_round+1 starts and 'scores' are the
     VP held then (user 2026-10-07: A/B is judged by charges in rounds 1-3, later rounds are unused).
     With state (a file holding an engine state, players numbered 0..3), the game starts there instead of
     at the seed's setup; max_steps ends it after that many decisions (a tool check, not a result).
     With script (a list of actions), decision k of the game is script[k] for whichever seat is to move, without
     asking a teacher; the teachers watch those moves and choose from decision len(script) on
-    (tools/room_handover.py --prefix-log / --first-move). The log row of a scripted move has selected 'scripted'."""
+    (tools/room_handover.py --prefix-log / --first-move). The log row of a scripted move has selected 'scripted'.
+    With seat_scripts ({seat: [action, ...]}), after the script each of that seat's own turns is its next listed
+    move while that move is exactly one legal candidate (seat_script_step); at the first one that is not, the
+    seat's script ends and its teacher plays on. result['seat_scripts'][seat] says how many moves were played
+    and where it stopped (`--first-move room`)."""
     from gaia_rl import Environment
     output.mkdir(parents=True)
     env = (Environment.from_state_json(Path(state).read_text(), MAX_DECISIONS) if state
@@ -443,6 +473,10 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, ma
               'started_at': now(), 'counters': counters}
     workers = {}
     decision_budget = clock['long_seconds']+WORKER_GRACE_SECONDS
+    pending = {seat: list(moves) for seat, moves in (seat_scripts or {}).items()}
+    if pending:
+        result['seat_scripts'] = {str(seat): {'moves': len(moves), 'played': 0, 'stopped': None}
+                                  for seat, moves in pending.items()}
     try:
         with (output/'workers.log').open('w') as log:
             for arm in 'AB':
@@ -459,9 +493,23 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, ma
                     limits = snapshot.get('candidate_generation') or {}
                     tick = time.monotonic()
                     state_digest = digest(snapshot)
+                    forced = None
                     if snapshot['steps'] < len(script or ()):
+                        forced = scripted_index(snapshot['candidates'], script[snapshot['steps']])
+                    elif pending.get(seat):
+                        verdict, value = seat_script_step(snapshot['candidates'], pending[seat])
+                        if verdict == 'play':
+                            forced = value
+                            pending[seat].pop(0)
+                            result['seat_scripts'][str(seat)]['played'] += 1
+                        elif verdict == 'stop':
+                            result['seat_scripts'][str(seat)]['stopped'] = {
+                                'step': snapshot['steps'], 'round': snapshot['state']['round'],
+                                'action': pending[seat][0], 'matches': value}
+                            pending[seat] = []
+                    if forced is not None:
                         # Not a teacher's decision: no counters, the log row says 'scripted'.
-                        index = scripted_index(snapshot['candidates'], script[snapshot['steps']])
+                        index = forced
                         reply = {'decision_id': snapshot['decision_id'], 'index': index, 'fallback_timeout': False,
                                  'unsearched_comparisons': 0, 'completed_comparisons': 0, 'selected': 'scripted'}
                     else:

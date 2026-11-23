@@ -22,6 +22,13 @@ same state; each `--first-move` then gives one game whose next decision is that 
 the part that names it; it must match exactly one legal candidate) — or `teacher` for the unforced game. From
 there the teacher plays on. Games are written to `round-N/move-I/game-K`, I in the order of the `--first-move`
 values, and `metrics.json` has one `by_first_move` row per value.
+
+`--first-move room` is the game that follows the owner: after the prefix, every own turn of the focus seat is its
+next move of that round in the room (restored from the snapshots, room_moves; listed in manifest.json
+`room_moves`) for as long as that move is legal in this game — the other seats are the teacher's, so the board
+may differ from the room's. At the first move that is not legal the teacher takes the seat over; reactions
+(charge offers, income order) are always the teacher's. `seat_script` in metrics.json says how many moves were
+played and where it stopped. If a move cannot be restored with this engine build the run stops before any game.
 """
 import argparse
 import gzip
@@ -77,11 +84,81 @@ def room_starts(path, rounds):
     return starts, mapping, final, skipped
 
 
-def opening_scripts(prefix_log, prefix_steps, first_moves):
-    """[{'first_move': action or None, 'script': [action, ...]}], one per --first-move value ('teacher' = None).
+def comparable(state):
+    """A GameState without what the server alone keeps (undo bookkeeping) and the event log."""
+    return {key: value for key, value in state.items() if key not in ('event_log', 'undo_state')}
+
+
+def room_moves(path, start_revision, seat, number):
+    """(moves, problems): the seat's own turns in round `number` of the room, from the start revision to its pass.
+
+    The export holds states — its event log names only the type of each action — so a move is restored as the
+    one legal candidate that turns a snapshot into the room's next one. Only the room's final line counts: a
+    snapshot of an undone branch is dropped (its event log is not the beginning of the final log), and a step
+    that only returns to the same state is the undo itself. Each move is {'revision', 'next_revision', 'action',
+    'matched_by'}: 'state' = the whole next state is reproduced (comparable), 'seat' = no candidate does that
+    and exactly one reproduces the seat's own player record (an engine build that differs from the server's in
+    what follows the move, e.g. the income after a pass). Reactions (teacher_ab.REACTIONS) are left out.
+    problems lists the steps that could not be restored; the moves after such a step are still listed."""
+    from gaia_rl import Environment
+    with open(path) as f:
+        lines = [line for line in f if line.strip()]
+    final_log = json.loads(lines[-1])['snapshot']['event_log']
+    line, server_id = [], None
+    for text in lines:
+        row = json.loads(text)
+        log = row['snapshot'].get('event_log', [])
+        if row['revision'] < start_revision or log != final_log[:len(log)]:
+            continue
+        try:
+            state, mapping = renumber(row['snapshot'])
+            env = Environment.from_state_json(json.dumps(state), 2000)
+            snapshot = json.loads(env.snapshot_json())
+        except Exception:
+            continue  # a transient phase: nobody decides there
+        server_id = next(pid for pid, index in mapping.items() if index == seat)
+        line.append((row['revision'], env, snapshot, log))
+        if snapshot['state']['round'] > number:
+            break
+    moves, problems = [], []
+    for (revision, env, snapshot, log), (next_revision, _, following, next_log) in zip(line, line[1:]):
+        if snapshot['state']['round'] != number:
+            break
+        after = comparable(following['state'])
+        if snapshot['player'] != seat or comparable(snapshot['state']) == after:
+            continue
+        forks = [comparable(json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())['state'])
+                 for i in range(len(snapshot['candidates']))]
+        hits, matched_by = [i for i, state in enumerate(forks) if state == after], 'state'
+        if len(hits) != 1:
+            hits = [i for i, state in enumerate(forks) if state['players'][seat] == after['players'][seat]]
+            matched_by = 'seat'
+        logged = [e['ActionLog']['action'] for e in next_log[len(log):]
+                  if 'ActionLog' in e and e['ActionLog']['player'] == server_id]
+        if len(hits) != 1:
+            problems.append(f'revision {revision}->{next_revision}: {len(hits)} of {len(snapshot["candidates"])} '
+                            f'candidates give the room\'s next state (the room logged {logged})')
+            continue
+        action = snapshot['candidates'][hits[0]]['action']
+        if logged and isinstance(logged[0], str) and logged[0] != action['type']:
+            problems.append(f'revision {revision}->{next_revision}: restored {action["type"]}, the room logged {logged}')
+            continue
+        if action['type'] in teacher_ab.REACTIONS:
+            continue
+        moves.append({'revision': revision, 'next_revision': next_revision, 'action': action, 'matched_by': matched_by})
+        if action['type'] == 'Pass':
+            break
+    return moves, problems
+
+
+def opening_scripts(prefix_log, prefix_steps, first_moves, room=None):
+    """[{'first_move': action, None or 'room', 'script': [action, ...]}], one per --first-move value
+    ('teacher' = None).
 
     The script is what teacher_ab.play plays before any teacher chooses: the first prefix_steps decisions of an
-    earlier game from the same start, then the forced first move if there is one."""
+    earlier game from the same start, then the forced first move if there is one. The value 'room' has the
+    prefix as its script and 'seat_script': `room` (the focus seat's own turns, room_moves) — played in order
+    on that seat's turns for as long as each is legal."""
     prefix = []
     if prefix_steps:
         if prefix_log is None:
@@ -93,6 +170,11 @@ def opening_scripts(prefix_log, prefix_steps, first_moves):
         prefix = [row['chosen']['action'] for row in rows]
     variants = []
     for text in first_moves or ['teacher']:
+        if text == 'room':
+            if room is None:
+                raise SystemExit('--first-move room: no room moves were restored')
+            variants.append({'first_move': 'room', 'script': list(prefix), 'seat_script': list(room)})
+            continue
         move = None if text == 'teacher' else json.loads(text)
         if move is not None and not (isinstance(move, dict) and move):
             raise SystemExit(f'--first-move must be "teacher" or a JSON action object: {text}')
@@ -104,7 +186,8 @@ def game_row(game_dir, result, focus):
     """What one handover game shows: scores, the focus seat's rank, federations formed, decision times."""
     row = {'game': game_dir.name, 'complete': result['complete'], 'failure': result.get('failure_kind'),
            'error': result.get('error'), 'steps': result.get('steps', result.get('step')),
-           'stopped_at_round': result.get('stopped_at_round'), 'scores': result.get('scores')}
+           'stopped_at_round': result.get('stopped_at_round'), 'scores': result.get('scores'),
+           'seat_script': (result.get('seat_scripts') or {}).get(str(focus))}
     federations, seconds, fallbacks = [0, 0, 0, 0], [], 0
     trace = game_dir/'decisions.jsonl.gz'
     if trace.exists():
@@ -144,7 +227,8 @@ def main():
                         help='Replay the first K decisions of --prefix-log in every game')
     parser.add_argument('--first-move', action='append',
                         help='One game per value: the action (JSON) forced as the decision after the prefix, '
-                             'or "teacher" for the unforced game')
+                             '"teacher" for the unforced game, or "room" for the focus seat\'s own turns of '
+                             'that round in the room, for as long as they are legal')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.output.exists():
@@ -152,7 +236,6 @@ def main():
     scripted = bool(args.prefix_steps or args.first_move)
     if scripted and len(set(args.rounds)) != 1:
         raise SystemExit('--prefix-steps / --first-move need exactly one start round')
-    variants = opening_scripts(args.prefix_log, args.prefix_steps, args.first_move)
     teacher = teacher_ab.resolve_teacher(args.teacher)
     problems = teacher_ab.frozen_problems(teacher)
     if problems:
@@ -165,6 +248,13 @@ def main():
     starts, mapping, room_final, skipped = room_starts(source, rounds)
     factions = starts[rounds[0]]['factions']
     focus = factions.index(args.focus)
+    restored = None
+    if 'room' in (args.first_move or ()):
+        restored, problems = room_moves(source, starts[rounds[0]]['revision'], focus, rounds[0])
+        if problems or not restored:
+            raise SystemExit('--first-move room: ' + '; '.join(problems or [f'no turn of {args.focus} found']))
+    variants = opening_scripts(args.prefix_log, args.prefix_steps, args.first_move,
+                               None if restored is None else [move['action'] for move in restored])
     (args.output/'states').mkdir(parents=True)
     for number, start in starts.items():
         (args.output/'states'/f'round-{number}.json').write_text(json.dumps(start['state']))
@@ -177,7 +267,7 @@ def main():
         'teacher': {**teacher, 'fingerprint': teacher_ab.fingerprint(teacher)}, 'clock': clock,
         'repeats': args.repeats, 'max_steps': args.max_steps, 'jobs': args.jobs,
         'prefix_log': str(args.prefix_log) if args.prefix_log else None, 'prefix_steps': args.prefix_steps,
-        'first_moves': [v['first_move'] for v in variants] if scripted else None,
+        'first_moves': [v['first_move'] for v in variants] if scripted else None, 'room_moves': restored,
         'versions': runtime_versions(), 'training_performed': False})
     jobs = [(number, i, k) for number in rounds for i in range(len(variants)) for k in range(args.repeats)]
     lock = threading.Lock()
@@ -189,7 +279,8 @@ def main():
         game_dir.parent.mkdir(parents=True, exist_ok=True)
         result = teacher_ab.play(game_dir, f'{args.room}-s{k}', {'A': teacher, 'B': teacher}, {0, 1, 2, 3}, clock,
                                  state=args.output/'states'/f'round-{number}.json', max_steps=args.max_steps,
-                                 script=variants[i]['script'])
+                                 script=variants[i]['script'],
+                                 seat_scripts={focus: variants[i]['seat_script']} if 'seat_script' in variants[i] else None)
         row = {'start_round': number, 'variant': i, 'first_move': variants[i]['first_move'], 'repeat': k,
                **game_row(game_dir, result, focus)}
         with lock:
@@ -219,11 +310,13 @@ def main():
             {'variant': i, 'first_move': v['first_move'], 'prefix_steps': args.prefix_steps,
              'focus_scores': [g['focus_score'] for g in games if g['variant'] == i and 'focus_score' in g],
              'scores': [g['scores'] for g in games if g['variant'] == i and 'focus_score' in g],
+             'seat_script': [g['seat_script'] for g in games if g['variant'] == i],
              'games': sum(g['variant'] == i for g in games)} for i, v in enumerate(variants)]
     teacher_ab.write_json(args.output/'metrics.json', metrics)
     for row in metrics.get('by_first_move', ()):
         print(f"first move {row['variant']} {json.dumps(row['first_move']) if row['first_move'] else 'teacher'}: "
-              f"{args.focus} finals {row['focus_scores']}, all seats {row['scores']}")
+              f"{args.focus} finals {row['focus_scores']}, all seats {row['scores']}"
+              + (f", room moves played/stopped {row['seat_script']}" if row['first_move'] == 'room' else ''))
     print(f"{args.focus} in room {args.room}: the room's own final {metrics['room_focus_final']}")
     for number, row in table.items():
         print(f"start round {number}: VP then {row['start_vp']}, teacher finals {row['focus_scores']} "
