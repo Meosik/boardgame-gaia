@@ -220,6 +220,42 @@ class RoomMovesTest(unittest.TestCase):
                 total += len(moves)
             self.assertGreater(total, 0)
 
+    def assert_same_moves_as_baseline(self, states_variant, states, number):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_path, variant_path = Path(tmp)/'base.jsonl', Path(tmp)/'variant.jsonl'
+            write_room(base_path, states)
+            write_room(variant_path, states_variant)
+            for seat in range(4):
+                base, base_problems = room_handover.room_moves(str(base_path), 0, seat, number)
+                self.assertEqual(base_problems, [], msg=f'baseline seat {seat}')
+                moves, problems = room_handover.room_moves(str(variant_path), 0, seat, number)
+                self.assertEqual([m['action'] for m in moves], [m['action'] for m in base], msg=f'seat {seat}')
+                self.assertEqual(problems, [], msg=f'seat {seat}')
+
+    def test_the_same_action_played_again_after_an_undo_is_one_move(self):
+        rows, states, _ = play_decisions()
+        number = states[0]['round']
+        k = 3
+        self.assertTrue(0 < k < DECISIONS-1)
+        # play A, undo it, play the same A again
+        variant = states[:k+2] + [states[k], states[k+1]] + states[k+2:]
+        self.assert_same_moves_as_baseline(variant, states, number)
+
+    def test_an_undone_other_branch_is_dropped(self):
+        rows, states, _ = play_decisions()
+        number = states[0]['round']
+        k = next(i for i in range(1, DECISIONS) if rows[i]['candidates'] >= 2)
+        env = Environment(SEED, 2000)
+        for i in range(k):
+            env.step(rows[i]['decision_id'], 0)
+        snap = json.loads(env.snapshot_json())
+        env.step(snap['decision_id'], 1)
+        branch = json.loads(env.snapshot_json())['state']
+        self.assertNotEqual(branch, states[k+1])
+        # at decision k another candidate is played, then undone, then the real one is played
+        variant = states[:k+1] + [branch, states[k]] + states[k+1:]
+        self.assert_same_moves_as_baseline(variant, states, number)
+
 
 if __name__ == '__main__':
     unittest.main()

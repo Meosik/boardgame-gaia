@@ -93,9 +93,10 @@ def room_moves(path, start_revision, seat, number):
     """(moves, problems): the seat's own turns in round `number` of the room, from the start revision to its pass.
 
     The export holds states — its event log names only the type of each action — so a move is restored as the
-    one legal candidate that turns a snapshot into the room's next one. Only the room's final line counts: a
-    snapshot of an undone branch is dropped (its event log is not the beginning of the final log), and a step
-    that only returns to the same state is the undo itself. Each move is {'revision', 'next_revision', 'action',
+    one legal candidate that turns a snapshot into the room's next one. Only the room's final line counts: when
+    a snapshot equals an earlier one (comparable) the room was undone to it, and the snapshots kept between
+    the two are cut — the same action played again after an undo is one move; a snapshot whose event log is
+    not the beginning of the final log is dropped too. Each move is {'revision', 'next_revision', 'action',
     'matched_by'}: 'state' = the whole next state is reproduced (comparable), 'seat' = no candidate does that
     and exactly one reproduces the seat's own player record (an engine build that differs from the server's in
     what follows the move, e.g. the income after a pass). Reactions (teacher_ab.REACTIONS) are left out.
@@ -117,15 +118,21 @@ def room_moves(path, start_revision, seat, number):
         except Exception:
             continue  # a transient phase: nobody decides there
         server_id = next(pid for pid, index in mapping.items() if index == seat)
-        line.append((row['revision'], env, snapshot, log))
+        now = comparable(snapshot['state'])
+        back = next((i for i, kept in enumerate(line) if kept[4] == now), None)
+        if back is not None:
+            # An undo: the room is back at a state it had before, so what was kept after that state never
+            # happened — also when the undone action was then played again and its log looks like the final one.
+            del line[back+1:]
+            continue
+        line.append((row['revision'], env, snapshot, log, now))
         if snapshot['state']['round'] > number:
             break
     moves, problems = [], []
-    for (revision, env, snapshot, log), (next_revision, _, following, next_log) in zip(line, line[1:]):
+    for (revision, env, snapshot, log, _), (next_revision, _, _, next_log, after) in zip(line, line[1:]):
         if snapshot['state']['round'] != number:
             break
-        after = comparable(following['state'])
-        if snapshot['player'] != seat or comparable(snapshot['state']) == after:
+        if snapshot['player'] != seat:
             continue
         forks = [comparable(json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())['state'])
                  for i in range(len(snapshot['candidates']))]
