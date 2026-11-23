@@ -492,6 +492,8 @@ class DecisionRecordOthersTest(unittest.TestCase):
         self.assertEqual(record['own'], {'vp': 20, 'ore': 7, 'credits': 2, 'knowledge': 3, 'qic': 4})
         self.assertEqual(record['positive_others'], 4)
         self.assertEqual([row['index'] for row in record['top_others']], [5, 3, 1])
+        self.assertEqual(record['positive_by_type'], {'Build': 2, 'FormFederation': 2})
+        self.assertEqual(sum(record['positive_by_type'].values()), record['positive_others'])
         self.assertIsNone(record['pass_after'])
         self.assertIsNone(record['federation_after'])
 

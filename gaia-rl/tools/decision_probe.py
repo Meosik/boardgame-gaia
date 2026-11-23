@@ -134,7 +134,7 @@ def decision_record(snapshot, scores, index, env=None):
     candidate (None when index is None), the unblocked top-scored one, the federation candidates (count, blocked
     count, best) and the best Pass. Also: 'others' (seats besides the acting one) and 'others_passed' (how many
     of them have passed), 'own' (the acting seat's vp, ore, credits, knowledge, qic), 'positive_others' (unblocked
-    non-Pass candidates with score > 0), 'top_others' (the three highest-scored of those, ties: lowest index),
+    non-Pass candidates with score > 0; 'positive_by_type' counts them by action type), 'top_others' (the three highest-scored of those, ties: lowest index),
     'pass_after' (with `env`: the best unblocked Pass forked like the teacher does, then {'round', 'phase',
     'player', 'own', 'others_passed'} of the state after it; None without env or such a candidate; {'error'} if
     the fork fails) and 'federation_after' (the same for the best unblocked FormFederation: {'round', 'own'}).
@@ -170,6 +170,10 @@ def decision_record(snapshot, scores, index, env=None):
     seats = state.get('players') or ()
     others = [seat for n, seat in enumerate(seats) if n != actor]
     free_others = [row for row in rows if not row['blocked'] and row['type'] != 'Pass']
+    positive = [row for row in free_others if row['score'] is not None and row['score'] > 0]
+    positive_by_type = {}
+    for row in positive:
+        positive_by_type[row['type']] = positive_by_type.get(row['type'], 0)+1
 
     def free_best(kind):
         free = [row for row in rows if row['type'] == kind and not row['blocked']]
@@ -207,7 +211,7 @@ def decision_record(snapshot, scores, index, env=None):
             'best_pass': best([row for row in rows if row['type'] == 'Pass']),
             'others': len(others), 'others_passed': sum(bool(seat.get('passed')) for seat in others),
             'own': own_stock(state, actor),
-            'positive_others': sum(1 for row in free_others if row['score'] is not None and row['score'] > 0),
+            'positive_others': len(positive), 'positive_by_type': positive_by_type,
             'top_others': sorted(free_others, key=lambda row: (-(row['score'] if row['score'] is not None
                                                                  else float('-inf')), row['index']))[:3],
             'pass_after': pass_after, 'federation_after': federation_after}
