@@ -1,0 +1,83 @@
+# 128-room-handover-smoke — 완료
+
+사용자 2026-11-23 「내 플레이로 하이브 교사의 실력을 높일 수 있나? 테스트 해봐」 → 「ㄱ」(HANDOFF E258·E259·E260): 이어 두기 도구 tools/room_handover.py의 스모크. 사용자 판 98ADBD(하이브 187점, 상대 실서버 AI 3좌석)의 6라운드 첫 행동 결정 자리(rev 280 부근, 수입·가이아 단계 뒤)에서 4좌석을 같은 교사 ships_menu1_all_tier cap60-p2 비교 4가 끝까지 둠, 1판. 맵·종족·좌석·그때까지의 판은 방 기록 그대로(시드 없음 — 교사는 같은 자리에서 같은 수를 둠, 달라질 수 있는 것은 60초 상한에 걸린 결정뿐). 방 기록은 lab과 같은 기계의 ~/gaia-media/rooms/98ADBD-snapshots.jsonl. 환경은 114·119·123과 같음(GAIA_ENGINE_FIXES_2=1, PYTHONPATH python·baseline-teacher·tools). 엔진은 현재 HEAD 빌드라 방을 둔 실서버 엔진과 다름(E252 하이브 연방 편입, E257 종료 때 환전) — 방의 187점과 직접 비교하지 않음. 봇 턴 점검(같은 자리 2결정, --max-steps 2)은 통과. 판정 없음 — 도구 동작 확인만. 통과 기준: ① 1/1판이 게임 종료까지 완주(metrics.json games_complete 1, failures 빈 목록, 4좌석 최종 점수 있음) ② 오류·타임아웃 0. 볼 것: 최대 결정 시간, 60초 이상·100초 초과 결정 수, 폴백 타임아웃 수, 좌석별 연방 행동 수. 하이브 최종 점수는 참고값(본 실험의 6라운드 팔과 같은 자리). 통과하면 본 실험(정리 턴 제안, 코덱스 확인 뒤): 같은 방 1·4·5·6라운드 시작 × 1판, 1라운드 시작 판이 대조군, ≈ 50분, 탐색적 진단(한 판·한 맵, 실력 향상 입증 아님). 예상 ≈ 10분. 리플레이 게시 없음.
+
+종료 코드 0
+
+```
+{"start_round": 6, "repeat": 0, "complete": true, "failure": null, "scores": {"0": 185, "1": 69, "2": 93, "3": 121}, "stopped_at_round": null, "max_seconds": 44.803}
+Ivits in room 98ADBD: the room's own final 187
+start round 6: VP then 64, teacher finals [185] mean 185 vs round-1 start None (1/1 finished)
+```
+
+지표
+
+```json
+{
+ "room": "98ADBD",
+ "focus": "Ivits",
+ "focus_seat": 0,
+ "factions": [
+  "Ivits",
+  "SpaceGiants",
+  "Tinkeroids",
+  "Itars"
+ ],
+ "room_final_scores": {
+  "0": 187,
+  "1": 71,
+  "2": 88,
+  "3": 103
+ },
+ "room_focus_final": 187,
+ "games_planned": 1,
+ "games_complete": 1,
+ "failures": [],
+ "max_steps": null,
+ "by_start_round": {
+  "6": {
+   "games": 1,
+   "finished": 1,
+   "start_vp": 64,
+   "focus_scores": [
+    185
+   ],
+   "mean": 185,
+   "mean_minus_round1": null
+  }
+ },
+ "games": [
+  {
+   "start_round": 6,
+   "repeat": 0,
+   "game": "game-0",
+   "complete": true,
+   "failure": null,
+   "error": null,
+   "steps": 76,
+   "stopped_at_round": null,
+   "scores": {
+    "0": 185,
+    "1": 69,
+    "2": 93,
+    "3": 121
+   },
+   "federations_formed": [
+    1,
+    0,
+    0,
+    1
+   ],
+   "decisions": 76,
+   "max_seconds": 44.803,
+   "at_or_over_60_seconds": 0,
+   "over_100_seconds": 0,
+   "fallback_timeouts": 0,
+   "focus_score": 185,
+   "focus_rank": 1
+  }
+ ]
+}
+```
+
+<sub>agentmaco · 커밋 9122315 · 2026-11-23T12:45:57+09:00 → 2026-11-23T12:54:21+09:00</sub>
