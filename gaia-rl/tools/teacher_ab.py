@@ -275,7 +275,10 @@ def worker(args):
     if parallel >= 2:
         import parallel_search
         parallel_search.install(parallel)
-    env = Environment(args.seed, MAX_DECISIONS)
+    # --state: the game starts from a saved engine state (tools/room_handover.py); the seed is then only the
+    # teacher's label. Steps count from 0 there, like the teacher's empty prefix.
+    env = (Environment.from_state_json(Path(args.state).read_text(), MAX_DECISIONS) if args.state
+           else Environment(args.seed, MAX_DECISIONS))
     teacher.bind(env)
     snapshot = json.loads(env.snapshot_json())
     out = sys.stdout
@@ -363,12 +366,13 @@ def decision_timing(audit, decision, tick):
 
 
 class Worker:
-    def __init__(self, teacher, seed, clock, log):
+    def __init__(self, teacher, seed, clock, log, state=None):
         env = {**os.environ, **teacher.get('env', {}),
                'PYTHONPATH': teacher['source'], 'PYTHONDONTWRITEBYTECODE': '1'}
         self.process = subprocess.Popen(
             [sys.executable, '-u', str(Path(__file__).resolve()), 'worker', '--seed', seed,
-             '--spec', json.dumps(teacher), '--clock', json.dumps(clock)],
+             '--spec', json.dumps(teacher), '--clock', json.dumps(clock),
+             *(['--state', str(Path(state).resolve())] if state else [])],
             cwd=teacher['source'], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=log, text=True)
         self.lines = queue.Queue()
@@ -408,12 +412,15 @@ class WorkerTimeout(RuntimeError):
 
 # ── One game ────────────────────────────────────────────────────────────────
 
-def play(output, seed, teachers, a_seats, clock, stop_round=None):
+def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, max_steps=None):
     """One game. With stop_round, the game ends when round stop_round+1 starts and 'scores' are the
-    VP held then (user 2026-10-07: A/B is judged by charges in rounds 1-3, later rounds are unused)."""
+    VP held then (user 2026-10-07: A/B is judged by charges in rounds 1-3, later rounds are unused).
+    With state (a file holding an engine state, players numbered 0..3), the game starts there instead of
+    at the seed's setup; max_steps ends it after that many decisions (a tool check, not a result)."""
     from gaia_rl import Environment
     output.mkdir(parents=True)
-    env = Environment(seed, MAX_DECISIONS)
+    env = (Environment.from_state_json(Path(state).read_text(), MAX_DECISIONS) if state
+           else Environment(seed, MAX_DECISIONS))
     snapshot = json.loads(env.snapshot_json())
     factions = [p['faction'] for p in snapshot['state']['players']]
     arm_of = {seat: 'A' if seat in a_seats else 'B' for seat in range(4)}
@@ -425,13 +432,14 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None):
     try:
         with (output/'workers.log').open('w') as log:
             for arm in 'AB':
-                workers[arm] = Worker(teachers[arm], seed, clock, log)
+                workers[arm] = Worker(teachers[arm], seed, clock, log, state)
             for arm, w in workers.items():
                 hello = w.request(None, timeout=300)
                 if hello.get('digest') != digest(snapshot):
                     raise RuntimeError(f'teacher {arm} started from a different native state')
             with gzip.open(output/'decisions.jsonl.gz', 'wt') as trace:
-                while not env.is_terminal() and not (stop_round and snapshot['state']['round'] > stop_round):
+                while (not env.is_terminal() and not (stop_round and snapshot['state']['round'] > stop_round)
+                       and not (max_steps and snapshot['steps'] >= max_steps)):
                     seat, arm = snapshot['player'], arm_of[snapshot['player']]
                     faction = factions[seat]
                     limits = snapshot.get('candidate_generation') or {}
@@ -584,6 +592,7 @@ def main():
     work.add_argument('--seed', required=True)
     work.add_argument('--spec', required=True)
     work.add_argument('--clock', required=True)
+    work.add_argument('--state')
     args = parser.parse_args()
     if args.command == 'worker':
         worker(args)
