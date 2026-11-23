@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { roundBoosterImageSrc } from '../assets/roundBoosterImages';
-import { finalPassConversionGain } from './freeActions';
 import type { PlayerState } from '../types/game';
 
 interface TopPassControlProps {
@@ -22,20 +21,13 @@ export function TopPassControl({
 }: TopPassControlProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedBoosterId, setSelectedBoosterId] = useState<number | null>(null);
-  const [conversionPromptOpen, setConversionPromptOpen] = useState(false);
   const controlsDisabled = !isMyTurn || player.passed;
   const requiresBoosterChoice = round < 6 && player.booster != null;
   const selectedImageSrc = selectedBoosterId === null ? null : roundBoosterImageSrc(selectedBoosterId);
-  const conversionGain = finalPassConversionGain(player);
-  const conversionParts = [
-    conversionGain.power > 0 ? `3구역 파워 ${conversionGain.power}(→ 돈)` : null,
-    conversionGain.qic > 0 ? `정보 큐브 ${conversionGain.qic}(→ 광석)` : null,
-  ].filter((part): part is string => part !== null);
 
   useEffect(() => {
     setPickerOpen(false);
     setSelectedBoosterId(null);
-    setConversionPromptOpen(false);
   }, [round, player.booster]);
 
   useEffect(() => {
@@ -46,10 +38,6 @@ export function TopPassControl({
 
   const handlePassClick = () => {
     if (!requiresBoosterChoice) {
-      if (round >= 6 && conversionGain.vp > 0) {
-        setConversionPromptOpen(true);
-        return;
-      }
       onPass(null);
       return;
     }
@@ -124,47 +112,6 @@ export function TopPassControl({
                 }}
               >
                 이 부스터로 패스
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
-
-      {conversionPromptOpen && (
-        <div
-          className="booster-preview-scrim"
-          role="presentation"
-          onMouseDown={() => setConversionPromptOpen(false)}
-        >
-          <section
-            className="booster-preview-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label="패스 전 자원 환전 안내"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <h2>패스 전에 바꾸면 +{conversionGain.vp}점</h2>
-            <p>
-              남은 {conversionParts.join('·')}를 바꾸면 게임 종료 자원 점수가 {conversionGain.vp}점
-              늘어납니다. 패스한 뒤에는 바꿀 수 없습니다.
-            </p>
-            <div className="booster-preview-actions">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setConversionPromptOpen(false)}
-              >
-                돌아가서 바꾸기
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  setConversionPromptOpen(false);
-                  onPass(null);
-                }}
-              >
-                그대로 패스
               </button>
             </div>
           </section>

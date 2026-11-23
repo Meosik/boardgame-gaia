@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SidebarTurnControls } from '../components/SidebarTurnControls';
 import { TopPassControl } from '../components/TopPassControl';
-import { finalPassConversionGain } from '../components/freeActions';
 import type { PlayerState, UndoState } from '../types/game';
 
 function player(bowl3 = 4, overrides: Partial<PlayerState> = {}): PlayerState {
@@ -275,11 +274,11 @@ describe('TopPassControl', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('passes at once in the final round when the leftovers would not add a point', () => {
+  it('passes without a booster in the final round', () => {
     const onPass = vi.fn();
     render(
       <TopPassControl
-        player={player(1, { resources: { ...player(1).resources, qic: 0 } })}
+        player={player()}
         round={6}
         availableBoosters={[2, 3]}
         isMyTurn
@@ -291,62 +290,5 @@ describe('TopPassControl', () => {
     expect(onPass).toHaveBeenCalledWith(null);
   });
 
-  it('asks before the final pass when converting power and QIC would score more', () => {
-    const onPass = vi.fn();
-    render(
-      <TopPassControl
-        player={player()}
-        round={6}
-        availableBoosters={[]}
-        isMyTurn
-        onPass={onPass}
-      />,
-    );
 
-    fireEvent.click(screen.getByRole('button', { name: '패스' }));
-    const dialog = screen.getByRole('dialog', { name: '패스 전 자원 환전 안내' });
-    expect(dialog).toHaveTextContent('+2점');
-    expect(dialog).toHaveTextContent('3구역 파워 4(→ 돈)·정보 큐브 1(→ 광석)');
-    expect(onPass).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole('button', { name: '그대로 패스' }));
-    expect(onPass).toHaveBeenCalledWith(null);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('goes back to convert instead of passing', () => {
-    const onPass = vi.fn();
-    render(
-      <TopPassControl
-        player={player()}
-        round={6}
-        availableBoosters={[]}
-        isMyTurn
-        onPass={onPass}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: '패스' }));
-    fireEvent.click(screen.getByRole('button', { name: '돌아가서 바꾸기' }));
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(onPass).not.toHaveBeenCalled();
-  });
-});
-
-describe('finalPassConversionGain', () => {
-  it('counts bowl-3 power and QIC toward the next multiple of three', () => {
-    expect(finalPassConversionGain(player())).toEqual({ power: 4, qic: 1, vp: 2 });
-    expect(finalPassConversionGain(player(1, { resources: { ...player(1).resources, qic: 0 } })))
-      .toEqual({ power: 1, qic: 0, vp: 0 });
-  });
-
-  it('doubles bowl-3 power for the Nevlas with a planetary institute', () => {
-    const nevlas = player(1, {
-      faction: 'Nevlas',
-      resources: { ...player(1).resources, qic: 0 },
-      structures: [{ hex: '0,0', kind: 'PlanetaryInstitute' }] as unknown as PlayerState['structures'],
-    });
-    expect(finalPassConversionGain(nevlas)).toEqual({ power: 2, qic: 0, vp: 1 });
-  });
 });
