@@ -1,0 +1,6445 @@
+{
+ "name": "132e-decision-probe-98ADBD-passstate",
+ "kind": "command",
+ "status": "done",
+ "note": "E279 추천 (ㄱ)의 뒷부분(코드로 안 정해지면 도구 기록), 코덱스 이상 없음(사용자 2026-11-13 상시 지시): 132d와 같은 결정·상태·교사·관심 수 셋·물음 하나(front-nocap: 상한 없음, 비교 9, 세 수를 root 목록 맨 앞)를 기록이 더 든 도구(tools/decision_probe.py c9fe0af: rollout 안 하이브 결정마다 132d의 기록에 더해 다른 좌석 수와 패스한 수(others, others_passed) · 자기 점수와 자원(own: vp, ore, credits, knowledge, qic) · 막히지 않은 패스 아닌 후보 가운데 점수 > 0인 수(positive_others)와 그 종류별 수(positive_by_type)·위 셋(top_others) · 가장 높은 패스를 교사와 같은 fork로 둔 뒤 상태(pass_after: round, phase, player, own, others_passed) · 가장 높은 연방을 둔 뒤 상태(federation_after: round, own))로 한 번 물음. 교사는 그대로(읽기만; fork는 교사가 순위를 매길 때 쓰는 것과 같은 호출). 대국 없음. 탐색적 진단, 판정 없음(한 결정). 읽는 법(사전 등록): 대상 = 현재 수(current-choice)·root-56 rollout에서 패스 점수가 −3.00이던 결정들과 47.53이 된 결정(132d). (a) 그 결정들의 others_passed와 pass_after.round·phase — 47.53 결정에서 pass_after.round = 6이고 −3.00 결정들에서 5면 「패스 점수의 뜀 = 라운드 넘김: 패스 뒤 상태가 다음 라운드라 potential의 식이 바뀜」 확인으로 적고 others_passed(3/3인지)를 나란히 적음; 47.53 결정에서도 5면 그 추정은 틀림으로 적고 potential 항 분해를 다음 일로 둠. (b) 47.53 결정의 positive_by_type(양수 후보 전부의 종류별 수)과 positive_others, top_others 셋의 점수 — positive_by_type에 FormFederation만 있으면 「연방에 한한 문제」, 다른 종류도 있으면 「남은 이득 행동 전반」으로 적음(수정안 A/B 선택의 근거; 위 셋만으로는 판정하지 않음 — 토론 1/1). (c) 현재 수 rollout 패스 결정의 연방 값 = own.qic − federation_after.own.qic(두기 전 − 둔 뒤 잔액; 다른 자원도 같은 식으로), flip-229 패스 결정의 own.qic을 그 값과 나란히 적음 — flip-229의 QIC가 그 값보다 적으면 「QIC 부족 추정과 맞음」, 같거나 많으면 「QIC만으로는 설명 안 됨」까지만 적음. 어느 쪽이든 확정·기각은 아님: 두 rollout은 연구 경로·건물·파워 상태가 다를 수 있고 가장 높은 연방 하나의 값만 보기 때문(토론 1/1) — 까닭은 미확인으로 남김. (d) pass_after.own.vp − own.vp(패스가 주는 점수)와 federation_after.own.vp − own.vp, 패스 전후 자원 변화(수입이 들어왔는지). (e) 값·선택·행동 목록과 132d의 기록(현재 수 131.46 · 정거장 계획 138.60 → 선택 · root-사용자 수 133.60; 패스 결정의 연방 후보 14개·막힘 0·연방 7.28·패스 47.53)이 132d와 같은지 — 다르면 fork 기록이 결정을 바꾼 것일 수 있어 새 기록을 결과로 쓰지 않고 원인부터 봄. 한정: 한 결정·한 상태, rollout은 교사의 싼 이어 두기, 뜻은 상한 없는 평가까지; 실제 대국에서의 빈도는 묻지 않음. 건강 기준: 종료 코드 0, failures 빈 목록, digest_matches_log true, 폴백 타임아웃 0, 끝난 rollout 모두 own_decisions가 있고 기록 오류(error 항목, pass_after·federation_after의 error 포함) 0, 물음 시간이 132d(84.45초)의 ±10% 안. 예상 ≈ 3–5분, 제한 2시간.",
+ "host": "agentmaco",
+ "commit": "7cb65a7",
+ "started_at": "2026-11-23T23:19:29+09:00",
+ "finished_at": "2026-11-23T23:20:57+09:00",
+ "command": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "tools/decision_probe.py",
+  "--state",
+  "runs/lab-130-room-first-move-98ADBD/states/round-5.json",
+  "--prefix-log",
+  "runs/lab-130-room-first-move-98ADBD/round-5/move-0/game-0/decisions.jsonl.gz",
+  "--prefix-steps",
+  "5",
+  "--teacher",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+  "--move",
+  "{\"type\":\"Upgrade\",\"coord\":\"-2,4\",\"to\":{\"Academy\":\"Qic\"},\"tech_tile_choice\":{\"kind\":\"Standard\",\"tile\":6,\"advance_track\":null,\"bonus_build_coord\":null}}",
+  "--move",
+  "{\"type\":\"IvitsPlaceSpaceStation\",\"coord\":\"-1,3\"}",
+  "--move",
+  "{\"type\":\"Upgrade\",\"coord\":\"-2,4\",\"to\":{\"Academy\":\"Qic\"},\"tech_tile_choice\":{\"kind\":\"Standard\",\"tile\":8,\"advance_track\":null,\"bonus_build_coord\":null}}",
+  "--ask",
+  "front-nocap:9:0:0,1,2",
+  "--output",
+  "runs/lab-132e-decision-probe-98ADBD-passstate"
+ ],
+ "exit_code": 0,
+ "metrics": {
+  "created_at": "2026-11-23T23:19:31.000902+09:00",
+  "state": "runs/lab-130-room-first-move-98ADBD/states/round-5.json",
+  "prefix_log": "runs/lab-130-room-first-move-98ADBD/round-5/move-0/game-0/decisions.jsonl.gz",
+  "prefix_steps": 5,
+  "teacher": "teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2",
+  "seed": "98ADBD-s0",
+  "digest": "f56cdbc35b155ee612efcb5d970f99b49e47f5d033ffededcec9f8c8148abc6d",
+  "digest_in_log": "f56cdbc35b155ee612efcb5d970f99b49e47f5d033ffededcec9f8c8148abc6d",
+  "digest_matches_log": true,
+  "logged_choice": {
+   "index": 272,
+   "action": {
+    "type": "TwilightReplayFederationToken",
+    "token_kind": 12,
+    "bonus_build_coord": null,
+    "bonus_tech_tile": 13,
+    "bonus_research_track": "ArtificialIntelligence"
+   },
+   "selected": "current-choice",
+   "seconds": 60.035,
+   "completed_comparisons": 1,
+   "timing": {
+    "choose": 60.033,
+    "audit_fresh": true,
+    "search": 60.033,
+    "cap": 60,
+    "published_at": [
+     1.906,
+     16.428,
+     60.0
+    ],
+    "stages": {
+     "bind_check": 0.001,
+     "root_rank": 1.242,
+     "planned_tasks": 0.661,
+     "prefetch": 1.904,
+     "drop_unfinished": 0.027,
+     "parallel_search": 60.027,
+     "search_call": 60.028,
+     "state_check": 0.003
+    },
+    "time_capped": true,
+    "budget_stopped": false,
+    "expired_before_search": false
+   }
+  },
+  "round": 5,
+  "seat": 0,
+  "faction": "Ivits",
+  "candidates": 350,
+  "candidates_by_type": {
+   "IvitsPlaceSpaceStation": 125,
+   "Upgrade": 65,
+   "PowerAction": 50,
+   "FreeAction": 33,
+   "SpaceshipCreditTerraform": 19,
+   "TwilightRangeBuild": 15,
+   "TwilightReplayFederationToken": 13,
+   "Build": 11,
+   "ResearchAdvance": 6,
+   "ExamineArtifact": 4,
+   "Pass": 3,
+   "ExploreSpaceship": 2,
+   "TwilightRangeExploreSpaceship": 2,
+   "TFMarsTechBonus": 1,
+   "TechTileSpecialAction": 1
+  },
+  "upgrade_candidates_by_target": {
+   "{\"Academy\": \"Qic\"}": 62,
+   "TradingStation": 3
+  },
+  "moves": [
+   {
+    "position": 0,
+    "index": 312,
+    "action": {
+     "type": "Upgrade",
+     "coord": "-2,4",
+     "to": {
+      "Academy": "Qic"
+     },
+     "tech_tile_choice": {
+      "kind": "Standard",
+      "tile": 6,
+      "advance_track": null,
+      "bonus_build_coord": null
+     }
+    },
+    "rank": 230
+   },
+   {
+    "position": 1,
+    "index": 56,
+    "action": {
+     "type": "IvitsPlaceSpaceStation",
+     "coord": "-1,3"
+    },
+    "rank": 15
+   },
+   {
+    "position": 2,
+    "index": 314,
+    "action": {
+     "type": "Upgrade",
+     "coord": "-2,4",
+     "to": {
+      "Academy": "Qic"
+     },
+     "tech_tile_choice": {
+      "kind": "Standard",
+      "tile": 8,
+      "advance_track": null,
+      "bonus_build_coord": null
+     }
+    },
+    "rank": 260
+   }
+  ],
+  "asks": [
+   {
+    "label": "front-nocap",
+    "comparisons": 9,
+    "cap": null,
+    "front": [
+     0,
+     1,
+     2
+    ],
+    "front_indices": [
+     312,
+     56,
+     314
+    ],
+    "wall_seconds": 86.004,
+    "index": 56,
+    "action": {
+     "type": "IvitsPlaceSpaceStation",
+     "coord": "-1,3"
+    },
+    "chose_move": 1,
+    "selected": "Ivits-station-then-extend-federation",
+    "completed_comparisons": 4,
+    "unsearched_comparisons": 518,
+    "stop_reason": "stable completed alternatives; no artificial wait",
+    "fallback_timeout": false,
+    "timing": {
+     "choose": 86.001,
+     "audit_fresh": true,
+     "search": 86.001,
+     "cap": null,
+     "published_at": [
+      1.421,
+      13.116,
+      85.966,
+      85.967,
+      85.968,
+      85.97
+     ],
+     "stages": {
+      "bind_check": 0.002,
+      "root_rank": 1.32,
+      "planned_tasks": 0.099,
+      "prefetch": 1.419,
+      "drop_unfinished": 0.027,
+      "parallel_search": 85.996,
+      "search_call": 85.997,
+      "state_check": 0.002
+     },
+     "time_capped": false,
+     "budget_stopped": false,
+     "expired_before_search": false
+    },
+    "compared": [
+     {
+      "goal": "current-choice",
+      "spec": "9d45d96b64",
+      "family": "current",
+      "first": 272,
+      "complete": true,
+      "value": 131.46,
+      "action": {
+       "type": "TwilightReplayFederationToken",
+       "token_kind": 12,
+       "bonus_build_coord": null,
+       "bonus_tech_tile": 13,
+       "bonus_research_track": "ArtificialIntelligence"
+      },
+      "move": null
+     },
+     {
+      "goal": "Ivits-station-then-extend-federation",
+      "spec": "1df192d52a",
+      "family": "ordered",
+      "first": 56,
+      "complete": true,
+      "value": 138.6,
+      "action": {
+       "type": "IvitsPlaceSpaceStation",
+       "coord": "-1,3"
+      },
+      "move": 1
+     },
+     {
+      "goal": "root-312",
+      "spec": "b41afe1372",
+      "family": "root",
+      "first": 312,
+      "complete": true,
+      "value": 133.6,
+      "action": {
+       "type": "Upgrade",
+       "coord": "-2,4",
+       "to": {
+        "Academy": "Qic"
+       },
+       "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 6,
+        "advance_track": null,
+        "bonus_build_coord": null
+       }
+      },
+      "move": 0
+     },
+     {
+      "goal": "tile-action-314-then-colony@3,3",
+      "spec": "2413645c2c",
+      "family": "colony",
+      "first": 314,
+      "complete": true,
+      "value": 125.83,
+      "action": {
+       "type": "Upgrade",
+       "coord": "-2,4",
+       "to": {
+        "Academy": "Qic"
+       },
+       "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 8,
+        "advance_track": null,
+        "bonus_build_coord": null
+       }
+      },
+      "move": 2
+     }
+    ],
+    "roots": 339,
+    "move_ranks": {
+     "312": 230,
+     "56": 15,
+     "314": 260
+    },
+    "planned_tasks": 522,
+    "task_order": [
+     [
+      "current-choice",
+      "current",
+      272
+     ],
+     [
+      "Ivits-station-then-extend-federation",
+      "ordered",
+      null
+     ],
+     [
+      "root-312",
+      "root",
+      312
+     ],
+     [
+      "tile-action-314-then-colony@3,3",
+      "colony",
+      314
+     ],
+     [
+      "flip-229",
+      "root",
+      229
+     ],
+     [
+      "root-56",
+      "root",
+      56
+     ],
+     [
+      "tile-action-314-then-Rebellion-RebellionGainTechTile-then-expand",
+      "sequence",
+      314
+     ],
+     [
+      "track-plan-Science-2",
+      "ordered",
+      null
+     ],
+     [
+      "root-314",
+      "root",
+      314
+     ],
+     [
+      "tile-action-314-then-colony@-4,-3",
+      "colony",
+      314
+     ],
+     [
+      "Qic@-8,1",
+      "upgrade",
+      null
+     ],
+     [
+      "root-274",
+      "root",
+      274
+     ]
+    ],
+    "comparison_times": [
+     {
+      "call": "rollout",
+      "goal": "current-choice",
+      "first": 272,
+      "pid": 385012,
+      "started": 1.435,
+      "finished": true,
+      "error": null,
+      "seconds": 11.682,
+      "complete": true,
+      "decisions": 61,
+      "rank_seconds": 11.576,
+      "rank_calls": 60,
+      "ranked_candidates": 3664,
+      "select_seconds": 0.001,
+      "select_calls": 8,
+      "own_decisions": [
+       {
+        "round": 5,
+        "candidates": 352,
+        "by_type": {
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 37,
+         "IvitsPlaceSpaceStation": 103,
+         "Pass": 3,
+         "PowerAction": 44,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 20,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 20,
+         "TwilightRangeExploreSpaceship": 2,
+         "Upgrade": 95
+        },
+        "chosen": {
+         "index": 209,
+         "type": "ResearchAdvance",
+         "score": 10.400000000000034,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 209,
+         "type": "ResearchAdvance",
+         "score": 10.400000000000034,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 160,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 10,
+         "qic": 2
+        },
+        "positive_others": 39,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "ResearchAdvance": 6,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 1,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 209,
+          "type": "ResearchAdvance",
+          "score": 10.400000000000034,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 207,
+          "type": "ResearchAdvance",
+          "score": 9.200000000000045,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 208,
+          "type": "ResearchAdvance",
+          "score": 4.6666666666667425,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 403,
+        "by_type": {
+         "Build": 19,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 33,
+         "GaiaFormation": 9,
+         "IvitsPlaceSpaceStation": 103,
+         "Pass": 3,
+         "PowerAction": 54,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 25,
+         "TFMarsGaiaFormation": 9,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 27,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 95
+        },
+        "chosen": {
+         "index": 227,
+         "type": "ResearchAdvance",
+         "score": 9.199999999999989,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 227,
+         "type": "ResearchAdvance",
+         "score": 9.199999999999989,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 170,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 6,
+         "qic": 2
+        },
+        "positive_others": 45,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 2,
+         "ResearchAdvance": 5,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 227,
+          "type": "ResearchAdvance",
+          "score": 9.199999999999989,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 229,
+          "type": "ResearchAdvance",
+          "score": 6.399999999999977,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 228,
+          "type": "ResearchAdvance",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 412,
+        "by_type": {
+         "Build": 29,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 33,
+         "GaiaFormation": 10,
+         "IvitsPlaceSpaceStation": 143,
+         "Pass": 3,
+         "PowerAction": 81,
+         "SpaceshipCreditTerraform": 39,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 29,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 15
+        },
+        "chosen": {
+         "index": 84,
+         "type": "IvitsPlaceSpaceStation",
+         "score": 4.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 84,
+         "type": "IvitsPlaceSpaceStation",
+         "score": 4.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 222,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 2,
+         "qic": 6
+        },
+        "positive_others": 39,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 84,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 85,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 86,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 35,
+          "ore": 7,
+          "credits": 11,
+          "knowledge": 2,
+          "qic": 6
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 269,
+        "by_type": {
+         "Build": 29,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 33,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 81,
+         "SpaceshipCreditTerraform": 39,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 29,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 15
+        },
+        "chosen": {
+         "index": 18,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "top": {
+         "index": 18,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 79,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 2,
+         "qic": 6
+        },
+        "positive_others": 12,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 18,
+          "type": "Build",
+          "score": 3.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+         },
+         {
+          "index": 34,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666666515,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 212,
+          "type": "TechTileSpecialAction",
+          "score": 1.3333333333333712,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 35,
+          "ore": 7,
+          "credits": 11,
+          "knowledge": 2,
+          "qic": 6
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 169,
+        "by_type": {
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 24,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 50,
+         "SpaceshipCreditTerraform": 20,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 4
+        },
+        "chosen": {
+         "index": 7,
+         "type": "Build",
+         "score": 5.1142857142857565,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 7,
+         "type": "Build",
+         "score": 5.1142857142857565,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 55,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 3,
+         "credits": 9,
+         "knowledge": 2,
+         "qic": 5
+        },
+        "positive_others": 15,
+        "positive_by_type": {
+         "Build": 3,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 2,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 7,
+          "type": "Build",
+          "score": 5.1142857142857565,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 5,
+          "type": "Build",
+          "score": 3.6666666666666856,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 19,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666666515,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 36,
+          "ore": 3,
+          "credits": 9,
+          "knowledge": 2,
+          "qic": 5
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 162,
+        "by_type": {
+         "Build": 13,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 22,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 47,
+         "SpaceshipCreditTerraform": 19,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 13,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 5
+        },
+        "chosen": {
+         "index": 6,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "top": {
+         "index": 6,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 52,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 26,
+         "ore": 2,
+         "credits": 7,
+         "knowledge": 2,
+         "qic": 5
+        },
+        "positive_others": 11,
+        "positive_by_type": {
+         "Build": 2,
+         "ExploreSpaceship": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 4,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 6,
+          "type": "Build",
+          "score": 3.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+         },
+         {
+          "index": 18,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666665947,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 138,
+          "type": "TwilightRangeBuild",
+          "score": 2.7142857142856656,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 37,
+          "ore": 2,
+          "credits": 7,
+          "knowledge": 2,
+          "qic": 5
+         },
+         "others_passed": 2
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 107,
+        "by_type": {
+         "Build": 5,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FormFederation": 14,
+         "FreeAction": 21,
+         "Pass": 3,
+         "PowerAction": 31,
+         "SpaceshipCreditTerraform": 11,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 6,
+         "TwilightRangeExploreSpaceship": 2,
+         "Upgrade": 6
+        },
+        "chosen": {
+         "index": 47,
+         "type": "Pass",
+         "score": 47.5333333333333,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 47,
+         "type": "Pass",
+         "score": 47.5333333333333,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 14,
+        "federations_blocked": 0,
+        "best_federation": {
+         "index": 13,
+         "type": "FormFederation",
+         "score": 7.276190476190436,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 3,
+         "hexes": [
+          "-9,8",
+          "-8,5",
+          "-8,7",
+          "-7,4",
+          "-7,8"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "best_pass": {
+         "index": 47,
+         "type": "Pass",
+         "score": 47.5333333333333,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 26,
+         "ore": 2,
+         "credits": 7,
+         "knowledge": 2,
+         "qic": 4
+        },
+        "positive_others": 18,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "FormFederation": 14,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 13,
+          "type": "FormFederation",
+          "score": 7.276190476190436,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 3,
+          "hexes": [
+           "-9,8",
+           "-8,5",
+           "-8,7",
+           "-7,4",
+           "-7,8"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 2
+          }
+         },
+         {
+          "index": 20,
+          "type": "FormFederation",
+          "score": 7.276190476190436,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 3,
+          "hexes": [
+           "-9,8",
+           "-8,5",
+           "-8,7",
+           "-7,4",
+           "-7,8"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 2
+          }
+         },
+         {
+          "index": 15,
+          "type": "FormFederation",
+          "score": 6.942857142857179,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 3,
+          "hexes": [
+           "-9,8",
+           "-8,5",
+           "-8,7",
+           "-7,4",
+           "-7,8"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 4
+          }
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "IncomeOrderPending",
+         "player": 0,
+         "own": {
+          "vp": 38,
+          "ore": 10,
+          "credits": 16,
+          "knowledge": 8,
+          "qic": 5
+         },
+         "others_passed": 3
+        },
+        "federation_after": {
+         "round": 5,
+         "own": {
+          "vp": 34,
+          "ore": 2,
+          "credits": 7,
+          "knowledge": 2,
+          "qic": 2
+         }
+        }
+       },
+       {
+        "round": 5,
+        "candidates": 2,
+        "by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "chosen": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.466666666666697,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.466666666666697,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": null,
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 38,
+         "ore": 10,
+         "credits": 16,
+         "knowledge": 8,
+         "qic": 5
+        },
+        "positive_others": 2,
+        "positive_by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "top_others": [
+         {
+          "index": 0,
+          "type": "ChooseIncomeOrder",
+          "score": 3.466666666666697,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 1,
+          "type": "ChooseIncomeOrder",
+          "score": 2.1333333333333258,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       }
+      ],
+      "value": 131.45714285714286,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "current-choice",
+       "family": "current",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 26,
+        "vp_after": 38
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 38,
+        "vp_after": 38
+       }
+      ]
+     },
+     {
+      "call": "select_goal",
+      "goal": "Ivits-station-then-extend-federation",
+      "first": 56,
+      "pid": 385013,
+      "started": 1.439,
+      "finished": true,
+      "error": null,
+      "seconds": 0.0
+     },
+     {
+      "call": "rollout",
+      "goal": "Ivits-station-then-extend-federation",
+      "first": 56,
+      "pid": 385013,
+      "started": 1.44,
+      "finished": true,
+      "error": null,
+      "seconds": 84.528,
+      "complete": true,
+      "decisions": 62,
+      "rank_seconds": 83.975,
+      "rank_calls": 177,
+      "ranked_candidates": 24785,
+      "select_seconds": 73.862,
+      "select_calls": 9,
+      "own_decisions": [
+       {
+        "round": 5,
+        "candidates": 224,
+        "by_type": {
+         "Build": 11,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 33,
+         "Pass": 3,
+         "PowerAction": 50,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 19,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightReplayFederationToken": 13,
+         "Upgrade": 65
+        },
+        "chosen": {
+         "index": 146,
+         "type": "TwilightReplayFederationToken",
+         "score": 19.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 146,
+         "type": "TwilightReplayFederationToken",
+         "score": 19.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 50,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 6,
+         "credits": 11,
+         "knowledge": 7,
+         "qic": 3
+        },
+        "positive_others": 24,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "ResearchAdvance": 5,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 1,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightReplayFederationToken": 11,
+         "Upgrade": 2
+        },
+        "top_others": [
+         {
+          "index": 146,
+          "type": "TwilightReplayFederationToken",
+          "score": 19.46666666666664,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 148,
+          "type": "TwilightReplayFederationToken",
+          "score": 17.73333333333335,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 155,
+          "type": "TwilightReplayFederationToken",
+          "score": 15.799999999999955,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 249,
+        "by_type": {
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 37,
+         "Pass": 3,
+         "PowerAction": 44,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 20,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 20,
+         "TwilightRangeExploreSpaceship": 2,
+         "Upgrade": 95
+        },
+        "chosen": {
+         "index": 106,
+         "type": "ResearchAdvance",
+         "score": 10.400000000000034,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 106,
+         "type": "ResearchAdvance",
+         "score": 10.400000000000034,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 57,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 10,
+         "qic": 2
+        },
+        "positive_others": 12,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "ResearchAdvance": 6,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 1,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 106,
+          "type": "ResearchAdvance",
+          "score": 10.400000000000034,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 104,
+          "type": "ResearchAdvance",
+          "score": 9.200000000000045,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 105,
+          "type": "ResearchAdvance",
+          "score": 4.6666666666667425,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 303,
+        "by_type": {
+         "Build": 20,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 33,
+         "GaiaFormation": 9,
+         "Pass": 3,
+         "PowerAction": 55,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 26,
+         "TFMarsGaiaFormation": 9,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 27,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 95
+        },
+        "chosen": {
+         "index": 126,
+         "type": "ResearchAdvance",
+         "score": 9.199999999999989,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 126,
+         "type": "ResearchAdvance",
+         "score": 9.199999999999989,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 68,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 6,
+         "qic": 2
+        },
+        "positive_others": 17,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "ResearchAdvance": 5,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 126,
+          "type": "ResearchAdvance",
+          "score": 9.199999999999989,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 128,
+          "type": "ResearchAdvance",
+          "score": 6.399999999999977,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 127,
+          "type": "ResearchAdvance",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 269,
+        "by_type": {
+         "Build": 29,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 33,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 81,
+         "SpaceshipCreditTerraform": 39,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 29,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 15
+        },
+        "chosen": {
+         "index": 18,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "top": {
+         "index": 18,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 79,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 2,
+         "qic": 6
+        },
+        "positive_others": 12,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 18,
+          "type": "Build",
+          "score": 3.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+         },
+         {
+          "index": 34,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666666515,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 212,
+          "type": "TechTileSpecialAction",
+          "score": 1.3333333333333712,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 35,
+          "ore": 7,
+          "credits": 11,
+          "knowledge": 2,
+          "qic": 6
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 169,
+        "by_type": {
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 24,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 50,
+         "SpaceshipCreditTerraform": 20,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 4
+        },
+        "chosen": {
+         "index": 7,
+         "type": "Build",
+         "score": 5.1142857142857565,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 7,
+         "type": "Build",
+         "score": 5.1142857142857565,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 55,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 3,
+         "credits": 9,
+         "knowledge": 2,
+         "qic": 5
+        },
+        "positive_others": 15,
+        "positive_by_type": {
+         "Build": 3,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 2,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 7,
+          "type": "Build",
+          "score": 5.1142857142857565,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 5,
+          "type": "Build",
+          "score": 3.6666666666666856,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 19,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666666515,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 36,
+          "ore": 3,
+          "credits": 9,
+          "knowledge": 2,
+          "qic": 5
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 162,
+        "by_type": {
+         "Build": 13,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 22,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 47,
+         "SpaceshipCreditTerraform": 19,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 13,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 5
+        },
+        "chosen": {
+         "index": 6,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "top": {
+         "index": 6,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 52,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 26,
+         "ore": 2,
+         "credits": 7,
+         "knowledge": 2,
+         "qic": 5
+        },
+        "positive_others": 11,
+        "positive_by_type": {
+         "Build": 2,
+         "ExploreSpaceship": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 4,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 6,
+          "type": "Build",
+          "score": 3.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+         },
+         {
+          "index": 18,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666665947,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 138,
+          "type": "TwilightRangeBuild",
+          "score": 2.7142857142856656,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 37,
+          "ore": 2,
+          "credits": 7,
+          "knowledge": 2,
+          "qic": 5
+         },
+         "others_passed": 2
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 107,
+        "by_type": {
+         "Build": 5,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FormFederation": 14,
+         "FreeAction": 21,
+         "Pass": 3,
+         "PowerAction": 31,
+         "SpaceshipCreditTerraform": 11,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 6,
+         "TwilightRangeExploreSpaceship": 2,
+         "Upgrade": 6
+        },
+        "chosen": {
+         "index": 13,
+         "type": "FormFederation",
+         "score": 7.276190476190436,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 3,
+         "hexes": [
+          "-9,8",
+          "-8,5",
+          "-8,7",
+          "-7,4",
+          "-7,8"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "top": {
+         "index": 47,
+         "type": "Pass",
+         "score": 47.5333333333333,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 14,
+        "federations_blocked": 0,
+        "best_federation": {
+         "index": 13,
+         "type": "FormFederation",
+         "score": 7.276190476190436,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 3,
+         "hexes": [
+          "-9,8",
+          "-8,5",
+          "-8,7",
+          "-7,4",
+          "-7,8"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "best_pass": {
+         "index": 47,
+         "type": "Pass",
+         "score": 47.5333333333333,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 26,
+         "ore": 2,
+         "credits": 7,
+         "knowledge": 2,
+         "qic": 4
+        },
+        "positive_others": 18,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "FormFederation": 14,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 13,
+          "type": "FormFederation",
+          "score": 7.276190476190436,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 3,
+          "hexes": [
+           "-9,8",
+           "-8,5",
+           "-8,7",
+           "-7,4",
+           "-7,8"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 2
+          }
+         },
+         {
+          "index": 20,
+          "type": "FormFederation",
+          "score": 7.276190476190436,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 3,
+          "hexes": [
+           "-9,8",
+           "-8,5",
+           "-8,7",
+           "-7,4",
+           "-7,8"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 2
+          }
+         },
+         {
+          "index": 15,
+          "type": "FormFederation",
+          "score": 6.942857142857179,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 3,
+          "hexes": [
+           "-9,8",
+           "-8,5",
+           "-8,7",
+           "-7,4",
+           "-7,8"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 4
+          }
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "IncomeOrderPending",
+         "player": 0,
+         "own": {
+          "vp": 38,
+          "ore": 10,
+          "credits": 16,
+          "knowledge": 8,
+          "qic": 5
+         },
+         "others_passed": 3
+        },
+        "federation_after": {
+         "round": 5,
+         "own": {
+          "vp": 34,
+          "ore": 2,
+          "credits": 7,
+          "knowledge": 2,
+          "qic": 2
+         }
+        }
+       },
+       {
+        "round": 5,
+        "candidates": 64,
+        "by_type": {
+         "Build": 1,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 19,
+         "Pass": 3,
+         "PowerAction": 17,
+         "SpaceshipCreditTerraform": 4,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 4,
+         "TwilightRangeExploreSpaceship": 2,
+         "Upgrade": 6
+        },
+        "chosen": {
+         "index": 27,
+         "type": "Pass",
+         "score": 43.800000000000125,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 27,
+         "type": "Pass",
+         "score": 43.800000000000125,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 27,
+         "type": "Pass",
+         "score": 43.800000000000125,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 34,
+         "ore": 2,
+         "credits": 7,
+         "knowledge": 2,
+         "qic": 2
+        },
+        "positive_others": 4,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 6,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666667084,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 51,
+          "type": "TechTileSpecialAction",
+          "score": 1.3333333333333712,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 56,
+          "type": "TwilightRangeExploreSpaceship",
+          "score": 0.6000000000000796,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "IncomeOrderPending",
+         "player": 0,
+         "own": {
+          "vp": 49,
+          "ore": 10,
+          "credits": 16,
+          "knowledge": 8,
+          "qic": 3
+         },
+         "others_passed": 3
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 2,
+        "by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "chosen": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.4666666666665833,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.4666666666665833,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": null,
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 49,
+         "ore": 10,
+         "credits": 16,
+         "knowledge": 8,
+         "qic": 3
+        },
+        "positive_others": 2,
+        "positive_by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "top_others": [
+         {
+          "index": 0,
+          "type": "ChooseIncomeOrder",
+          "score": 3.4666666666665833,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 1,
+          "type": "ChooseIncomeOrder",
+          "score": 2.1333333333333258,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       }
+      ],
+      "value": 138.6,
+      "goal_acquired": true,
+      "remaining_goal": {
+       "name": "Ivits-station-then-extend-federation",
+       "family": "ordered",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": [
+        "B12"
+       ]
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "FormFederation",
+         "hexes": [
+          "-9,8",
+          "-8,5",
+          "-8,7",
+          "-7,4",
+          "-7,8"
+         ],
+         "satellite_hexes": [
+          "-8,6",
+          "-7,3",
+          "-7,7"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         },
+         "bonus_build_coord": null,
+         "bonus_tech_tile": null,
+         "bonus_research_track": null
+        },
+        "vp_before": 26,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 34,
+        "vp_after": 49
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 49,
+        "vp_after": 49
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "root-312",
+      "first": 312,
+      "pid": 385012,
+      "started": 13.121,
+      "finished": true,
+      "error": null,
+      "seconds": 11.686,
+      "complete": true,
+      "decisions": 62,
+      "rank_seconds": 11.574,
+      "rank_calls": 61,
+      "ranked_candidates": 3674,
+      "select_seconds": 0.001,
+      "select_calls": 8,
+      "own_decisions": [
+       {
+        "round": 5,
+        "candidates": 257,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 7,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FormFederation": 7,
+         "FreeAction": 21,
+         "GaiaFormation": 11,
+         "IvitsPlaceSpaceStation": 125,
+         "Pass": 3,
+         "PowerAction": 18,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 7,
+         "TFMarsGaiaFormation": 11,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 7,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 11,
+         "TwilightReplayFederationToken": 12
+        },
+        "chosen": {
+         "index": 245,
+         "type": "TwilightReplayFederationToken",
+         "score": 19.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 245,
+         "type": "TwilightReplayFederationToken",
+         "score": 19.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 7,
+        "federations_blocked": 0,
+        "best_federation": {
+         "index": 16,
+         "type": "FormFederation",
+         "score": 14.285714285714278,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 1,
+         "hexes": [
+          "-8,5",
+          "-7,4"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "best_pass": {
+         "index": 178,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 0,
+         "credits": 5,
+         "knowledge": 7,
+         "qic": 3
+        },
+        "positive_others": 62,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "FormFederation": 7,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 2,
+         "ResearchAdvance": 5,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 4,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightReplayFederationToken": 10
+        },
+        "top_others": [
+         {
+          "index": 245,
+          "type": "TwilightReplayFederationToken",
+          "score": 19.46666666666664,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 253,
+          "type": "TwilightReplayFederationToken",
+          "score": 15.799999999999955,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 246,
+          "type": "TwilightReplayFederationToken",
+          "score": 14.800000000000011,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": {
+         "round": 5,
+         "own": {
+          "vp": 34,
+          "ore": 0,
+          "credits": 5,
+          "knowledge": 7,
+          "qic": 3
+         }
+        }
+       },
+       {
+        "round": 5,
+        "candidates": 247,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 7,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FormFederation": 7,
+         "FreeAction": 25,
+         "GaiaFormation": 9,
+         "IvitsPlaceSpaceStation": 103,
+         "Pass": 3,
+         "PowerAction": 34,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 11,
+         "TFMarsGaiaFormation": 9,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 12,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10
+        },
+        "chosen": {
+         "index": 16,
+         "type": "FormFederation",
+         "score": 14.285714285714278,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 1,
+         "hexes": [
+          "-8,5",
+          "-7,4"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "top": {
+         "index": 16,
+         "type": "FormFederation",
+         "score": 14.285714285714278,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 1,
+         "hexes": [
+          "-8,5",
+          "-7,4"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "federations": 7,
+        "federations_blocked": 0,
+        "best_federation": {
+         "index": 16,
+         "type": "FormFederation",
+         "score": 14.285714285714278,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 1,
+         "hexes": [
+          "-8,5",
+          "-7,4"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "best_pass": {
+         "index": 158,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 1,
+         "credits": 5,
+         "knowledge": 10,
+         "qic": 2
+        },
+        "positive_others": 53,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "FormFederation": 7,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 2,
+         "ResearchAdvance": 5,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 16,
+          "type": "FormFederation",
+          "score": 14.285714285714278,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 1,
+          "hexes": [
+           "-8,5",
+           "-7,4"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 2
+          }
+         },
+         {
+          "index": 18,
+          "type": "FormFederation",
+          "score": 13.952380952380963,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 1,
+          "hexes": [
+           "-8,5",
+           "-7,4"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 4
+          }
+         },
+         {
+          "index": 17,
+          "type": "FormFederation",
+          "score": 13.8857142857143,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 1,
+          "hexes": [
+           "-8,5",
+           "-7,4"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 3
+          }
+         }
+        ],
+        "pass_after": null,
+        "federation_after": {
+         "round": 5,
+         "own": {
+          "vp": 34,
+          "ore": 1,
+          "credits": 5,
+          "knowledge": 10,
+          "qic": 2
+         }
+        }
+       },
+       {
+        "round": 5,
+        "candidates": 239,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 7,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 25,
+         "GaiaFormation": 9,
+         "IvitsPlaceSpaceStation": 103,
+         "Pass": 3,
+         "PowerAction": 33,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 11,
+         "TFMarsGaiaFormation": 9,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 12,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10
+        },
+        "chosen": {
+         "index": 187,
+         "type": "ResearchAdvance",
+         "score": 16.66666666666663,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 187,
+         "type": "ResearchAdvance",
+         "score": 16.66666666666663,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 151,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 34,
+         "ore": 1,
+         "credits": 5,
+         "knowledge": 10,
+         "qic": 2
+        },
+        "positive_others": 47,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "Build": 3,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "ResearchAdvance": 5,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 187,
+          "type": "ResearchAdvance",
+          "score": 16.66666666666663,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 188,
+          "type": "ResearchAdvance",
+          "score": 12.133333333333326,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 189,
+          "type": "ResearchAdvance",
+          "score": 6.399999999999977,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 319,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 25,
+         "GaiaFormation": 10,
+         "IvitsPlaceSpaceStation": 143,
+         "Pass": 3,
+         "PowerAction": 53,
+         "ResearchAdvance": 5,
+         "SpaceshipCreditTerraform": 21,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10
+        },
+        "chosen": {
+         "index": 258,
+         "type": "ResearchAdvance",
+         "score": 6.400000000000034,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; Ivits research on its tracks (track_set)"
+        },
+        "top": {
+         "index": 258,
+         "type": "ResearchAdvance",
+         "score": 6.400000000000034,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; Ivits research on its tracks (track_set)"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 199,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 34,
+         "ore": 1,
+         "credits": 5,
+         "knowledge": 6,
+         "qic": 6
+        },
+        "positive_others": 46,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "Build": 3,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "ResearchAdvance": 4,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 258,
+          "type": "ResearchAdvance",
+          "score": 6.400000000000034,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms; Ivits research on its tracks (track_set)"
+         },
+         {
+          "index": 0,
+          "type": "AcademyQicAction",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 255,
+          "type": "ResearchAdvance",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 309,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 21,
+         "GaiaFormation": 10,
+         "IvitsPlaceSpaceStation": 143,
+         "Pass": 3,
+         "PowerAction": 52,
+         "SpaceshipCreditTerraform": 21,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10
+        },
+        "chosen": {
+         "index": 0,
+         "type": "AcademyQicAction",
+         "score": 4.666666666666686,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 0,
+         "type": "AcademyQicAction",
+         "score": 4.666666666666686,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 196,
+         "type": "Pass",
+         "score": -6.7333333333333485,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 34,
+         "ore": 1,
+         "credits": 5,
+         "knowledge": 2,
+         "qic": 6
+        },
+        "positive_others": 41,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "Build": 3,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 0,
+          "type": "AcademyQicAction",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 58,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 59,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 46,
+          "ore": 1,
+          "credits": 5,
+          "knowledge": 2,
+          "qic": 6
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 308,
+        "by_type": {
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 22,
+         "GaiaFormation": 10,
+         "IvitsPlaceSpaceStation": 143,
+         "Pass": 3,
+         "PowerAction": 51,
+         "SpaceshipCreditTerraform": 21,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10
+        },
+        "chosen": {
+         "index": 58,
+         "type": "IvitsPlaceSpaceStation",
+         "score": 4.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 58,
+         "type": "IvitsPlaceSpaceStation",
+         "score": 4.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 196,
+         "type": "Pass",
+         "score": -6.7333333333333485,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 34,
+         "ore": 1,
+         "credits": 5,
+         "knowledge": 2,
+         "qic": 7
+        },
+        "positive_others": 40,
+        "positive_by_type": {
+         "Build": 3,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 58,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 59,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 60,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 46,
+          "ore": 1,
+          "credits": 5,
+          "knowledge": 2,
+          "qic": 7
+         },
+         "others_passed": 2
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 165,
+        "by_type": {
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 22,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 51,
+         "SpaceshipCreditTerraform": 21,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10
+        },
+        "chosen": {
+         "index": 53,
+         "type": "Pass",
+         "score": 35.80000000000001,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 53,
+         "type": "Pass",
+         "score": 35.80000000000001,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 53,
+         "type": "Pass",
+         "score": 35.80000000000001,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 34,
+         "ore": 1,
+         "credits": 5,
+         "knowledge": 2,
+         "qic": 7
+        },
+        "positive_others": 13,
+        "positive_by_type": {
+         "Build": 3,
+         "ExploreSpaceship": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 5,
+          "type": "Build",
+          "score": 3.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 19,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666665947,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 140,
+          "type": "TwilightRangeBuild",
+          "score": 2.7142857142857224,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "IncomeOrderPending",
+         "player": 0,
+         "own": {
+          "vp": 46,
+          "ore": 6,
+          "credits": 14,
+          "knowledge": 8,
+          "qic": 8
+         },
+         "others_passed": 3
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 2,
+        "by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "chosen": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": null,
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 46,
+         "ore": 6,
+         "credits": 14,
+         "knowledge": 8,
+         "qic": 8
+        },
+        "positive_others": 2,
+        "positive_by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "top_others": [
+         {
+          "index": 0,
+          "type": "ChooseIncomeOrder",
+          "score": 3.46666666666664,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 1,
+          "type": "ChooseIncomeOrder",
+          "score": 2.1333333333333258,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       }
+      ],
+      "value": 133.6,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "root-312",
+       "family": "root",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "Upgrade",
+         "coord": "-2,4",
+         "to": {
+          "Academy": "Qic"
+         },
+         "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 6,
+          "advance_track": null,
+          "bonus_build_coord": null
+         }
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "FormFederation",
+         "hexes": [
+          "-8,5",
+          "-7,4"
+         ],
+         "satellite_hexes": [
+          "-7,3"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         },
+         "bonus_build_coord": null,
+         "bonus_tech_tile": null,
+         "bonus_research_track": null
+        },
+        "vp_before": 26,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "Science"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "AcademyQicAction"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 34,
+        "vp_after": 46
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 46,
+        "vp_after": 46
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "tile-action-314-then-colony@3,3",
+      "first": 314,
+      "pid": 385012,
+      "started": 24.838,
+      "finished": true,
+      "error": null,
+      "seconds": 30.124,
+      "complete": true,
+      "decisions": 68,
+      "rank_seconds": 29.887,
+      "rank_calls": 98,
+      "ranked_candidates": 9325,
+      "select_seconds": 18.667,
+      "select_calls": 13,
+      "own_decisions": [
+       {
+        "round": 5,
+        "candidates": 199,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 22,
+         "IvitsPlaceSpaceStation": 141,
+         "Pass": 3,
+         "PowerAction": 4,
+         "ResearchAdvance": 6,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightReplayFederationToken": 12
+        },
+        "chosen": {
+         "index": 187,
+         "type": "TwilightReplayFederationToken",
+         "score": 19.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 187,
+         "type": "TwilightReplayFederationToken",
+         "score": 19.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 170,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 0,
+         "credits": 5,
+         "knowledge": 7,
+         "qic": 4
+        },
+        "positive_others": 49,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "ResearchAdvance": 6,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightReplayFederationToken": 10
+        },
+        "top_others": [
+         {
+          "index": 187,
+          "type": "TwilightReplayFederationToken",
+          "score": 19.46666666666664,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 189,
+          "type": "TwilightReplayFederationToken",
+          "score": 17.73333333333335,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 196,
+          "type": "TwilightReplayFederationToken",
+          "score": 15.799999999999955,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 224,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 4,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 26,
+         "IvitsPlaceSpaceStation": 125,
+         "Pass": 3,
+         "PowerAction": 32,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 7,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "chosen": {
+         "index": 199,
+         "type": "ResearchAdvance",
+         "score": 10.399999999999977,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 199,
+         "type": "ResearchAdvance",
+         "score": 10.399999999999977,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 162,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 1,
+         "credits": 5,
+         "knowledge": 10,
+         "qic": 3
+        },
+        "positive_others": 38,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "ResearchAdvance": 4,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 1,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 199,
+          "type": "ResearchAdvance",
+          "score": 10.399999999999977,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 197,
+          "type": "ResearchAdvance",
+          "score": 9.199999999999989,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 0,
+          "type": "AcademyQicAction",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 284,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 11,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 22,
+         "GaiaFormation": 10,
+         "IvitsPlaceSpaceStation": 125,
+         "Pass": 3,
+         "PowerAction": 45,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 17,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10
+        },
+        "chosen": {
+         "index": 255,
+         "type": "TFMarsGaiaFormation",
+         "score": -9.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 223,
+         "type": "ResearchAdvance",
+         "score": 9.200000000000045,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 175,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 1,
+         "credits": 5,
+         "knowledge": 6,
+         "qic": 3
+        },
+        "positive_others": 45,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "ResearchAdvance": 4,
+         "SpaceshipCreditTerraform": 1,
+         "TFMarsGaiaFormation": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 223,
+          "type": "ResearchAdvance",
+          "score": 9.200000000000045,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 225,
+          "type": "ResearchAdvance",
+          "score": 6.400000000000034,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 0,
+          "type": "AcademyQicAction",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 125,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 1,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 17,
+         "IvitsPlaceSpaceStation": 73,
+         "Pass": 3,
+         "PowerAction": 7,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 4,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 4,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "chosen": {
+         "index": 122,
+         "type": "TwilightRangeBuild",
+         "score": -13.266666666666652,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 108,
+         "type": "ResearchAdvance",
+         "score": 9.200000000000045,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 98,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 1,
+         "credits": 5,
+         "knowledge": 6,
+         "qic": 1
+        },
+        "positive_others": 38,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "ResearchAdvance": 4,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 1,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 108,
+          "type": "ResearchAdvance",
+          "score": 9.200000000000045,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 109,
+          "type": "ResearchAdvance",
+          "score": 7.333333333333371,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 110,
+          "type": "ResearchAdvance",
+          "score": 6.400000000000034,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 68,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 2,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 1,
+         "FreeAction": 13,
+         "GaiaFormation": 1,
+         "IvitsPlaceSpaceStation": 30,
+         "Pass": 3,
+         "PowerAction": 4,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 2,
+         "TechTileSpecialAction": 1
+        },
+        "chosen": {
+         "index": 59,
+         "type": "ResearchAdvance",
+         "score": 9.200000000000045,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 59,
+         "type": "ResearchAdvance",
+         "score": 9.200000000000045,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 52,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 29,
+         "ore": 0,
+         "credits": 3,
+         "knowledge": 5,
+         "qic": 0
+        },
+        "positive_others": 42,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "Build": 2,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 30,
+         "PowerAction": 1,
+         "ResearchAdvance": 4,
+         "SpaceshipCreditTerraform": 2,
+         "TechTileSpecialAction": 1
+        },
+        "top_others": [
+         {
+          "index": 59,
+          "type": "ResearchAdvance",
+          "score": 9.200000000000045,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 60,
+          "type": "ResearchAdvance",
+          "score": 7.333333333333371,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 61,
+          "type": "ResearchAdvance",
+          "score": 6.399999999999977,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 198,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "Build": 7,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 13,
+         "GaiaFormation": 9,
+         "IvitsPlaceSpaceStation": 142,
+         "Pass": 3,
+         "PowerAction": 8,
+         "SpaceshipCreditTerraform": 7,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1
+        },
+        "chosen": {
+         "index": 7,
+         "type": "Build",
+         "score": 5.380952380952408,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 7,
+         "type": "Build",
+         "score": 5.380952380952408,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 179,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 29,
+         "ore": 0,
+         "credits": 3,
+         "knowledge": 1,
+         "qic": 4
+        },
+        "positive_others": 38,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "Build": 2,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 30,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 2,
+         "TechTileSpecialAction": 1
+        },
+        "top_others": [
+         {
+          "index": 7,
+          "type": "Build",
+          "score": 5.380952380952408,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 0,
+          "type": "AcademyQicAction",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 42,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 39,
+          "ore": 0,
+          "credits": 3,
+          "knowledge": 1,
+          "qic": 4
+         },
+         "others_passed": 2
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 2,
+        "by_type": {
+         "ChargePower": 2
+        },
+        "chosen": {
+         "index": 1,
+         "type": "ChargePower",
+         "score": 0.3333333333333144,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 1,
+         "type": "ChargePower",
+         "score": 0.3333333333333144,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": null,
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 29,
+         "ore": 0,
+         "credits": 3,
+         "knowledge": 1,
+         "qic": 4
+        },
+        "positive_others": 1,
+        "positive_by_type": {
+         "ChargePower": 1
+        },
+        "top_others": [
+         {
+          "index": 1,
+          "type": "ChargePower",
+          "score": 0.3333333333333144,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 0,
+          "type": "ChargePower",
+          "score": 0.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 169,
+        "by_type": {
+         "AcademyQicAction": 1,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 14,
+         "IvitsPlaceSpaceStation": 142,
+         "Pass": 3,
+         "PowerAction": 1,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1
+        },
+        "chosen": {
+         "index": 0,
+         "type": "AcademyQicAction",
+         "score": 4.666666666666686,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 0,
+         "type": "AcademyQicAction",
+         "score": 4.666666666666686,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 164,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 28,
+         "ore": 0,
+         "credits": 3,
+         "knowledge": 1,
+         "qic": 4
+        },
+        "positive_others": 34,
+        "positive_by_type": {
+         "AcademyQicAction": 1,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 31,
+         "TechTileSpecialAction": 1
+        },
+        "top_others": [
+         {
+          "index": 0,
+          "type": "AcademyQicAction",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 27,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 28,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 39,
+          "ore": 0,
+          "credits": 3,
+          "knowledge": 1,
+          "qic": 4
+         },
+         "others_passed": 2
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 170,
+        "by_type": {
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 15,
+         "IvitsPlaceSpaceStation": 143,
+         "Pass": 3,
+         "PowerAction": 1,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1
+        },
+        "chosen": {
+         "index": 27,
+         "type": "IvitsPlaceSpaceStation",
+         "score": 4.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 27,
+         "type": "IvitsPlaceSpaceStation",
+         "score": 4.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 165,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 28,
+         "ore": 0,
+         "credits": 3,
+         "knowledge": 1,
+         "qic": 5
+        },
+        "positive_others": 33,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 31,
+         "TechTileSpecialAction": 1
+        },
+        "top_others": [
+         {
+          "index": 27,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 28,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 29,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 39,
+          "ore": 0,
+          "credits": 3,
+          "knowledge": 1,
+          "qic": 5
+         },
+         "others_passed": 2
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 41,
+        "by_type": {
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FormFederation": 14,
+         "FreeAction": 15,
+         "Pass": 3,
+         "PowerAction": 1,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1
+        },
+        "chosen": {
+         "index": 5,
+         "type": "ExploreSpaceship",
+         "score": 3.2666666666665947,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 5,
+         "type": "ExploreSpaceship",
+         "score": 3.2666666666665947,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 14,
+        "federations_blocked": 0,
+        "best_federation": {
+         "index": 8,
+         "type": "FormFederation",
+         "score": 1.3714285714285097,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 5,
+         "hexes": [
+          "-8,5",
+          "-7,4",
+          "3,3",
+          "4,3"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "best_pass": {
+         "index": 36,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 28,
+         "ore": 0,
+         "credits": 3,
+         "knowledge": 1,
+         "qic": 5
+        },
+        "positive_others": 14,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "FormFederation": 12,
+         "TechTileSpecialAction": 1
+        },
+        "top_others": [
+         {
+          "index": 5,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666665947,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 40,
+          "type": "TechTileSpecialAction",
+          "score": 2.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 8,
+          "type": "FormFederation",
+          "score": 1.3714285714285097,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 5,
+          "hexes": [
+           "-8,5",
+           "-7,4",
+           "3,3",
+           "4,3"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 2
+          }
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 39,
+          "ore": 0,
+          "credits": 3,
+          "knowledge": 1,
+          "qic": 5
+         },
+         "others_passed": 2
+        },
+        "federation_after": {
+         "round": 5,
+         "own": {
+          "vp": 36,
+          "ore": 0,
+          "credits": 3,
+          "knowledge": 1,
+          "qic": 1
+         }
+        }
+       },
+       {
+        "round": 5,
+        "candidates": 133,
+        "by_type": {
+         "ExamineArtifact": 4,
+         "FormFederation": 14,
+         "FreeAction": 17,
+         "Pass": 3,
+         "PowerAction": 1,
+         "RebellionGainTechTile": 92,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1
+        },
+        "chosen": {
+         "index": 45,
+         "type": "RebellionGainTechTile",
+         "score": 10.733333333333348,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 45,
+         "type": "RebellionGainTechTile",
+         "score": 10.733333333333348,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 14,
+        "federations_blocked": 0,
+        "best_federation": {
+         "index": 6,
+         "type": "FormFederation",
+         "score": 1.3714285714285097,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 5,
+         "hexes": [
+          "-8,5",
+          "-7,4",
+          "3,3",
+          "4,3"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "best_pass": {
+         "index": 36,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 23,
+         "ore": 0,
+         "credits": 3,
+         "knowledge": 1,
+         "qic": 5
+        },
+        "positive_others": 46,
+        "positive_by_type": {
+         "FormFederation": 12,
+         "RebellionGainTechTile": 33,
+         "TechTileSpecialAction": 1
+        },
+        "top_others": [
+         {
+          "index": 45,
+          "type": "RebellionGainTechTile",
+          "score": 10.733333333333348,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 47,
+          "type": "RebellionGainTechTile",
+          "score": 10.733333333333348,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 41,
+          "type": "RebellionGainTechTile",
+          "score": 6.066666666666663,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 34,
+          "ore": 0,
+          "credits": 3,
+          "knowledge": 1,
+          "qic": 5
+         },
+         "others_passed": 2
+        },
+        "federation_after": {
+         "round": 5,
+         "own": {
+          "vp": 31,
+          "ore": 0,
+          "credits": 3,
+          "knowledge": 1,
+          "qic": 1
+         }
+        }
+       },
+       {
+        "round": 5,
+        "candidates": 24,
+        "by_type": {
+         "ExamineArtifact": 4,
+         "FreeAction": 14,
+         "Pass": 3,
+         "PowerAction": 1,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1
+        },
+        "chosen": {
+         "index": 19,
+         "type": "Pass",
+         "score": 44.866666666666674,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 19,
+         "type": "Pass",
+         "score": 44.866666666666674,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 19,
+         "type": "Pass",
+         "score": 44.866666666666674,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 23,
+         "ore": 0,
+         "credits": 3,
+         "knowledge": 1,
+         "qic": 2
+        },
+        "positive_others": 1,
+        "positive_by_type": {
+         "TechTileSpecialAction": 1
+        },
+        "top_others": [
+         {
+          "index": 23,
+          "type": "TechTileSpecialAction",
+          "score": 2.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 21,
+          "type": "PowerAction",
+          "score": 0.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 22,
+          "type": "TFMarsTechBonus",
+          "score": -0.33333333333337123,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "IncomeOrderPending",
+         "player": 0,
+         "own": {
+          "vp": 35,
+          "ore": 8,
+          "credits": 12,
+          "knowledge": 6,
+          "qic": 3
+         },
+         "others_passed": 3
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 2,
+        "by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "chosen": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 2.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 2.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": null,
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 35,
+         "ore": 8,
+         "credits": 12,
+         "knowledge": 6,
+         "qic": 3
+        },
+        "positive_others": 2,
+        "positive_by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "top_others": [
+         {
+          "index": 0,
+          "type": "ChooseIncomeOrder",
+          "score": 2.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 1,
+          "type": "ChooseIncomeOrder",
+          "score": 2.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       }
+      ],
+      "value": 125.82857142857142,
+      "goal_acquired": true,
+      "remaining_goal": {
+       "name": "tile-action-314-then-colony@3,3",
+       "family": "colony",
+       "coord": "3,3",
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "Upgrade",
+         "coord": "-2,4",
+         "to": {
+          "Academy": "Qic"
+         },
+         "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 8,
+          "advance_track": null,
+          "bonus_build_coord": null
+         }
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TFMarsGaiaFormation",
+         "coord": "3,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightRangeBuild",
+         "coord": "3,3"
+        },
+        "vp_before": 26,
+        "vp_after": 29
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 29,
+        "vp_after": 29
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "4,3"
+        },
+        "vp_before": 29,
+        "vp_after": 29
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChargePower",
+         "accept": true
+        },
+        "vp_before": 29,
+        "vp_after": 28
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "AcademyQicAction"
+        },
+        "vp_before": 28,
+        "vp_after": 28
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 28,
+        "vp_after": 28
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ExploreSpaceship",
+         "ship": "Rebellion"
+        },
+        "vp_before": 28,
+        "vp_after": 23
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "RebellionGainTechTile",
+         "tile": 11,
+         "track": "GaiaProject",
+         "bonus_build_coord": "-2,-5"
+        },
+        "vp_before": 23,
+        "vp_after": 23
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 23,
+        "vp_after": 35
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 35,
+        "vp_after": 35
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "flip-229",
+      "first": 229,
+      "pid": 385012,
+      "started": 54.966,
+      "finished": true,
+      "error": null,
+      "seconds": 10.265,
+      "complete": true,
+      "decisions": 61,
+      "rank_seconds": 10.162,
+      "rank_calls": 60,
+      "ranked_candidates": 3170,
+      "select_seconds": 0.0,
+      "select_calls": 8,
+      "own_decisions": [
+       {
+        "round": 5,
+        "candidates": 338,
+        "by_type": {
+         "Build": 18,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 38,
+         "IvitsPlaceSpaceStation": 125,
+         "Pass": 3,
+         "PowerAction": 57,
+         "SpaceshipCreditTerraform": 26,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 22,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightReplayFederationToken": 12,
+         "Upgrade": 27
+        },
+        "chosen": {
+         "index": 300,
+         "type": "TwilightReplayFederationToken",
+         "score": 17.73333333333335,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 300,
+         "type": "TwilightReplayFederationToken",
+         "score": 17.73333333333335,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 189,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 9,
+         "credits": 17,
+         "knowledge": 3,
+         "qic": 3
+        },
+        "positive_others": 39,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "TwilightRangeBuild": 1,
+         "TwilightReplayFederationToken": 9
+        },
+        "top_others": [
+         {
+          "index": 300,
+          "type": "TwilightReplayFederationToken",
+          "score": 17.73333333333335,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 299,
+          "type": "TwilightReplayFederationToken",
+          "score": 16.666666666666742,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 307,
+          "type": "TwilightReplayFederationToken",
+          "score": 13.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 35,
+          "ore": 9,
+          "credits": 17,
+          "knowledge": 3,
+          "qic": 3
+         },
+         "others_passed": 0
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 148,
+        "by_type": {
+         "Build": 4,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 1,
+         "FreeAction": 40,
+         "GaiaFormation": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "Pass": 3,
+         "PowerAction": 13,
+         "ResearchAdvance": 5,
+         "SpaceshipCreditTerraform": 4,
+         "TFMarsGaiaFormation": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 21,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 6,
+         "Upgrade": 15
+        },
+        "chosen": {
+         "index": 93,
+         "type": "ResearchAdvance",
+         "score": 9.333333333333371,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 93,
+         "type": "ResearchAdvance",
+         "score": 9.333333333333371,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 77,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 10,
+         "credits": 17,
+         "knowledge": 6,
+         "qic": 0
+        },
+        "positive_others": 41,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 2,
+         "ResearchAdvance": 4,
+         "SpaceshipCreditTerraform": 1,
+         "TwilightRangeBuild": 5
+        },
+        "top_others": [
+         {
+          "index": 93,
+          "type": "ResearchAdvance",
+          "score": 9.333333333333371,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 94,
+          "type": "ResearchAdvance",
+          "score": 6.399999999999977,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 95,
+          "type": "ResearchAdvance",
+          "score": 4.666666666666629,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 336,
+        "by_type": {
+         "Build": 25,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 38,
+         "GaiaFormation": 9,
+         "IvitsPlaceSpaceStation": 103,
+         "Pass": 3,
+         "PowerAction": 54,
+         "SpaceshipCreditTerraform": 25,
+         "TFMarsGaiaFormation": 9,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 35,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 15
+        },
+        "chosen": {
+         "index": 82,
+         "type": "IvitsPlaceSpaceStation",
+         "score": 4.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 82,
+         "type": "IvitsPlaceSpaceStation",
+         "score": 4.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 182,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 10,
+         "credits": 17,
+         "knowledge": 2,
+         "qic": 2
+        },
+        "positive_others": 36,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "IvitsPlaceSpaceStation": 27,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TwilightRangeBuild": 5
+        },
+        "top_others": [
+         {
+          "index": 82,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 83,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 84,
+          "type": "IvitsPlaceSpaceStation",
+          "score": 4.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 35,
+          "ore": 10,
+          "credits": 17,
+          "knowledge": 2,
+          "qic": 2
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 237,
+        "by_type": {
+         "Build": 26,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 38,
+         "GaiaFormation": 9,
+         "Pass": 3,
+         "PowerAction": 56,
+         "SpaceshipCreditTerraform": 26,
+         "TFMarsGaiaFormation": 9,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 35,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 15
+        },
+        "chosen": {
+         "index": 20,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "top": {
+         "index": 20,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 80,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 10,
+         "credits": 17,
+         "knowledge": 2,
+         "qic": 2
+        },
+        "positive_others": 9,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TwilightRangeBuild": 5
+        },
+        "top_others": [
+         {
+          "index": 20,
+          "type": "Build",
+          "score": 3.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+         },
+         {
+          "index": 31,
+          "type": "ExploreSpaceship",
+          "score": 1.9333333333332803,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 155,
+          "type": "SpaceshipCreditTerraform",
+          "score": 1.2666666666665947,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 35,
+          "ore": 10,
+          "credits": 17,
+          "knowledge": 2,
+          "qic": 2
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 141,
+        "by_type": {
+         "Build": 7,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 29,
+         "GaiaFormation": 4,
+         "Pass": 3,
+         "PowerAction": 32,
+         "SpaceshipCreditTerraform": 12,
+         "TFMarsGaiaFormation": 4,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 15,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 16
+        },
+        "chosen": {
+         "index": 6,
+         "type": "Build",
+         "score": 5.1142857142857,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 6,
+         "type": "Build",
+         "score": 5.1142857142857,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 47,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 6,
+         "credits": 15,
+         "knowledge": 2,
+         "qic": 1
+        },
+        "positive_others": 12,
+        "positive_by_type": {
+         "Build": 3,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 2,
+         "TwilightRangeBuild": 5
+        },
+        "top_others": [
+         {
+          "index": 6,
+          "type": "Build",
+          "score": 5.1142857142857,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 4,
+          "type": "Build",
+          "score": 3.6666666666666856,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 91,
+          "type": "SpaceshipCreditTerraform",
+          "score": 2.7142857142857224,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 36,
+          "ore": 6,
+          "credits": 15,
+          "knowledge": 2,
+          "qic": 1
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 122,
+        "by_type": {
+         "Build": 6,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 27,
+         "GaiaFormation": 4,
+         "Pass": 3,
+         "PowerAction": 29,
+         "SpaceshipCreditTerraform": 11,
+         "TFMarsGaiaFormation": 4,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 5
+        },
+        "chosen": {
+         "index": 5,
+         "type": "Build",
+         "score": 3.6666666666666856,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "top": {
+         "index": 5,
+         "type": "Build",
+         "score": 3.6666666666666856,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 44,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 26,
+         "ore": 5,
+         "credits": 13,
+         "knowledge": 2,
+         "qic": 1
+        },
+        "positive_others": 8,
+        "positive_by_type": {
+         "Build": 2,
+         "ExploreSpaceship": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TwilightRangeBuild": 4
+        },
+        "top_others": [
+         {
+          "index": 5,
+          "type": "Build",
+          "score": 3.6666666666666856,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+         },
+         {
+          "index": 101,
+          "type": "TwilightRangeBuild",
+          "score": 2.7142857142857224,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 11,
+          "type": "ExploreSpaceship",
+          "score": 1.9333333333332803,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 37,
+          "ore": 5,
+          "credits": 13,
+          "knowledge": 2,
+          "qic": 1
+         },
+         "others_passed": 2
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 58,
+        "by_type": {
+         "Build": 1,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 1,
+         "FreeAction": 26,
+         "Pass": 3,
+         "PowerAction": 9,
+         "SpaceshipCreditTerraform": 2,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 3,
+         "TwilightRangeExploreSpaceship": 2,
+         "Upgrade": 6
+        },
+        "chosen": {
+         "index": 33,
+         "type": "Pass",
+         "score": 39.26666666666665,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 33,
+         "type": "Pass",
+         "score": 39.26666666666665,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 33,
+         "type": "Pass",
+         "score": 39.26666666666665,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 26,
+         "ore": 5,
+         "credits": 13,
+         "knowledge": 2,
+         "qic": 0
+        },
+        "positive_others": 1,
+        "positive_by_type": {
+         "ExploreSpaceship": 1
+        },
+        "top_others": [
+         {
+          "index": 5,
+          "type": "ExploreSpaceship",
+          "score": 1.9333333333332803,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 41,
+          "type": "PowerAction",
+          "score": 0.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 46,
+          "type": "TechTileSpecialAction",
+          "score": 0.0,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "IncomeOrderPending",
+         "player": 0,
+         "own": {
+          "vp": 38,
+          "ore": 11,
+          "credits": 20,
+          "knowledge": 8,
+          "qic": 1
+         },
+         "others_passed": 3
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 2,
+        "by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "chosen": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.466666666666697,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.466666666666697,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": null,
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 38,
+         "ore": 11,
+         "credits": 20,
+         "knowledge": 8,
+         "qic": 1
+        },
+        "positive_others": 2,
+        "positive_by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "top_others": [
+         {
+          "index": 0,
+          "type": "ChooseIncomeOrder",
+          "score": 3.466666666666697,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 1,
+          "type": "ChooseIncomeOrder",
+          "score": 2.1333333333333258,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       }
+      ],
+      "value": 133.1238095238095,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "flip-229",
+       "family": "root",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "Economy"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 26,
+        "vp_after": 38
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 38,
+        "vp_after": 38
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "root-56",
+      "first": 56,
+      "pid": 385012,
+      "started": 65.235,
+      "finished": true,
+      "error": null,
+      "seconds": 10.705,
+      "complete": true,
+      "decisions": 61,
+      "rank_seconds": 10.594,
+      "rank_calls": 60,
+      "ranked_candidates": 3273,
+      "select_seconds": 0.0,
+      "select_calls": 8,
+      "own_decisions": [
+       {
+        "round": 5,
+        "candidates": 224,
+        "by_type": {
+         "Build": 11,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 33,
+         "Pass": 3,
+         "PowerAction": 50,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 19,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightReplayFederationToken": 13,
+         "Upgrade": 65
+        },
+        "chosen": {
+         "index": 146,
+         "type": "TwilightReplayFederationToken",
+         "score": 19.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 146,
+         "type": "TwilightReplayFederationToken",
+         "score": 19.46666666666664,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 50,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 6,
+         "credits": 11,
+         "knowledge": 7,
+         "qic": 3
+        },
+        "positive_others": 24,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "ResearchAdvance": 5,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 1,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightReplayFederationToken": 11,
+         "Upgrade": 2
+        },
+        "top_others": [
+         {
+          "index": 146,
+          "type": "TwilightReplayFederationToken",
+          "score": 19.46666666666664,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 148,
+          "type": "TwilightReplayFederationToken",
+          "score": 17.73333333333335,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 155,
+          "type": "TwilightReplayFederationToken",
+          "score": 15.799999999999955,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 249,
+        "by_type": {
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 37,
+         "Pass": 3,
+         "PowerAction": 44,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 20,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 20,
+         "TwilightRangeExploreSpaceship": 2,
+         "Upgrade": 95
+        },
+        "chosen": {
+         "index": 106,
+         "type": "ResearchAdvance",
+         "score": 10.400000000000034,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 106,
+         "type": "ResearchAdvance",
+         "score": 10.400000000000034,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 57,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 0,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 10,
+         "qic": 2
+        },
+        "positive_others": 12,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "ResearchAdvance": 6,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 1,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 106,
+          "type": "ResearchAdvance",
+          "score": 10.400000000000034,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 104,
+          "type": "ResearchAdvance",
+          "score": 9.200000000000045,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 105,
+          "type": "ResearchAdvance",
+          "score": 4.6666666666667425,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 303,
+        "by_type": {
+         "Build": 20,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 33,
+         "GaiaFormation": 9,
+         "Pass": 3,
+         "PowerAction": 55,
+         "ResearchAdvance": 6,
+         "SpaceshipCreditTerraform": 26,
+         "TFMarsGaiaFormation": 9,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 27,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 95
+        },
+        "chosen": {
+         "index": 126,
+         "type": "ResearchAdvance",
+         "score": 9.199999999999989,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 126,
+         "type": "ResearchAdvance",
+         "score": 9.199999999999989,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 68,
+         "type": "Pass",
+         "score": null,
+         "blocked": true,
+         "reason": "conservation blocked: knowledge spend: research before passing"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 6,
+         "qic": 2
+        },
+        "positive_others": 17,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "ResearchAdvance": 5,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 126,
+          "type": "ResearchAdvance",
+          "score": 9.199999999999989,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 128,
+          "type": "ResearchAdvance",
+          "score": 6.399999999999977,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 127,
+          "type": "ResearchAdvance",
+          "score": 4.666666666666686,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 269,
+        "by_type": {
+         "Build": 29,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 33,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 81,
+         "SpaceshipCreditTerraform": 39,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 29,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 15
+        },
+        "chosen": {
+         "index": 18,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "top": {
+         "index": 18,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 79,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 7,
+         "credits": 11,
+         "knowledge": 2,
+         "qic": 6
+        },
+        "positive_others": 12,
+        "positive_by_type": {
+         "Build": 1,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 18,
+          "type": "Build",
+          "score": 3.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+         },
+         {
+          "index": 34,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666666515,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 212,
+          "type": "TechTileSpecialAction",
+          "score": 1.3333333333333712,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 35,
+          "ore": 7,
+          "credits": 11,
+          "knowledge": 2,
+          "qic": 6
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 169,
+        "by_type": {
+         "Build": 14,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 24,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 50,
+         "SpaceshipCreditTerraform": 20,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 14,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 4
+        },
+        "chosen": {
+         "index": 7,
+         "type": "Build",
+         "score": 5.1142857142857565,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 7,
+         "type": "Build",
+         "score": 5.1142857142857565,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 55,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 1,
+        "own": {
+         "vp": 26,
+         "ore": 3,
+         "credits": 9,
+         "knowledge": 2,
+         "qic": 5
+        },
+        "positive_others": 15,
+        "positive_by_type": {
+         "Build": 3,
+         "ExploreSpaceship": 1,
+         "PowerAction": 1,
+         "SpaceshipCreditTerraform": 2,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 5,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 7,
+          "type": "Build",
+          "score": 5.1142857142857565,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 5,
+          "type": "Build",
+          "score": 3.6666666666666856,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 19,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666666515,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 3,
+         "own": {
+          "vp": 36,
+          "ore": 3,
+          "credits": 9,
+          "knowledge": 2,
+          "qic": 5
+         },
+         "others_passed": 1
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 162,
+        "by_type": {
+         "Build": 13,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FreeAction": 22,
+         "GaiaFormation": 10,
+         "Pass": 3,
+         "PowerAction": 47,
+         "SpaceshipCreditTerraform": 19,
+         "TFMarsGaiaFormation": 10,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 13,
+         "TwilightRangeExploreSpaceship": 2,
+         "TwilightRangeGaiaFormation": 10,
+         "Upgrade": 5
+        },
+        "chosen": {
+         "index": 6,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "top": {
+         "index": 6,
+         "type": "Build",
+         "score": 3.6666666666666288,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": {
+         "index": 52,
+         "type": "Pass",
+         "score": -3.0,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 2,
+        "own": {
+         "vp": 26,
+         "ore": 2,
+         "credits": 7,
+         "knowledge": 2,
+         "qic": 5
+        },
+        "positive_others": 11,
+        "positive_by_type": {
+         "Build": 2,
+         "ExploreSpaceship": 1,
+         "SpaceshipCreditTerraform": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 4,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 6,
+          "type": "Build",
+          "score": 3.6666666666666288,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms; mine that links our buildings for a federation, satellites +1 (fed_cluster)"
+         },
+         {
+          "index": 18,
+          "type": "ExploreSpaceship",
+          "score": 3.2666666666665947,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 138,
+          "type": "TwilightRangeBuild",
+          "score": 2.7142857142856656,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "ActionPhase",
+         "player": 2,
+         "own": {
+          "vp": 37,
+          "ore": 2,
+          "credits": 7,
+          "knowledge": 2,
+          "qic": 5
+         },
+         "others_passed": 2
+        },
+        "federation_after": null
+       },
+       {
+        "round": 5,
+        "candidates": 107,
+        "by_type": {
+         "Build": 5,
+         "ExamineArtifact": 4,
+         "ExploreSpaceship": 2,
+         "FormFederation": 14,
+         "FreeAction": 21,
+         "Pass": 3,
+         "PowerAction": 31,
+         "SpaceshipCreditTerraform": 11,
+         "TFMarsTechBonus": 1,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeBuild": 6,
+         "TwilightRangeExploreSpaceship": 2,
+         "Upgrade": 6
+        },
+        "chosen": {
+         "index": 47,
+         "type": "Pass",
+         "score": 47.5333333333333,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 47,
+         "type": "Pass",
+         "score": 47.5333333333333,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 14,
+        "federations_blocked": 0,
+        "best_federation": {
+         "index": 13,
+         "type": "FormFederation",
+         "score": 7.276190476190436,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+         "satellites": 3,
+         "hexes": [
+          "-9,8",
+          "-8,5",
+          "-8,7",
+          "-7,4",
+          "-7,8"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         }
+        },
+        "best_pass": {
+         "index": 47,
+         "type": "Pass",
+         "score": 47.5333333333333,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 26,
+         "ore": 2,
+         "credits": 7,
+         "knowledge": 2,
+         "qic": 4
+        },
+        "positive_others": 18,
+        "positive_by_type": {
+         "ExploreSpaceship": 1,
+         "FormFederation": 14,
+         "TechTileSpecialAction": 1,
+         "TwilightRangeExploreSpaceship": 2
+        },
+        "top_others": [
+         {
+          "index": 13,
+          "type": "FormFederation",
+          "score": 7.276190476190436,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 3,
+          "hexes": [
+           "-9,8",
+           "-8,5",
+           "-8,7",
+           "-7,4",
+           "-7,8"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 2
+          }
+         },
+         {
+          "index": 20,
+          "type": "FormFederation",
+          "score": 7.276190476190436,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 3,
+          "hexes": [
+           "-9,8",
+           "-8,5",
+           "-8,7",
+           "-7,4",
+           "-7,8"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 2
+          }
+         },
+         {
+          "index": 15,
+          "type": "FormFederation",
+          "score": 6.942857142857179,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms",
+          "satellites": 3,
+          "hexes": [
+           "-9,8",
+           "-8,5",
+           "-8,7",
+           "-7,4",
+           "-7,8"
+          ],
+          "token": {
+           "source": "Supply",
+           "kind": 4
+          }
+         }
+        ],
+        "pass_after": {
+         "round": 5,
+         "phase": "IncomeOrderPending",
+         "player": 0,
+         "own": {
+          "vp": 38,
+          "ore": 10,
+          "credits": 16,
+          "knowledge": 8,
+          "qic": 5
+         },
+         "others_passed": 3
+        },
+        "federation_after": {
+         "round": 5,
+         "own": {
+          "vp": 34,
+          "ore": 2,
+          "credits": 7,
+          "knowledge": 2,
+          "qic": 2
+         }
+        }
+       },
+       {
+        "round": 5,
+        "candidates": 2,
+        "by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "chosen": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.466666666666697,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "top": {
+         "index": 0,
+         "type": "ChooseIncomeOrder",
+         "score": 3.466666666666697,
+         "blocked": false,
+         "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+        },
+        "federations": 0,
+        "federations_blocked": 0,
+        "best_federation": null,
+        "best_pass": null,
+        "others": 3,
+        "others_passed": 3,
+        "own": {
+         "vp": 38,
+         "ore": 10,
+         "credits": 16,
+         "knowledge": 8,
+         "qic": 5
+        },
+        "positive_others": 2,
+        "positive_by_type": {
+         "ChooseIncomeOrder": 2
+        },
+        "top_others": [
+         {
+          "index": 0,
+          "type": "ChooseIncomeOrder",
+          "score": 3.466666666666697,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         },
+         {
+          "index": 1,
+          "type": "ChooseIncomeOrder",
+          "score": 2.1333333333333258,
+          "blocked": false,
+          "reason": "native faction preview: paid state delta + explicit soft opportunity terms"
+         }
+        ],
+        "pass_after": null,
+        "federation_after": null
+       }
+      ],
+      "value": 131.45714285714286,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "root-56",
+       "family": "root",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 26,
+        "vp_after": 38
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 38,
+        "vp_after": 38
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "tile-action-314-then-Rebellion-RebellionGainTechTile-then-expand",
+      "first": 314,
+      "pid": 385012,
+      "started": 75.944,
+      "finished": false
+     },
+     {
+      "call": "select_goal",
+      "goal": "track-plan-Science-2",
+      "first": 232,
+      "pid": 385013,
+      "started": 85.971,
+      "finished": true,
+      "error": null,
+      "seconds": 0.0
+     },
+     {
+      "call": "rollout",
+      "goal": "track-plan-Science-2",
+      "first": 232,
+      "pid": 385013,
+      "started": 85.971,
+      "finished": false
+     }
+    ],
+    "front_comparisons": [
+     {
+      "index": 312,
+      "started": true,
+      "finished": true,
+      "compared": true
+     },
+     {
+      "index": 56,
+      "started": true,
+      "finished": true,
+      "compared": false
+     },
+     {
+      "index": 314,
+      "started": false,
+      "finished": false,
+      "compared": false
+     }
+    ]
+   }
+  ],
+  "failures": [],
+  "root_moves": 340
+ }
+}
