@@ -73,7 +73,8 @@ teacher ends with. No replay posted (queue note).
   round-6 start over the teacher playing the whole game from the same setup. It grows at every start.
 - **Per stretch (a subtraction made after seeing the result, not pre-registered)**: rounds 1–3 +31, round 4 +21
   (134 → 155), round 5 +30 (155 → 185); round 6 is 185 against the room's 187, which is not compared. No stretch stands
-  out as the only gap, and round 6 alone shows none worth a look.
+  out as the only gap. Round 6 is not judged: its only number is that uncomparable pair, so a round-6 problem is neither
+  shown nor ruled out; round 5 is looked at first (debate 1/1 correction).
 - ① Noise: one game per arm. The round-6 arm is a fixed value (reproduced exactly, no capped decision); the other three
   hold 11, 2 and 9 capped decisions, so their spread on a rerun is not measured. The differences (21–31 per stretch) are
   leads, not measurements.
@@ -85,10 +86,13 @@ teacher ends with. No replay posted (queue note).
 - ④ Interaction with search: the cap bites where Ivits is biggest. 13 of the 22 capped decisions are Ivits decisions in
   round 5, in three different arms; part of that is the load of four arms at once (the round-6 arm ran 30% slower than
   alone in 128). Whether the round-5 loss comes from those cut comparisons or from what the teacher prefers is not known.
-- ⑤ Cleanest pair: round-5 arm against round-6 arm. Both come from the same round-5 start; the only difference is who
-  played round 5 (teacher in all seats: Ivits ends 155; user and live AI: Ivits ends 185 with the same teacher playing
-  round 6). The user's round 5 took Ivits from 27 to 64 VP, 11 to 15 structures, 5 to 7 technology tiles, 2 to 3
-  federation tokens. Round-4 arm against round-5 arm is the same kind of pair for round 4 (+21).
+- ⑤ Cleanest pair available — still not the user's moves alone (debate 1/1 correction): round-5 arm against round-6
+  arm. Both come from the same round-5 start, but round 5 then differs in three things at once: who played Ivits (teacher /
+  user), who played the three opponents (teacher / live AI), and the engine that ran the round (lab HEAD build / live
+  engine: E252, E257). Teacher in all seats on the lab engine: Ivits ends 155; the room's own round 5, then the same
+  teacher playing round 6: 185. The user's round 5 took Ivits from 27 to 64 VP, 11 to 15 structures, 5 to 7 technology
+  tiles, 2 to 3 federation tokens. Round-4 arm against round-5 arm is the same kind of pair for round 4 (+21), with the
+  same three differences.
 - ⑥ Condition: one room = one map, one lineup, live-AI opponents up to each start. Nothing here generalises to the
   teacher's Ivits on other maps.
 - Health and timing: clean; 53 min for the four arms at once, the round-1 arm (3,199 s of decisions) sets the length.
@@ -100,8 +104,10 @@ No code or deployment change. Lab queue empty after this cycle.
 - (ㄱ) Round-5 stretch side by side — bot turn 1–2, no lab. Replay the round-5 arm's Ivits moves of round 5 from
   `states/round-5.json` and the user's round 5 from the room record (revisions 191–280); put the two round-6 start states
   next to each other (VP, structures, technology tiles, federations, resources) and explain the first two or three teacher
-  decisions that part from the user's line, the capped ones first. Decides: what the teacher does not do in round 5 that
-  the user did.
+  decisions that part from the user's line, the capped ones first. Check first, before reading any move as the teacher's miss:
+  whether each of the user's round-5 moves is legal in the teacher's state on the lab engine at that point, and whether the
+  two lines part first at an opponent's move or at an engine difference rather than at an Ivits decision (debate 1/1).
+  Decides: what the teacher does not do in round 5 that the user did.
 - (ㄴ) Measure the spread: the same command with `--repeats N` (lab ≈ 1 h per repeat of the four starts). N is the user's
   number.
 - (ㄷ) The same experiment on another room of the user's (another map), once a room export exists.
