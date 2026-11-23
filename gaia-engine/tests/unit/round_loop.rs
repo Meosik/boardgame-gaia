@@ -141,6 +141,120 @@ fn finalize_game_is_idempotent_once_already_ended() {
     assert_eq!(state.phase, first, "re-finalizing should be a no-op");
 }
 
+/// Finalizes a two-player game whose seat 0 holds 1 ore and 2 knowledge plus what `setup` adds.
+fn finalized_with_leftovers(
+    setup: impl FnOnce(&mut gaia_engine::game_state::PlayerState),
+) -> (
+    gaia_engine::game_state::GameState,
+    Vec<gaia_engine::game_state::GameEvent>,
+) {
+    let mut state = GameStateBuilder::new()
+        .with_player_fn(0, |player| {
+            player.vp = 40;
+            player.passed = true;
+            player.resources.credits = 0;
+            player.resources.ore = 1;
+            player.resources.knowledge = 2;
+            player.resources.qic = 0;
+            player.resources.power.bowl1 = 0;
+            player.resources.power.bowl2 = 0;
+            player.resources.power.bowl3 = 0;
+            setup(player);
+        })
+        .with_player_fn(1, |player| player.vp = 10)
+        .with_phase(GamePhase::RoundScoring { round: 6 })
+        .build();
+    let events = RuleEngine::finalize_game(&mut state).unwrap_or_else(|e| panic!("{e}"));
+    (state, events)
+}
+
+fn final_score(state: &gaia_engine::game_state::GameState, player_id: u8) -> i32 {
+    let GamePhase::Ended { final_scores, .. } = &state.phase else {
+        panic!("expected GamePhase::Ended, got {:?}", state.phase);
+    };
+    final_scores
+        .iter()
+        .find(|(id, _)| *id == player_id)
+        .map(|(_, vp)| *vp)
+        .unwrap_or_else(|| panic!("score of player {player_id}"))
+}
+
+/// Room 98ADBD (owner, 2026-11-23): the game ended with 3 power in Area III and 1 QIC
+/// unconverted, 1 resource point instead of 2. The owner's rule: when round 6 is over,
+/// everything is converted — also what was charged after the player's own pass.
+#[test]
+fn finalize_game_converts_leftover_power_and_qic() {
+    let (plain, _) = finalized_with_leftovers(|_| {});
+    let (state, events) = finalized_with_leftovers(|player| {
+        player.resources.qic = 1;
+        player.resources.power.bowl1 = 3;
+        player.resources.power.bowl3 = 3;
+    });
+
+    let resources = &state.player(0).unwrap_or_else(|| panic!("player")).resources;
+    assert_eq!(
+        (resources.credits, resources.ore, resources.knowledge, resources.qic),
+        (3, 2, 2, 0)
+    );
+    assert_eq!((resources.power.bowl1, resources.power.bowl3), (6, 0));
+    // 1 ore + 2 knowledge is 1 point; with 3 credits and 1 more ore it is 7 resources, 2 points.
+    assert_eq!(final_score(&state, 0), final_score(&plain, 0) + 1);
+    let conversions: Vec<(String, u8)> = events
+        .iter()
+        .filter_map(|event| match event {
+            gaia_engine::game_state::GameEvent::FreeActionTaken {
+                player: 0,
+                kind,
+                count,
+            } => Some((kind.clone(), *count)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        conversions,
+        vec![("PowerToCredit".to_string(), 3), ("QicToOre".to_string(), 1)]
+    );
+}
+
+#[test]
+fn finalize_game_sacrifices_area_two_power_before_converting() {
+    let (state, _) = finalized_with_leftovers(|player| {
+        player.resources.power.bowl2 = 5;
+        player.resources.power.bowl3 = 1;
+    });
+
+    let resources = &state.player(0).unwrap_or_else(|| panic!("player")).resources;
+    // 5 tokens in Area II: two sacrifices leave 1 there and add 2 to Area III.
+    assert_eq!(resources.credits, 3);
+    assert_eq!((resources.power.bowl2, resources.power.bowl3), (1, 0));
+}
+
+#[test]
+fn finalize_game_conversion_stops_at_the_credit_limit() {
+    let (state, _) = finalized_with_leftovers(|player| {
+        player.resources.credits = 29;
+        player.resources.power.bowl3 = 3;
+    });
+
+    let resources = &state.player(0).unwrap_or_else(|| panic!("player")).resources;
+    assert_eq!((resources.credits, resources.power.bowl3), (30, 2));
+}
+
+#[test]
+fn finalize_game_converts_the_bal_taks_gaiaformers_through_qic() {
+    let (state, _) = finalized_with_leftovers(|player| {
+        player.faction = Some(FactionId::BalTaks);
+        player.gaiaformers_total = 2;
+        player.gaiaformers_deployed = 0;
+        player.gaiaformers_in_gaia_area = 0;
+        player.resources.spent_gaia_formers = 0;
+    });
+
+    let player = state.player(0).unwrap_or_else(|| panic!("player"));
+    assert_eq!((player.resources.ore, player.resources.qic), (3, 0));
+    assert_eq!(player.gaiaformers_in_gaia_area, 2);
+}
+
 #[test]
 fn advance_to_next_round_reopens_action_phase_and_increments_round() {
     let mut state = GameStateBuilder::new()

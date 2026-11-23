@@ -154,11 +154,11 @@ fn final_round_returns_booster_without_choosing_a_new_one() {
     assert!(state.boosters.contains(&Booster(7)));
 }
 
-fn leftover_state(round: u8, credits: u8) -> gaia_engine::GameState {
+fn leftover_state(round: u8) -> gaia_engine::GameState {
     let mut state = GameStateBuilder::new()
         .with_player_fn(0, |player| {
             player.booster = Some(Booster(7));
-            player.resources.credits = credits;
+            player.resources.credits = 0;
             player.resources.ore = 1;
             player.resources.knowledge = 2;
             player.resources.qic = 1;
@@ -184,39 +184,24 @@ fn free_actions(events: &[GameEvent]) -> Vec<(String, u8)> {
         .collect()
 }
 
-/// Room 98ADBD (owner, 2026-11-23): the game ended with 3 power in Area III and 1 QIC
-/// unconverted. Free actions end at the pass, so the final pass converts them first.
+/// Leftovers are converted when the game ends (`finalize_game`), not at a pass: power charged
+/// after the last pass is converted too (owner 2026-11-23).
 #[test]
-fn final_round_pass_converts_leftover_power_and_qic() {
-    let mut state = leftover_state(6, 0);
+fn final_round_pass_leaves_the_conversion_to_the_end_of_the_game() {
+    let mut state = leftover_state(6);
 
     let events = RuleEngine::apply_action(&mut state, 0, GameAction::Pass { booster_id: None })
         .unwrap_or_else(|error| panic!("{error}"));
 
     let resources = &state.player(0).unwrap_or_else(|| panic!("player")).resources;
-    assert_eq!(
-        (resources.credits, resources.ore, resources.knowledge, resources.qic),
-        (3, 2, 2, 0)
-    );
-    assert_eq!((resources.power.bowl1, resources.power.bowl3), (6, 0));
-    assert_eq!(
-        free_actions(&events),
-        vec![("PowerToCredit".to_string(), 3), ("QicToOre".to_string(), 1)]
-    );
-    let passed_at = events
-        .iter()
-        .position(|event| matches!(event, GameEvent::PlayerPassed { .. }))
-        .unwrap_or_else(|| panic!("pass event"));
-    let last_conversion = events
-        .iter()
-        .rposition(|event| matches!(event, GameEvent::FreeActionTaken { .. }))
-        .unwrap_or_else(|| panic!("conversion event"));
-    assert!(last_conversion < passed_at);
+    assert_eq!((resources.credits, resources.ore, resources.qic), (0, 1, 1));
+    assert_eq!(resources.power.bowl3, 3);
+    assert!(free_actions(&events).is_empty());
 }
 
 #[test]
 fn earlier_round_pass_keeps_power_and_qic() {
-    let mut state = leftover_state(5, 0);
+    let mut state = leftover_state(5);
 
     let events = RuleEngine::apply_action(
         &mut state,
@@ -231,18 +216,6 @@ fn earlier_round_pass_keeps_power_and_qic() {
     assert_eq!((resources.credits, resources.ore, resources.qic), (0, 1, 1));
     assert_eq!(resources.power.bowl3, 3);
     assert!(free_actions(&events).is_empty());
-}
-
-#[test]
-fn final_round_pass_conversion_stops_at_the_credit_limit() {
-    let mut state = leftover_state(6, 29);
-
-    RuleEngine::apply_action(&mut state, 0, GameAction::Pass { booster_id: None })
-        .unwrap_or_else(|error| panic!("{error}"));
-
-    let resources = &state.player(0).unwrap_or_else(|| panic!("player")).resources;
-    assert_eq!((resources.credits, resources.power.bowl3), (30, 2));
-    assert_eq!((resources.ore, resources.qic), (2, 0));
 }
 
 fn booster_gaia_state(booster_id: u8, target: HexCoord) -> gaia_engine::GameState {
