@@ -118,3 +118,37 @@ No code or deployment change. Lab queue empty after this cycle.
 - (ㄹ) Rerun the arms one at a time (`--jobs 1`, ≈ 2 h) to remove the capped decisions caused by load. Low priority.
 
 Bot recommendation: (ㄱ) first — it is what this diagnostic was for; (ㄴ) only if the user wants the differences as numbers.
+
+## Follow-up: round 5 side by side (bot turn, 2026-11-23, HANDOFF E265)
+
+Proposal (ㄱ) was carried out after a clean second-model round. Sources: the room record (snapshot differences,
+revisions 191–280) and the round-5 arm's decision log; the arm was replayed from `states/round-5.json` on the work-tree
+engine build, which is not the lab build (67eaa893… against 49318fef…): the replay matches the lab log for decisions
+0–55 and parts at decision 56 (the Ivits federation action), so the teacher's round-6 start state is not available and
+legality was checked for the first move only.
+
+- First parting point: the very first action of round 5, an opponent's (Tinkeroids: research in the room, a trading
+  station upgrade for the teacher). The Ivits position at its first decision is still nearly the same (same ore, credits,
+  knowledge, QIC, structures, technology tiles; VP 26 against 27 and one power token moved by an accepted charge).
+- The user's first move — research lab at -2,4 to the QIC academy with the technology tile "planetary institute/academy
+  power value +1" — is legal in the teacher's state: candidate 312 of 412.
+- The user's round 5 (27 → 64 VP): academy, federation (+7), space station, academy QIC action, AI research, three
+  mines, the Twilight action "take a held federation token's effect again" for the "7 VP now" technology tile (+7) and
+  AI level 5, TF Mars technology bonus (+8), pass (+15).
+- The teacher's round 5 (13 Ivits actions): the Twilight action first, taking the "1 ore + 3 knowledge" technology tile,
+  two research steps, a space station, exploring the Rebellion ship (−5 VP), three mines, a federation (8 VP + 1 QIC
+  token), then power actions and one more research step. Up to decision 55 Ivits goes 27 → 21 VP with nothing scored.
+- Search record: 6 of the 13 decisions were cut by the 60 s cap (decisions 5, 10, 14, 42, 46, 50) and 4 of them (5, 10,
+  14, 42) finished one comparison only — the teacher's own default move, no alternative at all (412–1066 candidates;
+  at decision 5 the first comparison result came at 17.5 s). The plan menu pool at decision 5 holds station-federation,
+  track and colony plans, no academy upgrade. Where comparisons finished, values mostly tie (136.73).
+- Cause per parting decision (E264 classes): the first three Ivits actions = ② cut by the cap, with a share of ① (the
+  academy is not a menu plan); the Rebellion exploration (decision 37, 4 of 4 comparisons, 137.73 against 136.73) = ③.
+- Not known: which line is better (no game continues the user's move with the teacher on the same engine and opponents),
+  whether the cap bites less without the load of four arms at once, the teacher's VP at the round-6 start.
+
+Proposals (nothing queued): (ㄱ) rerun the round-5 arm alone (`--rounds 5 --jobs 1`, lab ≈ 30–40 min; read the capped
+Ivits decisions of round 5, completed comparisons, whether the first three actions change, Ivits final as a reference);
+(ㄴ) an option in `room_handover.py` that plays the user's first N Ivits moves from the room record before the teacher
+takes over; (ㄷ) rebuild the work-tree engine (owner command); (ㄹ) a larger cap (the user's number).
+Bot recommendation: (ㄱ), then (ㄴ).
