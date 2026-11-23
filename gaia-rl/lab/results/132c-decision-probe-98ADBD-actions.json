@@ -1,0 +1,2078 @@
+{
+ "name": "132c-decision-probe-98ADBD-actions",
+ "kind": "command",
+ "status": "done",
+ "note": "E273 제안 (ㄱ)(= E272에서 먼저 하기로 한 rollout 행동 기록), 사용자 2026-11-23 「다음」: 132·132b와 같은 결정(사용자 방 98ADBD 5라운드, 130 대조 판 move-0의 하이브 첫 행동 = 5번째 결정)을 rollout 행동 기록이 든 도구(tools/decision_probe.py 186b0c4: 끝난 rollout마다 값·목표 달성 여부 goal_acquired·남은 목표·끝난 라운드·하이브 자신의 행동 목록(라운드, 행동, 행동 전후 VP))로 상한 없이 다시 물음. 교사는 그대로(rollout이 돌려준 결과를 읽어 기록만 함). 대국 없음. 상태·앞 5결정 재생·교사(all_tier cap60-p2, 병렬 2)·관심 수 셋(move 0 사용자의 수 = 연구소 -2,4 → 정보 큐브 아카데미 + 「행성의회/아카데미 파워 가치 +1」 타일 / move 1 우주정거장 -1,3 / move 2 같은 아카데미 + 「가이아 광산 3점」 타일)은 132b와 같음. 물음 둘: front-nocap-1·2(상한 없음, 비교 9, 세 수를 root 목록 맨 앞 — 132b의 front-nocap과 같은 물음을 차례로 두 번). 탐색적 진단, 판정 없음(한 결정; rollout은 교사의 싼 이어 두기이고 평가 창은 사이클 132에 적은 대로 수입 1회 앞까지). 읽는 법(사전 등록): (a) root-사용자 수(root-312) rollout — 하이브 행동 목록에 FormFederation이 있는지, 있으면 몇 번째 자기 행동·몇 라운드·그 행동의 VP 변화. 사용자의 실제 수순은 아카데미 바로 다음 수에 연방(+7)이었음(사이클 132 흐름 대조 표). 있으면 「교사의 이어 두기도 사용자 수 뒤에 연방을 둠 — 133.60은 그 연방이 든 값」, 없으면 「133.60은 연방 없이 매긴 값 — 사용자의 흐름(아카데미 → 연방)은 이 평가에 안 들어감」으로 적음. (b) 정거장 → 연방 계획 rollout — 행동 순서, FormFederation의 위치·라운드·VP 변화, goal_acquired·남은 목표, 정거장과 연방 사이에 자기 행동이 몇 개 끼는지. (c) 현재 수(연방 토큰 다시 받기) rollout — 행동 순서를 대조로 그대로 적음. (d) 넷째 비교(아카데미 + 가이아 광산 3점 타일 → 식민; 132b에서 식민 좌표가 물음마다 달라짐)는 그 작업의 기록으로만 적음. (e) 값·선택이 132·132b와 같은지(현재 수 131.46 · 정거장 계획 138.60 · root-사용자 수 133.60, 선택 = 정거장) — 다르면 기록 추가가 결정을 바꾼 것일 수 있어 행동 목록을 결과로 쓰지 않고 원인부터 봄. (f) 두 물음의 행동 목록이 (a)–(c) 세 비교에서 서로 같은지 — 다르면 다른 지점을 그대로 적고 한 번의 목록을 대표로 쓰지 않음. 한정: 어느 값이 높든 뜻은 상한 없는 평가의 선호까지(E272 둘째 토론) — 60초 상한의 발표·선택은 이 실행이 묻지 않음(132b에 기록 있음); 「아카데미 + 파워 가치 타일 → 연방」 계획 대 계획 비교는 이 실행 뒤 따로. 건강 기준: 종료 코드 0, failures 빈 목록(물음 둘 모두 답), digest_matches_log true, 폴백 타임아웃 0, 두 물음 모두 끝난 rollout의 comparison_times에 actions가 있음. 예상 ≈ 3–10분(132b의 front-nocap 한 번이 85초), 제한 2시간.",
+ "host": "agentmaco",
+ "commit": "e70fcb6",
+ "started_at": "2026-11-23T21:29:48+09:00",
+ "finished_at": "2026-11-23T21:32:39+09:00",
+ "command": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "tools/decision_probe.py",
+  "--state",
+  "runs/lab-130-room-first-move-98ADBD/states/round-5.json",
+  "--prefix-log",
+  "runs/lab-130-room-first-move-98ADBD/round-5/move-0/game-0/decisions.jsonl.gz",
+  "--prefix-steps",
+  "5",
+  "--teacher",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+  "--move",
+  "{\"type\":\"Upgrade\",\"coord\":\"-2,4\",\"to\":{\"Academy\":\"Qic\"},\"tech_tile_choice\":{\"kind\":\"Standard\",\"tile\":6,\"advance_track\":null,\"bonus_build_coord\":null}}",
+  "--move",
+  "{\"type\":\"IvitsPlaceSpaceStation\",\"coord\":\"-1,3\"}",
+  "--move",
+  "{\"type\":\"Upgrade\",\"coord\":\"-2,4\",\"to\":{\"Academy\":\"Qic\"},\"tech_tile_choice\":{\"kind\":\"Standard\",\"tile\":8,\"advance_track\":null,\"bonus_build_coord\":null}}",
+  "--ask",
+  "front-nocap-1:9:0:0,1,2",
+  "--ask",
+  "front-nocap-2:9:0:0,1,2",
+  "--output",
+  "runs/lab-132c-decision-probe-98ADBD-actions"
+ ],
+ "exit_code": 0,
+ "metrics": {
+  "created_at": "2026-11-23T21:29:48.562607+09:00",
+  "state": "runs/lab-130-room-first-move-98ADBD/states/round-5.json",
+  "prefix_log": "runs/lab-130-room-first-move-98ADBD/round-5/move-0/game-0/decisions.jsonl.gz",
+  "prefix_steps": 5,
+  "teacher": "teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2",
+  "seed": "98ADBD-s0",
+  "digest": "f56cdbc35b155ee612efcb5d970f99b49e47f5d033ffededcec9f8c8148abc6d",
+  "digest_in_log": "f56cdbc35b155ee612efcb5d970f99b49e47f5d033ffededcec9f8c8148abc6d",
+  "digest_matches_log": true,
+  "logged_choice": {
+   "index": 272,
+   "action": {
+    "type": "TwilightReplayFederationToken",
+    "token_kind": 12,
+    "bonus_build_coord": null,
+    "bonus_tech_tile": 13,
+    "bonus_research_track": "ArtificialIntelligence"
+   },
+   "selected": "current-choice",
+   "seconds": 60.035,
+   "completed_comparisons": 1,
+   "timing": {
+    "choose": 60.033,
+    "audit_fresh": true,
+    "search": 60.033,
+    "cap": 60,
+    "published_at": [
+     1.906,
+     16.428,
+     60.0
+    ],
+    "stages": {
+     "bind_check": 0.001,
+     "root_rank": 1.242,
+     "planned_tasks": 0.661,
+     "prefetch": 1.904,
+     "drop_unfinished": 0.027,
+     "parallel_search": 60.027,
+     "search_call": 60.028,
+     "state_check": 0.003
+    },
+    "time_capped": true,
+    "budget_stopped": false,
+    "expired_before_search": false
+   }
+  },
+  "round": 5,
+  "seat": 0,
+  "faction": "Ivits",
+  "candidates": 350,
+  "candidates_by_type": {
+   "IvitsPlaceSpaceStation": 125,
+   "Upgrade": 65,
+   "PowerAction": 50,
+   "FreeAction": 33,
+   "SpaceshipCreditTerraform": 19,
+   "TwilightRangeBuild": 15,
+   "TwilightReplayFederationToken": 13,
+   "Build": 11,
+   "ResearchAdvance": 6,
+   "ExamineArtifact": 4,
+   "Pass": 3,
+   "ExploreSpaceship": 2,
+   "TwilightRangeExploreSpaceship": 2,
+   "TFMarsTechBonus": 1,
+   "TechTileSpecialAction": 1
+  },
+  "upgrade_candidates_by_target": {
+   "{\"Academy\": \"Qic\"}": 62,
+   "TradingStation": 3
+  },
+  "moves": [
+   {
+    "position": 0,
+    "index": 312,
+    "action": {
+     "type": "Upgrade",
+     "coord": "-2,4",
+     "to": {
+      "Academy": "Qic"
+     },
+     "tech_tile_choice": {
+      "kind": "Standard",
+      "tile": 6,
+      "advance_track": null,
+      "bonus_build_coord": null
+     }
+    },
+    "rank": 230
+   },
+   {
+    "position": 1,
+    "index": 56,
+    "action": {
+     "type": "IvitsPlaceSpaceStation",
+     "coord": "-1,3"
+    },
+    "rank": 15
+   },
+   {
+    "position": 2,
+    "index": 314,
+    "action": {
+     "type": "Upgrade",
+     "coord": "-2,4",
+     "to": {
+      "Academy": "Qic"
+     },
+     "tech_tile_choice": {
+      "kind": "Standard",
+      "tile": 8,
+      "advance_track": null,
+      "bonus_build_coord": null
+     }
+    },
+    "rank": 260
+   }
+  ],
+  "asks": [
+   {
+    "label": "front-nocap-1",
+    "comparisons": 9,
+    "cap": null,
+    "front": [
+     0,
+     1,
+     2
+    ],
+    "front_indices": [
+     312,
+     56,
+     314
+    ],
+    "wall_seconds": 85.773,
+    "index": 56,
+    "action": {
+     "type": "IvitsPlaceSpaceStation",
+     "coord": "-1,3"
+    },
+    "chose_move": 1,
+    "selected": "Ivits-station-then-extend-federation",
+    "completed_comparisons": 4,
+    "unsearched_comparisons": 518,
+    "stop_reason": "stable completed alternatives; no artificial wait",
+    "fallback_timeout": false,
+    "timing": {
+     "choose": 85.77,
+     "audit_fresh": true,
+     "search": 85.77,
+     "cap": null,
+     "published_at": [
+      1.429,
+      13.089,
+      85.739,
+      85.74,
+      85.741,
+      85.742
+     ],
+     "stages": {
+      "bind_check": 0.002,
+      "root_rank": 1.323,
+      "planned_tasks": 0.103,
+      "prefetch": 1.427,
+      "drop_unfinished": 0.025,
+      "parallel_search": 85.765,
+      "search_call": 85.766,
+      "state_check": 0.002
+     },
+     "time_capped": false,
+     "budget_stopped": false,
+     "expired_before_search": false
+    },
+    "compared": [
+     {
+      "goal": "current-choice",
+      "spec": "9d45d96b64",
+      "family": "current",
+      "first": 272,
+      "complete": true,
+      "value": 131.46,
+      "action": {
+       "type": "TwilightReplayFederationToken",
+       "token_kind": 12,
+       "bonus_build_coord": null,
+       "bonus_tech_tile": 13,
+       "bonus_research_track": "ArtificialIntelligence"
+      },
+      "move": null
+     },
+     {
+      "goal": "Ivits-station-then-extend-federation",
+      "spec": "1df192d52a",
+      "family": "ordered",
+      "first": 56,
+      "complete": true,
+      "value": 138.6,
+      "action": {
+       "type": "IvitsPlaceSpaceStation",
+       "coord": "-1,3"
+      },
+      "move": 1
+     },
+     {
+      "goal": "root-312",
+      "spec": "b41afe1372",
+      "family": "root",
+      "first": 312,
+      "complete": true,
+      "value": 133.6,
+      "action": {
+       "type": "Upgrade",
+       "coord": "-2,4",
+       "to": {
+        "Academy": "Qic"
+       },
+       "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 6,
+        "advance_track": null,
+        "bonus_build_coord": null
+       }
+      },
+      "move": 0
+     },
+     {
+      "goal": "tile-action-314-then-colony@-9,0",
+      "spec": "052c82395b",
+      "family": "colony",
+      "first": 314,
+      "complete": true,
+      "value": 123.98,
+      "action": {
+       "type": "Upgrade",
+       "coord": "-2,4",
+       "to": {
+        "Academy": "Qic"
+       },
+       "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 8,
+        "advance_track": null,
+        "bonus_build_coord": null
+       }
+      },
+      "move": 2
+     }
+    ],
+    "roots": 339,
+    "move_ranks": {
+     "312": 230,
+     "56": 15,
+     "314": 260
+    },
+    "planned_tasks": 522,
+    "task_order": [
+     [
+      "current-choice",
+      "current",
+      272
+     ],
+     [
+      "Ivits-station-then-extend-federation",
+      "ordered",
+      null
+     ],
+     [
+      "root-312",
+      "root",
+      312
+     ],
+     [
+      "tile-action-314-then-colony@-9,0",
+      "colony",
+      314
+     ],
+     [
+      "flip-229",
+      "root",
+      229
+     ],
+     [
+      "root-56",
+      "root",
+      56
+     ],
+     [
+      "tile-action-314-then-Rebellion-RebellionGainTechTile-then-expand",
+      "sequence",
+      314
+     ],
+     [
+      "track-plan-Science-2",
+      "ordered",
+      null
+     ],
+     [
+      "root-314",
+      "root",
+      314
+     ],
+     [
+      "tile-action-314-then-colony@2,4",
+      "colony",
+      314
+     ],
+     [
+      "Qic@-8,1",
+      "upgrade",
+      null
+     ],
+     [
+      "root-274",
+      "root",
+      274
+     ]
+    ],
+    "comparison_times": [
+     {
+      "call": "rollout",
+      "goal": "current-choice",
+      "first": 272,
+      "pid": 310209,
+      "started": 1.443,
+      "finished": true,
+      "error": null,
+      "seconds": 11.647,
+      "complete": true,
+      "decisions": 61,
+      "rank_seconds": 11.553,
+      "rank_calls": 60,
+      "ranked_candidates": 3664,
+      "select_seconds": 0.001,
+      "select_calls": 8,
+      "value": 131.45714285714286,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "current-choice",
+       "family": "current",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 26,
+        "vp_after": 38
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 38,
+        "vp_after": 38
+       }
+      ]
+     },
+     {
+      "call": "select_goal",
+      "goal": "Ivits-station-then-extend-federation",
+      "first": 56,
+      "pid": 310210,
+      "started": 1.447,
+      "finished": true,
+      "error": null,
+      "seconds": 0.0
+     },
+     {
+      "call": "rollout",
+      "goal": "Ivits-station-then-extend-federation",
+      "first": 56,
+      "pid": 310210,
+      "started": 1.447,
+      "finished": true,
+      "error": null,
+      "seconds": 84.293,
+      "complete": true,
+      "decisions": 62,
+      "rank_seconds": 83.734,
+      "rank_calls": 177,
+      "ranked_candidates": 24785,
+      "select_seconds": 73.72,
+      "select_calls": 9,
+      "value": 138.6,
+      "goal_acquired": true,
+      "remaining_goal": {
+       "name": "Ivits-station-then-extend-federation",
+       "family": "ordered",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": [
+        "B12"
+       ]
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "FormFederation",
+         "hexes": [
+          "-9,8",
+          "-8,5",
+          "-8,7",
+          "-7,4",
+          "-7,8"
+         ],
+         "satellite_hexes": [
+          "-8,6",
+          "-7,3",
+          "-7,7"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         },
+         "bonus_build_coord": null,
+         "bonus_tech_tile": null,
+         "bonus_research_track": null
+        },
+        "vp_before": 26,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 34,
+        "vp_after": 49
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 49,
+        "vp_after": 49
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "root-312",
+      "first": 312,
+      "pid": 310209,
+      "started": 13.094,
+      "finished": true,
+      "error": null,
+      "seconds": 11.508,
+      "complete": true,
+      "decisions": 62,
+      "rank_seconds": 11.408,
+      "rank_calls": 61,
+      "ranked_candidates": 3674,
+      "select_seconds": 0.001,
+      "select_calls": 8,
+      "value": 133.6,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "root-312",
+       "family": "root",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "Upgrade",
+         "coord": "-2,4",
+         "to": {
+          "Academy": "Qic"
+         },
+         "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 6,
+          "advance_track": null,
+          "bonus_build_coord": null
+         }
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "FormFederation",
+         "hexes": [
+          "-8,5",
+          "-7,4"
+         ],
+         "satellite_hexes": [
+          "-7,3"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         },
+         "bonus_build_coord": null,
+         "bonus_tech_tile": null,
+         "bonus_research_track": null
+        },
+        "vp_before": 26,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "Science"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "AcademyQicAction"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 34,
+        "vp_after": 46
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 46,
+        "vp_after": 46
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "tile-action-314-then-colony@-9,0",
+      "first": 314,
+      "pid": 310209,
+      "started": 24.606,
+      "finished": true,
+      "error": null,
+      "seconds": 28.782,
+      "complete": true,
+      "decisions": 62,
+      "rank_seconds": 28.564,
+      "rank_calls": 92,
+      "ranked_candidates": 9023,
+      "select_seconds": 18.558,
+      "select_calls": 8,
+      "value": 123.98095238095237,
+      "goal_acquired": true,
+      "remaining_goal": {
+       "name": "tile-action-314-then-colony@-9,0",
+       "family": "colony",
+       "coord": "-9,0",
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "Upgrade",
+         "coord": "-2,4",
+         "to": {
+          "Academy": "Qic"
+         },
+         "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 8,
+          "advance_track": null,
+          "bonus_build_coord": null
+         }
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TFMarsGaiaFormation",
+         "coord": "-9,0"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightRangeBuild",
+         "coord": "-9,0"
+        },
+        "vp_before": 26,
+        "vp_after": 29
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 29,
+        "vp_after": 29
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "AcademyQicAction"
+        },
+        "vp_before": 29,
+        "vp_after": 29
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 29,
+        "vp_after": 39
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 39,
+        "vp_after": 39
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "flip-229",
+      "first": 229,
+      "pid": 310209,
+      "started": 53.391,
+      "finished": true,
+      "error": null,
+      "seconds": 9.956,
+      "complete": true,
+      "decisions": 61,
+      "rank_seconds": 9.866,
+      "rank_calls": 60,
+      "ranked_candidates": 3170,
+      "select_seconds": 0.0,
+      "select_calls": 8,
+      "value": 133.1238095238095,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "flip-229",
+       "family": "root",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "Economy"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 26,
+        "vp_after": 38
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 38,
+        "vp_after": 38
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "root-56",
+      "first": 56,
+      "pid": 310209,
+      "started": 63.35,
+      "finished": true,
+      "error": null,
+      "seconds": 10.632,
+      "complete": true,
+      "decisions": 61,
+      "rank_seconds": 10.541,
+      "rank_calls": 60,
+      "ranked_candidates": 3273,
+      "select_seconds": 0.0,
+      "select_calls": 8,
+      "value": 131.45714285714286,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "root-56",
+       "family": "root",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 26,
+        "vp_after": 38
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 38,
+        "vp_after": 38
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "tile-action-314-then-Rebellion-RebellionGainTechTile-then-expand",
+      "first": 314,
+      "pid": 310209,
+      "started": 73.985,
+      "finished": false
+     },
+     {
+      "call": "select_goal",
+      "goal": "track-plan-Science-2",
+      "first": 232,
+      "pid": 310210,
+      "started": 85.744,
+      "finished": true,
+      "error": null,
+      "seconds": 0.0
+     },
+     {
+      "call": "rollout",
+      "goal": "track-plan-Science-2",
+      "first": 232,
+      "pid": 310210,
+      "started": 85.744,
+      "finished": false
+     }
+    ],
+    "front_comparisons": [
+     {
+      "index": 312,
+      "started": true,
+      "finished": true,
+      "compared": true
+     },
+     {
+      "index": 56,
+      "started": true,
+      "finished": true,
+      "compared": false
+     },
+     {
+      "index": 314,
+      "started": false,
+      "finished": false,
+      "compared": false
+     }
+    ]
+   },
+   {
+    "label": "front-nocap-2",
+    "comparisons": 9,
+    "cap": null,
+    "front": [
+     0,
+     1,
+     2
+    ],
+    "front_indices": [
+     312,
+     56,
+     314
+    ],
+    "wall_seconds": 84.396,
+    "index": 56,
+    "action": {
+     "type": "IvitsPlaceSpaceStation",
+     "coord": "-1,3"
+    },
+    "chose_move": 1,
+    "selected": "Ivits-station-then-extend-federation",
+    "completed_comparisons": 4,
+    "unsearched_comparisons": 518,
+    "stop_reason": "stable completed alternatives; no artificial wait",
+    "fallback_timeout": false,
+    "timing": {
+     "choose": 84.393,
+     "audit_fresh": true,
+     "search": 84.393,
+     "cap": null,
+     "published_at": [
+      1.218,
+      13.025,
+      84.362,
+      84.363,
+      84.364,
+      84.365
+     ],
+     "stages": {
+      "bind_check": 0.001,
+      "root_rank": 1.116,
+      "planned_tasks": 0.1,
+      "prefetch": 1.216,
+      "drop_unfinished": 0.025,
+      "parallel_search": 84.39,
+      "search_call": 84.39,
+      "state_check": 0.002
+     },
+     "time_capped": false,
+     "budget_stopped": false,
+     "expired_before_search": false
+    },
+    "compared": [
+     {
+      "goal": "current-choice",
+      "spec": "9d45d96b64",
+      "family": "current",
+      "first": 272,
+      "complete": true,
+      "value": 131.46,
+      "action": {
+       "type": "TwilightReplayFederationToken",
+       "token_kind": 12,
+       "bonus_build_coord": null,
+       "bonus_tech_tile": 13,
+       "bonus_research_track": "ArtificialIntelligence"
+      },
+      "move": null
+     },
+     {
+      "goal": "Ivits-station-then-extend-federation",
+      "spec": "1df192d52a",
+      "family": "ordered",
+      "first": 56,
+      "complete": true,
+      "value": 138.6,
+      "action": {
+       "type": "IvitsPlaceSpaceStation",
+       "coord": "-1,3"
+      },
+      "move": 1
+     },
+     {
+      "goal": "root-312",
+      "spec": "b41afe1372",
+      "family": "root",
+      "first": 312,
+      "complete": true,
+      "value": 133.6,
+      "action": {
+       "type": "Upgrade",
+       "coord": "-2,4",
+       "to": {
+        "Academy": "Qic"
+       },
+       "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 6,
+        "advance_track": null,
+        "bonus_build_coord": null
+       }
+      },
+      "move": 0
+     },
+     {
+      "goal": "tile-action-314-then-colony@-4,-3",
+      "spec": "23d458f5b8",
+      "family": "colony",
+      "first": 314,
+      "complete": true,
+      "value": 120.65,
+      "action": {
+       "type": "Upgrade",
+       "coord": "-2,4",
+       "to": {
+        "Academy": "Qic"
+       },
+       "tech_tile_choice": {
+        "kind": "Standard",
+        "tile": 8,
+        "advance_track": null,
+        "bonus_build_coord": null
+       }
+      },
+      "move": 2
+     }
+    ],
+    "roots": 339,
+    "move_ranks": {
+     "312": 230,
+     "56": 15,
+     "314": 260
+    },
+    "planned_tasks": 522,
+    "task_order": [
+     [
+      "current-choice",
+      "current",
+      272
+     ],
+     [
+      "Ivits-station-then-extend-federation",
+      "ordered",
+      null
+     ],
+     [
+      "root-312",
+      "root",
+      312
+     ],
+     [
+      "tile-action-314-then-colony@-4,-3",
+      "colony",
+      314
+     ],
+     [
+      "flip-229",
+      "root",
+      229
+     ],
+     [
+      "root-56",
+      "root",
+      56
+     ],
+     [
+      "tile-action-314-then-Rebellion-RebellionGainTechTile-then-expand",
+      "sequence",
+      314
+     ],
+     [
+      "track-plan-Science-2",
+      "ordered",
+      null
+     ],
+     [
+      "root-314",
+      "root",
+      314
+     ],
+     [
+      "tile-action-314-then-colony@-7,5",
+      "colony",
+      314
+     ],
+     [
+      "Qic@-8,1",
+      "upgrade",
+      null
+     ],
+     [
+      "root-274",
+      "root",
+      274
+     ]
+    ],
+    "comparison_times": [
+     {
+      "call": "rollout",
+      "goal": "current-choice",
+      "first": 272,
+      "pid": 311679,
+      "started": 1.231,
+      "finished": true,
+      "error": null,
+      "seconds": 11.795,
+      "complete": true,
+      "decisions": 61,
+      "rank_seconds": 11.701,
+      "rank_calls": 60,
+      "ranked_candidates": 3664,
+      "select_seconds": 0.001,
+      "select_calls": 8,
+      "value": 131.45714285714286,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "current-choice",
+       "family": "current",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 26,
+        "vp_after": 38
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 38,
+        "vp_after": 38
+       }
+      ]
+     },
+     {
+      "call": "select_goal",
+      "goal": "Ivits-station-then-extend-federation",
+      "first": 56,
+      "pid": 311680,
+      "started": 1.235,
+      "finished": true,
+      "error": null,
+      "seconds": 0.0
+     },
+     {
+      "call": "rollout",
+      "goal": "Ivits-station-then-extend-federation",
+      "first": 56,
+      "pid": 311680,
+      "started": 1.236,
+      "finished": true,
+      "error": null,
+      "seconds": 83.127,
+      "complete": true,
+      "decisions": 62,
+      "rank_seconds": 82.573,
+      "rank_calls": 177,
+      "ranked_candidates": 24785,
+      "select_seconds": 72.56,
+      "select_calls": 9,
+      "value": 138.6,
+      "goal_acquired": true,
+      "remaining_goal": {
+       "name": "Ivits-station-then-extend-federation",
+       "family": "ordered",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": [
+        "B12"
+       ]
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "FormFederation",
+         "hexes": [
+          "-9,8",
+          "-8,5",
+          "-8,7",
+          "-7,4",
+          "-7,8"
+         ],
+         "satellite_hexes": [
+          "-8,6",
+          "-7,3",
+          "-7,7"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         },
+         "bonus_build_coord": null,
+         "bonus_tech_tile": null,
+         "bonus_research_track": null
+        },
+        "vp_before": 26,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 34,
+        "vp_after": 49
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 49,
+        "vp_after": 49
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "root-312",
+      "first": 312,
+      "pid": 311679,
+      "started": 13.029,
+      "finished": true,
+      "error": null,
+      "seconds": 11.73,
+      "complete": true,
+      "decisions": 62,
+      "rank_seconds": 11.628,
+      "rank_calls": 61,
+      "ranked_candidates": 3674,
+      "select_seconds": 0.001,
+      "select_calls": 8,
+      "value": 133.6,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "root-312",
+       "family": "root",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "Upgrade",
+         "coord": "-2,4",
+         "to": {
+          "Academy": "Qic"
+         },
+         "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 6,
+          "advance_track": null,
+          "bonus_build_coord": null
+         }
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "FormFederation",
+         "hexes": [
+          "-8,5",
+          "-7,4"
+         ],
+         "satellite_hexes": [
+          "-7,3"
+         ],
+         "token": {
+          "source": "Supply",
+          "kind": 2
+         },
+         "bonus_build_coord": null,
+         "bonus_tech_tile": null,
+         "bonus_research_track": null
+        },
+        "vp_before": 26,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "Science"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "AcademyQicAction"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 34,
+        "vp_after": 34
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 34,
+        "vp_after": 46
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 46,
+        "vp_after": 46
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "tile-action-314-then-colony@-4,-3",
+      "first": 314,
+      "pid": 311679,
+      "started": 24.763,
+      "finished": true,
+      "error": null,
+      "seconds": 47.2,
+      "complete": true,
+      "decisions": 62,
+      "rank_seconds": 46.859,
+      "rank_calls": 135,
+      "ranked_candidates": 14124,
+      "select_seconds": 37.566,
+      "select_calls": 8,
+      "value": 120.64761904761903,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "tile-action-314-then-colony@-4,-3",
+       "family": "colony",
+       "coord": "-4,-3",
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "Upgrade",
+         "coord": "-2,4",
+         "to": {
+          "Academy": "Qic"
+         },
+         "tech_tile_choice": {
+          "kind": "Standard",
+          "tile": 8,
+          "advance_track": null,
+          "bonus_build_coord": null
+         }
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightRangeGaiaFormation",
+         "coord": "-4,-3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "AcademyQicAction"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 26,
+        "vp_after": 35
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 35,
+        "vp_after": 35
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "flip-229",
+      "first": 229,
+      "pid": 311679,
+      "started": 71.967,
+      "finished": true,
+      "error": null,
+      "seconds": 10.242,
+      "complete": true,
+      "decisions": 61,
+      "rank_seconds": 10.142,
+      "rank_calls": 60,
+      "ranked_candidates": 3170,
+      "select_seconds": 0.0,
+      "select_calls": 8,
+      "value": 133.1238095238095,
+      "goal_acquired": false,
+      "remaining_goal": {
+       "name": "flip-229",
+       "family": "root",
+       "coord": null,
+       "target": null,
+       "level": 0,
+       "tile": null,
+       "first": null,
+       "payoff": null,
+       "steps": [],
+       "sources": []
+      },
+      "end_round": 6,
+      "actions": [
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "Economy"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "TwilightReplayFederationToken",
+         "token_kind": 12,
+         "bonus_build_coord": null,
+         "bonus_tech_tile": 13,
+         "bonus_research_track": "GaiaProject"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ResearchAdvance",
+         "track": "ArtificialIntelligence"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "IvitsPlaceSpaceStation",
+         "coord": "-1,3"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-8,7"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-9,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Build",
+         "coord": "-7,8"
+        },
+        "vp_before": 26,
+        "vp_after": 26
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "Pass",
+         "booster_id": 12
+        },
+        "vp_before": 26,
+        "vp_after": 38
+       },
+       {
+        "round": 5,
+        "action": {
+         "type": "ChooseIncomeOrder",
+         "charge_first": false
+        },
+        "vp_before": 38,
+        "vp_after": 38
+       }
+      ]
+     },
+     {
+      "call": "rollout",
+      "goal": "root-56",
+      "first": 56,
+      "pid": 311679,
+      "started": 82.213,
+      "finished": false
+     },
+     {
+      "call": "rollout",
+      "goal": "tile-action-314-then-Rebellion-RebellionGainTechTile-then-expand",
+      "first": 314,
+      "pid": 311680,
+      "started": 84.366,
+      "finished": false
+     }
+    ],
+    "front_comparisons": [
+     {
+      "index": 312,
+      "started": true,
+      "finished": true,
+      "compared": true
+     },
+     {
+      "index": 56,
+      "started": true,
+      "finished": false,
+      "compared": false
+     },
+     {
+      "index": 314,
+      "started": false,
+      "finished": false,
+      "compared": false
+     }
+    ]
+   }
+  ],
+  "failures": [],
+  "root_moves": 340
+ }
+}
