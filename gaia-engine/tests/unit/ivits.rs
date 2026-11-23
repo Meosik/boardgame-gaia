@@ -348,7 +348,41 @@ fn ivits_state_after_the_first_federation() -> gaia_engine::game_state::GameStat
 }
 
 #[test]
-fn ivits_federation_that_already_has_the_power_grows_by_exactly_one_planet() {
+fn ivits_space_station_placed_next_to_the_federation_joins_it() {
+    // Owner 2026-11-23 (live room 98ADBD): a station next to the federation stayed outside it,
+    // and so did the mines built next to the station afterwards.
+    let mut state = state_with_ivits_pi();
+    let target = HexCoord::new(1, 0);
+    state.players[0].federated_hexes.push(HexCoord::new(0, 0));
+    RuleEngine::apply_action(&mut state, 0, GameAction::IvitsPlaceSpaceStation { coord: target })
+        .unwrap_or_else(|e| panic!("space station placement should succeed: {e}"));
+    assert!(state.players[0].federated_hexes.contains(&target));
+
+    // No federation yet: nothing to join.
+    let mut state = state_with_ivits_pi();
+    RuleEngine::apply_action(&mut state, 0, GameAction::IvitsPlaceSpaceStation { coord: target })
+        .unwrap_or_else(|e| panic!("space station placement should succeed: {e}"));
+    assert!(state.players[0].federated_hexes.is_empty());
+}
+
+#[test]
+fn ivits_federation_short_of_the_power_takes_no_token_with_nothing_connected() {
+    let mut state = ivits_state_after_the_first_federation();
+    // 7 power, the second token needs 14.
+    let result = RuleEngine::apply_action(&mut state, 0, grow(vec![]));
+    assert!(result.is_err(), "7 power is not 14: {result:?}");
+    assert_eq!(state.players[0].federation_tokens.len(), 1);
+}
+
+#[test]
+fn a_first_federation_needs_hexes() {
+    let mut state = ivits_federation_state();
+    let result = RuleEngine::apply_action(&mut state, 0, grow(vec![]));
+    assert!(result.is_err(), "nothing to form a first federation from: {result:?}");
+}
+
+#[test]
+fn ivits_federation_that_already_has_the_power_takes_the_token_with_nothing_connected() {
     use gaia_engine::game_state::AcademyType;
     let mut state = ivits_state_after_the_first_federation();
     // The federation now reaches `f` and two of its Trading Stations became Academies:
@@ -364,14 +398,31 @@ fn ivits_federation_that_already_has_the_power_grows_by_exactly_one_planet() {
     let h = HexCoord::new(7, 0);
     state.board.hexes.insert(h, structure_hex(h, 0, StructureType::Mine));
 
-    // Two planets where one is enough: the Mine at `h` can be left out.
+    // The power is there: anything connected on top is more than needed (rulebook p.14).
     let both = RuleEngine::apply_action(&mut state, 0, grow(vec![HexCoord::new(6, 0), h]));
-    assert!(both.is_err(), "one planet is enough: {both:?}");
+    assert!(both.is_err(), "nothing more is needed: {both:?}");
+    let one = RuleEngine::apply_action(&mut state, 0, grow(vec![HexCoord::new(6, 0)]));
+    assert!(one.is_err(), "nothing more is needed: {one:?}");
 
-    // One connected planet is a Form a Federation action, although the power was there.
-    RuleEngine::apply_action(&mut state, 0, grow(vec![HexCoord::new(6, 0)]))
-        .unwrap_or_else(|e| panic!("connecting one planet should succeed: {e}"));
+    // The AI's candidates are the empty federation only, once per token left.
+    use gaia_engine::rules::engine::AiDecision;
+    let candidates: Vec<_> = RuleEngine::ai_decisions(&state)
+        .unwrap_or_else(|e| panic!("candidates: {e}"))
+        .into_iter()
+        .filter(|decision| matches!(decision, AiDecision::Game(GameAction::FormFederation { .. })))
+        .collect();
+    assert!(!candidates.is_empty());
+    assert!(candidates.iter().all(|decision| matches!(decision,
+        AiDecision::Game(GameAction::FormFederation { hexes, satellite_hexes, .. })
+            if hexes.is_empty() && satellite_hexes.is_empty())));
+
+    // The token is taken with no hexes: no satellite, the federation unchanged.
+    let federated = state.players[0].federated_hexes.clone();
+    RuleEngine::apply_action(&mut state, 0, grow(vec![]))
+        .unwrap_or_else(|e| panic!("the federation has the power of the second token: {e}"));
     assert_eq!(state.players[0].federation_tokens.len(), 2);
+    assert!(state.board.hexes.values().all(|hex| hex.satellites.is_empty()));
+    assert_eq!(state.players[0].federated_hexes, federated);
 }
 
 #[test]

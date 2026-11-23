@@ -3810,6 +3810,23 @@ fn apply_ivits_place_space_station(
             kind: StructureType::SpaceStation,
         });
     }
+    // A space station placed directly next to the Hive's federation enlarges it, as a mine built
+    // there does (rulebook p.14 "these new planets enlarge the existing federation"; p.20 "Like
+    // planets, a space station can be connected ... counts as having a power value of one for
+    // its federation"). Without this the station stayed outside, and so did every mine built
+    // next to it afterwards: the player had to pick them one by one in a later Form a Federation
+    // action (owner 2026-11-23, live room 98ADBD).
+    if experimental_engine_fixes_enabled() {
+        if let Some(player) = state.player_mut(player_id) {
+            let touches_federation = coord
+                .neighbors()
+                .iter()
+                .any(|n| player.federated_hexes.contains(n));
+            if touches_federation && !player.federated_hexes.contains(&coord) {
+                player.federated_hexes.push(coord);
+            }
+        }
+    }
     advance_turn(state);
     vec![GameEvent::SpaceStationPlaced {
         player: player_id,
@@ -4897,6 +4914,15 @@ fn federation_submission_has_redundant_hex(
     minimum_power: u32,
 ) -> bool {
     let candidates: Vec<HexCoord> = hexes.iter().chain(satellite_hexes).copied().collect();
+    // The Hive's federation that already has the power for its next token takes the token with
+    // nothing connected (`validate_federation`), so anything connected on top is more than needed.
+    if is_ivits_growth
+        && experimental_engine_fixes_enabled()
+        && !candidates.is_empty()
+        && federation_power_total(state, player_id, &[], federated_hexes, true) >= minimum_power
+    {
+        return true;
+    }
     for dropped in candidates {
         let remaining_hexes: Vec<HexCoord> =
             hexes.iter().copied().filter(|&h| h != dropped).collect();
@@ -4905,10 +4931,10 @@ fn federation_submission_has_redundant_hex(
             .copied()
             .filter(|&h| h != dropped)
             .collect();
-        // What is left must still be a Form a Federation action: it connects at least one
-        // planet. Without this an Ivits federation that already has the power for its next
-        // token (its structures were upgraded since) could never grow — dropping the one new
-        // planet left the old federation alone, which passed as "valid with one fewer".
+        // What is left must still connect a planet. The Hive's federation that already has the
+        // power for its next token is decided above; with the engine fixes off (legacy) it
+        // still grows by one planet — dropping that planet left the old federation alone,
+        // which would pass as "valid with one fewer".
         if remaining_hexes.is_empty() {
             continue;
         }
@@ -4943,7 +4969,8 @@ fn federation_submission_has_redundant_hex(
 /// which is expected to touch its own existing hexes. The related "colonizing a planet directly
 /// adjacent to an existing federation enlarges it for free" mechanic is modeled where the mine is
 /// placed (`apply_build_impl_with_options`, `apply_lost_planet_placement`): the new hex joins
-/// `federated_hexes`. A Hive space station placed next to the federation does not join it.
+/// `federated_hexes`. So does a Hive space station placed next to the federation
+/// (`apply_ivits_place_space_station`).
 fn federation_touches_an_existing_federation(
     state: &GameState,
     player_id: PlayerId,
@@ -4992,11 +5019,29 @@ fn validate_federation(
     token: FederationTokenChoice,
     bonus: FederationBonus<&TechTile>,
 ) -> Result<(), RuleError> {
-    if hexes.is_empty() {
+    let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
+
+    // Ivits (base rulebook Appendix I): "You can have only one federation during the whole
+    // game... After you have formed a federation, to take the 'Form a Federation' action again,
+    // you must connect planets to that federation instead of forming a new federation... To
+    // build a satellite during this action, you must spend one Q.I.C. instead of discarding one
+    // power." `federated_hexes` already holds exactly this player's one-and-only federation's
+    // full hex set once it exists (empty until their first `FormFederation`), so its emptiness
+    // doubles as the "have I formed my federation yet" flag — no extra state needed.
+    let is_ivits_growth =
+        player.faction == Some(FactionId::Ivits) && !player.federated_hexes.is_empty();
+
+    // The Hive's buildings placed next to its federation are already part of it (rulebook p.14),
+    // so there may be nothing left to connect when the federation reaches the power of the next
+    // token: the action then takes the token with no hexes (owner 2026-11-23: "이미 연결된 연방
+    // 안에서 파워 수가 채워지면 바로 연방이 가능"). The power check below decides whether it may.
+    let grows_without_new_hexes = hexes.is_empty()
+        && satellite_hexes.is_empty()
+        && is_ivits_growth
+        && experimental_engine_fixes_enabled();
+    if hexes.is_empty() && !grows_without_new_hexes {
         return Err(RuleError::FederationDisconnected);
     }
-
-    let player = state.player(player_id).ok_or(RuleError::NotYourTurn)?;
 
     // Every named planet must be colonized by this player. The Lost Planet is the sole case
     // represented without a physical structure piece, but still counts as a Mine.
@@ -5030,16 +5075,6 @@ fn validate_federation(
         }
     }
 
-    // Ivits (base rulebook Appendix I): "You can have only one federation during the whole
-    // game... After you have formed a federation, to take the 'Form a Federation' action again,
-    // you must connect planets to that federation instead of forming a new federation... To
-    // build a satellite during this action, you must spend one Q.I.C. instead of discarding one
-    // power." `federated_hexes` already holds exactly this player's one-and-only federation's
-    // full hex set once it exists (empty until their first `FormFederation`), so its emptiness
-    // doubles as the "have I formed my federation yet" flag — no extra state needed.
-    let is_ivits_growth =
-        player.faction == Some(FactionId::Ivits) && !player.federated_hexes.is_empty();
-
     if !is_ivits_growth
         && federation_touches_an_existing_federation(state, player_id, hexes, satellite_hexes)
     {
@@ -5070,7 +5105,7 @@ fn validate_federation(
     if is_ivits_growth {
         connected.extend(player.federated_hexes.iter().copied());
     }
-    if !MapEngine::is_connected(&connected) {
+    if !grows_without_new_hexes && !MapEngine::is_connected(&connected) {
         return Err(RuleError::FederationDisconnected);
     }
 
@@ -5103,8 +5138,9 @@ fn validate_federation(
         ));
     }
 
-    if minimum_federation_satellites(state, player_id, hexes, is_ivits_growth)
-        .is_some_and(|minimum| satellite_hexes.len() > minimum)
+    if !grows_without_new_hexes
+        && minimum_federation_satellites(state, player_id, hexes, is_ivits_growth)
+            .is_some_and(|minimum| satellite_hexes.len() > minimum)
     {
         return Err(RuleError::ActionNotAllowed(
             "this federation does not use the fewest possible Satellites — route through any closer owned planets"

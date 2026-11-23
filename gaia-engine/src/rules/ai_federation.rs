@@ -283,7 +283,16 @@ fn federation_candidates_with(state: &GameState, player_id: PlayerId, one_route:
     let mut shapes = BTreeMap::new();
     let mut budget = MAX_WORK;
     let mut route_cache = BTreeMap::new();
-    for mask in 1..subsets {
+    // The Hive's federation that already has the power of its next token takes it with nothing
+    // connected, and anything connected on top is refused as more than needed
+    // (`validate_federation`): the empty shape is then the only one.
+    let enough_already = growth && experimental_engine_fixes_enabled()
+        && federation_power_total(state, player_id, &[], &player.federated_hexes, true) >= minimum;
+    if enough_already {
+        let empty: (Vec<HexCoord>, Vec<HexCoord>) = (Vec::new(), Vec::new());
+        shapes.insert(serde_json::to_string(&(&empty.0, &empty.1))?, empty);
+    }
+    for mask in if enough_already { subsets..subsets } else { 1..subsets } {
         spend(&mut budget, 1)?;
         let required: Vec<_> = owned.iter().enumerate().filter(|(i, _)| mask & (1 << i) != 0).map(|(_, c)| *c).collect();
         if federation_power_total(state, player_id, &required, &player.federated_hexes, growth) < minimum { continue; }
