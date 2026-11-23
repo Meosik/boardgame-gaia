@@ -442,6 +442,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'menu_first': 3,              # plan_menu front slots (MENU_FIRST); ..._ships_menu1 sets 1 (E89 (ㄷ) B')
           'mj01': False,                # True: ..._ships_menu1_all (MJ01 Lost Fleet track corrections, see MJ_TRACK_CAPS)
           'booster_tier': False,        # True: ..._ships_menu1_all_tier (starting booster by tier, see booster_tier_scores)
+          'pass_last': False,           # True: ..._ships_menu1_all_tier_passlast (last seat to pass plays its positive actions first, see pass_last_scores)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -5439,6 +5440,42 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier(seed, **kwargs):
     _guide['booster_tier'] = True
     _wrap_rank('_booster_tier', booster_tier_scores)     # explain_decision's ranking shows the same order
     install_booster_tier_choose()
+    return teacher
+
+
+def pass_last_scores(env, snapshot, scores):
+    """pass_last (lab 132e, HANDOFF E281; opt-in): in the action phase, when every other seat has passed, the
+    highest unblocked score is a Pass and an unblocked non-Pass candidate scores above 0, the unblocked Pass
+    candidates drop below the lowest of those positive candidates (still above 0, their own order kept). The last
+    pass gets its pass points and the next income whenever it is played, so it must not outrank what still pays.
+    While any other seat has not passed the scores are returned as given (debate 1/1: only the diagnosed case)."""
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if not _guide['pass_last'] or actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    if not all(seat.get('passed') for n, seat in enumerate(state['players']) if n != actor):
+        return scores
+    candidates = snapshot['candidates']
+    free = [i for i in range(len(candidates)) if not blocked(scores[i])]
+    passes = [i for i in free if candidates[i]['action'].get('type') == 'Pass']
+    others = [i for i in free if candidates[i]['action'].get('type') != 'Pass']
+    positive = [i for i in others if scores[i][0] > 0]
+    if not passes or not positive:
+        return scores
+    if max(scores[i][0] for i in passes) < max(scores[i][0] for i in others):
+        return scores
+    floor = min(scores[i][0] for i in positive)
+    lifted = list(scores)
+    for k, i in enumerate(sorted(passes, key=lambda i: (-scores[i][0], i))):
+        lifted[i] = (floor/(k+2), f'{scores[i][1]}; pass_last: {len(positive)} positive first', *scores[i][2:])
+    return lifted
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast(seed, **kwargs):
+    """Teacher factory: ships_menu1_all_tier + pass_last (lab 132e, E281; opt-in, not in the deployment stack)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier(seed, **kwargs)
+    _guide['pass_last'] = True
+    _wrap_rank('_pass_last', pass_last_scores)
     return teacher
 
 

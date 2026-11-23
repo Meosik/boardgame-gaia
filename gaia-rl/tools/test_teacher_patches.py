@@ -1,5 +1,6 @@
 """symmetric_pass: exact against native passes, and only unpassed action-phase states change."""
 import json
+import os
 import time
 import unittest
 from unittest import mock
@@ -9,6 +10,7 @@ fast_teacher.install()
 import budget_teacher
 from gaia_rl import Environment
 import teacher_patches as tp
+from current_actions.conservation import BLOCKED, PREFIX
 
 SEED = 'geo-quartet-24'   # Taklons, Geodens, Xenos, Terrans
 
@@ -2886,3 +2888,80 @@ class BoosterTierTests(unittest.TestCase):
                 self.assertEqual(tp._formers_at_pass(state, player), 0)
             with mock.patch.object(tp, 'TILE_PREFS', {player['faction']: {'prefer': (10,), 'avoid': ()}}):
                 self.assertTrue(tp._gaia_one_in_round_one(state, player))
+
+
+class PassLastTests(unittest.TestCase):
+    SPEC = 'teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-passlast-cap60-p2.json'
+    BASE_SPEC = 'teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json'
+    FACTORY = 'guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast'
+
+    def make(self, phase='ActionPhase', unpassed=None):
+        players = [{'passed': n != 0} for n in range(4)]
+        if unpassed is not None:
+            players[unpassed]['passed'] = False
+        snapshot = {'player': 0, 'state': {'round': 5, 'phase': phase, 'players': players},
+                    'candidates': [{'action': {'type': 'Pass', 'booster_id': 1}},
+                                   {'action': {'type': 'Pass', 'booster_id': 2}},
+                                   {'action': {'type': 'FormFederation'}},
+                                   {'action': {'type': 'Build'}},
+                                   {'action': {'type': 'PowerAction'}},
+                                   {'action': {'type': 'Upgrade'}}]}
+        scores = [(47.5, 'x'), (40.0, 'x'), (7.28, 'x'), (3.67, 'x'), (-1.0, 'x'), (BLOCKED, PREFIX + 'y')]
+        return snapshot, scores
+
+    def run_on(self, snapshot, scores, flag=True):
+        if not flag:
+            return tp.pass_last_scores(None, snapshot, scores)
+        with mock.patch.dict(tp._guide, {'pass_last': True}):
+            return tp.pass_last_scores(None, snapshot, scores)
+
+    def test_fires_when_every_other_seat_has_passed(self):
+        snapshot, scores = self.make()
+        result = self.run_on(snapshot, scores)
+        self.assertEqual(max(range(len(result)), key=lambda i: result[i][0]), 2)
+        for i in (0, 1):
+            self.assertLess(result[i][0], 3.67)
+            self.assertGreater(result[i][0], 0)
+            self.assertIn('pass_last', result[i][1])
+            self.assertFalse(result[i][1].startswith(PREFIX))
+        self.assertGreater(result[0][0], result[1][0])
+        for i in range(2, 6):
+            self.assertEqual(result[i], scores[i])
+
+    def test_unchanged_while_another_seat_has_not_passed(self):
+        snapshot, scores = self.make(unpassed=2)
+        self.assertIs(self.run_on(snapshot, scores), scores)
+
+    def test_unchanged_with_the_flag_off(self):
+        snapshot, scores = self.make()
+        self.assertIs(self.run_on(snapshot, scores, flag=False), scores)
+
+    def test_unchanged_without_a_positive_non_pass_candidate(self):
+        snapshot, scores = self.make()
+        scores[2], scores[3] = (0.0, 'x'), (-2.0, 'x')
+        self.assertIs(self.run_on(snapshot, scores), scores)
+        snapshot, scores = self.make()
+        scores[2], scores[3] = (BLOCKED, PREFIX + 'y'), (-2.0, 'x')
+        self.assertIs(self.run_on(snapshot, scores), scores)
+
+    def test_unchanged_when_a_non_pass_candidate_is_already_on_top(self):
+        snapshot, scores = self.make()
+        scores[2] = (50.0, 'x')
+        self.assertIs(self.run_on(snapshot, scores), scores)
+
+    def test_unchanged_outside_the_action_phase(self):
+        snapshot, scores = self.make(phase='IncomeOrderPending')
+        self.assertIs(self.run_on(snapshot, scores), scores)
+
+    def test_spec_file_names_the_factory_and_matches_the_base_spec(self):
+        here = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(here, self.SPEC), encoding='utf-8') as f:
+            spec = json.load(f)
+        with open(os.path.join(here, self.BASE_SPEC), encoding='utf-8') as f:
+            base = json.load(f)
+        self.assertEqual(spec['factory'], 'teacher_patches:' + self.FACTORY)
+        self.assertTrue(callable(getattr(tp, self.FACTORY)))
+        for key in ('description', 'factory'):
+            spec.pop(key)
+            base.pop(key)
+        self.assertEqual(spec, base)
