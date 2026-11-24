@@ -52,7 +52,14 @@ def booster_income_value(booster):
 
 def _action_phase(state):
     phase = state['phase']
-    return isinstance(phase, dict) and 'ActionPhase' in phase or phase == 'ActionPhase'
+    if isinstance(phase, dict) and 'ActionPhase' in phase or phase == 'ActionPhase':
+        return True
+    # charge_phase (lab 132j, HANDOFF E293; opt-in): a move that offers a neighbour a charge leaves the state in
+    # ChargePowerPending until the neighbours answer. The ranking scores a move by the state right after it, so
+    # without this the whole pass term (best booster left + the held booster's pass VP; 9.80 in the 132j decision)
+    # dropped out of every mine, upgrade and range build next to a neighbour, and of nothing else. The mover is
+    # still unpassed in the same action phase, so with the flag the pending state counts as the action phase.
+    return bool(_guide['charge_phase'] and isinstance(phase, dict) and 'ChargePowerPending' in phase)
 
 
 def symmetric_potential(state, actor, **kwargs):
@@ -444,6 +451,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'booster_tier': False,        # True: ..._ships_menu1_all_tier (starting booster by tier, see booster_tier_scores)
           'pass_last': False,           # True: ..._ships_menu1_all_tier_passlast (last seat to pass plays its positive actions first, see pass_last_scores)
           'ship_now': False,            # True: ..._all_tier_passlast_shipnow (a ship entry's share for this round only up to what it opens, see ship_now_scores)
+          'charge_phase': False,        # True: ..._passlast_shipnow_chargephase (the pass term also in ChargePowerPending, see _action_phase)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -5574,6 +5582,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow(seed
     install_ship_now()
     _guide['pass_last'] = True
     _wrap_rank('_pass_last', pass_last_scores)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow_chargephase(seed, **kwargs):
+    """Teacher factory: ..._all_tier_passlast_shipnow + charge_phase (lab 132k, E293/E294; opt-in, not in the
+    deployment stack): the state value keeps its pass term while a charge offer is pending (see _action_phase)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow(seed, **kwargs)
+    _guide['charge_phase'] = True
     return teacher
 
 

@@ -1,0 +1,14 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow_chargephase (..._all_tier_passlast_shipnow + charge_phase: the state value keeps its pass term - best booster left + the held booster's pass VP - while a charge offer is pending, so a move next to a neighbour no longer loses it; lab 132j/132k, E293) with the lab measurement budget: 4 comparisons, 60 s cap, comparisons in 2 processes (HANDOFF E52).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow_chargephase",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 60,
+  "parallel": 2
+}

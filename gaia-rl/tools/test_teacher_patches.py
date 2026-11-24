@@ -77,6 +77,31 @@ class SymmetricPassTests(unittest.TestCase):
         self.assertGreater(changed, 0)
         self.assertGreater(unchanged, 0)
 
+    def test_charge_phase_keeps_the_pass_terms_while_a_charge_is_pending(self):
+        from faction_teachers.profiles import profiles
+        pending = [s['state'] for _, s in self.states
+                   if isinstance(s['state']['phase'], dict) and 'ChargePowerPending' in s['state']['phase']]
+        self.assertGreater(len(pending), 0)
+        self.assertFalse(tp._guide['charge_phase'])
+        checked = 0
+        for state in pending:
+            self.assertFalse(tp._action_phase(state))
+            for actor, player in enumerate(state['players']):
+                home = profiles()[player['faction']].home
+                base = tp._original(state, actor, home=home)
+                self.assertEqual(tp.symmetric_potential(state, actor, home=home)-base, 0)
+                with mock.patch.dict(tp._guide, {'charge_phase': True}):
+                    self.assertTrue(tp._action_phase(state))
+                    delta = tp.symmetric_potential(state, actor, home=home)-base
+                if state['round'] >= 1 and not player['passed']:
+                    expected = tp.booster_pass_vp(state, player)+max(
+                        (tp.booster_income_value(b) for b in state['boosters']), default=0)
+                    self.assertAlmostEqual(delta, expected)
+                    checked += 1
+                else:
+                    self.assertEqual(delta, 0)
+        self.assertGreater(checked, 0)
+
     def test_factory_rebinds_every_user_of_potential(self):
         teacher = tp.symmetric_pass(SEED, bgg_openings=True, shared_factions=True)
         import four_factions.preparation as preparation
@@ -3200,3 +3225,51 @@ class ShipNowTests(unittest.TestCase):
             self.assertFalse(tp._guide['ship_now'])
             self.assertIs(p.Policies.rank(object(), None, {'state': {'phase': 'ActionPhase'}, 'player': 0,
                                                            'candidates': []}), expected)
+
+
+class ChargePhaseTests(unittest.TestCase):
+    SPEC = ('teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-passlast-shipnow-'
+            'chargephase-cap60-p2.json')
+    BASE_SPEC = 'teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-passlast-shipnow-cap60-p2.json'
+    BASE_FACTORY = 'guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow'
+    FACTORY = BASE_FACTORY + '_chargephase'
+    PENDING = {'ChargePowerPending': {'queue': [{'player': 3, 'hex': '-2,4', 'max_power': 2}]}}
+
+    def test_off_by_default_only_the_action_phase_counts(self):
+        self.assertFalse(tp._guide['charge_phase'])
+        self.assertTrue(tp._action_phase({'phase': 'ActionPhase'}))
+        self.assertTrue(tp._action_phase({'phase': {'ActionPhase': {'active_player': 2}}}))
+        self.assertFalse(tp._action_phase({'phase': self.PENDING}))
+
+    def test_on_a_pending_charge_counts_and_other_phases_do_not(self):
+        with mock.patch.dict(tp._guide, {'charge_phase': True}):
+            self.assertIs(tp._action_phase({'phase': self.PENDING}), True)
+            self.assertTrue(tp._action_phase({'phase': 'ActionPhase'}))
+            self.assertTrue(tp._action_phase({'phase': {'ActionPhase': {'active_player': 2}}}))
+            for phase in ('IncomeOrderPending', 'ChargePowerPending', {'Ended': {'final_scores': []}},
+                          {'GaiaPhase': {}}):
+                self.assertIs(tp._action_phase({'phase': phase}), False)
+
+    def test_factory_sets_only_its_flag_on_the_base_factory(self):
+        sentinel = object()
+        with mock.patch.dict(tp._guide), mock.patch.object(tp, self.BASE_FACTORY, return_value=sentinel) as base:
+            before = dict(tp._guide)
+            self.assertIs(getattr(tp, self.FACTORY)('seed', bgg_openings=True), sentinel)
+            base.assert_called_once_with('seed', bgg_openings=True)
+            changed = {key for key in tp._guide if tp._guide[key] != before[key]}
+            self.assertEqual(changed, {'charge_phase'})
+            self.assertIs(tp._guide['charge_phase'], True)
+        self.assertFalse(tp._guide['charge_phase'])
+
+    def test_spec_file_names_the_factory_and_matches_the_base_spec(self):
+        here = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(here, self.SPEC), encoding='utf-8') as f:
+            spec = json.load(f)
+        with open(os.path.join(here, self.BASE_SPEC), encoding='utf-8') as f:
+            base = json.load(f)
+        self.assertEqual(spec['factory'], 'teacher_patches:' + self.FACTORY)
+        self.assertTrue(callable(getattr(tp, self.FACTORY)))
+        for key in ('description', 'factory'):
+            spec.pop(key)
+            base.pop(key)
+        self.assertEqual(spec, base)
