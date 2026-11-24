@@ -149,6 +149,8 @@ class MovesAndSites(unittest.TestCase):
         self.assertEqual([(m['index'], m['large_tile_after'], m['ready_after']) for m in p['moves']], [(1, True, True)])
         every = fed_plan.plan(state, 0, [lab('1,0', tile(1)), lab('1,0', tile(6)), lab('1,0', tile(2))], every=True)
         self.assertEqual([(m['index'], m['ready_after']) for m in every['moves']], [(1, True), (0, False)])
+        raw = fed_plan.plan(state, 0, [lab('1,0', tile(1)), lab('1,0', tile(6)), lab('1,0', tile(2))], every=True, merge=False)
+        self.assertEqual([(m['index'], m['ready_after']) for m in raw['moves']], [(1, True), (0, False), (2, False)])
 
     def test_covering_the_large_building_tile_takes_its_power_away(self):
         state = state_of(board({'0,0': (0, PI), '1,0': (0, TS), '2,0': (0, MINE)}), tiles=(6,))

@@ -262,8 +262,9 @@ def tile_effect(player, action):
     return large, choice.get('bonus_build_coord')
 
 
-def plan(state, pid, candidates=(), every=False):
-    """every: list each Build / Upgrade variant, also those that do not bring the target closer (the engine check)."""
+def plan(state, pid, candidates=(), every=False, merge=True):
+    """every: also list the Build / Upgrade rows that do not bring the target closer; merge=False: one row per
+    engine candidate instead of one per site, kind and tile effect (both for the engine check)."""
     facts = board_facts(state, pid)
     anchors = facts['federated'] if facts['growth'] else ()
     now = solve(facts['values'], facts['spaces'], facts['need'], facts['funds'], anchors, facts['inside'])
@@ -280,7 +281,7 @@ def plan(state, pid, candidates=(), every=False):
         # which other tile or track they take are one row).
         key = (action.get('coord'), 'Mine' if action['type'] in BUILD else kind_name(action['to']),
                tile_effect(facts['player'], action) if choice else None)
-        if key in seen:
+        if merge and key in seen:
             continue
         seen.add(key)
         changed = _after(state, facts, action)
@@ -343,7 +344,7 @@ def _next_main_turn(branch, pid, json, limit=80):
     return None
 
 
-def check(run_dir, stride, seconds, python_path=None):
+def check(run_dir, stride, seconds, python_path=None, output=None):
     import gzip
     import json
     import os
@@ -392,7 +393,8 @@ def check(run_dir, stride, seconds, python_path=None):
                     forked = not count['engine not legal'] % stride and time.monotonic() - start <= seconds
                     count['engine not legal'] += 1
                     count['C decisions with every build / upgrade forked'] += forked
-                    for pick in plan(state, pid, candidates, every=True)['moves'] if forked else ():
+                    # merge=False: each engine candidate is played, not one representative per site and kind
+                    for pick in plan(state, pid, candidates, every=True, merge=False)['moves'] if forked else ():
                         if pick['funds_unknown']:
                             count['C funds unknown, not forked'] += 1
                             continue
@@ -422,6 +424,10 @@ def check(run_dir, stride, seconds, python_path=None):
         print(f'  {name}: {value}')
     for line in examples[:12]:
         print('  example', line)
+    if output:
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        Path(output).write_text(json.dumps({'engine': ENGINE_BUILD_ID, 'stride': stride, 'counts': dict(count),
+                                            'examples': examples[:50]}, ensure_ascii=False, indent=1))
 
 
 if __name__ == '__main__':
@@ -432,5 +438,6 @@ if __name__ == '__main__':
     parser.add_argument('--python-path', help='folder holding the gaia_rl build the run was recorded with')
     parser.add_argument('--stride', type=int, default=1, help='fork the moves of every N-th decision without a federation')
     parser.add_argument('--seconds', type=float, default=1e9, help='stop forking after this many seconds (A, B, E go on)')
+    parser.add_argument('--output', help='write the counts and mismatch examples as JSON (lab command metrics)')
     args = parser.parse_args()
-    check(args.run_dir, args.stride, args.seconds, args.python_path)
+    check(args.run_dir, args.stride, args.seconds, args.python_path, args.output)
