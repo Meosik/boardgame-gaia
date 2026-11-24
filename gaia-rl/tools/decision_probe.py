@@ -358,6 +358,31 @@ def install_task_log(log_path):
     parallel_search._planned_tasks = _planned_tasks
 
 
+def install_root_scores(log_path, watch=()):
+    """Log the root ranking of a searched decision (parallel_search._planned_tasks is handed the root scores):
+    one 'root_scores' line from rank_terms.root_scores_record — every candidate's score, reason and rank, and
+    the state-value parts before/after for the watched moves, the top 20 and the watched upgrades' best
+    siblings. Recording only (it forks the environment per broken-down move; the time lands in the
+    'planned_tasks' stage); a failure is written into the line, never raised."""
+    import parallel_search
+    inner = parallel_search._planned_tasks
+    if getattr(inner, '_probe_root_scores', False):
+        return
+
+    def _planned_tasks(env, snapshot, memory, scores, *args, **kwargs):
+        try:
+            import rank_terms
+            _write(log_path, rank_terms.root_scores_record(env, snapshot, scores, list(watch)))
+        except Exception as error:
+            _write(log_path, {'event': 'root_scores', 'error': repr(error)[:300]})
+        return inner(env, snapshot, memory, scores, *args, **kwargs)
+    for name, value in vars(inner).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(_planned_tasks, name, value)
+    _planned_tasks._probe_root_scores = True
+    parallel_search._planned_tasks = _planned_tasks
+
+
 def comparison_times(lines, started_at):
     """The timing lines of one ask as rows, in start order: {'call', 'goal', 'first', 'pid', 'started' (seconds
     after the choice was asked), 'finished' (False = a start with no end: cut by the cap), then the end line's
@@ -385,10 +410,12 @@ def factory(seed, **kwargs):
     module, _, attribute = os.environ[FACTORY_ENV].partition(':')
     teacher = getattr(import_module(module), attribute)(seed, **kwargs)
     log_path = os.environ.get(LOG_ENV)
-    install_front(json.loads(os.environ.get(FRONT_ENV, '[]')), json.loads(os.environ.get(WATCH_ENV, '[]')), log_path)
+    watch = json.loads(os.environ.get(WATCH_ENV, '[]'))
+    install_front(json.loads(os.environ.get(FRONT_ENV, '[]')), watch, log_path)
     if log_path:
         install_timing(log_path)
         install_task_log(log_path)
+        install_root_scores(log_path, watch)
     return teacher
 
 
@@ -499,6 +526,9 @@ def run_ask(ask, teacher, seed, state_path, start, prefix, snapshot, indices, ou
         tasks = [line for line in lines if line.get('event') == 'tasks']
         if tasks:
             row.update(planned_tasks=tasks[-1]['planned'], task_order=tasks[-1]['order'])
+        ranking = [line for line in lines if line.get('event') == 'root_scores']
+        if ranking:
+            row['root_scores'] = {key: value for key, value in ranking[-1].items() if key != 'event'}
         row['comparison_times'] = comparison_times(lines, asked_at)
         # Was each front move's root comparison started / finished within this ask (the cap may cut it)?
         row['front_comparisons'] = [
@@ -629,6 +659,31 @@ def main():
         for front in row.get('front_comparisons', ()):
             print(f"    front move [{front['index']}]: started {front['started']}, finished {front['finished']}, "
                   f"compared {front['compared']}")
+    for row in metrics['asks']:                 # last, so the result page's tail shows it
+        for line in ranking_lines(row.get('root_scores'), row['label']):
+            print(line)
+
+
+def ranking_lines(ranking, label, parts=7):
+    """The root ranking of one ask as text: one line per broken-down move — rank, score, what the ranking added
+    to the plain state delta, and the `parts` largest value parts of the delta."""
+    if not ranking:
+        return []
+    if 'breakdown' not in ranking:
+        return [f"root ranking ({label}): no breakdown — {ranking.get('error')}"]
+    lines = [f"root ranking ({label}): {ranking.get('unblocked')} unblocked; rank, score, score − state delta, "
+             f"largest parts of the state delta"]
+    for item in ranking['breakdown']:
+        head = f"    #{item.get('rank')} [{item['index']}] {item['score']:8.2f}"
+        if 'delta' not in item:
+            lines.append(f"{head} no parts — {item.get('error')} {short(item.get('action'), 70)}")
+            continue
+        delta = {name: value for name, value in item['delta'].items() if name != 'total' and abs(value) >= 0.005}
+        largest = sorted(delta.items(), key=lambda pair: -abs(pair[1]))[:parts]
+        lines.append(f"{head} {item['score_minus_delta']:+6.2f} | "
+                     + ' '.join(f'{name} {value:+.2f}' for name, value in largest)
+                     + f" | {short(item.get('action'), 70)}")
+    return lines
 
 
 if __name__ == '__main__':

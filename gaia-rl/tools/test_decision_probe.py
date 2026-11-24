@@ -576,5 +576,83 @@ class InstallTaskLogTest(unittest.TestCase):
         self.assertIs(self.module._planned_tasks, wrapper)
 
 
+class InstallRootScoresTest(unittest.TestCase):
+    def setUp(self):
+        import rank_terms
+        self.rank_terms = rank_terms
+        self.calls = []
+        self.module = types.ModuleType('parallel_search')
+
+        def inner(*args, **kwargs):
+            self.calls.append((args, kwargs))
+            return ('goals', True)
+        self.module._planned_tasks = inner
+        patcher = mock.patch.dict(sys.modules, {'parallel_search': self.module})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.log = Path(directory.name)/'roots.jsonl'
+
+    def lines(self):
+        return [json.loads(line) for line in self.log.read_text().splitlines()]
+
+    def test_the_inner_result_is_unchanged_and_one_root_scores_line_is_logged(self):
+        record = {'event': 'root_scores', 'unblocked': 2}
+        with mock.patch.object(self.rank_terms, 'root_scores_record', return_value=record) as made:
+            decision_probe.install_root_scores(str(self.log), watch=[4, 9])
+            result = self.module._planned_tasks('env', 'snap', 'memory', 'scores', 7, key='v')
+        self.assertEqual(result, ('goals', True))
+        self.assertEqual(self.calls, [(('env', 'snap', 'memory', 'scores', 7), {'key': 'v'})])
+        made.assert_called_once_with('env', 'snap', 'scores', [4, 9])
+        self.assertEqual(self.lines(), [record])
+
+    def test_a_failing_record_is_written_as_an_error_and_the_inner_still_runs(self):
+        with mock.patch.object(self.rank_terms, 'root_scores_record', side_effect=RuntimeError('boom')):
+            decision_probe.install_root_scores(str(self.log))
+            result = self.module._planned_tasks('env', 'snap', 'memory', 'scores')
+        self.assertEqual(result, ('goals', True))
+        self.assertEqual(len(self.calls), 1)
+        lines = self.lines()
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0]['event'], 'root_scores')
+        self.assertIn('boom', lines[0]['error'])
+
+    def test_a_second_install_does_not_wrap_again(self):
+        decision_probe.install_root_scores(str(self.log))
+        wrapper = self.module._planned_tasks
+        self.assertTrue(wrapper._probe_root_scores)
+        decision_probe.install_root_scores(str(self.log))
+        self.assertIs(self.module._planned_tasks, wrapper)
+
+
+class RankingLinesTest(unittest.TestCase):
+    def test_no_ranking_gives_no_lines(self):
+        self.assertEqual(decision_probe.ranking_lines(None, 'x'), [])
+
+    def test_a_ranking_without_breakdown_gives_one_line(self):
+        lines = decision_probe.ranking_lines({'unblocked': 3, 'error': 'boom'}, 'x')
+        self.assertEqual(len(lines), 1)
+        self.assertIn('no breakdown', lines[0])
+        self.assertIn('boom', lines[0])
+
+    def test_each_breakdown_item_gets_a_line_with_parts_sorted_by_size(self):
+        ranking = {'unblocked': 5, 'breakdown': [
+            {'index': 12, 'rank': 1, 'score': 3.5, 'score_minus_delta': 0.25, 'action': {'type': 'Build'},
+             'delta': {'total': 9.0, 'vp': 1.0, 'stock': -2.0, 'power': 0.001, 'income': 0.5}},
+            {'index': 13, 'rank': 2, 'score': 1.0, 'action': {'type': 'Pass'}, 'error': 'fork failed'}]}
+        lines = decision_probe.ranking_lines(ranking, 'x')
+        self.assertEqual(len(lines), 3)
+        self.assertIn('root ranking (x)', lines[0])
+        first = lines[1]
+        self.assertIn('#1', first)
+        self.assertIn('[12]', first)
+        self.assertIn('stock -2.00 vp +1.00 income +0.50', first)
+        self.assertNotIn('total', first)
+        self.assertNotIn('power', first)
+        self.assertIn('no parts', lines[2])
+        self.assertIn('fork failed', lines[2])
+
+
 if __name__ == '__main__':
     unittest.main()
