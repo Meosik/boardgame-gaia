@@ -1,0 +1,33 @@
+{
+ "kind": "command",
+ "note": "E293 (ㄱ) → 코덱스 이상 없음(사용자 2026-11-13 상시 지시), HANDOFF E294: 132j와 같은 결정·상태·앞 5결정 재생·물음 하나(front-nocap: 상한 없음, 비교 9, 세 수를 root 목록 맨 앞)·도구로 한 번 더, 바꾼 것은 스펙의 플래그 하나 — …-all-tier-passlast-shipnow-chargephase-cap60-p2 = 132j 스펙 + charge_phase(opt-in, 기본 꺼짐, 배포 스택 아님; tools/teacher_patches.py _action_phase: 수를 둔 직후가 ChargePowerPending(이웃의 충전 수락 대기)이어도 상태 값의 부스터 항 = 남은 부스터 최고 값 + 든 부스터 패스 점수를 더함). 지켜보는 수 하나 추가(앞에 넣지 않음, 기록만): 광산 -8,7(132j 점수 목록의 7번 후보 −1.27 · 105위 — lab 빌드의 후보 번호는 작업 트리 빌드와 0–284번이 같다는 추정(종류별 수와 56 · 228 · 272 · 312번 일치)에 기대므로, 이 수를 못 찾아 실패하면 그 수만 빼고 다시 넣음). 대국 없음. 탐색적 진단, 판정 없음(한 결정). 읽는 법(사전 등록): (a) 건강 기준 — 종료 코드 0, failures 빈 목록, digest_matches_log true, 폴백 타임아웃 0, root_scores·breakdown 행에 error 없음, 끝난 rollout 모두 own_decisions 있음. (b) 플래그가 그 자리에만 닿았는지 — 업그레이드 행(사용자 수·314·아카데미 변형)의 부스터 차가 절댓값 0.01 이하, 광산 -8,7 행의 부스터 차 +1.00(든 부스터가 광산당 패스 1점: 3 → 4), other 차 절댓값 0.01 이하; 충전을 안 주는 행(정거장 -1,3 +4.00, 연방 토큰 다시 받기 1위 +19.47, 연구 전진)은 점수가 132j와 같아야 함 — 다르면 플래그가 다른 것을 건드린 것 → 아래를 결과로 쓰지 않고 원인부터. 참고(결과 아님, 작업 트리 빌드 스모크): 사용자 수 −12.20 → −2.40, 314 −14.93 → −5.13, 광산 -1,0 −16.73 → −5.93(부스터 차 +1.00), 정거장·토큰 다시 받기 그대로. (c) 읽을 것: root 기본 순위에서 사용자 수·정거장·314·광산 -8,7의 순위와 점수(132j: 230 · 15 · 260 · 105위), 1위가 무엇인지, 상위 20개에 충전을 주는 수(광산·업그레이드·사거리 건설·함선 돈 테라포밍)가 몇 개 드는지. (d) rollout 값: rollout 안 순위도 바뀌므로 132j와 같을 것을 요구하지 않음 — 끝난 rollout마다 값과 132j 대비 차(현재 수 143.40 · 정거장 → 연방 계획 143.40 · root-56 143.40 · root-사용자 수 146.16 · flip-229 133.12 · 314 → Rebellion 계획 134.73 · 과학 연구 계획 141.40 · root-314 134.73; 식민 비교는 목표 칸이 달라 뺌), 선택된 수, 끝난 비교 수, 걸린 시간을 적음. 값이 오르거나 내린 것은 관찰이고 판정이 아님(rollout은 교사의 싼 이어 두기, 한 결정) — 내린 rollout이 있으면 그 행동 열에서 무엇이 바뀌었는지(own_decisions)를 적음. (e) 이 물음은 세 수를 앞에 억지로 넣으므로 「60초 상한의 기본 순서에서 사용자 수가 비교에 드는가」는 답하지 않음 — 순위만 읽음. 다음 연방 가치(E293 ②, federation_progress)는 이 플래그가 다루지 않음: 사용자 수의 federation_progress·tiles 차는 0.00 그대로일 것(달라지면 적음). 한정: 한 결정·한 상태; 플래그의 대국 효과·방향은 끔 대 켬 A/B 전까지 미확정(시드 수·라운드는 사용자 수치); 230위의 원인 전부를 설명한다고 하지 않음. 예상 ≈ 3–5분, 제한 2시간.",
+ "run": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "{python}",
+  "tools/decision_probe.py",
+  "--state",
+  "runs/lab-130-room-first-move-98ADBD/states/round-5.json",
+  "--prefix-log",
+  "runs/lab-130-room-first-move-98ADBD/round-5/move-0/game-0/decisions.jsonl.gz",
+  "--prefix-steps",
+  "5",
+  "--teacher",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-passlast-shipnow-chargephase-cap60-p2.json",
+  "--move",
+  "{\"type\":\"Upgrade\",\"coord\":\"-2,4\",\"to\":{\"Academy\":\"Qic\"},\"tech_tile_choice\":{\"kind\":\"Standard\",\"tile\":6,\"advance_track\":null,\"bonus_build_coord\":null}}",
+  "--move",
+  "{\"type\":\"IvitsPlaceSpaceStation\",\"coord\":\"-1,3\"}",
+  "--move",
+  "{\"type\":\"Upgrade\",\"coord\":\"-2,4\",\"to\":{\"Academy\":\"Qic\"},\"tech_tile_choice\":{\"kind\":\"Standard\",\"tile\":8,\"advance_track\":null,\"bonus_build_coord\":null}}",
+  "--move",
+  "{\"type\":\"Build\",\"coord\":\"-8,7\"}",
+  "--ask",
+  "front-nocap:9:0:0,1,2",
+  "--output",
+  "runs/lab-132k-decision-probe-98ADBD-chargephase"
+ ],
+ "metrics": "runs/lab-132k-decision-probe-98ADBD-chargephase/metrics.json",
+ "timeout_hours": 2
+}
