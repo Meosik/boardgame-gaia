@@ -38,6 +38,14 @@ def state_of(hexes, faction='Terrans', tokens=3, federated=(), supply=(1,), tile
 PI, TS, MINE = 'PlanetaryInstitute', 'TradingStation', 'Mine'
 
 
+def tile(number, bonus=None):
+    return {'kind': 'Standard', 'tile': number, 'advance_track': None, 'bonus_build_coord': bonus}
+
+
+def lab(coord, choice):
+    return {'action': {'type': 'Upgrade', 'coord': coord, 'to': 'ResearchLab', 'tech_tile_choice': choice}}
+
+
 class Ready(unittest.TestCase):
     def test_adjacent_buildings_with_seven_power_need_no_satellite(self):
         state = state_of(board({'0,0': (0, PI), '1,0': (0, TS), '2,0': (0, TS)}), tokens=0)
@@ -110,8 +118,8 @@ class MovesAndSites(unittest.TestCase):
         self.cells = {'0,0': (0, PI), '1,0': (0, TS), '2,0': (0, MINE), '3,0': 'planet', '2,1': None, '2,2': 'planet'}
         self.candidates = [{'action': {'type': 'Pass'}},
                            {'action': {'type': 'Upgrade', 'coord': '2,0', 'to': TS, 'tech_tile_choice': None}},
-                           {'action': {'type': 'Upgrade', 'coord': '1,0', 'to': 'ResearchLab', 'tech_tile_choice': 1}},
-                           {'action': {'type': 'Upgrade', 'coord': '1,0', 'to': 'ResearchLab', 'tech_tile_choice': 2}},
+                           {'action': {'type': 'Upgrade', 'coord': '1,0', 'to': 'ResearchLab', 'tech_tile_choice': tile(1)}},
+                           {'action': {'type': 'Upgrade', 'coord': '1,0', 'to': 'ResearchLab', 'tech_tile_choice': tile(2)}},
                            {'action': {'type': 'Build', 'coord': '3,0'}}]
 
     def test_moves_that_fill_the_shortfall_come_first_and_a_lab_is_no_gain(self):
@@ -133,6 +141,32 @@ class MovesAndSites(unittest.TestCase):
         p = fed_plan.plan(state_of(hexes, faction='Bescods'), 0, candidates)
         self.assertEqual(p['target']['power'], 4)
         self.assertEqual((p['moves'][0]['short_after'], p['moves'][0]['ready_after']), (0, True))   # 3 + 2 + 2
+
+    def test_a_lab_that_takes_the_large_building_tile_opens_the_federation(self):
+        # institute 3 + station 2 + mine 1 = 6; station -> lab keeps 2, tile 6 makes the institute 4 -> 7
+        state = state_of(board({'0,0': (0, PI), '1,0': (0, TS), '2,0': (0, MINE)}))
+        p = fed_plan.plan(state, 0, [lab('1,0', tile(1)), lab('1,0', tile(6)), lab('1,0', tile(2))])
+        self.assertEqual([(m['index'], m['large_tile_after'], m['ready_after']) for m in p['moves']], [(1, True, True)])
+        every = fed_plan.plan(state, 0, [lab('1,0', tile(1)), lab('1,0', tile(6)), lab('1,0', tile(2))], every=True)
+        self.assertEqual([(m['index'], m['ready_after']) for m in every['moves']], [(1, True), (0, False)])
+
+    def test_covering_the_large_building_tile_takes_its_power_away(self):
+        state = state_of(board({'0,0': (0, PI), '1,0': (0, TS), '2,0': (0, MINE)}), tiles=(6,))
+        cover = {'kind': 'Advanced', 'track': 'Economy', 'covered_tile': 6, 'advance_track': None}
+        p = fed_plan.plan(state, 0, [lab('1,0', cover)], every=True)
+        self.assertTrue(p['ready'])
+        self.assertEqual((p['moves'][0]['large_tile_after'], p['moves'][0]['short_after']), (False, 1))
+
+    def test_a_tile_that_comes_with_a_mine_adds_the_mine(self):
+        state = state_of(board({'0,0': (0, PI), '1,0': (0, TS), '2,0': (0, MINE), '3,0': 'planet'}))
+        p = fed_plan.plan(state, 0, [lab('1,0', tile(3, bonus='3,0'))])
+        self.assertEqual((p['moves'][0]['bonus_mine'], p['moves'][0]['ready_after']), ('3,0', True))
+
+    def test_a_verdict_that_hangs_on_funds_is_marked_for_a_move_with_a_tile(self):
+        # after the tile the power is there, but the gap needs a satellite the seat cannot pay now
+        cells = {'0,0': (0, PI), '1,0': (0, TS), '2,0': None, '3,0': (0, MINE)}
+        p = fed_plan.plan(state_of(board(cells), tokens=0), 0, [lab('1,0', tile(6))], every=True)
+        self.assertEqual((p['moves'][0]['ready_after'], p['moves'][0]['funds_unknown']), (False, True))
 
     def test_sites_next_to_the_target_and_one_space_away(self):
         p = fed_plan.plan(state_of(board(self.cells)), 0, self.candidates)

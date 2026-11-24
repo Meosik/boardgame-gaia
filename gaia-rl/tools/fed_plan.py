@@ -24,7 +24,7 @@ needs a space without planet, building, own satellite or spaceship tile and cost
 Not in this stage: prices. A move is offered only when the engine lists it as legal now, so "cheapest" is not
 computed and a filling that takes two moves is not sequenced.
 
-  fed_plan.py check <run dir> [--python-path DIR] [--forks N]     compare with the engine on a recorded run
+  fed_plan.py check <run dir> [--python-path DIR] [--stride N] [--seconds S]    compare with the engine on a run
 """
 import heapq
 from itertools import combinations
@@ -45,17 +45,21 @@ def neighbors(coord):
     return [f'{q+dq},{r+dr}' for dq, dr in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1))]
 
 
-def hex_power(state, player, coord, growth, kinds=None, institute=None):
+def large_tile(player):
+    """The tech tile that makes the planetary institute and academies worth one more (id 6) is active."""
+    return 6 in set(player['tech_tiles']) - set(player['covered_tech_tiles'])
+
+
+def hex_power(state, player, coord, growth, kinds=None, institute=None, large=None):
     """Power the hex adds to a federation of `player` (kinds: the seat's building kinds there, to test a change;
-    institute: whether the seat has its planetary institute, to test building it)."""
+    institute / large: whether the seat has its planetary institute / the large-building tile, to test a move)."""
     pid, board = player['player_id'], state['board']
     cell = board['hexes'][coord]
     if kinds is None:
         kinds = [kind_name(s['kind']) for s in cell['structures']
                  if s['owner'] == pid and kind_name(s['kind']) != 'Satellite']
     total = sum(POWER[name] for name in kinds)
-    active = set(player['tech_tiles']) - set(player['covered_tech_tiles'])
-    if 6 in active:
+    if large_tile(player) if large is None else large:
         total += sum(1 for name in kinds if name in LARGE)
     planet = cell.get('planet') or {}
     if (board.get('lost_planet') == coord and planet.get('owner') == pid
@@ -211,65 +215,89 @@ def _after(state, facts, action):
     The planetary institute changes more than its own hex: every Bescods building on the home planet type gains 1
     and the Xenos need drops to 6 (engine bescods_home_planet_power_bonus, federation_minimum_power)."""
     player, growth, need = facts['player'], facts['growth'], facts['need']
-    coord, values, base, anchors = action.get('coord'), dict(facts['values']), facts['inside'], set(facts['federated'])
+    coord, hexes = action.get('coord'), state['board']['hexes']
+    values, base, anchors = dict(facts['values']), facts['inside'], set(facts['federated'])
     if coord is None:
         return None
+    institute, large, mines = None, large_tile(player), []
     if action['type'] in BUILD:
-        gain = hex_power(state, player, coord, growth, ['Mine'])
-        if growth and any(n in facts['federated'] for n in neighbors(coord)):
-            return values, base + gain, anchors | {coord}, need  # joins the federation that grows
-        if coord in facts['touching']:
-            return None                                          # joins an existing federation: no new group
-        values[coord] = gain
-        return values, base, anchors, need
-    if action['type'] == 'Upgrade':
+        mines.append(coord)
+    elif action['type'] == 'Upgrade':
         to = kind_name(action['to'])
         institute = True if to == 'PlanetaryInstitute' else None
-        if institute and not growth:
-            if player['faction'] == 'Bescods':
-                values = {h: hex_power(state, player, h, growth, institute=True) for h in values}
-            if player['faction'] == 'Xenos':
-                need = 6
-        new = hex_power(state, player, coord, growth, [to], institute)
-        if coord in values:
-            if new == facts['values'][coord] and values == facts['values'] and need == facts['need']:
-                return None
-            values[coord] = new
-            return values, base, anchors, need
-        if growth and coord in facts['federated']:
-            old = hex_power(state, player, coord, True)
-            return (values, base + new - old, anchors, need) if new != old else None
-        if values != facts['values'] or need != facts['need']:
-            return values, base, anchors, need                   # the institute stands inside a federation
-    return None
+        large, bonus = tile_effect(player, action)
+        if bonus:
+            mines.append(bonus)
+        if institute and not growth and player['faction'] == 'Xenos':
+            need = 6
+        # every hex again: the institute (Bescods) and the tile change buildings other than the upgraded one
+        values = {h: hex_power(state, player, h, growth, [to] if h == coord else None, institute, large) for h in values}
+        if growth:
+            base = sum(hex_power(state, player, h, True, [to] if h == coord else None, large=large)
+                       for h in anchors if h in hexes)
+    else:
+        return None
+    for mine in mines:
+        gain = hex_power(state, player, mine, growth, ['Mine'], institute, large)
+        if growth and any(n in anchors for n in neighbors(mine)):
+            base, anchors = base + gain, anchors | {mine}        # joins the federation that grows
+        elif mine not in facts['touching']:                      # next to a federation it joins that one: no group
+            values[mine] = gain
+    if values == facts['values'] and base == facts['inside'] and need == facts['need'] and anchors == facts['federated']:
+        return None
+    return values, base, anchors, need
 
 
-def plan(state, pid, candidates=()):
+def tile_effect(player, action):
+    """(large-building tile active after the move, coord of the mine a tile lets the seat build with it).
+
+    An upgrade to a research lab or academy takes a tech tile (engine apply_upgrade -> apply_tech_tile_choice):
+    a standard tile 6 switches the bonus on, an advanced tile that covers tile 6 switches it off."""
+    choice = action.get('tech_tile_choice') or {}
+    large = large_tile(player)
+    if choice.get('kind') == 'Standard' and choice.get('tile') == 6:
+        large = True
+    if choice.get('covered_tile') == 6:
+        large = False
+    return large, choice.get('bonus_build_coord')
+
+
+def plan(state, pid, candidates=(), every=False):
+    """every: list each Build / Upgrade variant, also those that do not bring the target closer (the engine check)."""
     facts = board_facts(state, pid)
     anchors = facts['federated'] if facts['growth'] else ()
     now = solve(facts['values'], facts['spaces'], facts['need'], facts['funds'], anchors, facts['inside'])
     ready = now['ready'] and facts['token']
     reason = now['reason'] if not now['ready'] else None if facts['token'] else 'token'
+    ivits = facts['player']['faction'] == 'Ivits'
     moves, seen = [], set()
     for number, candidate in enumerate(candidates):
         action = candidate['action']
         if action.get('type') not in BUILD and action.get('type') != 'Upgrade':
             continue
-        key = (action.get('coord'), 'Mine' if action['type'] in BUILD else kind_name(action['to']))
+        choice = action.get('tech_tile_choice') or {}
+        # One row per site, target kind and tile effect on the federation (variants that differ only in
+        # which other tile or track they take are one row).
+        key = (action.get('coord'), 'Mine' if action['type'] in BUILD else kind_name(action['to']),
+               tile_effect(facts['player'], action) if choice else None)
         if key in seen:
             continue
         seen.add(key)
         changed = _after(state, facts, action)
-        if changed is None:
-            continue
-        values, base, grown, need = changed
-        spaces = facts['spaces'] - {key[0]}
-        after = solve(values, spaces, need, facts['funds'], grown if facts['growth'] else (), base)
-        if after['short'] < now['short'] or (after['ready'] and not now['ready']):
-            # Funds are taken as unchanged by the move. Ivits pays satellites with QIC and may pay the mine's range
-            # with the same QIC (lab 133 pair-007 step 145: 3 QIC -> 1), so that case is marked, not decided.
-            unknown = (facts['player']['faction'] == 'Ivits' and action['type'] in BUILD and after['sats'] > 0)
+        after = now
+        if changed is not None:
+            values, base, grown, need = changed
+            spaces = facts['spaces'] - set(values)
+            after = solve(values, spaces, need, facts['funds'], grown if facts['growth'] else (), base)
+        if every or after['short'] < now['short'] or (after['ready'] and not now['ready']):
+            # Funds are taken as unchanged by the move, so a verdict that hangs on them is marked, not decided:
+            # Ivits pays satellites with QIC and a mine's range with the same QIC (lab 133 pair-007 step 145:
+            # 3 QIC -> 1), and a tech tile or the track step taken with it can add QIC or power tokens.
+            # (pair-000 step 246: a lab's tile gave Ivits a QIC, 1 -> 2, and a two-satellite group opened.)
+            on_funds = after['reason'] == 'satellites' or (ivits and after['sats'] > 0)
+            unknown = on_funds and ((ivits and action['type'] in BUILD) or bool(choice))
             moves.append({'index': number, 'type': action['type'], 'coord': key[0], 'to': key[1],
+                          'large_tile_after': key[2][0] if key[2] else None, 'bonus_mine': key[2][1] if key[2] else None,
                           'short_after': after['short'], 'sats_after': after['sats'],
                           'ready_after': after['ready'] and facts['token'], 'funds_unknown': unknown})
     moves.sort(key=lambda m: (not m['ready_after'], m['short_after'], m['sats_after'], m['index']))
@@ -315,7 +343,7 @@ def _next_main_turn(branch, pid, json, limit=80):
     return None
 
 
-def check(run_dir, forks, python_path=None):
+def check(run_dir, stride, seconds, python_path=None):
     import gzip
     import json
     import os
@@ -358,24 +386,27 @@ def check(run_dir, forks, python_path=None):
                     if p['ready'] and not limit:
                         count['B plan ready, engine not legal'] += 1
                         examples.append(f"B {where} target {p['target']} funds {p['funds']}")
-                    for wanted in (True, False):
-                        count['moves with funds unknown (Ivits mine, not forked)'] += wanted and sum(
-                            m['funds_unknown'] for m in p['moves'])
-                        pick = next((m for m in p['moves'] if m['ready_after'] == wanted and not m['funds_unknown']), None)
-                        name = 'C fill makes it legal' if wanted else 'D move leaves it short'
-                        if pick is None or count[name + ' (forks)'] >= forks:
+                    # Every Build / Upgrade variant the engine lists is played in a fork, not only the moves the
+                    # plan offers: a move that opens the federation and is missing from the plan shows as
+                    # "engine opens it, plan says no".
+                    forked = not count['engine not legal'] % stride and time.monotonic() - start <= seconds
+                    count['engine not legal'] += 1
+                    count['C decisions with every build / upgrade forked'] += forked
+                    for pick in plan(state, pid, candidates, every=True)['moves'] if forked else ():
+                        if pick['funds_unknown']:
+                            count['C funds unknown, not forked'] += 1
                             continue
-                        count[name + ' (forks)'] += 1
                         later = _next_main_turn(env.fork(row['decision_id'], pick['index']), pid, json)
                         if later is None or later['state']['round'] != state['round']:
-                            count[name + ': seat has no further turn'] += 1
+                            count['C seat has no further turn'] += 1
                             continue
                         formed = any(c['action'].get('type') == 'FormFederation' for c in later['candidates'])
-                        if formed == wanted:
-                            count[name + ': engine agrees'] += 1
+                        name = 'opens the federation' if pick['ready_after'] else 'leaves it closed'
+                        if formed == pick['ready_after']:
+                            count[f'C plan: {name} — engine agrees'] += 1
                         else:
-                            count[name + ': MISMATCH'] += 1
-                            examples.append(f"{name[0]} {where} move {pick} engine legal after: {formed} | funds "
+                            count[f'C MISMATCH plan: {name}, engine: {"opens" if formed else "closed"}'] += 1
+                            examples.append(f"C {where} move {pick} engine legal after: {formed} | funds "
                                             f"{p['funds']} -> {board_facts(later['state'], pid)['funds']}")
                 played = candidates[row['index']]['action']
                 if played.get('type') == 'FormFederation':
@@ -399,6 +430,7 @@ if __name__ == '__main__':
     parser.add_argument('command', choices=['check'])
     parser.add_argument('run_dir')
     parser.add_argument('--python-path', help='folder holding the gaia_rl build the run was recorded with')
-    parser.add_argument('--forks', type=int, default=60, help='engine forks per check (C and D each)')
+    parser.add_argument('--stride', type=int, default=1, help='fork the moves of every N-th decision without a federation')
+    parser.add_argument('--seconds', type=float, default=1e9, help='stop forking after this many seconds (A, B, E go on)')
     args = parser.parse_args()
-    check(args.run_dir, args.forks, args.python_path)
+    check(args.run_dir, args.stride, args.seconds, args.python_path)
