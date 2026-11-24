@@ -105,9 +105,14 @@ seats); R5 2.50 · 8.91 · 2.34; R6 3.88 · 10.72 · 2.78. Satellite funds mean 
 - **Mostly short by a lot, not by 1–2.** At the last main turn of round 6, 6 of the 46 stopped seats are 1–2 short
   (4 of 32 and 2 of 14), 36 are 3 or more short (25 and 11), 4 have the power and no candidate (cause unconfirmed).
   The pre-registered first fix candidate E179 (ㄱ) (in R5–6, when the power outside is 2 or less short, a
-  power-raising root inside the four comparisons) therefore reaches at most 6 of 46 seats on these 12 games — an upper
-  bound, since whether a filling move exists and can be paid is not checked. It cannot bring the run to the criterion
-  alone.
+  power-raising root inside the four comparisons) aims at that 1–2 group: 6 of the 46 stopped seats at the end.
+  Recount after the debate (Codex 1/1, accepted — the earlier "at most 6 of 46" is withdrawn as a bound on the fix):
+  the smallest shortfall over every main-turn decision of the final stage (`best_gap` in the `scratch_fed_why.py`
+  output) falls in the same 0 / 1 / 2 / 3 / 4 / 5+ cell as the round-6 last-turn shortfall for all 46 seats, so none
+  of the 36 seats that ended 3 or more short was within 2 at any decision of that stage. Not counted, and therefore
+  no maximum reach is stated: the 4 seats that reached enough power without a candidate, the stages that were formed
+  (12 of the 16 second federations came in round 6 — the fix could bring such a federation forward and leave time
+  for the next), and whether a filling move existed and could be paid at those decisions.
 - **The volume outside the first federation is the gap, and it opens before round 5.** A one-federation seat ends
   round 4 with 1.81 buildings (power 1.94) outside its federation; over R5–R6 the power inside the existing federation
   grows by 2.56 (8.16 → 10.72) and outside by 1.94 (1.94 → 3.88). Total building power at the end: 14.6 for
@@ -128,12 +133,14 @@ from the lab build (67eaa893 against 49318fef), replay tools run in the work tre
 
 - (ㄱ) Bot turn, read-only (a few minutes): the pre-registered count on these 12 games — "could build and passed"
   (E296: building site × target building kind, deduplicated; denominator = all passes), split by round and by
-  federations formed, and whether the buildable target lies outside the seat's federation.
+  federations formed, and whether the buildable target lies outside the seat's federation. Added in the debate: over
+  all R5–6 main-turn decisions (formed stages included), the seats that met the E179 (ㄱ) condition (1–2 short) at
+  least once and the number of payable power-raising moves at those decisions.
 - (ㄴ) Same 12 lines, same teacher, once more (lab ≈ 4 h, command, no verdict): the same-code rerun spread of
   federations per seat and seat mean VP — the noise reference every later fix on these lines is read against.
 - (ㄷ) Federation plan design stages 1–3 (`research/strategy/federation-plan-design.md`, `fed_plan` flag; E179 (ㄱ) is
   its front-slot part) and its measurement on the same 12 lines (lab ≈ 4 h): waits for the user's approval and
-  numbers (short value 2, verdict criterion, number of games). This baseline bounds its reach at 6 of 46 seats unless
-  the plan also acts before round 5 (design part (다), mine sites in R1–5).
+  numbers (short value 2, verdict criterion, number of games). 36 of the 46 stopped seats end 3 or more short, which
+  is the part design (다) (mine sites in R1–5) is about; the reach of the front-slot part is open until (ㄱ).
 Bot recommendation: (ㄱ) and (ㄴ) now (the lab is idle), (ㄷ) after (ㄱ) shows whether the missing buildings were
 affordable.
