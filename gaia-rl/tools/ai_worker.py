@@ -9,6 +9,13 @@ Reply    {"ok": true, "decision": {"phase": "Game", "action": {...}}, "seconds":
 Request  {"op": "forget", "room": "AB12"}   drop that room's teacher memory
 Request  {"op": "ping"}
 
+Rejected moves (research/strategy/ai-move-reject-design.md, stage 1; a request without these keys is answered as before):
+  "exclude": [<decision>, ...]  moves a reply carried for this decision; the teacher chooses among the others
+                                (its root ranking reports them as blocked, so the comparisons go to other moves)
+  "spares": N                   adds "spares": up to min(N, 3) entries {"decision", "searched"} - the answer first, then
+                                the other first moves of completed comparisons by value, then the one-step ranking;
+                                "searched" is false where no completed comparison backs the move
+
 Both levels use the frozen teacher with tools/teacher_patches.py geodens_guide
 (symmetric pass for all seats, Geodens guide order and look-ahead for Geodens).
 Levels: "easy" = the teacher's one-step ranking only; "hard" = 4 comparisons, 20 s cap; "normal" = 2 completed
@@ -16,6 +23,7 @@ comparisons at the next income boundary with a 5 s cap (cycle 016: +21.8 VP/seat
 easy without the cap, -3.8 for the cap). Run with
 PYTHONPATH=python:baseline-teacher-20260917:tools from gaia-rl/.
 """
+import contextlib
 import json
 import os
 import sys
@@ -75,6 +83,72 @@ MAX_ROOMS = 256
 def factory_name(environ=None):
     """The teacher_patches factory this worker runs: GAIA_AI_TEACHER, else the deployed stack."""
     return (os.environ if environ is None else environ).get('GAIA_AI_TEACHER') or DEFAULT_FACTORY
+
+
+MAX_SPARES = 3     # user 2026-11-24: at most 3 spare moves per rejected AI turn
+
+
+def excluded_indices(candidates, exclude):
+    """Candidate indices of the rejected moves. A move that is not a candidate, or a list that leaves no candidate,
+    is an error: the caller must learn that its exclusion did not apply."""
+    if not isinstance(exclude, list):
+        raise ValueError('exclude must be a list of decisions')
+    indices = set()
+    for move in exclude:
+        if move not in candidates:
+            raise ValueError('an excluded move is not a candidate of this decision')
+        indices.add(candidates.index(move))
+    if len(indices) >= len(candidates):
+        raise ValueError('every candidate of this decision is excluded')
+    return indices
+
+
+@contextlib.contextmanager
+def excluding(snapshot, indices):
+    """While open, the ranking of this decision (and of no later one: rollouts rank positions with more steps)
+    reports the candidates in `indices` as blocked. The search then takes its current choice, route first moves and
+    root alternatives from the others (best_index, scoring_pairs and the root list all skip blocked scores).
+    Policies.rank is wrapped for the one call and put back, so a request without exclusions runs untouched code."""
+    import four_factions.preparation as preparation
+    from current_actions.conservation import BLOCKED, PREFIX
+    inner = preparation.Policies.rank
+    root = (snapshot['decision_id'], snapshot['steps'])
+
+    def mark(ranked, scores):
+        if (ranked['decision_id'], ranked['steps']) != root:
+            return scores
+        return [(BLOCKED, PREFIX+'rejected move') if i in indices else score for i, score in enumerate(scores)]
+
+    def rank(self, env, ranked):
+        return mark(ranked, inner(self, env, ranked))
+    if getattr(inner, '_parallel', False):
+        # parallel_search._prefetch ranks the root through Policies.rank.__wrapped__ and hands those scores to its
+        # pool: they must carry the marks too.
+        below = inner.__wrapped__
+        rank.__wrapped__ = lambda self, env, ranked: mark(ranked, below(self, env, ranked))
+        rank._parallel = True
+    preparation.Policies.rank = rank
+    try:
+        yield
+    finally:
+        preparation.Policies.rank = inner
+
+
+def spare_order(index, scores, plans, excluded=()):
+    """[(candidate index, searched)]: the answer `index` first (None: no usable answer), then the other first moves of
+    completed comparisons by value (one entry per first move, its best value), then the remaining candidates by the
+    one-step ranking - that tail is not a search result, hence searched False. Excluded and blocked candidates are
+    left out; the answer counts as searched only when a completed comparison starts with it."""
+    from current_actions.conservation import blocked
+    values = {}
+    for plan in plans:
+        first = plan.get('first')
+        if plan.get('complete') and type(first) is int and first not in excluded:
+            values[first] = max(values.get(first, plan['value']), plan['value'])
+    order = ([] if index is None else [index])+sorted((i for i in values if i != index), key=lambda i: (-values[i], i))
+    rest = sorted((i for i, score in enumerate(scores)
+                   if i not in order and i not in excluded and not blocked(score)), key=lambda i: (-scores[i][0], i))
+    return [(i, i in values) for i in order]+[(i, False) for i in rest]
 
 
 def install_budget(budget_teacher, level):
@@ -164,15 +238,38 @@ def main():
                 teachers.pop(next(iter(teachers)))
             teacher.prefix = []               # a fresh native env per decision starts at step 0
             teacher.bind(env)
-            decision_id, index = teacher.choose(snapshot)
+            excluded = excluded_indices(snapshot['candidates'], request.get('exclude') or [])
+            spares = request.get('spares') or 0
+            if type(spares) is not int or spares < 0:
+                raise ValueError('spares must be a nonnegative integer')
+            if excluded:
+                # The rejected move may be the first step of this seat's saved route: do not put that route first again.
+                teacher.memory.get('_plans', {}).pop(str(snapshot['player']), None)
+            with excluding(snapshot, excluded) if excluded else contextlib.nullcontext():
+                decision_id, index = teacher.choose(snapshot)
             if decision_id != snapshot['decision_id']:
                 raise RuntimeError('teacher answered another decision')
             audit = teacher.last_audit or {}
-            reply({'ok': True, 'decision': snapshot['candidates'][index],
-                   'seconds': round(time.monotonic()-started, 3),
-                   'completed_comparisons': audit.get('completed_comparisons', 0),
-                   'time_capped': bool(audit.get('time_capped')),
-                   'selected': audit.get('selected')})
+            answer = {'ok': True, 'decision': snapshot['candidates'][index],
+                      'seconds': round(time.monotonic()-started, 3),
+                      'completed_comparisons': audit.get('completed_comparisons', 0),
+                      'time_capped': bool(audit.get('time_capped')),
+                      'selected': audit.get('selected')}
+            if excluded or spares:
+                # A pick made outside the ranking (teacher_patches.install_booster_tier_choose) does not see the
+                # marks: an excluded answer is replaced by the best move left and reported as such.
+                replaced = index in excluded
+                order = spare_order(None if replaced else index, getattr(teacher, 'last_scores', None) or [],
+                                    audit.get('plans') or [], excluded)
+                if replaced:
+                    if not order:
+                        raise RuntimeError('no move left after the exclusion')
+                    answer.update(decision=snapshot['candidates'][order[0][0]], exclude_fallback=True,
+                                  selected='best move left after an excluded pick')
+                if spares:
+                    answer['spares'] = [{'decision': snapshot['candidates'][i], 'searched': searched}
+                                        for i, searched in order[:min(spares, MAX_SPARES)]]
+            reply(answer)
         except Exception as error:  # report, never crash the pool member
             print(traceback.format_exc(), file=sys.stderr, flush=True)
             reply({'ok': False, 'error': repr(error)[:500]})
