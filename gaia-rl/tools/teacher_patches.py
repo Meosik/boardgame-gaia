@@ -5489,10 +5489,15 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast(seed, **kwar
 # decision is its own, same round: every other seat has passed), this round's share of the table value counts only up
 # to the best base-ranking score among the candidates the entry opened (not legal before it, Pass excluded):
 # share -> min(share, max(0, best opened)). The shares of the later rounds stay. With another seat to move next the
-# score is returned as given (their moves come first; like pass_last, only the diagnosed case). A ship action that
-# first needs a conversion is not counted as opened (132h reads whether that is too strict).
-def ship_now_scores(env, snapshot, scores, rank_after):
-    """rank_after(branch, after) -> the base ranking of the position after the entry (no side effects on the caller)."""
+# score is returned as given (their moves come first; like pass_last, only the diagnosed case).
+# Widened after lab 132h (E288): counting only the new candidates missed the conversion that was already legal and
+# leads to the ship action (power -> QIC 12.46, then the Rebellion tech tile 17.33; two rollouts fell 143.40 -> 138.60).
+# A candidate that was legal before the entry now counts by what the entry added to it:
+# min(score after, score after - score before), both from the base ranking; blocked before = counted like a new one.
+def ship_now_scores(env, snapshot, scores, rank_after, rank_before=None):
+    """rank_after(branch, after) -> the base ranking of the position after the entry (no side effects on the caller).
+    rank_before() -> the base ranking of this position, the same scale as rank_after (default: `scores`); asked at
+    most once, and only when an entry leaves the move with the explorer."""
     import guide_value as gv
     from current_actions.conservation import blocked
     state, actor = snapshot['state'], snapshot.get('player')
@@ -5503,9 +5508,10 @@ def ship_now_scores(env, snapshot, scores, rank_after):
                and not blocked(scores[i]) and scores[i][0] > 0]
     if not entries:
         return scores
-    before = {json.dumps(c['action'], sort_keys=True) for c in candidates}
+    before = {json.dumps(c['action'], sort_keys=True): k for k, c in enumerate(candidates)}
     held = set(state['players'][actor].get('explored_ships') or ())
     lifted = list(scores)
+    base = None
     for i in entries:
         branch = env.fork(snapshot['decision_id'], i)
         after = json.loads(branch.snapshot_json())
@@ -5520,14 +5526,22 @@ def ship_now_scores(env, snapshot, scores, rank_after):
         else:
             share = gv.to_vp(state, gv.SHIP_ACTION_GAIN*len(new))
         ranked = rank_after(branch, after)
-        opened = [ranked[j][0] for j, d in enumerate(after['candidates'])
-                  if d['action'].get('type') != 'Pass' and not blocked(ranked[j])
-                  and json.dumps(d['action'], sort_keys=True) not in before]
-        used = min(share, max(0.0, max(opened, default=0.0)))
+        if base is None:
+            base = scores if rank_before is None else rank_before()
+        opened, raised = [], []
+        for j, d in enumerate(after['candidates']):
+            if d['action'].get('type') == 'Pass' or blocked(ranked[j]):
+                continue
+            k = before.get(json.dumps(d['action'], sort_keys=True))
+            if k is None or blocked(base[k]):
+                opened.append(ranked[j][0])
+            elif ranked[j][0] > base[k][0]:
+                raised.append(min(ranked[j][0], ranked[j][0]-base[k][0]))
+        used = min(share, max(0.0, max(opened+raised, default=0.0)))
         if used >= share:
             continue
         lifted[i] = (scores[i][0]-share+used, f"{scores[i][1]}; ship_now: this round's share {share:.2f} -> {used:.2f} "
-                     f'({len(opened)} opened)', *scores[i][2:])
+                     f'({len(opened)} opened, {len(raised)} raised)', *scores[i][2:])
     return lifted if lifted != scores else scores
 
 
@@ -5542,7 +5556,8 @@ def install_ship_now():
 
     def rank(self, env, snapshot):
         return ship_now_scores(env, snapshot, inner_rank(self, env, snapshot),
-                               lambda branch, after: base_rank(self.clone(), branch, after))
+                               lambda branch, after: base_rank(self.clone(), branch, after),
+                               lambda: base_rank(self.clone(), env, snapshot))
     for name, value in vars(inner_rank).items():
         if name.startswith('_') and isinstance(value, bool):
             setattr(rank, name, value)

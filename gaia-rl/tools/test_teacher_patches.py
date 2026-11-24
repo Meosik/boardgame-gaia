@@ -3016,9 +3016,14 @@ class ShipNowTests(unittest.TestCase):
                                {'action': {'type': 'RebellionCreditsAndQic'}},
                                {'action': {'type': 'RebellionGainTechTile', 'tile': 11}}]}
 
-    def run_on(self, snapshot, scores, after_scores=None, flags=None, **after_kwargs):
+    def run_on(self, snapshot, scores, after_scores=None, flags=None, before_scores=None, **after_kwargs):
         env = _ShipEnv({1: self.after(**after_kwargs)})
         calls = []
+        before_calls = self.before_calls = []
+
+        def rank_before():
+            before_calls.append(1)
+            return before_scores
 
         def rank_after(branch, after):
             calls.append(after)
@@ -3027,12 +3032,73 @@ class ShipNowTests(unittest.TestCase):
         patch = {'ship_now': True, 'lf_tables': True}
         patch.update(flags or {})
         with mock.patch.dict(tp._guide, patch):
-            result = tp.ship_now_scores(env, snapshot, scores, rank_after)
+            if before_scores is None:
+                result = tp.ship_now_scores(env, snapshot, scores, rank_after)
+            else:
+                result = tp.ship_now_scores(env, snapshot, scores, rank_after, rank_before)
         return result, env, calls
+
+    def test_raised_candidate_above_the_share_leaves_the_score(self):
+        snapshot, scores = self.root()
+        after = [(39.0, 'p'), (12.46, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after)
+        self.assertIs(result, scores)
+
+    def test_high_before_and_after_is_not_counted(self):
+        snapshot, scores = self.root()
+        scores[2] = (9.0, 'x')
+        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after)
+        self.assertAlmostEqual(result[1][0], self.ENTRY - self.SHARE + 0.93)
+        self.assertIn('1 opened, 0 raised', result[1][1])
+
+    def test_partial_rise_counts(self):
+        snapshot, scores = self.root()
+        after = [(39.0, 'p'), (2.5, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after)
+        self.assertAlmostEqual(result[1][0], self.ENTRY - self.SHARE + 2.0)
+        self.assertIn('1 opened, 1 raised', result[1][1])
+
+    def test_rise_bigger_than_the_after_score_counts_the_after_score(self):
+        snapshot, scores = self.root()
+        scores[2] = (-3.0, 'x')
+        after = [(39.0, 'p'), (2.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after)
+        self.assertAlmostEqual(result[1][0], self.ENTRY - self.SHARE + 2.0)
+
+    def test_negative_raise_stays_negative(self):
+        snapshot, scores = self.root()
+        scores[2] = (-10.0, 'x')
+        after = [(39.0, 'p'), (-5.0, 'b'), (-1.0, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after)
+        self.assertAlmostEqual(result[1][0], self.ENTRY - self.SHARE)
+
+    def test_blocked_before_and_open_after_counts_like_a_new_one(self):
+        snapshot, scores = self.root()
+        scores[2] = (BLOCKED, PREFIX + 'y')
+        after = [(39.0, 'p'), (7.78, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after)
+        self.assertIs(result, scores)
+
+    def test_rank_before_is_used_and_asked_once(self):
+        snapshot, scores = self.root()
+        before = [(39.0, 'p'), (1.9, 'e'), (9.0, 'b')]
+        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after, before_scores=before)
+        self.assertAlmostEqual(result[1][0], self.ENTRY - self.SHARE + 0.93)
+        self.assertEqual(len(self.before_calls), 1)
+
+    def test_rank_before_not_asked_when_another_seat_moves_next(self):
+        snapshot, scores = self.root()
+        before = [(39.0, 'p'), (1.9, 'e'), (9.0, 'b')]
+        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after, before_scores=before, player=1)
+        self.assertIs(result, scores)
+        self.assertEqual(len(self.before_calls), 0)
 
     def test_lowered_to_the_best_opened_action(self):
         snapshot, scores = self.root()
-        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        after = [(39.0, 'p'), (0.5, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
         result, env, calls = self.run_on(snapshot, scores, after)
         self.assertAlmostEqual(result[1][0], self.ENTRY - self.SHARE + 0.93)
         self.assertAlmostEqual(result[1][0], -0.6033, places=3)
@@ -3045,34 +3111,34 @@ class ShipNowTests(unittest.TestCase):
 
     def test_unchanged_when_an_opened_action_scores_the_share(self):
         snapshot, scores = self.root()
-        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (7.78, 't')]
+        after = [(39.0, 'p'), (0.5, 'b'), (0.93, 'c'), (7.78, 't')]
         result, env, calls = self.run_on(snapshot, scores, after)
         self.assertIs(result, scores)
 
     def test_nothing_opened_above_zero(self):
         snapshot, scores = self.root()
-        after = [(39.0, 'p'), (9.0, 'b'), (-1.0, 'c'), (BLOCKED, PREFIX + 'y')]
+        after = [(39.0, 'p'), (0.5, 'b'), (-1.0, 'c'), (BLOCKED, PREFIX + 'y')]
         result, env, calls = self.run_on(snapshot, scores, after)
         self.assertAlmostEqual(result[1][0], self.ENTRY - self.SHARE)
         self.assertAlmostEqual(result[1][0], -1.5333, places=3)
 
     def test_unchanged_when_another_seat_moves_next(self):
         snapshot, scores = self.root()
-        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        after = [(39.0, 'p'), (0.5, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
         result, env, calls = self.run_on(snapshot, scores, after, player=1)
         self.assertIs(result, scores)
         self.assertEqual(calls, [])
 
     def test_unchanged_when_the_round_changes(self):
         snapshot, scores = self.root()
-        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        after = [(39.0, 'p'), (0.5, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
         result, env, calls = self.run_on(snapshot, scores, after, rnd=6)
         self.assertIs(result, scores)
         self.assertEqual(calls, [])
 
     def test_unchanged_when_the_next_phase_is_not_the_action_phase(self):
         snapshot, scores = self.root()
-        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        after = [(39.0, 'p'), (0.5, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
         result, env, calls = self.run_on(snapshot, scores, after, phase='IncomeOrderPending')
         self.assertIs(result, scores)
         self.assertEqual(calls, [])
@@ -3102,7 +3168,7 @@ class ShipNowTests(unittest.TestCase):
 
     def test_share_without_lf_tables(self):
         snapshot, scores = self.root()
-        after = [(39.0, 'p'), (9.0, 'b'), (0.5, 'c'), (BLOCKED, PREFIX + 'y')]
+        after = [(39.0, 'p'), (0.5, 'b'), (0.5, 'c'), (BLOCKED, PREFIX + 'y')]
         result, env, calls = self.run_on(snapshot, scores, after, flags={'lf_tables': False})
         self.assertAlmostEqual(result[1][0], self.ENTRY - 2.0/1.5 + 0.5)
 
