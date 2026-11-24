@@ -908,15 +908,25 @@ fn turn_goes_on(
         || !matches!(now.phase, GamePhase::ActionPhase { .. })
 }
 
-/// Records a committed move of an AI seat in the seat's turn (`Room::ai_turn`) and, when the
-/// player looks at every AI turn (`Room::ai_review`) and this move ended the turn, makes the
-/// AI seats wait at the revision the room is at now (`Room::ai_hold`). `true` = they wait.
+/// Records a move of an AI seat in the seat's turn (`Room::ai_turn`) and, when the player
+/// looks at every AI turn (`Room::ai_review`) and this move ended the turn, makes the AI seats
+/// wait at the revision of the move (`Room::ai_hold`). `true` = they wait.
 ///
-/// `turn` is the position the move was asked at and `moved` the revision right after the move.
-/// The move continues the recorded turn only when it was asked at the revision that turn had
-/// reached; anything else (the first move of a turn, a turn broken by an undo or a restart)
-/// starts a new record at `turn.revision`, the revision a rejected turn goes back to.
-fn note_ai_move(room: &mut Room, turn: &Turn, decision: &AiDecision, moved: u64) -> bool {
+/// Called inside the transition that commits the move (`drive`), on the room the move has just
+/// been applied to and before its revision advances: the move and the wait are one commit, so
+/// no command of the player can come between them. (Noting the move after the commit let a
+/// player's answer slip in first and then put the wait on the revision of that answer.)
+/// A round end that follows takes the wait along (`Room::advance_by_server`); a command of the
+/// player ends it.
+///
+/// `turn` is the position the move was asked at. The move continues the recorded turn only
+/// when it was asked at the revision that turn had reached; anything else (the first move of a
+/// turn, a turn broken by an undo or a restart) starts a new record at `turn.revision`, the
+/// revision a rejected turn goes back to.
+fn note_ai_move(room: &mut Room, turn: &Turn, decision: &AiDecision) -> bool {
+    // The revision this transition is committed as: always the next one
+    // (`GameRepository::commit_server_transition`).
+    let moved = turn.revision + 1;
     let continued = room
         .ai_turn
         .take()
@@ -929,17 +939,14 @@ fn note_ai_move(room: &mut Room, turn: &Turn, decision: &AiDecision, moved: u64)
     });
     record.decisions.push(decision.clone());
     record.revision = moved;
-    // A room that moved on past the move (the round ended, the player was faster) is at a new
-    // position: the turn is over whatever the state says.
-    let goes_on = room.revision == moved
-        && room
-            .game_state
-            .as_ref()
-            .is_some_and(|now| turn_goes_on(&turn.state, decision, now, turn.player));
+    let goes_on = room
+        .game_state
+        .as_ref()
+        .is_some_and(|now| turn_goes_on(&turn.state, decision, now, turn.player));
     let held = room.ai_review && !goes_on;
     if held {
         room.ai_hold = Some(AiHold {
-            revision: room.revision,
+            revision: moved,
             turn: record.clone(),
         });
     }
@@ -1159,6 +1166,10 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                 let events = RuleEngine::start_first_round(state)?;
                 state.event_log.extend(events);
             }
+            if reviewed {
+                // Part of this commit: the snapshot of the move already carries the wait.
+                note_ai_move(room, &turn, &decision);
+            }
             Ok(())
         })
         .await;
@@ -1174,23 +1185,8 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                     stall_on_server_error(app, room_code, turn.player).await;
                     return;
                 }
-                if reviewed {
-                    // After the round end, so that a hold is on the revision the room rests at.
-                    let held = {
-                        let mut rooms = app.rooms.write().await;
-                        rooms.get_room_mut(room_code).and_then(|room| {
-                            note_ai_move(room, &turn, &decision, outcome.revision.get())
-                                .then_some(room.revision)
-                        })
-                    };
-                    // The player sees the finished turn with [continue]; the next read of the
-                    // room finds the hold and this driver ends.
-                    if let Some(revision) =
-                        held.and_then(|revision| gaia_protocol::Revision::new(revision).ok())
-                    {
-                        coordinator::broadcast_snapshot(app, room_code, revision).await;
-                    }
-                }
+                // A wait at this turn (`note_ai_move`) came with the commit; the next read of
+                // the room finds it and this driver ends.
             }
             Err(CommandError::Rule(_)) | Err(CommandError::RevisionConflict { .. }) => {
                 let give_up = match rejected {
@@ -1925,6 +1921,26 @@ mod tests {
         (room, ai, other)
     }
 
+    /// What `coordinator::apply_server_transition` does to the in-memory room around a
+    /// transition of the server itself: the revision advances and a current wait goes along.
+    fn server_transition(room: &mut Room, mutate: impl FnOnce(&mut Room) -> bool) -> bool {
+        let waited = room.current_ai_hold().is_some();
+        let result = mutate(room);
+        let next = room.revision + 1;
+        room.advance_by_server(waited, next);
+        result
+    }
+
+    /// The AI seat's move as `drive` commits it: applied (`after` is the state it leads to),
+    /// noted in the same transition, then the revision advances.
+    fn commit_ai_move(room: &mut Room, turn: &Turn, decision: &AiDecision, after: GameState) -> bool {
+        assert_eq!(room.revision, turn.revision, "the move is applied where it was asked");
+        server_transition(room, |room| {
+            room.game_state = Some(after);
+            note_ai_move(room, turn, decision)
+        })
+    }
+
     #[test]
     fn a_free_action_keeps_the_turn_and_the_move_after_it_ends_it() {
         let (mut room, ai, other) = reviewed_room();
@@ -1932,14 +1948,12 @@ mod tests {
         let asked = action_phase(&room, ai, 1);
         room.game_state = Some(asked.clone());
         let first = asked_at(&room, ai, &asked);
-        room.revision = 6;
-        assert!(!note_ai_move(&mut room, &first, &free_action(), 6));
-        assert_eq!(room.current_ai_hold(), None);
+        assert!(!commit_ai_move(&mut room, &first, &free_action(), asked.clone()));
+        assert_eq!((room.revision, room.current_ai_hold()), (6, None));
         // Revision 6: it passes; the room waits for another seat at 7.
         let second = asked_at(&room, ai, &asked);
-        room.game_state = Some(action_phase(&room, other, 1));
-        room.revision = 7;
-        assert!(note_ai_move(&mut room, &second, &pass(), 7));
+        let after = action_phase(&room, other, 1);
+        assert!(commit_ai_move(&mut room, &second, &pass(), after));
         let hold = room.current_ai_hold().cloned().expect("the AI seats wait");
         assert_eq!(hold.revision, 7);
         assert_eq!(
@@ -1968,13 +1982,11 @@ mod tests {
         let asked = action_phase(&room, ai, 1);
         room.game_state = Some(asked.clone());
         let first = asked_at(&room, ai, &asked);
-        room.revision = 6;
-        assert!(!note_ai_move(&mut room, &first, &free_action(), 6));
+        assert!(!commit_ai_move(&mut room, &first, &free_action(), asked.clone()));
         assert_eq!(room.ai_turn.as_ref().map(|turn| turn.decisions.len()), Some(1));
         let second = asked_at(&room, ai, &asked);
-        room.game_state = Some(action_phase(&room, other, 1));
-        room.revision = 7;
-        assert!(!note_ai_move(&mut room, &second, &pass(), 7));
+        let after = action_phase(&room, other, 1);
+        assert!(!commit_ai_move(&mut room, &second, &pass(), after));
         // The finished turn is not kept: nothing waits and nothing could be rejected.
         assert_eq!((room.ai_hold.as_ref(), room.ai_turn.as_ref()), (None, None));
         assert!(coordinator::room_snapshot_view(&room).get("ai_review").is_none());
@@ -1987,16 +1999,52 @@ mod tests {
         let asked = action_phase(&room, ai, 1);
         room.game_state = Some(asked.clone());
         let turn = asked_at(&room, ai, &asked);
-        room.revision = 6;
         let action = AiDecision::Game(GameAction::AcademyQicAction);
-        assert!(note_ai_move(&mut room, &turn, &action, 6));
+        assert!(commit_ai_move(&mut room, &turn, &action, asked.clone()));
         // The next turn of the seat starts its own record at the revision it is asked at.
         room.ai_hold = None;
         let next = asked_at(&room, ai, &asked);
-        room.revision = 7;
-        assert!(note_ai_move(&mut room, &next, &pass(), 7));
+        assert!(commit_ai_move(&mut room, &next, &pass(), asked.clone()));
         let hold = room.current_ai_hold().expect("the AI seats wait");
         assert_eq!((hold.turn.start_revision, hold.turn.decisions.len()), (6, 1));
+    }
+
+    #[test]
+    fn the_round_end_takes_the_wait_along_and_a_command_of_the_player_ends_it_for_good() {
+        // The AI seat passes at revision 5 and the round ends with it.
+        let pass_that_ends_the_round = || {
+            let (mut room, ai, other) = reviewed_room();
+            let asked = action_phase(&room, ai, 1);
+            room.game_state = Some(asked.clone());
+            let turn = asked_at(&room, ai, &asked);
+            let after = action_phase(&room, other, 1);
+            assert!(commit_ai_move(&mut room, &turn, &pass(), after));
+            assert_eq!(room.current_ai_hold().map(|hold| hold.revision), Some(6));
+            (room, other)
+        };
+        let next_round = |room: &mut Room, first: PlayerId| {
+            let state = action_phase(room, first, 2);
+            server_transition(room, |room| {
+                room.game_state = Some(state);
+                true
+            });
+        };
+
+        // The server starts the next round right away: the player still looks at that pass.
+        let (mut room, other) = pass_that_ends_the_round();
+        next_round(&mut room, other);
+        let hold = room.current_ai_hold().expect("the wait went along");
+        assert_eq!((room.revision, hold.revision, hold.turn.start_revision), (7, 7, 5));
+
+        // The player answers before the server gets to the round end (a charge answer between
+        // the AI move's broadcast and `maybe_end_round`): that is the same as [continue], and
+        // the round end after it must not put the old turn's wait on the player's revision.
+        let (mut room, other) = pass_that_ends_the_round();
+        room.revision += 1; // the player's command (`coordinator::apply_command`)
+        assert_eq!(room.current_ai_hold(), None);
+        next_round(&mut room, other);
+        assert_eq!((room.revision, room.current_ai_hold()), (8, None));
+        assert!(coordinator::room_snapshot_view(&room).get("ai_hold").is_none());
     }
 
     #[test]
@@ -2006,13 +2054,6 @@ mod tests {
         assert!(turn_goes_on(&asked, &free_action(), &asked, ai));
         // A new round with the same seat first is not the same turn.
         assert!(!turn_goes_on(&asked, &free_action(), &action_phase(&room, ai, 2), ai));
-        // The round ended while the move was noted: the room is past the move's revision.
-        let mut moved_on = room.clone();
-        moved_on.game_state = Some(asked.clone());
-        let turn = asked_at(&moved_on, ai, &asked);
-        moved_on.revision = 8;
-        assert!(note_ai_move(&mut moved_on, &turn, &free_action(), 6));
-        assert_eq!(moved_on.current_ai_hold().map(|hold| hold.revision), Some(8));
         // Setup: the seat that places again right away is asked as a new turn.
         let setup = room.game_state.clone().expect("the room has a game");
         assert!(matches!(setup.phase, GamePhase::Setup(_)));
@@ -2026,13 +2067,11 @@ mod tests {
         let asked = action_phase(&room, ai, 1);
         room.game_state = Some(asked.clone());
         let first = asked_at(&room, ai, &asked);
-        room.revision = 6;
-        assert!(!note_ai_move(&mut room, &first, &free_action(), 6));
+        assert!(!commit_ai_move(&mut room, &first, &free_action(), asked.clone()));
         // An undo or a restart in between: the seat is asked at 9, not at 6.
         room.revision = 9;
         let again = asked_at(&room, ai, &asked);
-        room.revision = 10;
-        assert!(!note_ai_move(&mut room, &again, &free_action(), 10));
+        assert!(!commit_ai_move(&mut room, &again, &free_action(), asked.clone()));
         let record = room.ai_turn.as_ref().expect("a turn is recorded");
         assert_eq!((record.start_revision, record.decisions.len()), (9, 1));
     }

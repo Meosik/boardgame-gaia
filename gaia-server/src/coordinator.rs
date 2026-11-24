@@ -272,7 +272,9 @@ pub async fn apply_server_transition(
 
     let new_revision = Revision::new(new_revision_raw as u64)
         .map_err(|_| ServerError::Internal("revision overflow".into()))?;
-    candidate.revision = new_revision.get();
+    // A wait at a finished AI turn survives the server's own transitions (`Room::ai_hold`).
+    let waited = room.current_ai_hold().is_some();
+    candidate.advance_by_server(waited, new_revision.get());
     *room = candidate;
 
     Ok(TransitionOutcome {

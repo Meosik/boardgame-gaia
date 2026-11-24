@@ -155,6 +155,20 @@ impl Room {
             .filter(|hold| hold.revision == self.revision)
     }
 
+    /// The room takes the revision a transition of the server itself was committed as (an AI
+    /// move, the next round, the game end; `coordinator::apply_server_transition`). `waited` =
+    /// the AI seats waited at a finished AI turn before the transition: the wait goes along to
+    /// the new revision, because only a command of the player ends it. A wait the player has
+    /// already ended by playing on is not current, so it is not brought back.
+    pub fn advance_by_server(&mut self, waited: bool, revision: u64) {
+        self.revision = revision;
+        if waited {
+            if let Some(hold) = self.ai_hold.as_mut() {
+                hold.revision = revision;
+            }
+        }
+    }
+
 
     /// Show all locally controlled seats without treating them as separate authenticated members.
     pub fn display_players(&self) -> Vec<(PlayerId, String, bool)> {
