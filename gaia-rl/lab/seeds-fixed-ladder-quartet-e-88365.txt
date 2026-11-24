@@ -1,0 +1,12 @@
+quartet-e-88365@factions=Darkanians,BalTaks,Itars,Ivits@order=1,2,0,3
+quartet-e-88365@factions=Moweyds,Nevlas,Firaks,BalTaks@order=0,3,1,2
+quartet-e-88365@factions=Bescods,HadschHallas,BalTaks,Gleens@order=3,2,0,1
+quartet-e-88365@factions=Lantids,Xenos,Bescods,Itars@order=1,0,2,3
+quartet-e-88365@factions=Darkanians,Terrans,SpaceGiants,Geodens@order=2,0,1,3
+quartet-e-88365@factions=Tinkeroids,SpaceGiants,Taklons,Lantids@order=1,0,2,3
+quartet-e-88365@factions=Firaks,Terrans,Nevlas,Darkanians@order=2,3,0,1
+quartet-e-88365@factions=Ivits,Geodens,Taklons,Tinkeroids@order=3,2,1,0
+quartet-e-88365@factions=Geodens,Terrans,Firaks,Gleens@order=3,0,2,1
+quartet-e-88365@factions=Ambas,Xenos,Bescods,Moweyds@order=3,0,1,2
+quartet-e-88365@factions=Xenos,Lantids,Taklons,Tinkeroids@order=2,3,1,0
+quartet-e-88365@factions=SpaceGiants,HadschHallas,Nevlas,Ambas@order=0,2,3,1
