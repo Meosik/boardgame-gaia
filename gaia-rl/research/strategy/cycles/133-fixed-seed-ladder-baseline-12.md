@@ -129,7 +129,50 @@ seats); R5 2.50 · 8.91 · 2.34; R6 3.88 · 10.72 · 2.78. Satellite funds mean 
 No code or deployment change. Lab queue is empty after this cycle. Note for tools: the work tree venv build differs
 from the lab build (67eaa893 against 49318fef), replay tools run in the work tree need the lab module.
 
-## Proposal (user decision, nothing queued)
+## Follow-up counts (E304, bot turn after a clean Codex round, read-only)
+
+`lab/scratch_133_pass_build.py <run>` (replay with the lab build; at each main-turn decision the legal Build / Upgrade
+candidates are deduplicated by site × target building kind; "outside" = an upgrade on a hex that is not federated or a
+mine on a hex not next to a federated hex; "raising" = outside and more building power, the teacher's own predicate
+`conditional_plans/routes.py` 243–252). Legal means with the resources as they are — a building that needs a
+free-action conversion first is not counted. A count, not a verdict: a legal building at a pass does not make the pass
+wrong.
+
+| Round | Passes | A building legal | Raising one legal | Buildable (mean when > 0) | Credits / ore left at those passes |
+|---|---:|---:|---:|---:|---|
+| 1 | 48 | 14 | 14 | 1.9 | 7.2 / 2.4 |
+| 2 | 48 | 17 | 17 | 3.1 | 5.5 / 2.4 |
+| 3 | 48 | 11 | 10 | 3.1 | 3.9 / 2.1 |
+| 4 | 48 | 20 | 19 | 11.3 | 10.2 / 4.5 |
+| 5 | 48 | 19 | 18 | 11.2 | 15.1 / 5.8 |
+| 6 | 48 | 2 | 2 | 3.0 | 3.5 / 1.0 |
+| All | 288 | **83 (29%)** | 80 | | |
+
+By federations formed before the pass (passes / a building legal): 0 → 100 / 32, 1 → 166 / 50, 2 → 20 / 1, 3 → 2 / 0.
+The 20 passes of R5–6 with a raising building legal (R5 18, R6 2) by shortfall of the next federation: enough power 1,
+1–2 short 2, 3 or more short 17.
+
+E179 (ㄱ) condition (R5–6 main-turn decision, next federation 1–2 short): met at least once by **20 of 48 seats**
+(185 decisions). In all 20 a raising building was legal at some such decision.
+- 10 seats formed that federation later; all 10 played a raising building at such a decision.
+- 10 seats were in a stage that stopped (the 6 that ended 1–2 short and the 4 with enough power and no candidate):
+  8 met the condition only in the stopped stage and 7 of them played a raising building at such a decision; 2 met it
+  in a formed and in the stopped stage (Ivits pair-000 played none, Bescods pair-003 one — the stage of that play is
+  not split out).
+- A pass while 1–2 short with a raising building legal — the event the fix was designed around (16 of 72 seats in the
+  93 games, E176) — happened **twice** in the run (Darkanians pair-000, Bescods pair-003).
+
+Reading of the counts:
+- The front-slot part has little direct room on these 12 games: the seats that come within 2 already take the
+  raising building in 18 of 20 cases, and the pass it should prevent occurs twice. What it could still do is bring a
+  federation forward (Lantids pair-010: 27 decisions in the condition, 26 of them in R5, formed in R6; Bescods
+  pair-002: 14, 12 in R5) — not quantified, the decisions include free-action steps before a building.
+- Passing with a building still legal is common in R4–R5 (20 and 19 of 48 passes, 10–15 credits and 4.5–5.8 ore
+  left), and 17 of the 20 late passes with a raising building legal are 3 or more short. In R6 almost nothing legal
+  is left (2 of 48), so the resources are spent by the end; what a pass in R1–R5 delays is the building's income and
+  its power in the rounds before. Whether building then would have been better is not decided by this count.
+
+## Proposal (user decision; (ㄱ) done above, (ㄴ) queued as `134-fixed-seed-ladder-rerun-12`)
 
 - (ㄱ) Bot turn, read-only (a few minutes): the pre-registered count on these 12 games — "could build and passed"
   (E296: building site × target building kind, deduplicated; denominator = all passes), split by round and by
