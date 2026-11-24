@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aiStallWarning, liveActionEntries, liveHighlight, opponentLastMoves, turnStatus } from '../liveActivity';
+import { aiHoldNotice, aiStallWarning, liveActionEntries, liveHighlight, opponentLastMoves, turnStatus } from '../liveActivity';
 import type { GameEvent, GameState, PlayerState } from '../types/game';
 
 const players = [
@@ -177,6 +177,18 @@ describe('aiStallWarning', () => {
     // The server's own failure, not the teacher's: a different line, the same retry button.
     expect(aiStallWarning(state({ ai_stalled: { revision: 7, player: 1, reason: 'server_error' } }))).toBe(
       '⚠ AI 진행 멈춤 — 영희의 수 뒤에 서버가 다음 단계로 넘어가지 못함',
+    );
+  });
+});
+
+describe('aiHoldNotice', () => {
+  it('speaks only while the AI seats wait at a finished AI turn', () => {
+    expect(aiHoldNotice(null)).toBeNull();
+    expect(aiHoldNotice(state({ ai_review: true }))).toBeNull();
+    const turn = { player: 1, start_revision: 5, revision: 7, decisions: [] };
+    const hold = { revision: 7, turn, rejections: 0, spares_left: null, can_reject: true };
+    expect(aiHoldNotice(state({ ai_review: true, ai_hold: hold }))).toBe(
+      '⏸ AI 멈춤 — 영희의 차례가 끝났습니다. 「AI 차례 검토」에서 계속하거나 거절하세요.',
     );
   });
 });

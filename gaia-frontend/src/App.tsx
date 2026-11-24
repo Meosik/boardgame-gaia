@@ -46,12 +46,13 @@ import { SidebarTurnControls } from './components/SidebarTurnControls';
 import { TopPassControl } from './components/TopPassControl';
 import { PlayerActionShelf } from './components/PlayerActionShelf';
 import { TeacherHint } from './components/TeacherHint';
+import { AiTurnReview } from './components/AiTurnReview';
 import { GameOverScreen } from './components/GameOverScreen';
 import { TurnBanner } from './components/TurnBanner';
 import { ActionToast } from './components/ActionToast';
 import { RecentActions } from './components/RecentActions';
 import { ActionReview } from './components/ActionReview';
-import { aiStallWarning, liveActionEntries, liveHighlight, opponentLastMoves, turnStatus } from './liveActivity';
+import { aiHoldNotice, aiStallWarning, liveActionEntries, liveHighlight, opponentLastMoves, turnStatus } from './liveActivity';
 import { LastMoveMarksContext, ReplayHighlightContext } from './replay/highlight';
 import type { LastMoveMarks } from './replay/highlight';
 import { recentActionHex, scrollBoardIntoView } from './boardScroll';
@@ -372,11 +373,18 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
     setTimeline(({ items, at }) => {
       const last = items[items.length - 1];
       if (last === liveGameState) return { items, at };
-      // A snapshot that only sets or clears the AI-stall mark is the same position again.
+      // A snapshot that only sets or clears a mark of the AI seats (stalled, waiting at a
+      // finished turn, the review switch, a replay) is the same position again.
+      const aiMarks = (state: GameState) => JSON.stringify([
+        state.ai_stalled ?? null,
+        state.ai_hold ?? null,
+        state.ai_review ?? false,
+        state.ai_replay ?? null,
+      ]);
       if (
         last
         && (last.event_log?.length ?? 0) === (liveGameState.event_log?.length ?? 0)
-        && JSON.stringify(last.ai_stalled ?? null) !== JSON.stringify(liveGameState.ai_stalled ?? null)
+        && aiMarks(last) !== aiMarks(liveGameState)
       ) {
         return { items: [...items.slice(0, -1), liveGameState], at };
       }
@@ -723,6 +731,8 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   };
   // The AI seats stopped because the teacher gave no usable move; the player asks it again.
   const aiStallText = replay ? null : aiStallWarning(liveGameState);
+  // The AI seats wait at a finished AI turn for 계속 / 거절 (`AiTurnReview`).
+  const aiHoldText = replay ? null : aiHoldNotice(liveGameState);
   async function retryAiSeats() {
     if (!roomCode || !sessionToken || aiRetrying) return;
     setAiRetrying(true);
@@ -1539,7 +1549,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
         <TurnBanner
           status={turnBannerStatus}
           waitKey={reviewing ? null : String(liveGameState?.event_log?.length ?? 0)}
-          warning={aiStallText}
+          warning={aiStallText ?? aiHoldText}
           warningAction={aiStallText ? {
             label: aiRetrying ? '교사 부르는 중…' : '다시 시도',
             busy: aiRetrying,
@@ -1958,6 +1968,9 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             />
             {/* Right above the turn controls, where the player acts; the move is also marked on
                 the map (teacherHintHexes). */}
+            {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && liveGameState && (
+              <AiTurnReview roomCode={roomCode} sessionToken={sessionToken} state={liveGameState} />
+            )}
             {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && (
               <TeacherHint
                 roomCode={roomCode}

@@ -392,6 +392,17 @@ pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
         if let Some(hold) = room.current_ai_hold() {
             fields.insert("ai_hold".into(), json!(hold));
         }
+        // An AI seat is playing a rejected turn again and has not finished it.
+        if let Some(replay) = crate::ai::replay_in_progress(room) {
+            fields.insert(
+                "ai_replay".into(),
+                json!({
+                    "player": replay.player,
+                    "start_revision": replay.start_revision,
+                    "rejections": replay.rejections,
+                }),
+            );
+        }
     }
     view
 }

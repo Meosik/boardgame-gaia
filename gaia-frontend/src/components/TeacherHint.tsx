@@ -22,7 +22,8 @@ interface Shown {
 
 const NO_HEXES: HexCoord[] = [];
 
-function hintLabel(decision: unknown, state: GameState): string {
+/** A teacher decision (`{ phase, action }`) in the words of the coach's candidate list. */
+export function hintLabel(decision: unknown, state: GameState): string {
   const candidate = decision as Candidate | null;
   if (!candidate || typeof candidate !== 'object' || !candidate.action
     || typeof candidate.action.type !== 'string') {

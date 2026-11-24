@@ -39,7 +39,7 @@ interface RoomStore {
       options?: { name?: string; password?: string },
     ) => Promise<void>;
     createTutorialGame: () => Promise<void>;
-    createAiGame: (nickname: string, level?: AiLevel, table?: AiGameTable) => Promise<void>;
+    createAiGame: (nickname: string, level?: AiLevel, table?: AiGameTable, review?: boolean) => Promise<void>;
     joinRoom: (code: string, nickname: string, sessionToken?: string, password?: string) => Promise<void>;
     regenerateSetup: (seed?: string) => Promise<void>;
     fetchPreviewBoard: () => Promise<void>;
@@ -113,10 +113,12 @@ export const useRoomStore = createWithEqualityFn<RoomStore>()(
             sessionToken: res.session_token, nickname: '나', manualControl: false });
         },
 
-        async createAiGame(nickname, level = 'normal', table) {
-          const res = table
-            ? await api.createAiGame(nickname, level, table)
-            : await api.createAiGame(nickname, level);
+        async createAiGame(nickname, level = 'normal', table, review = false) {
+          const res = review
+            ? await api.createAiGame(nickname, level, table, true)
+            : table
+              ? await api.createAiGame(nickname, level, table)
+              : await api.createAiGame(nickname, level);
           set({
             manualControl: false,
             roomCode: res.room_code,

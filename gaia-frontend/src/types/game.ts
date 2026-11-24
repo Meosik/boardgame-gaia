@@ -411,6 +411,25 @@ export interface TutorialState {
   };
 }
 
+/** The finished AI turn the AI seats of an AI game wait at (server: `AiHold`). */
+export interface AiHold {
+  /** The room revision the AI seats wait at; `api.aiReject` names it. */
+  revision: number;
+  turn: {
+    player: PlayerId;
+    start_revision: number;
+    revision: number;
+    /** The seat's moves of this turn in order, each `{ phase, action }` as the engine names it. */
+    decisions: unknown[];
+  };
+  /** How often this turn has been rejected (0 = the teacher's first choice). */
+  rejections: number;
+  /** Spare moves left for another rejection; `null` until the turn was rejected once. */
+  spares_left: number | null;
+  /** `false` = no other move is left for this turn. */
+  can_reject: boolean;
+}
+
 export interface GameState {
   tutorial?: TutorialState | null;
   dev_controller?: PlayerId | null;
@@ -418,6 +437,14 @@ export interface GameState {
    * wait at this position: the teacher gave no usable move for `player` and nothing was played
    * for it. Absent otherwise; `api.aiRetry` asks the teacher again. */
   ai_stalled?: { revision: number; player: PlayerId; reason: 'no_answer' | 'rejected' | 'server_error' } | null;
+  /** Added by the server to a live snapshot (not game state) of an AI game whose player looks
+   * at every AI turn (`api.aiReview`). Absent when the option is off. */
+  ai_review?: boolean;
+  /** Added by the server while the AI seats wait at a finished AI turn (`ai_review` is on):
+   * the player lets them play on (`api.aiContinue`) or rejects the turn (`api.aiReject`). */
+  ai_hold?: AiHold | null;
+  /** Added by the server while an AI seat plays a rejected turn again and has not finished it. */
+  ai_replay?: { player: PlayerId; start_revision: number; rejections: number } | null;
   players: PlayerState[];
   board: BoardState;
   research_board: ResearchBoard;

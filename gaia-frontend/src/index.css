@@ -5689,6 +5689,12 @@ button.lobby-entry { font: inherit; text-align: left; cursor: pointer; }
 .teacher-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem 0; }
 .teacher-hint-note { color: var(--color-muted); font-size: 0.78rem; }
 .teacher-hint-move { flex-basis: 100%; margin: 0; padding: 0.45rem 0.6rem; border-left: 3px solid #4ade80; border-radius: 4px; background: rgba(74, 222, 128, 0.12); font-size: 1.05rem; line-height: 1.4; }
+/* AI turn review: the switch, and the finished AI turn the AI seats wait at. */
+.ai-turn-review-switch { flex-basis: 100%; font-size: 0.85rem; }
+.ai-turn-review-hold { flex-basis: 100%; }
+.ai-turn-review-hold .teacher-hint-move { border-left-color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+.ai-turn-review-moves { margin: 0.4rem 0; padding-left: 1.4rem; font-size: 0.92rem; line-height: 1.4; }
+.ai-turn-review-hold > .teacher-hint-note { margin: 0.3rem 0; }
 
 /* AI test: the four dealt factions are the start buttons. */
 .ai-test-factions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin: 0 0 1rem; padding: 0; border: 0; }

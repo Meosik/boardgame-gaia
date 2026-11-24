@@ -21,6 +21,8 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
   const order = aiTestTurnOrder(factions);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  /** The AI seats wait after each of their turns for 계속 / 거절 (can be switched in the game too). */
+  const [review, setReview] = useState(false);
   const createAiGame = useRoomStore((s) => s.actions.createAiGame);
 
   async function start(faction: FactionId) {
@@ -36,7 +38,7 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
         faction,
         aiFactions: order.filter((other) => other !== faction),
         seat: order.indexOf(faction) + 1,
-      });
+      }, review);
       onGameCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 테스트를 시작하지 못했습니다');
@@ -85,6 +87,17 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
           );
         })}
       </fieldset>
+      <div className="form-group">
+        <label>
+          <input
+            type="checkbox"
+            checked={review}
+            disabled={loading}
+            onChange={(e) => setReview(e.target.checked)}
+          />
+          {' '}AI 차례마다 멈춤 — AI가 둔 수를 보고 [계속] 또는 [거절](다른 수로 다시 두게 함)
+        </label>
+      </div>
       <p>
         <small>
           나머지 세 종족은 AI(어려움)가 둡니다. 맵·타일은 실험과 같은 시드({AI_TEST_MAP_SEED})로

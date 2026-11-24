@@ -270,6 +270,16 @@ export function aiStallWarning(state: GameState | null | undefined): string | nu
   return `⚠ AI 교사 응답 없음 — ${seat} 차례에서 멈춤 (${why})`;
 }
 
+/** The banner's line while the AI seats wait at a finished AI turn (`GameState.ai_hold`): the
+ * game goes on only when the player continues, rejects the turn or plays their own move. */
+export function aiHoldNotice(state: GameState | null | undefined): string | null {
+  const hold = state?.ai_hold;
+  if (!hold) return null;
+  const seat = state.players.find((player) => player.player_id === hold.turn.player)?.nickname
+    ?? `플레이어 ${hold.turn.player}`;
+  return `⏸ AI 멈춤 — ${seat}의 차례가 끝났습니다. 「AI 차례 검토」에서 계속하거나 거절하세요.`;
+}
+
 /** One sentence for the banner: who acts now, and what the viewing player must do. */
 export function turnStatus(state: GameState, myPlayerId: PlayerId): TurnStatus | null {
   const nameOf = (id: PlayerId) =>

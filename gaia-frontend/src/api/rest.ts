@@ -74,13 +74,20 @@ export const api = {
    * With `table` the game skips the setup auction: the map comes from `table.seed` and the seats
    * get the named factions (the rest are drawn from the seed). `setup_mode` is always sent with
    * it — the server's default is the auction, which has no fixed factions. */
-  createAiGame(nickname: string, level: AiLevel = 'normal', table?: AiGameTable): Promise<DevGameResponse> {
+  createAiGame(
+    nickname: string,
+    level: AiLevel = 'normal',
+    table?: AiGameTable,
+    /** `true` = the AI seats wait after each of their turns (`aiContinue` / `aiReject`). */
+    review = false,
+  ): Promise<DevGameResponse> {
     return request(`${BASE}/dev-games`, {
       method: 'POST',
       body: JSON.stringify({
         nickname,
         ai_opponents: true,
         ai_level: level,
+        ...(review ? { ai_review: true } : {}),
         ...(table
           ? {
               setup_mode: 'sequential',
@@ -154,6 +161,33 @@ export const api = {
     return request(`${BASE}/rooms/${code}/ai-retry`, {
       method: 'POST',
       body: JSON.stringify({ session_token: sessionToken }),
+    });
+  },
+
+  /** Turns the wait after every AI turn on or off (`GameState.ai_review`). The server keeps the
+   * setting in memory only: after a server restart it is off again. */
+  aiReview(code: string, sessionToken: string, enabled: boolean): Promise<{ ok: boolean }> {
+    return request(`${BASE}/rooms/${code}/ai-review`, {
+      method: 'POST',
+      body: JSON.stringify({ session_token: sessionToken, enabled }),
+    });
+  },
+
+  /** Lets the AI seats play on from the finished AI turn they wait at (`GameState.ai_hold`). */
+  aiContinue(code: string, sessionToken: string): Promise<{ ok: boolean }> {
+    return request(`${BASE}/rooms/${code}/ai-continue`, {
+      method: 'POST',
+      body: JSON.stringify({ session_token: sessionToken }),
+    });
+  },
+
+  /** Rejects the finished AI turn the AI seats wait at: the room goes back to that turn's first
+   * position and the seat plays it again without the move that ended it. `revision` is the
+   * hold's (`GameState.ai_hold.revision`); the new position arrives as snapshots. */
+  aiReject(code: string, sessionToken: string, revision: number): Promise<{ ok: boolean }> {
+    return request(`${BASE}/rooms/${code}/ai-reject`, {
+      method: 'POST',
+      body: JSON.stringify({ session_token: sessionToken, expected_revision: revision }),
     });
   },
 

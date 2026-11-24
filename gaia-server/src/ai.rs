@@ -1145,6 +1145,23 @@ fn rejection_for(room: &Room, player: PlayerId) -> Option<&AiRejected> {
     (first || later).then_some(rejected)
 }
 
+/// The replay the room is in the middle of: it waits for an AI seat whose rejected turn is
+/// being played again. Sent with the snapshot as `ai_replay`, so that the screen can say the
+/// seat is still choosing: only the first decision of a replay can be a stored spare, every
+/// later decision of the turn is a new search (`replay_step`) — a spare that is a free action
+/// is followed by one.
+pub fn replay_in_progress(room: &Room) -> Option<&AiRejected> {
+    room.ai_rejected.as_ref()?;
+    if room.current_ai_hold().is_some() {
+        return None;
+    }
+    let state = room.game_state.as_ref()?;
+    awaited_players(state)
+        .into_iter()
+        .filter(|player| Some(*player) != room.dev_human_player)
+        .find_map(|player| rejection_for(room, player))
+}
+
 /// How one decision of a replay is found.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Replay {
@@ -2552,9 +2569,19 @@ mod tests {
                 spares: MAX_SPARES,
             }))
         );
+        // The screen is told that the seat plays the turn again (`ai_replay`).
+        let replay_mark = |room: &Room| {
+            crate::coordinator::room_snapshot_view(room)
+                .get("ai_replay")
+                .cloned()
+        };
+        let mark = serde_json::json!({ "player": ai, "start_revision": 8, "rejections": 1 });
+        assert_eq!(replay_mark(&room), Some(mark.clone()));
         // The teacher answers a free action and two spares; `drive` saves them with the move.
         room.ai_rejected.as_mut().unwrap().spares = Some(vec![spare(pass()), spare(research())]);
         assert!(!commit_ai_move(&mut room, &first, &free_action(), start.clone()));
+        // Still the same replay after its free action.
+        assert_eq!(replay_mark(&room), Some(mark));
         // Later decision of the same turn: a search without the rejected move, no spares.
         let later = asked_at(&room, ai, &start);
         let rejected = later.rejected.clone().expect("the replay applies to the whole turn");
@@ -2575,6 +2602,8 @@ mod tests {
         let hold = room.current_ai_hold().expect("the replay is held");
         assert_eq!((hold.rejections, hold.spares_left, hold.can_reject), (1, Some(2), true));
         assert_eq!(hold.turn.start_revision, 8);
+        // A finished replay is a held turn, no longer a replay in progress.
+        assert_eq!(replay_mark(&room), None);
     }
 
     #[test]

@@ -135,6 +135,35 @@ describe('AI test', () => {
     expect(bodies[1]).toEqual({ nickname: '나', ai_opponents: true, ai_level: 'normal' });
   });
 
+  it('asks for the wait after every AI turn only when the box is ticked', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => new Response('{}', { status: 200 }));
+    await api.createAiGame('나', 'hard', { seed: 's1', faction: 'Ivits' }, true);
+    await api.createAiGame('나', 'normal', undefined, true);
+    const bodies = fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
+    expect(bodies[0]).toMatchObject({ ai_review: true, setup_mode: 'sequential', seed: 's1' });
+    expect(bodies[1]).toEqual({ nickname: '나', ai_opponents: true, ai_level: 'normal', ai_review: true });
+    fetchMock.mockRestore();
+
+    const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
+      room_code: 'AI1234',
+      player_id: 5,
+      session_token: 'token',
+      game_setup: null as never,
+      game_state: null as never,
+      players: [{ player_id: 5, nickname: '나', ready: true }] as never,
+      host_player_id: 5,
+    });
+    const onGameCreated = vi.fn();
+    render(<AiTestView onGameCreated={onGameCreated} onBack={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /AI 차례마다 멈춤/ }));
+    fireEvent.click(dealtButtons()[0]);
+    await waitFor(() => expect(onGameCreated).toHaveBeenCalled());
+    expect(createAiGame.mock.calls[0][3]).toBe(true);
+  });
+
   it('opens from its own entry on the lobby front page', async () => {
     vi.spyOn(api, 'listRooms').mockResolvedValue([]);
     const onAiTest = vi.fn();
