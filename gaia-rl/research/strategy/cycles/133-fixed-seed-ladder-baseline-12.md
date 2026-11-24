@@ -163,10 +163,12 @@ E179 (ㄱ) condition (R5–6 main-turn decision, next federation 1–2 short): m
   93 games, E176) — happened **twice** in the run (Darkanians pair-000, Bescods pair-003).
 
 Reading of the counts:
-- The front-slot part has little direct room on these 12 games: the seats that come within 2 already take the
-  raising building in 18 of 20 cases, and the pass it should prevent occurs twice. What it could still do is bring a
-  federation forward (Lantids pair-010: 27 decisions in the condition, 26 of them in R5, formed in R6; Bescods
-  pair-002: 14, 12 in R5) — not quantified, the decisions include free-action steps before a building.
+- The pass the front-slot part was designed around occurs twice on these 12 games, and 18 of the 20 seats that come
+  within 2 play a raising building at least once in that condition. That is a count of seats, not the effect of the
+  fix (Codex debate, accepted): bringing a federation forward (Lantids pair-010: 27 decisions in the condition, 26 of
+  them in R5, formed in R6; Bescods pair-002: 14, 12 in R5) is not measured — the decisions include free-action steps
+  before a building. The order of the front-slot part (나) and the site part (다) is therefore not settled by this
+  count.
 - Passing with a building still legal is common in R4–R5 (20 and 19 of 48 passes, 10–15 credits and 4.5–5.8 ore
   left), and 17 of the 20 late passes with a raising building legal are 3 or more short. In R6 almost nothing legal
   is left (2 of 48), so the resources are spent by the end; what a pass in R1–R5 delays is the building's income and
