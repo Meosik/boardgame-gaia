@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use gaia_engine::{game_state::PlayerId, GameSetup, GameState, Randomizer, SetupMode};
+use gaia_engine::{
+    game_state::PlayerId, rules::engine::AiDecision, GameSetup, GameState, Randomizer, SetupMode,
+};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -84,6 +86,37 @@ pub struct Room {
     /// holds only for the revision it names, is kept in memory only, and is sent with the
     /// snapshots of that revision as `ai_stalled`.
     pub ai_stalled: Option<AiStall>,
+    /// The player looks at every AI turn (`crate::ai`): when an AI seat has ended its turn the
+    /// AI seats wait (`ai_hold`) until the player continues. Kept in memory only, so it is off
+    /// again after a server restart; sent with the snapshots as `ai_review`.
+    pub ai_review: bool,
+    /// The moves the AI seat in turn has played since its turn began (`crate::ai`). Memory only.
+    pub ai_turn: Option<AiTurn>,
+    /// Set while the AI seats wait for the player to look at a finished AI turn. It holds only
+    /// for the revision it names — any command of the player moves the room on, which is the
+    /// same as continuing — and is sent with the snapshots of that revision as `ai_hold`.
+    pub ai_hold: Option<AiHold>,
+}
+
+/// One turn of an AI seat: every decision the seat made from the position it was first asked
+/// at until its turn ended (free actions, then the action or pass that ends the turn).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AiTurn {
+    pub player: PlayerId,
+    /// The room revision of the turn's first decision: a rejected turn goes back to it.
+    pub start_revision: u64,
+    /// The room revision after the last recorded move; the turn goes on only from there.
+    pub revision: u64,
+    pub decisions: Vec<AiDecision>,
+}
+
+/// See `Room::ai_hold`.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AiHold {
+    /// The room revision the AI seats wait at.
+    pub revision: u64,
+    /// The finished turn the player is looking at.
+    pub turn: AiTurn,
 }
 
 /// See `Room::ai_stalled`.
@@ -112,6 +145,14 @@ impl Room {
     /// longer counts.
     pub fn current_ai_stall(&self) -> Option<AiStall> {
         self.ai_stalled.filter(|stall| stall.revision == self.revision)
+    }
+
+    /// The finished AI turn the room waits at now; one left from an earlier revision no longer
+    /// counts (the player played on).
+    pub fn current_ai_hold(&self) -> Option<&AiHold> {
+        self.ai_hold
+            .as_ref()
+            .filter(|hold| hold.revision == self.revision)
     }
 
 
@@ -301,6 +342,9 @@ impl RoomManager {
             ai_level: None,
             ai_teacher: None,
             ai_stalled: None,
+            ai_review: false,
+            ai_turn: None,
+            ai_hold: None,
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))

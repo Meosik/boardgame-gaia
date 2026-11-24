@@ -85,6 +85,10 @@ pub struct CreateDevGameRequest {
     pub ai_opponents: bool,
     /// AI difficulty for `ai_opponents` games: `easy`, `normal` or `hard` (default: server's).
     pub ai_level: Option<String>,
+    /// The player looks at every AI turn of an `ai_opponents` game: the AI seats wait after
+    /// each of their turns until the player continues (`crate::ai`, `Room::ai_review`).
+    #[serde(default)]
+    pub ai_review: bool,
     /// The three AI seats' factions for an `ai_opponents` game (default: drawn from the seed).
     /// Naming these or `faction` skips the setup auction, see `dev_game::ai_game_setup`.
     #[serde(default)]
@@ -388,6 +392,7 @@ pub async fn create_dev_game(
             None
         };
         room.ai_teacher = ai_teacher;
+        room.ai_review = ai_opponents && req.ai_review;
         for (_, _, ready) in &mut room.players {
             *ready = !req.full_setup;
         }
@@ -572,6 +577,54 @@ pub async fn ai_retry(
         ServerError::InvalidAction("only the human seat of an AI game restarts its AI seats".into())
     })?;
     Ok(Json(serde_json::json!({ "ok": true })))
+}
+
+/// The player has looked at the AI turn the AI seats wait at and lets them play on
+/// (`crate::ai::continue_after_hold`). Asked by the game's human seat; harmless when nothing
+/// waits.
+pub async fn ai_continue(
+    State(app): State<AppState>,
+    Path(code): Path<String>,
+    Json(req): Json<AiRetryRequest>,
+) -> ServerResult<Json<serde_json::Value>> {
+    let (player, session_room) = ReconnectService::validate_session(&app, &req.session_token).await?;
+    if session_room != code {
+        return Err(ServerError::InvalidSession);
+    }
+    app.ensure_room_loaded(&code).await?;
+    crate::ai::continue_after_hold(&app, &code, player)
+        .await
+        .map_err(|_| {
+            ServerError::InvalidAction("only the human seat of an AI game continues its AI seats".into())
+        })?;
+    Ok(Json(serde_json::json!({ "ok": true })))
+}
+
+#[derive(Deserialize)]
+pub struct AiReviewRequest {
+    pub session_token: String,
+    /// `true` = the AI seats wait after each of their turns until the player continues.
+    pub enabled: bool,
+}
+
+/// Turns the review of AI turns on or off for an AI game (`crate::ai::set_review`). Asked by
+/// the game's human seat; the new setting arrives with a snapshot (`ai_review`).
+pub async fn ai_review(
+    State(app): State<AppState>,
+    Path(code): Path<String>,
+    Json(req): Json<AiReviewRequest>,
+) -> ServerResult<Json<serde_json::Value>> {
+    let (player, session_room) = ReconnectService::validate_session(&app, &req.session_token).await?;
+    if session_room != code {
+        return Err(ServerError::InvalidSession);
+    }
+    app.ensure_room_loaded(&code).await?;
+    crate::ai::set_review(&app, &code, player, req.enabled)
+        .await
+        .map_err(|_| {
+            ServerError::InvalidAction("only the human seat of an AI game sets its AI turn review".into())
+        })?;
+    Ok(Json(serde_json::json!({ "ok": true, "enabled": req.enabled })))
 }
 
 /// Read-only preview of the board/tiles the current `room.setup`/`room.seed` would produce if the

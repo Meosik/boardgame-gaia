@@ -11,7 +11,11 @@ Request  {"op": "ping"}
 
 Rejected moves (research/strategy/ai-move-reject-design.md, stage 1; a request without these keys is answered as before):
   "exclude": [<decision>, ...]  moves a reply carried for this decision; the teacher chooses among the others
-                                (its root ranking reports them as blocked, so the comparisons go to other moves)
+                                (its root ranking reports them as blocked, so the comparisons go to other moves);
+                                {"action_type": "Pass"} stands for every candidate of that action type;
+                                the reply's "excluded" is the number of candidates left out
+  "skip_missing": true          an exclude entry that matches no candidate is skipped instead of an error (one
+                                list for every decision of a rejected turn)
   "spares": N                   adds "spares": up to min(N, 3) entries {"decision", "searched"} - the answer first, then
                                 the other first moves of completed comparisons by value, then the one-step ranking;
                                 "searched" is false where no completed comparison backs the move
@@ -88,16 +92,25 @@ def factory_name(environ=None):
 MAX_SPARES = 3     # user 2026-11-24: at most 3 spare moves per rejected AI turn
 
 
-def excluded_indices(candidates, exclude):
-    """Candidate indices of the rejected moves. A move that is not a candidate, or a list that leaves no candidate,
-    is an error: the caller must learn that its exclusion did not apply."""
+def excluded_indices(candidates, exclude, skip_missing=False):
+    """Candidate indices of the rejected moves. An entry is a decision a reply carried, or {"action_type": T} for
+    every candidate whose action is of type T (a rejected pass: no pass at all, whatever the booster). An entry that
+    matches no candidate is an error - the caller must learn that its exclusion did not apply - unless
+    `skip_missing`: a rejected turn sends one list with every decision of the turn and the candidates differ from
+    decision to decision (the reply's "excluded" then says how many candidates were left out). A list that leaves
+    no candidate is always an error."""
     if not isinstance(exclude, list):
         raise ValueError('exclude must be a list of decisions')
     indices = set()
     for move in exclude:
-        if move not in candidates:
+        if isinstance(move, dict) and set(move) == {'action_type'}:
+            found = [i for i, candidate in enumerate(candidates)
+                     if isinstance(candidate.get('action'), dict) and candidate['action'].get('type') == move['action_type']]
+        else:
+            found = [i for i, candidate in enumerate(candidates) if candidate == move]
+        if not found and not skip_missing:
             raise ValueError('an excluded move is not a candidate of this decision')
-        indices.add(candidates.index(move))
+        indices.update(found)
     if len(indices) >= len(candidates):
         raise ValueError('every candidate of this decision is excluded')
     return indices
@@ -238,7 +251,8 @@ def main():
                 teachers.pop(next(iter(teachers)))
             teacher.prefix = []               # a fresh native env per decision starts at step 0
             teacher.bind(env)
-            excluded = excluded_indices(snapshot['candidates'], request.get('exclude') or [])
+            excluded = excluded_indices(snapshot['candidates'], request.get('exclude') or [],
+                                        bool(request.get('skip_missing')))
             spares = request.get('spares') or 0
             if type(spares) is not int or spares < 0:
                 raise ValueError('spares must be a nonnegative integer')
@@ -255,6 +269,8 @@ def main():
                       'completed_comparisons': audit.get('completed_comparisons', 0),
                       'time_capped': bool(audit.get('time_capped')),
                       'selected': audit.get('selected')}
+            if request.get('exclude'):
+                answer['excluded'] = len(excluded)      # candidates left out; 0 = no entry matched (skip_missing)
             if excluded or spares:
                 # A pick made outside the ranking (teacher_patches.install_booster_tier_choose) does not see the
                 # marks: an excluded answer is replaced by the best move left and reported as such.

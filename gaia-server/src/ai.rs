@@ -12,6 +12,13 @@
 //! screen) until the player asks for another try (`retry`). No other bot ever moves an AI
 //! seat, so every AI move of such a game is the teacher's.
 //!
+//! Review of AI turns (optional per room, `Room::ai_review`): the driver records the moves of
+//! the AI seat in turn (`note_ai_move`) and, when the seat's turn has ended, stops until the
+//! player continues (`continue_after_hold`) or plays on. The finished turn is sent with the
+//! snapshot (`ai_hold`). A request to the teacher may leave moves out and ask for spare moves
+//! (`Exclusions`); rejecting a held turn is built on these (research/strategy/
+//! ai-move-reject-design.md).
+//!
 //! Teacher versions (optional, `GAIA_AI_TEACHERS_DIR`): a folder outside the image holding one
 //! sub-folder per promoted teacher (`tools/teacher_version.py`), each mirroring the repository
 //! layout (`<version>/gaia-rl/tools/ai_worker.py`, ...) plus `<version>/teacher.json`, and a
@@ -34,7 +41,7 @@ use std::time::Duration;
 use gaia_engine::{
     error::RuleError,
     game_state::{GamePhase, PlayerId, SetupPhase},
-    rules::engine::AiDecision,
+    rules::{actions::GameAction, engine::AiDecision},
     GameState, RuleEngine,
 };
 use serde::Deserialize;
@@ -44,7 +51,7 @@ use tokio::sync::{watch, Mutex};
 
 use crate::{
     coordinator::{self, CommandError},
-    room::manager::{AiStall, AiStallReason, Room, RoomState},
+    room::manager::{AiHold, AiStall, AiStallReason, AiTurn, Room, RoomState},
     services::{
         dev_game::required_player,
         game_action::apply_server_seat_action,
@@ -185,6 +192,90 @@ struct Reply {
     ok: bool,
     decision: Option<AiDecision>,
     error: Option<String>,
+    /// Only in the reply to a request with `Exclusions` (see there).
+    #[serde(default)]
+    spares: Vec<Spare>,
+    #[serde(default)]
+    excluded: usize,
+    #[serde(default)]
+    exclude_fallback: bool,
+}
+
+/// A move the teacher would play instead of a rejected one (`tools/ai_worker.py` "spares").
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, serde::Serialize)]
+pub struct Spare {
+    pub decision: AiDecision,
+    /// `false` = no completed comparison starts with the move: it is the next one of the
+    /// teacher's one-step ranking, not a search result.
+    pub searched: bool,
+}
+
+/// One entry of the moves a teacher request leaves out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Excluded {
+    /// This move.
+    Move(AiDecision),
+    /// Every move of this action type (`"Pass"`: a rejected pass means no pass at all in that
+    /// turn, whatever the booster).
+    ActionType(String),
+}
+
+/// What a rejected AI turn adds to a teacher request; the default adds nothing, and the
+/// request is then the one every ordinary AI move is asked with.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Exclusions {
+    /// Moves the teacher must not answer. An entry that is no candidate of the asked decision
+    /// is skipped: the list is the same for every decision of the turn.
+    pub moves: Vec<Excluded>,
+    /// How many moves the reply lists as `Answer::spares` (the worker gives at most 3).
+    pub spares: usize,
+}
+
+/// The teacher's reply to a request with `Exclusions`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Answer {
+    pub decision: AiDecision,
+    /// The answer first, then the moves the teacher would play next, each with whether a
+    /// completed comparison backs it. Empty unless `Exclusions::spares` asked for them.
+    pub spares: Vec<Spare>,
+    /// Candidates of the decision the exclusions left out; 0 = no entry matched.
+    pub excluded: usize,
+    /// The teacher's own pick was an excluded move (a pick made outside its ranking) and the
+    /// worker answered the best move left instead.
+    pub replaced: bool,
+}
+
+/// The request line for one decision. Without exclusions it has exactly the keys it always
+/// had, so the worker answers it with the code every AI move has been answered with.
+fn choose_request(
+    memory: &str,
+    player: PlayerId,
+    level: &str,
+    state: &GameState,
+    exclusions: &Exclusions,
+) -> serde_json::Value {
+    let mut request = serde_json::json!({
+        "op": "choose", "room": memory, "player": player,
+        "level": level, "state": state,
+    });
+    if let Some(fields) = request.as_object_mut() {
+        if !exclusions.moves.is_empty() {
+            let moves: Vec<serde_json::Value> = exclusions
+                .moves
+                .iter()
+                .map(|entry| match entry {
+                    Excluded::Move(decision) => serde_json::json!(decision),
+                    Excluded::ActionType(kind) => serde_json::json!({ "action_type": kind }),
+                })
+                .collect();
+            fields.insert("exclude".into(), moves.into());
+            fields.insert("skip_missing".into(), true.into());
+        }
+        if exclusions.spares > 0 {
+            fields.insert("spares".into(), exclusions.spares.into());
+        }
+    }
+    request
 }
 
 /// One request line to a worker and its one reply line.
@@ -517,6 +608,31 @@ impl AiPool {
         level: Option<&str>,
         teacher: Option<&str>,
     ) -> Option<AiDecision> {
+        self.ask(
+            room_code,
+            memory,
+            state,
+            player,
+            level,
+            teacher,
+            &Exclusions::default(),
+        )
+        .await
+        .map(|answer| answer.decision)
+    }
+
+    /// `choose_in` with the moves a rejected turn leaves out and the spare moves asked for.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn ask(
+        &self,
+        room_code: &str,
+        memory: &str,
+        state: &GameState,
+        player: PlayerId,
+        level: Option<&str>,
+        teacher: Option<&str>,
+        exclusions: &Exclusions,
+    ) -> Option<Answer> {
         let teacher = teacher.filter(|version| match self.version_dir(version) {
             Ok(_) => true,
             Err(reason) => {
@@ -548,10 +664,7 @@ impl AiPool {
         };
         let level = level.unwrap_or(&self.config.level);
         let state = &asked_as(state, player);
-        let request = serde_json::json!({
-            "op": "choose", "room": memory, "player": player,
-            "level": level, "state": state,
-        });
+        let request = choose_request(memory, player, level, state, exclusions);
         let outcome = tokio::time::timeout(
             guard_timeout(self.config.timeout, level),
             exchange(&mut worker, &request),
@@ -576,8 +689,16 @@ impl AiPool {
             Reply {
                 ok: true,
                 decision: Some(decision),
+                spares,
+                excluded,
+                exclude_fallback,
                 ..
-            } => Some(decision),
+            } => Some(Answer {
+                decision,
+                spares,
+                excluded,
+                replaced: exclude_fallback,
+            }),
             reply => {
                 log::warn!(
                     "AI worker declined room {room_code}: {}",
@@ -723,6 +844,10 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
     if room.paused {
         return None;
     }
+    // The player is looking at the AI turn that just ended (`note_ai_move`).
+    if room.current_ai_hold().is_some() {
+        return None;
+    }
     let state = room.game_state.as_ref()?;
     if state.tutorial.is_some()
         || state.dev_controller.is_some()
@@ -746,6 +871,151 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
         level: room.ai_level.clone(),
         teacher: room.ai_teacher.clone(),
     })
+}
+
+/// The phases in which every queued seat answers for itself (`awaited_players`): a charge
+/// offer or the income order. Such an answer belongs to no seat's turn.
+fn answers_a_queue(state: &GameState) -> bool {
+    matches!(
+        state.phase,
+        GamePhase::ChargePowerPending { .. }
+            | GamePhase::LostPlanetChargePowerPending { .. }
+            | GamePhase::IncomeOrderPending { .. }
+    )
+}
+
+/// Whether the turn of `player` goes on after `decision`, asked at `asked` and leading to
+/// `now`: the seat must decide next, alone, in the same round, and either the move was a free
+/// action (the only action that does not end a turn) or the engine waits for the rest of the
+/// seat's action (a lost-planet place, a Gaia-phase choice). A new action phase decision after
+/// a main action is the seat's next turn (the others have passed), and every setup decision
+/// is a turn of its own.
+fn turn_goes_on(
+    asked: &GameState,
+    decision: &AiDecision,
+    now: &GameState,
+    player: PlayerId,
+) -> bool {
+    if matches!(asked.phase, GamePhase::Setup(_))
+        || now.round != asked.round
+        || answers_a_queue(now)
+        || matches!(now.phase, GamePhase::Ended { .. })
+        || required_player(now) != Some(player)
+    {
+        return false;
+    }
+    matches!(decision, AiDecision::Game(GameAction::FreeAction { .. }))
+        || !matches!(now.phase, GamePhase::ActionPhase { .. })
+}
+
+/// Records a committed move of an AI seat in the seat's turn (`Room::ai_turn`) and, when the
+/// player looks at every AI turn (`Room::ai_review`) and this move ended the turn, makes the
+/// AI seats wait at the revision the room is at now (`Room::ai_hold`). `true` = they wait.
+///
+/// `turn` is the position the move was asked at and `moved` the revision right after the move.
+/// The move continues the recorded turn only when it was asked at the revision that turn had
+/// reached; anything else (the first move of a turn, a turn broken by an undo or a restart)
+/// starts a new record at `turn.revision`, the revision a rejected turn goes back to.
+fn note_ai_move(room: &mut Room, turn: &Turn, decision: &AiDecision, moved: u64) -> bool {
+    let continued = room
+        .ai_turn
+        .take()
+        .filter(|known| known.player == turn.player && known.revision == turn.revision);
+    let mut record = continued.unwrap_or_else(|| AiTurn {
+        player: turn.player,
+        start_revision: turn.revision,
+        revision: turn.revision,
+        decisions: Vec::new(),
+    });
+    record.decisions.push(decision.clone());
+    record.revision = moved;
+    // A room that moved on past the move (the round ended, the player was faster) is at a new
+    // position: the turn is over whatever the state says.
+    let goes_on = room.revision == moved
+        && room
+            .game_state
+            .as_ref()
+            .is_some_and(|now| turn_goes_on(&turn.state, decision, now, turn.player));
+    let held = room.ai_review && !goes_on;
+    if held {
+        room.ai_hold = Some(AiHold {
+            revision: room.revision,
+            turn: record.clone(),
+        });
+    }
+    // A finished turn is kept only in the hold: the seat's next decision, even one asked at
+    // this very revision (the other seats have passed), starts a new record.
+    room.ai_turn = goes_on.then_some(record);
+    held
+}
+
+/// The human seat of an AI game, the only one that may steer its AI seats.
+fn ai_room_of<'a>(
+    rooms: &'a mut crate::room::manager::RoomManager,
+    room_code: &str,
+    player: PlayerId,
+) -> Result<&'a mut Room, HintError> {
+    let room = rooms
+        .get_room_mut(room_code)
+        .ok_or(HintError::NotAnAiGame)?;
+    if !is_ai_room(room) || room.dev_human_player != Some(player) {
+        return Err(HintError::NotAnAiGame);
+    }
+    Ok(room)
+}
+
+/// The player's [continue] after looking at a finished AI turn (`Room::ai_hold`): the AI seats
+/// play on. Harmless when they were not waiting.
+pub async fn continue_after_hold(
+    app: &AppState,
+    room_code: &str,
+    player: PlayerId,
+) -> Result<(), HintError> {
+    if app.ai.is_none() {
+        return Err(HintError::NotAnAiGame);
+    }
+    let cleared = {
+        let mut rooms = app.rooms.write().await;
+        let room = ai_room_of(&mut rooms, room_code, player)?;
+        let current = room.current_ai_hold().map(|hold| hold.revision);
+        room.ai_hold = None;
+        current
+    };
+    // The buttons go away at once; the next AI move follows when the teacher has it.
+    if let Some(revision) = cleared.and_then(|revision| gaia_protocol::Revision::new(revision).ok())
+    {
+        coordinator::broadcast_snapshot(app, room_code, revision).await;
+    }
+    spawn_driver(app.clone(), room_code.to_string());
+    Ok(())
+}
+
+/// Turns the review of AI turns on or off for an AI game (`Room::ai_review`). Turning it off
+/// also ends a wait in progress. In memory only, like the rest of the review state.
+pub async fn set_review(
+    app: &AppState,
+    room_code: &str,
+    player: PlayerId,
+    enabled: bool,
+) -> Result<(), HintError> {
+    if app.ai.is_none() {
+        return Err(HintError::NotAnAiGame);
+    }
+    let revision = {
+        let mut rooms = app.rooms.write().await;
+        let room = ai_room_of(&mut rooms, room_code, player)?;
+        room.ai_review = enabled;
+        if !enabled {
+            room.ai_hold = None;
+        }
+        room.revision
+    };
+    log::info!("AI turn review of room {room_code} set to {enabled} by seat {player}");
+    if let Ok(revision) = gaia_protocol::Revision::new(revision) {
+        coordinator::broadcast_snapshot(app, room_code, revision).await;
+    }
+    spawn_driver(app.clone(), room_code.to_string());
+    Ok(())
 }
 
 /// How often the teacher is asked again for a position it gave no usable move for, before the
@@ -827,7 +1097,12 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
             return;
         };
         // The teacher workers do not play the setup auction; AI seats bid with ai_bidding.
-        let decision = match crate::ai_bidding::decide(&turn.state, turn.player) {
+        let bid = crate::ai_bidding::decide(&turn.state, turn.player);
+        // A move the player may look at and reject (`note_ai_move`): the teacher's own, and
+        // not one of the queue answers (charge offers, income order) the AI seats give in
+        // between other seats' turns.
+        let reviewed = bid.is_none() && !answers_a_queue(&turn.state);
+        let decision = match bid {
             Some(action) => Some(AiDecision::Setup(action)),
             None => {
                 pool.choose(
@@ -898,6 +1173,23 @@ async fn drive(app: &AppState, pool: &Arc<AiPool>, room_code: &str) {
                     log::error!("maybe_end_round failed for room {room_code}: {error}");
                     stall_on_server_error(app, room_code, turn.player).await;
                     return;
+                }
+                if reviewed {
+                    // After the round end, so that a hold is on the revision the room rests at.
+                    let held = {
+                        let mut rooms = app.rooms.write().await;
+                        rooms.get_room_mut(room_code).and_then(|room| {
+                            note_ai_move(room, &turn, &decision, outcome.revision.get())
+                                .then_some(room.revision)
+                        })
+                    };
+                    // The player sees the finished turn with [continue]; the next read of the
+                    // room finds the hold and this driver ends.
+                    if let Some(revision) =
+                        held.and_then(|revision| gaia_protocol::Revision::new(revision).ok())
+                    {
+                        coordinator::broadcast_snapshot(app, room_code, revision).await;
+                    }
                 }
             }
             Err(CommandError::Rule(_)) | Err(CommandError::RevisionConflict { .. }) => {
@@ -1146,6 +1438,9 @@ mod tests {
             ai_level: Some("hard".into()),
             ai_teacher: None,
             ai_stalled: None,
+            ai_review: false,
+            ai_turn: None,
+            ai_hold: None,
         };
         (room, to_move)
     }
@@ -1582,5 +1877,213 @@ mod tests {
         assert_eq!(pool.current_teacher(), Some("v1".to_string()));
         assert_eq!(pool.pin_teacher().await, None);
         std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    // ── Review of AI turns (research/strategy/ai-move-reject-design.md, stage 2a) ──
+
+    fn free_action() -> AiDecision {
+        AiDecision::Game(GameAction::FreeAction {
+            kind: gaia_engine::rules::actions::FreeActionKind::PowerToCredit,
+            count: 1,
+        })
+    }
+
+    fn pass() -> AiDecision {
+        AiDecision::Game(GameAction::Pass { booster_id: None })
+    }
+
+    /// The helper room's game in the action phase of `round` with `player` to act.
+    fn action_phase(room: &Room, player: PlayerId, round: u8) -> GameState {
+        let mut state = room.game_state.clone().expect("the room has a game");
+        state.turn_order = vec![7, 8, 9, 10];
+        state.round = round;
+        let active_player = state
+            .turn_order
+            .iter()
+            .position(|seat| *seat == player)
+            .expect("a seat of the game");
+        state.phase = GamePhase::ActionPhase { active_player };
+        state
+    }
+
+    fn asked_at(room: &Room, player: PlayerId, state: &GameState) -> Turn {
+        Turn {
+            revision: room.revision,
+            player,
+            state: state.clone(),
+            level: None,
+            teacher: None,
+        }
+    }
+
+    /// The helper room with the review on, an AI seat and another seat that is not the human.
+    fn reviewed_room() -> (Room, PlayerId, PlayerId) {
+        let (mut room, human) = ai_room_waiting_for_its_human();
+        room.ai_review = true;
+        let mut others = [7, 8, 9, 10].into_iter().filter(|seat| *seat != human);
+        let (ai, other) = (others.next().unwrap(), others.next().unwrap());
+        (room, ai, other)
+    }
+
+    #[test]
+    fn a_free_action_keeps_the_turn_and_the_move_after_it_ends_it() {
+        let (mut room, ai, other) = reviewed_room();
+        // Revision 5: the AI seat is asked, plays a free action and is still to act at 6.
+        let asked = action_phase(&room, ai, 1);
+        room.game_state = Some(asked.clone());
+        let first = asked_at(&room, ai, &asked);
+        room.revision = 6;
+        assert!(!note_ai_move(&mut room, &first, &free_action(), 6));
+        assert_eq!(room.current_ai_hold(), None);
+        // Revision 6: it passes; the room waits for another seat at 7.
+        let second = asked_at(&room, ai, &asked);
+        room.game_state = Some(action_phase(&room, other, 1));
+        room.revision = 7;
+        assert!(note_ai_move(&mut room, &second, &pass(), 7));
+        let hold = room.current_ai_hold().cloned().expect("the AI seats wait");
+        assert_eq!(hold.revision, 7);
+        assert_eq!(
+            hold.turn,
+            AiTurn {
+                player: ai,
+                start_revision: 5,
+                revision: 7,
+                decisions: vec![free_action(), pass()],
+            }
+        );
+        // The snapshot of that revision carries it; the player playing on ends the wait.
+        let view = coordinator::room_snapshot_view(&room);
+        assert_eq!(view["ai_review"], true);
+        assert_eq!(view["ai_hold"]["turn"]["start_revision"], 5);
+        assert_eq!(view["ai_hold"]["turn"]["decisions"][1]["action"]["type"], "Pass");
+        room.revision = 8;
+        assert_eq!(room.current_ai_hold(), None);
+        assert!(coordinator::room_snapshot_view(&room).get("ai_hold").is_none());
+    }
+
+    #[test]
+    fn without_the_review_the_turn_is_recorded_and_nothing_waits() {
+        let (mut room, ai, other) = reviewed_room();
+        room.ai_review = false;
+        let asked = action_phase(&room, ai, 1);
+        room.game_state = Some(asked.clone());
+        let first = asked_at(&room, ai, &asked);
+        room.revision = 6;
+        assert!(!note_ai_move(&mut room, &first, &free_action(), 6));
+        assert_eq!(room.ai_turn.as_ref().map(|turn| turn.decisions.len()), Some(1));
+        let second = asked_at(&room, ai, &asked);
+        room.game_state = Some(action_phase(&room, other, 1));
+        room.revision = 7;
+        assert!(!note_ai_move(&mut room, &second, &pass(), 7));
+        // The finished turn is not kept: nothing waits and nothing could be rejected.
+        assert_eq!((room.ai_hold.as_ref(), room.ai_turn.as_ref()), (None, None));
+        assert!(coordinator::room_snapshot_view(&room).get("ai_review").is_none());
+    }
+
+    #[test]
+    fn a_main_action_ends_the_turn_even_when_the_same_seat_acts_next() {
+        // The other seats have passed: the seat's next decision is a new turn.
+        let (mut room, ai, _) = reviewed_room();
+        let asked = action_phase(&room, ai, 1);
+        room.game_state = Some(asked.clone());
+        let turn = asked_at(&room, ai, &asked);
+        room.revision = 6;
+        let action = AiDecision::Game(GameAction::AcademyQicAction);
+        assert!(note_ai_move(&mut room, &turn, &action, 6));
+        // The next turn of the seat starts its own record at the revision it is asked at.
+        room.ai_hold = None;
+        let next = asked_at(&room, ai, &asked);
+        room.revision = 7;
+        assert!(note_ai_move(&mut room, &next, &pass(), 7));
+        let hold = room.current_ai_hold().expect("the AI seats wait");
+        assert_eq!((hold.turn.start_revision, hold.turn.decisions.len()), (6, 1));
+    }
+
+    #[test]
+    fn the_turn_ends_with_the_round_and_a_setup_decision_is_a_turn_of_its_own() {
+        let (room, ai, _) = reviewed_room();
+        let asked = action_phase(&room, ai, 1);
+        assert!(turn_goes_on(&asked, &free_action(), &asked, ai));
+        // A new round with the same seat first is not the same turn.
+        assert!(!turn_goes_on(&asked, &free_action(), &action_phase(&room, ai, 2), ai));
+        // The round ended while the move was noted: the room is past the move's revision.
+        let mut moved_on = room.clone();
+        moved_on.game_state = Some(asked.clone());
+        let turn = asked_at(&moved_on, ai, &asked);
+        moved_on.revision = 8;
+        assert!(note_ai_move(&mut moved_on, &turn, &free_action(), 6));
+        assert_eq!(moved_on.current_ai_hold().map(|hold| hold.revision), Some(8));
+        // Setup: the seat that places again right away is asked as a new turn.
+        let setup = room.game_state.clone().expect("the room has a game");
+        assert!(matches!(setup.phase, GamePhase::Setup(_)));
+        let placing = required_player(&setup).expect("a seat places");
+        assert!(!turn_goes_on(&setup, &pass(), &setup, placing));
+    }
+
+    #[test]
+    fn a_move_asked_elsewhere_than_the_record_reached_starts_a_new_turn() {
+        let (mut room, ai, _) = reviewed_room();
+        let asked = action_phase(&room, ai, 1);
+        room.game_state = Some(asked.clone());
+        let first = asked_at(&room, ai, &asked);
+        room.revision = 6;
+        assert!(!note_ai_move(&mut room, &first, &free_action(), 6));
+        // An undo or a restart in between: the seat is asked at 9, not at 6.
+        room.revision = 9;
+        let again = asked_at(&room, ai, &asked);
+        room.revision = 10;
+        assert!(!note_ai_move(&mut room, &again, &free_action(), 10));
+        let record = room.ai_turn.as_ref().expect("a turn is recorded");
+        assert_eq!((record.start_revision, record.decisions.len()), (9, 1));
+    }
+
+    #[test]
+    fn an_ordinary_request_has_the_old_keys_and_a_rejected_turn_adds_its_own() {
+        let (room, human) = ai_room_waiting_for_its_human();
+        let state = room.game_state.as_ref().expect("the room has a game");
+        let plain = choose_request("ROOM", human, "hard", state, &Exclusions::default());
+        let mut keys: Vec<&str> = plain
+            .as_object()
+            .expect("an object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["level", "op", "player", "room", "state"]);
+
+        let exclusions = Exclusions {
+            moves: vec![Excluded::Move(pass()), Excluded::ActionType("Pass".into())],
+            spares: 3,
+        };
+        let asked = choose_request("ROOM", human, "hard", state, &exclusions);
+        // A move goes out as the worker gave it; the worker matches whole types on `action.type`.
+        assert_eq!(asked["exclude"][0], serde_json::json!(pass()));
+        assert_eq!(asked["exclude"][0]["phase"], "Game");
+        assert_eq!(asked["exclude"][0]["action"]["type"], "Pass");
+        assert_eq!(asked["exclude"][1], serde_json::json!({ "action_type": "Pass" }));
+        assert_eq!(asked["skip_missing"], true);
+        assert_eq!(asked["spares"], 3);
+    }
+
+    #[test]
+    fn a_reply_carries_spares_only_when_they_were_asked_for() {
+        let plain: Reply =
+            serde_json::from_value(serde_json::json!({ "ok": true, "decision": pass(), "seconds": 0.4 }))
+                .expect("an ordinary reply");
+        assert!(plain.spares.is_empty() && plain.excluded == 0 && !plain.exclude_fallback);
+        let reply: Reply = serde_json::from_value(serde_json::json!({
+            "ok": true, "decision": pass(), "seconds": 9.1, "excluded": 2, "exclude_fallback": true,
+            "spares": [{ "decision": pass(), "searched": false }, { "decision": free_action(), "searched": true }],
+        }))
+        .expect("a reply with spares");
+        assert_eq!(reply.excluded, 2);
+        assert!(reply.exclude_fallback);
+        assert_eq!(
+            reply.spares,
+            vec![
+                Spare { decision: pass(), searched: false },
+                Spare { decision: free_action(), searched: true },
+            ]
+        );
     }
 }

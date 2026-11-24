@@ -381,6 +381,16 @@ pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
     if let (Some(stall), Some(fields)) = (room.current_ai_stall(), view.as_object_mut()) {
         fields.insert("ai_stalled".into(), json!(stall));
     }
+    // Nor are these: the player looks at every AI turn (`Room::ai_review`), and the finished
+    // AI turn the AI seats wait at now (`Room::ai_hold`).
+    if let Some(fields) = view.as_object_mut() {
+        if room.ai_review {
+            fields.insert("ai_review".into(), json!(true));
+        }
+        if let Some(hold) = room.current_ai_hold() {
+            fields.insert("ai_hold".into(), json!(hold));
+        }
+    }
     view
 }
 

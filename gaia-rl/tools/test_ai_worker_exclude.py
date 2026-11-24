@@ -58,6 +58,21 @@ class ExcludedIndicesTests(unittest.TestCase):
         self.assertEqual(ai_worker.excluded_indices(self.CANDIDATES, []), set())
         self.assertEqual(ai_worker.excluded_indices(self.CANDIDATES, [self.CANDIDATES[2], self.CANDIDATES[0]]), {0, 2})
 
+    def test_action_type_entry_takes_every_candidate_of_that_type(self):
+        candidates = [{'phase': 'Game', 'action': {'type': 'Pass', 'booster_id': 1}},
+                      {'phase': 'Game', 'action': {'type': 'Build', 'coord': [0, 1]}},
+                      {'phase': 'Game', 'action': {'type': 'Pass', 'booster_id': 4}}]
+        self.assertEqual(ai_worker.excluded_indices(candidates, [{'action_type': 'Pass'}]), {0, 2})
+        with self.assertRaises(ValueError):     # no pass would be left
+            ai_worker.excluded_indices(candidates[::2], [{'action_type': 'Pass'}])
+
+    def test_skip_missing_ignores_entries_without_a_candidate(self):
+        unknown = {'phase': 'Game', 'action': {'type': 'Z'}}
+        self.assertEqual(ai_worker.excluded_indices(self.CANDIDATES, [unknown, self.CANDIDATES[1]], True), {1})
+        self.assertEqual(ai_worker.excluded_indices(self.CANDIDATES, [unknown, {'action_type': 'Y'}], True), set())
+        with self.assertRaises(ValueError):     # still an error when nothing is left
+            ai_worker.excluded_indices(self.CANDIDATES, list(self.CANDIDATES), True)
+
     def test_unknown_move_all_moves_and_a_wrong_type_are_errors(self):
         with self.assertRaises(ValueError):
             ai_worker.excluded_indices(self.CANDIDATES, [{'phase': 'Game', 'action': {'type': 'Z'}}])
@@ -151,6 +166,19 @@ class ExcludeWorkerTests(unittest.TestCase):
         self.check_spares(second, [first['decision']])
         self.assertEqual(second['decision'], first['spares'][1]['decision'])   # the next move of the same ranking
         self.assertEqual([spare['searched'] for spare in second['spares']], [False, False, False])
+
+    def test_a_turn_list_skips_missing_entries_and_takes_whole_action_types(self):
+        first = self.ask('easy')
+        unknown = {'phase': 'Game', 'action': {'type': 'Nope'}}
+        same = self.ask('easy', exclude=[unknown], skip_missing=True)
+        self.assertTrue(same['ok'], same)
+        self.assertEqual((same['excluded'], same['decision']), (0, first['decision']))
+        kind = first['decision']['action']['type']
+        other = self.ask('easy', exclude=[unknown, {'action_type': kind}], skip_missing=True)
+        self.assertTrue(other['ok'], other)
+        self.assertNotEqual(other['decision']['action']['type'], kind)
+        of_kind = sum(c['action'].get('type') == kind for c in self.snapshot['candidates'])
+        self.assertEqual(other['excluded'], of_kind)
 
     def test_bad_exclusions_are_reported_not_played(self):
         self.assertFalse(self.ask('easy', exclude=[{'phase': 'Game', 'action': {'type': 'Nope'}}])['ok'])

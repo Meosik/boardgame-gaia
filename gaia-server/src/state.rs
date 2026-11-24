@@ -190,6 +190,10 @@ fn rehydrated_room(
         ai_level: ai_game.as_ref().and_then(|mark| mark.level.clone()),
         ai_teacher: ai_game.and_then(|mark| mark.teacher),
         ai_stalled: None,
+        // In memory only: the player turns the review of AI turns on again after a restart.
+        ai_review: false,
+        ai_turn: None,
+        ai_hold: None,
     }
 }
 

@@ -715,6 +715,9 @@ mod tests {
                 ai_level: None,
                 ai_teacher: None,
                 ai_stalled: None,
+                ai_review: false,
+                ai_turn: None,
+                ai_hold: None,
             },
             coord,
         )
