@@ -31,6 +31,7 @@ import argparse
 import gzip
 import json
 import os
+import re
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -40,6 +41,7 @@ import teacher_ab
 
 FACTORY_ENV, FRONT_ENV, WATCH_ENV, LOG_ENV = ('GAIA_PROBE_FACTORY', 'GAIA_PROBE_FRONT', 'GAIA_PROBE_WATCH',
                                               'GAIA_PROBE_LOG')
+PASS_LAST_FROM = re.compile(r'pass_last: \d+ positive first \(from ([0-9.+\-e]+)\)')
 
 
 def is_root(goal):
@@ -139,7 +141,8 @@ def decision_record(snapshot, scores, index, env=None):
     'player', 'own', 'others_passed'} of the state after it; None without env or such a candidate; {'error'} if
     the fork fails) and 'federation_after' (the same for the best unblocked FormFederation: {'round', 'own'}).
     Recording only. An entry is {'index', 'type', 'score' (None when blocked), 'blocked',
-    'reason'} (a FormFederation also has 'satellites', 'hexes', 'token'). A candidate is blocked when its reason
+    'reason'} (a FormFederation also has 'satellites', 'hexes', 'token'; a Pass the pass_last flag lowered also has
+    'pass_last_from', its score before the flag, read from the full reason before the 200-character cut). A candidate is blocked when its reason
     starts with 'conservation blocked: '. Best = the highest-scored unblocked one (ties: lowest index), else the
     highest-scored blocked one."""
     candidates = snapshot.get('candidates') or ()
@@ -150,6 +153,12 @@ def decision_record(snapshot, scores, index, env=None):
         blocked = str(reason).startswith('conservation blocked: ')
         row = {'index': i, 'type': action.get('type'), 'score': None if blocked else score, 'blocked': blocked,
                'reason': str(reason)[:200]}
+        found = PASS_LAST_FROM.search(str(reason))
+        if found:
+            try:
+                row['pass_last_from'] = float(found.group(1))
+            except ValueError:
+                pass
         if action.get('type') == 'FormFederation':
             row.update(satellites=len(action.get('satellite_hexes') or ()), hexes=action.get('hexes'),
                        token=action.get('token'))

@@ -2928,6 +2928,14 @@ class PassLastTests(unittest.TestCase):
         for i in range(2, 6):
             self.assertEqual(result[i], scores[i])
 
+    def test_lifted_reason_carries_the_pre_flag_score(self):
+        snapshot, scores = self.make()
+        result = self.run_on(snapshot, scores)
+        for i in (0, 1):
+            self.assertTrue(result[i][1].endswith(f'(from {scores[i][0]!r})'))
+            self.assertIn('; pass_last: 2 positive first (from ', result[i][1])
+        self.assertEqual((result[0][0], result[1][0]), (3.67/2, 3.67/3))
+
     def test_unchanged_while_another_seat_has_not_passed(self):
         snapshot, scores = self.make(unpassed=2)
         self.assertIs(self.run_on(snapshot, scores), scores)

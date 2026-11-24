@@ -5448,7 +5448,8 @@ def pass_last_scores(env, snapshot, scores):
     highest unblocked score is a Pass and an unblocked non-Pass candidate scores above 0, the unblocked Pass
     candidates drop below the lowest of those positive candidates (still above 0, their own order kept). The last
     pass gets its pass points and the next income whenever it is played, so it must not outrank what still pays.
-    While any other seat has not passed the scores are returned as given (debate 1/1: only the diagnosed case)."""
+    While any other seat has not passed the scores are returned as given (debate 1/1: only the diagnosed case).
+    The lifted reason carries the pre-flag score as `(from <score>)`."""
     from current_actions.conservation import blocked
     state, actor = snapshot['state'], snapshot.get('player')
     if not _guide['pass_last'] or actor is None or 'ActionPhase' not in state['phase']:
@@ -5467,7 +5468,8 @@ def pass_last_scores(env, snapshot, scores):
     floor = min(scores[i][0] for i in positive)
     lifted = list(scores)
     for k, i in enumerate(sorted(passes, key=lambda i: (-scores[i][0], i))):
-        lifted[i] = (floor/(k+2), f'{scores[i][1]}; pass_last: {len(positive)} positive first', *scores[i][2:])
+        lifted[i] = (floor/(k+2), f'{scores[i][1]}; pass_last: {len(positive)} positive first (from {scores[i][0]!r})',
+                     *scores[i][2:])
     return lifted
 
 

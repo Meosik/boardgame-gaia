@@ -443,6 +443,23 @@ class DecisionRecordTest(unittest.TestCase):
         none_top = decision_probe.decision_record(snap({'type': 'Pass'}), [(1, BLOCK)], None)
         self.assertIsNone(none_top['top'])
 
+    def test_pass_last_from_is_read_before_the_reason_cut(self):
+        reason = 'x'*250+'; pass_last: 3 positive first (from 39.266666666666666)'
+        snapshot = snap({'type': 'Pass'}, {'type': 'Build'})
+        record = decision_probe.decision_record(snapshot, [(1.2, reason), (3, 'plain')], 0)
+        self.assertEqual(record['chosen']['pass_last_from'], 39.266666666666666)
+        self.assertEqual(len(record['chosen']['reason']), 200)
+        self.assertNotIn('pass_last_from', record['top'])
+
+    def test_no_pass_last_from_without_the_suffix(self):
+        record = decision_probe.decision_record(snap({'type': 'Pass'}), [(1, 'plain')], 0)
+        self.assertNotIn('pass_last_from', record['chosen'])
+
+    def test_pass_last_from_reads_a_negative_score(self):
+        reason = 'a; pass_last: 2 positive first (from -3.0)'
+        record = decision_probe.decision_record(snap({'type': 'Pass'}), [(1, reason)], 0)
+        self.assertEqual(record['chosen']['pass_last_from'], -3.0)
+
     def test_a_none_index_gives_no_chosen(self):
         record = decision_probe.decision_record(snap({'type': 'Pass'}), [(1, 'x')], None)
         self.assertIsNone(record['chosen'])
