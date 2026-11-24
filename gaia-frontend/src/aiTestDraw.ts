@@ -23,59 +23,26 @@ export const AI_TEST_FACTIONS: FactionId[] = FACTION_BOARDS.reduce<FactionId[]>(
   [],
 );
 
-/** How many AI test games each faction has been dealt into, on this browser. */
-export type ShownCounts = Partial<Record<FactionId, number>>;
-
-const STORAGE_KEY = 'gaia-ai-test-shown';
-
 export function otherBoardSide(faction: FactionId): FactionId {
   const board = FACTION_BOARDS.find((sides) => sides[0] === faction || sides[1] === faction);
   if (!board) return faction;
   return board[0] === faction ? board[1] : board[0];
 }
 
-/** Four factions for one game: the least dealt first (ties in random order), never two sides of
- * one board. Dealing the least dealt first is what spreads the factions evenly over the games —
- * all eighteen come up within six games. */
-export function drawAiTestFactions(
-  counts: ShownCounts,
-  random: () => number = Math.random,
-): FactionId[] {
-  const order = AI_TEST_FACTIONS
-    .map((faction) => ({ faction, shown: counts[faction] ?? 0, tie: random() }))
-    .sort((a, b) => a.shown - b.shown || a.tie - b.tie);
+/** Four factions for one game, drawn at random every time (owner 2026-11-24 「완전 무작위」; before
+ * that the least dealt came first), never two sides of one board. */
+export function drawAiTestFactions(random: () => number = Math.random): FactionId[] {
+  const shuffled = [...AI_TEST_FACTIONS];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   const drawn: FactionId[] = [];
-  for (const { faction } of order) {
+  for (const faction of shuffled) {
     if (drawn.length === 4) break;
     if (!drawn.includes(otherBoardSide(faction))) drawn.push(faction);
   }
   return drawn;
-}
-
-export function readShownCounts(): ShownCounts {
-  try {
-    const value: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
-    if (!value || typeof value !== 'object') return {};
-    const counts: ShownCounts = {};
-    for (const faction of AI_TEST_FACTIONS) {
-      const shown = (value as Record<string, unknown>)[faction];
-      if (typeof shown === 'number' && Number.isInteger(shown) && shown > 0) counts[faction] = shown;
-    }
-    return counts;
-  } catch {
-    return {};
-  }
-}
-
-/** Count a started game's four factions, so the next draw prefers the others. */
-export function recordShown(factions: FactionId[]): void {
-  try {
-    const counts = readShownCounts();
-    for (const faction of factions) counts[faction] = (counts[faction] ?? 0) + 1;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(counts));
-  } catch {
-    // Storage denied: the game still starts, the next draw is just less even.
-  }
 }
 
 /** The turn order of an AI test table: the faction expected to do worst on the fixed map moves

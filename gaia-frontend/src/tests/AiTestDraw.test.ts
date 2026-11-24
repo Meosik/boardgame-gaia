@@ -5,8 +5,7 @@ import {
   aiTestTurnOrder,
   drawAiTestFactions,
   otherBoardSide,
-  type ShownCounts,
-} from '../aiTestDraw';
+}from '../aiTestDraw';
 import orderTable from '../aiTestOrder.json';
 
 /** A small deterministic generator, so a failing seed can be replayed. */
@@ -28,31 +27,21 @@ describe('AI test faction draw', () => {
     }
   });
 
-  it('deals four different boards every time and every faction within six games', () => {
+  it('draws four different boards every time and reaches every faction', () => {
     for (let seed = 1; seed <= 50; seed += 1) {
       const random = seeded(seed);
-      const counts: ShownCounts = {};
-      for (let game = 0; game < 6; game += 1) {
-        const dealt = drawAiTestFactions(counts, random);
-        expect(dealt).toHaveLength(4);
-        expect(new Set(dealt).size).toBe(4);
-        for (const faction of dealt) {
-          expect(dealt).not.toContain(otherBoardSide(faction));
-          counts[faction] = (counts[faction] ?? 0) + 1;
+      const seen = new Set<string>();
+      for (let game = 0; game < 40; game += 1) {
+        const drawn = drawAiTestFactions(random);
+        expect(drawn).toHaveLength(4);
+        expect(new Set(drawn).size).toBe(4);
+        for (const faction of drawn) {
+          expect(drawn).not.toContain(otherBoardSide(faction));
+          seen.add(faction);
         }
       }
-      for (const faction of AI_TEST_FACTIONS) {
-        expect(counts[faction] ?? 0, `seed ${seed}: ${faction}`).toBeGreaterThanOrEqual(1);
-      }
+      expect(seen.size, `seed ${seed}`).toBe(18);
     }
-  });
-
-  it('deals the least dealt factions first', () => {
-    const counts: ShownCounts = {};
-    for (const faction of AI_TEST_FACTIONS) counts[faction] = 2;
-    const fresh = ['Terrans', 'Xenos', 'Ivits', 'Moweyds'] as const;
-    for (const faction of fresh) counts[faction] = 1;
-    expect([...drawAiTestFactions(counts, seeded(7))].sort()).toEqual([...fresh].sort());
   });
 });
 
@@ -74,7 +63,7 @@ describe('AI test turn order', () => {
 
   it('orders every dealt table as a permutation of its four factions', () => {
     for (let seed = 1; seed <= 50; seed += 1) {
-      const dealt = drawAiTestFactions({}, seeded(seed));
+      const dealt = drawAiTestFactions(seeded(seed));
       const order = aiTestTurnOrder(dealt);
       expect(order, `seed ${seed}`).toHaveLength(4);
       expect([...order].sort(), `seed ${seed}`).toEqual([...dealt].sort());

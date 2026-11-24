@@ -6,7 +6,7 @@ import { LobbyHomeView } from '../components/GameLobby/LobbyHomeView';
 import { api } from '../api/rest';
 import { useRoomStore } from '../store/roomStore';
 import { useGameStore } from '../store/gameStore';
-import { AI_TEST_FACTIONS, aiTestTurnOrder, otherBoardSide, readShownCounts } from '../aiTestDraw';
+import { AI_TEST_FACTIONS, aiTestTurnOrder, otherBoardSide } from '../aiTestDraw';
 import type { FactionId } from '../types/game';
 
 function dealtButtons(): HTMLElement[] {
@@ -68,10 +68,6 @@ describe('AI test', () => {
     expect(room.playerId).toBe(5);
     expect(room.manualControl).toBe(false);
     expect(room.roomState).toBe('faction_selection');
-    // The started game's four factions are counted, so the next draw prefers the other fourteen.
-    const shown = readShownCounts();
-    expect(Object.keys(shown).sort()).toEqual([...dealt].sort());
-    expect(Object.values(shown)).toEqual([1, 1, 1, 1]);
   });
 
   it('keeps the setup position the create response carries, so the first screen is the starting placement', async () => {
@@ -90,13 +86,12 @@ describe('AI test', () => {
     useGameStore.getState().actions.reset();
   });
 
-  it('asks for a nickname before starting and counts nothing', () => {
+  it('asks for a nickname before starting', () => {
     const createAiGame = vi.spyOn(api, 'createAiGame');
     render(<AiTestView onGameCreated={vi.fn()} onBack={vi.fn()} />);
     fireEvent.click(dealtButtons()[0]);
     expect(createAiGame).not.toHaveBeenCalled();
     expect(screen.getByText('닉네임을 입력해주세요')).toBeInTheDocument();
-    expect(readShownCounts()).toEqual({});
   });
 
   it('sends setup_mode sequential with a fixed table and nothing extra without one', async () => {

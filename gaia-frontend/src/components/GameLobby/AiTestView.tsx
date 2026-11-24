@@ -3,13 +3,7 @@ import { useRoomStore } from '../../store/roomStore';
 import { readRecentRoom } from '../../store/recentRoom';
 import { factionDisplayName } from '../../displayNames';
 import { factionBoardImageSrc } from '../../assets/factionBoardImages';
-import {
-  AI_TEST_MAP_SEED,
-  aiTestTurnOrder,
-  drawAiTestFactions,
-  readShownCounts,
-  recordShown,
-} from '../../aiTestDraw';
+import { AI_TEST_MAP_SEED, aiTestTurnOrder, drawAiTestFactions } from '../../aiTestDraw';
 import type { FactionId } from '../../types/game';
 
 interface Props {
@@ -17,13 +11,13 @@ interface Props {
   onBack: () => void;
 }
 
-/** The AI test: the lab's fixed map, four factions dealt evenly over the games, the player picks
+/** The AI test: the lab's fixed map, four factions drawn at random, the player picks
  * one of them and three hard AI seats take the rest. The turn order is the lab's strength order
  * for the four factions (the one expected to do worst moves first), shown on each button. No
  * auction, no room title or password. */
 export function AiTestView({ onGameCreated, onBack }: Props) {
   const [nickname, setNickname] = useState(() => readRecentRoom()?.nickname ?? '');
-  const [factions] = useState(() => drawAiTestFactions(readShownCounts()));
+  const [factions] = useState(() => drawAiTestFactions());
   const order = aiTestTurnOrder(factions);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,7 +37,6 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
         aiFactions: order.filter((other) => other !== faction),
         seat: order.indexOf(faction) + 1,
       });
-      recordShown(factions);
       onGameCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 테스트를 시작하지 못했습니다');
