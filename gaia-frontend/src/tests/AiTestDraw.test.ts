@@ -5,7 +5,7 @@ import {
   aiTestTurnOrder,
   drawAiTestFactions,
   otherBoardSide,
-}from '../aiTestDraw';
+} from '../aiTestDraw';
 import orderTable from '../aiTestOrder.json';
 
 /** A small deterministic generator, so a failing seed can be replayed. */
@@ -31,7 +31,8 @@ describe('AI test faction draw', () => {
     for (let seed = 1; seed <= 50; seed += 1) {
       const random = seeded(seed);
       const seen = new Set<string>();
-      for (let game = 0; game < 40; game += 1) {
+      // 200 draws: a faction missing from all of them has a chance of about (14/18)^200.
+      for (let game = 0; game < 200; game += 1) {
         const drawn = drawAiTestFactions(random);
         expect(drawn).toHaveLength(4);
         expect(new Set(drawn).size).toBe(4);
