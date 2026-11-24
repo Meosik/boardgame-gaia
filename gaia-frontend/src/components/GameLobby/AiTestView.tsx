@@ -11,13 +11,13 @@ interface Props {
   onBack: () => void;
 }
 
-/** The AI test: the lab's fixed map, four factions drawn at random, the player picks
+/** The AI test: the lab's fixed map, four factions drawn at random (a 다시 뽑기 button draws four new ones), the player picks
  * one of them and three hard AI seats take the rest. The turn order is the lab's strength order
  * for the four factions (the one expected to do worst moves first), shown on each button. No
  * auction, no room title or password. */
 export function AiTestView({ onGameCreated, onBack }: Props) {
   const [nickname, setNickname] = useState(() => readRecentRoom()?.nickname ?? '');
-  const [factions] = useState(() => drawAiTestFactions());
+  const [factions, setFactions] = useState(() => drawAiTestFactions());
   const order = aiTestTurnOrder(factions);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -97,6 +97,14 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
       <div className="form-actions">
         <button className="btn btn-ghost" onClick={onBack} disabled={loading}>
           뒤로
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => setFactions(drawAiTestFactions())}
+          disabled={loading}
+        >
+          다시 뽑기
         </button>
       </div>
     </div>

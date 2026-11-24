@@ -36,6 +36,25 @@ describe('AI test', () => {
     }
   });
 
+  it('draws four new factions with 다시 뽑기 and shows their turn order', () => {
+    // Math.random 0 and just under 1 give two different shuffles (a rotation and the identity).
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    render(<AiTestView onGameCreated={vi.fn()} onBack={vi.fn()} />);
+    const first = dealtFactions();
+    random.mockReturnValue(0.999);
+    fireEvent.click(screen.getByRole('button', { name: '다시 뽑기' }));
+    const second = dealtFactions();
+    expect(second).toHaveLength(4);
+    expect(second).not.toEqual(first);
+    for (const faction of second) {
+      expect(second).not.toContain(otherBoardSide(faction));
+    }
+    const order = aiTestTurnOrder(second);
+    second.forEach((faction, index) => {
+      expect(dealtButtons()[index]).toHaveTextContent(`${order.indexOf(faction) + 1}번 차례`);
+    });
+  });
+
   it('starts a hard game on the fixed map with the picked faction and the other three as AI', async () => {
     const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
       room_code: 'AI1234',
