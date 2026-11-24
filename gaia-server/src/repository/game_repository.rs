@@ -335,6 +335,30 @@ impl GameRepository {
         Ok(Some(new_revision))
     }
 
+    /// Keeps the record of an AI turn the player rejected (`crate::ai::reject_turn`): the room,
+    /// the seat, the turn's moves and the revision of its first position, whose snapshot is
+    /// in `game_snapshots`. It is a row of `processed_commands` under the id
+    /// `ai-reject-<revision>` (`revision` = the revision the room was taken back as, so one row
+    /// per rejection; no client command has such an id) — the table already holds one JSON
+    /// result per room and id, and the record needs no table of its own. Read with
+    /// `SELECT room_code, revision, result FROM processed_commands WHERE command_id LIKE 'ai-reject-%'`.
+    pub async fn record_ai_reject(
+        &self,
+        room_code: &str,
+        revision: u64,
+        record: &serde_json::Value,
+    ) -> ServerResult<()> {
+        let revision = i64::try_from(revision)
+            .map_err(|_| ServerError::Internal("reject revision overflow".into()))?;
+        self.record_rejected_command(
+            room_code,
+            &format!("ai-reject-{revision}"),
+            revision,
+            record,
+        )
+        .await
+    }
+
     /// Records a rejected command outcome (e.g. a validation error) without
     /// touching the room's revision or state — still keyed by `command_id` so
     /// a retried rejected command replays the same rejection.

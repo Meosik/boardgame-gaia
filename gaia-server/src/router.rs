@@ -106,6 +106,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/rooms/:code/ai-hint", post(rest::ai_hint))
         .route("/rooms/:code/ai-retry", post(rest::ai_retry))
         .route("/rooms/:code/ai-continue", post(rest::ai_continue))
+        .route("/rooms/:code/ai-reject", post(rest::ai_reject))
         .route("/rooms/:code/ai-review", post(rest::ai_review))
         .route("/rooms/:code/preview_board", get(rest::preview_board));
 

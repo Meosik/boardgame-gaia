@@ -600,6 +600,36 @@ pub async fn ai_continue(
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
+/// The player rejects the finished AI turn the AI seats wait at (`crate::ai::reject_turn`): the
+/// room goes back to that turn's first position and the seat plays it again without the move
+/// that ended it. Asked by the game's human seat for the revision it is looking at; the
+/// restored position and the new move arrive as ordinary snapshots.
+pub async fn ai_reject(
+    State(app): State<AppState>,
+    Path(code): Path<String>,
+    Json(req): Json<AiHintRequest>,
+) -> ServerResult<Json<serde_json::Value>> {
+    use crate::ai::RejectError;
+    let (player, session_room) = ReconnectService::validate_session(&app, &req.session_token).await?;
+    if session_room != code {
+        return Err(ServerError::InvalidSession);
+    }
+    app.ensure_room_loaded(&code).await?;
+    match crate::ai::reject_turn(&app, &code, player, req.expected_revision).await {
+        Ok(()) => Ok(Json(serde_json::json!({ "ok": true }))),
+        Err(RejectError::NotAnAiGame) => Err(ServerError::InvalidAction(
+            "only the human seat of an AI game rejects an AI turn".into(),
+        )),
+        Err(RejectError::NothingHeld) => Err(ServerError::InvalidAction(
+            "no finished AI turn waits at this position".into(),
+        )),
+        Err(RejectError::NoAlternative) => Err(ServerError::InvalidAction(
+            "no other move is left for this AI turn".into(),
+        )),
+        Err(RejectError::Server(error)) => Err(ServerError::Internal(error)),
+    }
+}
+
 #[derive(Deserialize)]
 pub struct AiReviewRequest {
     pub session_token: String,

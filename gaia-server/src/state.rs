@@ -194,6 +194,7 @@ fn rehydrated_room(
         ai_review: false,
         ai_turn: None,
         ai_hold: None,
+        ai_rejected: None,
     }
 }
 

@@ -96,6 +96,47 @@ pub struct Room {
     /// for the revision it names — any command of the player moves the room on, which is the
     /// same as continuing — and is sent with the snapshots of that revision as `ai_hold`.
     pub ai_hold: Option<AiHold>,
+    /// The moves the player has rejected in the AI turn that is being played again
+    /// (`crate::ai::reject_turn`). Memory only.
+    pub ai_rejected: Option<AiRejected>,
+}
+
+/// A move the teacher would play instead of a rejected one (`tools/ai_worker.py` "spares").
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, Serialize)]
+pub struct Spare {
+    pub decision: AiDecision,
+    /// `false` = no completed comparison starts with the move: it is the next one of the
+    /// teacher's one-step ranking, not a search result.
+    pub searched: bool,
+}
+
+/// One entry of the moves a teacher request leaves out.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum Excluded {
+    /// This move.
+    Move(AiDecision),
+    /// Every move of this action type (`"Pass"`: a rejected pass means no pass at all in that
+    /// turn, whatever the booster).
+    ActionType(String),
+}
+
+/// See `Room::ai_rejected`. A rejected turn is taken back to its first position, which the
+/// room then has at a new revision; the turn played from there is the replay.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AiRejected {
+    pub player: PlayerId,
+    /// The revision the replay starts at.
+    pub start_revision: u64,
+    /// The moves that ended the rejected turns; left out at every decision of the replay.
+    pub excluded: Vec<Excluded>,
+    /// The other moves the teacher gave for the replay's first decision, in its order, not yet
+    /// played. `None` until the teacher was asked (the first rejection of the turn).
+    pub spares: Option<Vec<Spare>>,
+    /// How often the turn has been rejected.
+    pub rejections: u32,
+    /// The teacher had no move without the rejected ones: the replay is played without
+    /// exclusions (its own choice again) and cannot be rejected.
+    pub no_alternative: bool,
 }
 
 /// One turn of an AI seat: every decision the seat made from the position it was first asked
@@ -117,6 +158,14 @@ pub struct AiHold {
     pub revision: u64,
     /// The finished turn the player is looking at.
     pub turn: AiTurn,
+    /// How often this turn has already been rejected (0 = the teacher's first choice).
+    pub rejections: u32,
+    /// Spare moves left for another rejection; `None` = the teacher has not been asked for
+    /// them yet (a turn that was never rejected).
+    pub spares_left: Option<usize>,
+    /// `false` = the turn cannot be rejected (again): no spare move is left, or the teacher
+    /// had no move without the rejected ones and played its own choice again.
+    pub can_reject: bool,
 }
 
 /// See `Room::ai_stalled`.
@@ -359,6 +408,7 @@ impl RoomManager {
             ai_review: false,
             ai_turn: None,
             ai_hold: None,
+            ai_rejected: None,
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))
