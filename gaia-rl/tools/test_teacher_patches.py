@@ -2973,3 +2973,164 @@ class PassLastTests(unittest.TestCase):
             spec.pop(key)
             base.pop(key)
         self.assertEqual(spec, base)
+
+
+class _ShipBranch:
+    def __init__(self, after):
+        self.after = after
+
+    def snapshot_json(self):
+        return json.dumps(self.after)
+
+
+class _ShipEnv:
+    def __init__(self, afters):
+        self.afters, self.forked = afters, []
+
+    def fork(self, decision_id, index):
+        self.forked.append(index)
+        return _ShipBranch(self.afters[index])
+
+
+class ShipNowTests(unittest.TestCase):
+    SPEC = 'teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-passlast-shipnow-cap60-p2.json'
+    BASE_SPEC = 'teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-passlast-cap60-p2.json'
+    FACTORY = 'guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow'
+    SHARE = 5.2/1.5
+    ENTRY = 2*5.2/1.5 - 5
+
+    def root(self, phase='ActionPhase', entry=None):
+        snapshot = {'player': 0, 'decision_id': 7,
+                    'state': {'round': 5, 'phase': phase, 'players': [{'explored_ships': []}, {}, {}, {}]},
+                    'candidates': [{'action': {'type': 'Pass', 'booster_id': 1}},
+                                   {'action': {'type': 'ExploreSpaceship', 'ship': 'Rebellion'}},
+                                   {'action': {'type': 'Build', 'coord': '1,1'}}]}
+        scores = [(39.0, 'x'), (self.ENTRY if entry is None else entry, 'x'), (0.5, 'x')]
+        return snapshot, scores
+
+    def after(self, player=0, rnd=5, phase='ActionPhase'):
+        players = [{'explored_ships': [1]}, {}, {}, {}]
+        return {'player': player, 'decision_id': 8, 'state': {'round': rnd, 'phase': phase, 'players': players},
+                'candidates': [{'action': {'type': 'Pass', 'booster_id': 1}},
+                               {'action': {'type': 'Build', 'coord': '1,1'}},
+                               {'action': {'type': 'RebellionCreditsAndQic'}},
+                               {'action': {'type': 'RebellionGainTechTile', 'tile': 11}}]}
+
+    def run_on(self, snapshot, scores, after_scores=None, flags=None, **after_kwargs):
+        env = _ShipEnv({1: self.after(**after_kwargs)})
+        calls = []
+
+        def rank_after(branch, after):
+            calls.append(after)
+            return after_scores
+
+        patch = {'ship_now': True, 'lf_tables': True}
+        patch.update(flags or {})
+        with mock.patch.dict(tp._guide, patch):
+            result = tp.ship_now_scores(env, snapshot, scores, rank_after)
+        return result, env, calls
+
+    def test_lowered_to_the_best_opened_action(self):
+        snapshot, scores = self.root()
+        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after)
+        self.assertAlmostEqual(result[1][0], self.ENTRY - self.SHARE + 0.93)
+        self.assertAlmostEqual(result[1][0], -0.6033, places=3)
+        self.assertIn('ship_now', result[1][1])
+        self.assertTrue(result[1][1].startswith('x'))
+        self.assertIs(result[0], scores[0])
+        self.assertIs(result[2], scores[2])
+        self.assertEqual(env.forked, [1])
+        self.assertEqual(len(calls), 1)
+
+    def test_unchanged_when_an_opened_action_scores_the_share(self):
+        snapshot, scores = self.root()
+        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (7.78, 't')]
+        result, env, calls = self.run_on(snapshot, scores, after)
+        self.assertIs(result, scores)
+
+    def test_nothing_opened_above_zero(self):
+        snapshot, scores = self.root()
+        after = [(39.0, 'p'), (9.0, 'b'), (-1.0, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after)
+        self.assertAlmostEqual(result[1][0], self.ENTRY - self.SHARE)
+        self.assertAlmostEqual(result[1][0], -1.5333, places=3)
+
+    def test_unchanged_when_another_seat_moves_next(self):
+        snapshot, scores = self.root()
+        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after, player=1)
+        self.assertIs(result, scores)
+        self.assertEqual(calls, [])
+
+    def test_unchanged_when_the_round_changes(self):
+        snapshot, scores = self.root()
+        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after, rnd=6)
+        self.assertIs(result, scores)
+        self.assertEqual(calls, [])
+
+    def test_unchanged_when_the_next_phase_is_not_the_action_phase(self):
+        snapshot, scores = self.root()
+        after = [(39.0, 'p'), (9.0, 'b'), (0.93, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after, phase='IncomeOrderPending')
+        self.assertIs(result, scores)
+        self.assertEqual(calls, [])
+
+    def test_unchanged_with_the_flag_off(self):
+        snapshot, scores = self.root()
+        env = _ShipEnv({1: self.after()})
+        self.assertFalse(tp._guide['ship_now'])
+        with mock.patch.dict(tp._guide, {'lf_tables': True}):
+            result = tp.ship_now_scores(env, snapshot, scores, lambda branch, after: self.fail('ranked'))
+        self.assertIs(result, scores)
+        self.assertEqual(env.forked, [])
+
+    def test_unchanged_when_the_entry_scores_nothing_or_is_blocked(self):
+        for entry in (0.0, -1.0, (BLOCKED, PREFIX + 'y')):
+            snapshot, scores = self.root()
+            scores[1] = entry if isinstance(entry, tuple) else (entry, 'x')
+            result, env, calls = self.run_on(snapshot, scores, None)
+            self.assertIs(result, scores)
+            self.assertEqual(env.forked, [])
+
+    def test_unchanged_outside_the_action_phase(self):
+        snapshot, scores = self.root(phase='IncomeOrderPending')
+        result, env, calls = self.run_on(snapshot, scores, None)
+        self.assertIs(result, scores)
+        self.assertEqual(env.forked, [])
+
+    def test_share_without_lf_tables(self):
+        snapshot, scores = self.root()
+        after = [(39.0, 'p'), (9.0, 'b'), (0.5, 'c'), (BLOCKED, PREFIX + 'y')]
+        result, env, calls = self.run_on(snapshot, scores, after, flags={'lf_tables': False})
+        self.assertAlmostEqual(result[1][0], self.ENTRY - 2.0/1.5 + 0.5)
+
+    def test_spec_file_names_the_factory_and_matches_the_base_spec(self):
+        here = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(here, self.SPEC), encoding='utf-8') as f:
+            spec = json.load(f)
+        with open(os.path.join(here, self.BASE_SPEC), encoding='utf-8') as f:
+            base = json.load(f)
+        self.assertEqual(spec['factory'], 'teacher_patches:' + self.FACTORY)
+        self.assertTrue(callable(getattr(tp, self.FACTORY)))
+        for key in ('description', 'factory'):
+            spec.pop(key)
+            base.pop(key)
+        self.assertEqual(spec, base)
+
+    def test_install_wraps_once(self):
+        import four_factions.preparation as p
+        expected = [(1.0, 'a')]
+
+        def stub(self, env, snapshot):
+            return expected
+        with mock.patch.object(p.Policies, 'rank', stub):
+            tp.install_ship_now()
+            self.assertIs(p.Policies.rank._ship_now, True)
+            first = p.Policies.rank
+            tp.install_ship_now()
+            self.assertIs(p.Policies.rank, first)
+            self.assertFalse(tp._guide['ship_now'])
+            self.assertIs(p.Policies.rank(object(), None, {'state': {'phase': 'ActionPhase'}, 'player': 0,
+                                                           'candidates': []}), expected)

@@ -1,0 +1,14 @@
+{
+  "description": "guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow (ships_menu1_all_tier + pass_last + ship_now: when the explorer moves again right after a ship entry, this round's share of the ship's table value counts only up to the best score among the actions the entry opened; lab 132h, E286) with the lab measurement budget: 4 comparisons, 60 s cap, comparisons in 2 processes (HANDOFF E52).",
+  "source": "gaia-rl/baseline-teacher-20260917",
+  "factory": "teacher_patches:guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow",
+  "kwargs": {
+    "bgg_openings": true,
+    "shared_factions": true
+  },
+  "comparisons": 4,
+  "horizon_incomes": 1,
+  "frozen": true,
+  "max_seconds": 60,
+  "parallel": 2
+}

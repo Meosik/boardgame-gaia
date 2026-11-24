@@ -443,6 +443,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'mj01': False,                # True: ..._ships_menu1_all (MJ01 Lost Fleet track corrections, see MJ_TRACK_CAPS)
           'booster_tier': False,        # True: ..._ships_menu1_all_tier (starting booster by tier, see booster_tier_scores)
           'pass_last': False,           # True: ..._ships_menu1_all_tier_passlast (last seat to pass plays its positive actions first, see pass_last_scores)
+          'ship_now': False,            # True: ..._all_tier_passlast_shipnow (a ship entry's share for this round only up to what it opens, see ship_now_scores)
           # Opt-in parts measured and not in the base stack (stack-parts.md B; per-faction candidates):
           'former_use': False,          # True: ..._ships_former (see install_former_use)
           'opening_budget': False,      # True: ..._ships_budget (see opening_budget_scores)
@@ -5476,6 +5477,86 @@ def pass_last_scores(env, snapshot, scores):
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast(seed, **kwargs):
     """Teacher factory: ships_menu1_all_tier + pass_last (lab 132e, E281; opt-in, not in the deployment stack)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier(seed, **kwargs)
+    _guide['pass_last'] = True
+    _wrap_rank('_pass_last', pass_last_scores)
+    return teacher
+
+
+# ship_now (lab 132g, HANDOFF E286; opt-in). guide_value.ships_value prices an explored ship at its best table action
+# once for every round left *including this one*, whether or not anything can be played on it this round: the round-5
+# Rebellion entry is 2 x 5.2 / 1.5 - 5 VP = +1.93 and is worth -1.53 once round 6 starts (132f flip-229: the only ship
+# action left that round was credits + QIC, 0.93). When the explorer moves again right after the entry (the fork's next
+# decision is its own, same round: every other seat has passed), this round's share of the table value counts only up
+# to the best base-ranking score among the candidates the entry opened (not legal before it, Pass excluded):
+# share -> min(share, max(0, best opened)). The shares of the later rounds stay. With another seat to move next the
+# score is returned as given (their moves come first; like pass_last, only the diagnosed case). A ship action that
+# first needs a conversion is not counted as opened (132h reads whether that is too strict).
+def ship_now_scores(env, snapshot, scores, rank_after):
+    """rank_after(branch, after) -> the base ranking of the position after the entry (no side effects on the caller)."""
+    import guide_value as gv
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if not _guide['ship_now'] or actor is None or 'ActionPhase' not in state['phase']:
+        return scores
+    candidates = snapshot['candidates']
+    entries = [i for i, c in enumerate(candidates) if str(c['action'].get('type')).endswith('ExploreSpaceship')
+               and not blocked(scores[i]) and scores[i][0] > 0]
+    if not entries:
+        return scores
+    before = {json.dumps(c['action'], sort_keys=True) for c in candidates}
+    held = set(state['players'][actor].get('explored_ships') or ())
+    lifted = list(scores)
+    for i in entries:
+        branch = env.fork(snapshot['decision_id'], i)
+        after = json.loads(branch.snapshot_json())
+        if (after.get('player') != actor or 'ActionPhase' not in after['state']['phase']
+                or after['state']['round'] != state['round']):
+            continue
+        new = set(after['state']['players'][actor].get('explored_ships') or ()) - held
+        if not new:
+            continue
+        if _guide['lf_tables']:
+            share = gv.to_vp(state, sum(gv.SHIP_ACTION_NET.get(ship, gv.SHIP_ACTION_GAIN) for ship in new))
+        else:
+            share = gv.to_vp(state, gv.SHIP_ACTION_GAIN*len(new))
+        ranked = rank_after(branch, after)
+        opened = [ranked[j][0] for j, d in enumerate(after['candidates'])
+                  if d['action'].get('type') != 'Pass' and not blocked(ranked[j])
+                  and json.dumps(d['action'], sort_keys=True) not in before]
+        used = min(share, max(0.0, max(opened, default=0.0)))
+        if used >= share:
+            continue
+        lifted[i] = (scores[i][0]-share+used, f"{scores[i][1]}; ship_now: this round's share {share:.2f} -> {used:.2f} "
+                     f'({len(opened)} opened)', *scores[i][2:])
+    return lifted if lifted != scores else scores
+
+
+def install_ship_now():
+    """Wrap Policies.rank with ship_now_scores (like _wrap_rank, plus the base ranking of the fork on a clone of the
+    policies, so the proof memory and the wrappers' own state of the decision being ranked are untouched)."""
+    import four_factions.preparation as p
+    inner_rank = p.Policies.rank
+    if getattr(inner_rank, '_ship_now', False):
+        return
+    base_rank = getattr(inner_rank, '__wrapped__', inner_rank)
+
+    def rank(self, env, snapshot):
+        return ship_now_scores(env, snapshot, inner_rank(self, env, snapshot),
+                               lambda branch, after: base_rank(self.clone(), branch, after))
+    for name, value in vars(inner_rank).items():
+        if name.startswith('_') and isinstance(value, bool):
+            setattr(rank, name, value)
+    rank.__wrapped__ = base_rank
+    rank._ship_now = True
+    p.Policies.rank = rank
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_passlast_shipnow(seed, **kwargs):
+    """Teacher factory: ships_menu1_all_tier + ship_now + pass_last (lab 132h, E286; opt-in, not in the deployment
+    stack). ship_now is wrapped first so pass_last sees the lowered entry."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier(seed, **kwargs)
+    _guide['ship_now'] = True
+    install_ship_now()
     _guide['pass_last'] = True
     _wrap_rank('_pass_last', pass_last_scores)
     return teacher
