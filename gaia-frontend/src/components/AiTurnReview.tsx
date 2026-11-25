@@ -32,6 +32,16 @@ export function aiHoldSpares(hold: AiHold): string {
     : '남은 예비 수 없음 — 다시 거절하면 이 차례를 직접 둡니다';
 }
 
+/** The AI seats wait at a setup decision (a starting structure or starting booster). When the
+ * position itself is already past setup, that decision was the last one — the last starting
+ * booster — and the setup screen keeps showing it until the player continues or rejects
+ * (`FactionSelectView`). */
+export function aiHoldIsSetupDecision(state: GameState): boolean {
+  const decisions = state.ai_hold?.turn.decisions ?? [];
+  const last = decisions[decisions.length - 1] as { phase?: unknown } | undefined;
+  return last?.phase === 'Setup';
+}
+
 /** The review of AI turns in an AI game: the switch (the AI seats wait after each of their
  * turns), and while they wait the finished turn's moves with 계속 / 거절. A rejected turn is
  * taken back and played again without the move that ended it; the server records the rejection.

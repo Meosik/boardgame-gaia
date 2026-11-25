@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AiTurnReview, aiHoldOrigin, aiHoldSpares } from '../components/AiTurnReview';
+import { AiTurnReview, aiHoldIsSetupDecision, aiHoldOrigin, aiHoldSpares } from '../components/AiTurnReview';
 import { api } from '../api/rest';
 import { controlledPlayer } from '../devControl';
 import type { AiHold, GameState, PlayerState } from '../types/game';
@@ -160,5 +160,19 @@ describe('aiHoldOrigin and aiHoldSpares', () => {
     expect(aiHoldOrigin(single)).toBe('보관해 둔 예비 수(새 탐색 없음)');
     // No spare is left: the next rejection gives the turn to the player.
     expect(aiHoldSpares(hold({ rejections: 2, spares_left: 0 }))).toContain('이 차례를 직접 둡니다');
+  });
+});
+
+describe('aiHoldIsSetupDecision', () => {
+  it('is true only while the AI seats wait at a setup decision', () => {
+    const booster = { phase: 'Setup', action: { type: 'SelectStartingBooster', booster_id: 3 } };
+    const pass = { phase: 'Game', action: { type: 'Pass', booster_id: 4 } };
+    const turn = { player: 1, start_revision: 5, revision: 6 };
+    // The last starting booster: the game has started in the snapshot, the wait is at the booster.
+    expect(aiHoldIsSetupDecision(state({ ai_hold: hold({ turn: { ...turn, decisions: [booster] } }) }))).toBe(true);
+    expect(aiHoldIsSetupDecision(state({ ai_hold: hold({ turn: { ...turn, decisions: [pass] } }) }))).toBe(false);
+    expect(aiHoldIsSetupDecision(state({ ai_hold: hold() }))).toBe(false);
+    expect(aiHoldIsSetupDecision(state({ ai_hold: null }))).toBe(false);
+    expect(aiHoldIsSetupDecision(state())).toBe(false);
   });
 });

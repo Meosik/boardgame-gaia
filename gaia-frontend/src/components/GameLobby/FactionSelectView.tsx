@@ -12,7 +12,7 @@ import { RoundBoosters } from '../RoundBoosters';
 import { ScoringBoard } from '../ScoringBoard';
 import { PersonalBoardDrawer } from '../PersonalBoardDrawer';
 import { PlayerDashboard } from '../PlayerDashboard';
-import { AiTurnReview } from '../AiTurnReview';
+import { AiTurnReview, aiHoldIsSetupDecision } from '../AiTurnReview';
 import { SetupRedo } from '../SetupRedo';
 import { LostFleetTechRequirementBoard } from '../LostFleetTechRequirementBoard';
 import { FactionBadge } from './FactionBadge';
@@ -232,6 +232,8 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
   // and losing one to a same-batch sibling would stall whichever step it
   // was carrying.
   const processedCount = useRef(0);
+  /** The latest position that was still in setup (the store's, then every setup snapshot). */
+  const lastSetup = useRef<GameState | null>(initialGameState);
   useEffect(() => {
     for (let i = processedCount.current; i < messages.length; i++) {
       const message = messages[i];
@@ -253,7 +255,21 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
           const { state } = message;
           if (!isGameState(state)) break;
           if (typeof state.phase === 'object' && 'Setup' in state.phase) {
+            lastSetup.current = state;
             setSetupGameState(state);
+            break;
+          }
+          // The game has started in this snapshot, but the AI seats wait at the last setup
+          // decision (an AI seat's starting booster) for 계속 / 거절. The setup screen stays —
+          // the new position (the booster is taken) under the setup step it was decided in —
+          // so the player is asked here, not after the board has already opened. 계속 sends
+          // the same position without the wait (the game opens), 거절 one back in setup.
+          const before = lastSetup.current;
+          if (
+            before && aiHoldIsSetupDecision(state)
+            && typeof before.phase === 'object' && 'Setup' in before.phase
+          ) {
+            setSetupGameState({ ...state, phase: before.phase });
             break;
           }
           setGameState(state);
