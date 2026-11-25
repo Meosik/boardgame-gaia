@@ -99,8 +99,8 @@ def main():
     args = parser.parse_args()
     out = args.out if args.out.is_absolute() else Path.cwd()/args.out
     folder = out.parent
-    if folder.exists() and any(folder.iterdir()):
-        parser.error(f'{folder} is not empty: give a fresh run folder')
+    if any((folder/name).exists() for name in ('single', 'parallel')):
+        parser.error(f'{folder} already holds a run: give a fresh run folder')
     folder.mkdir(parents=True, exist_ok=True)
     arms = {'single': run_arm('single', 0, args, folder), 'parallel': run_arm('parallel', args.runners, args, folder)}
     single, parallel = (arms[name].get('decisions_per_hour') for name in ('single', 'parallel'))
