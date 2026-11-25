@@ -1259,7 +1259,8 @@ pub(crate) fn takeover_before(room: &Room, sender: PlayerId) -> Option<Takeover>
 /// for review: it is the player's. Called inside the command that applies the move, before the
 /// room's revision advances. Returns the record of the turn when this move ended it (kept
 /// beside the rejections: what the player played where every move of the teacher was
-/// rejected); the takeover is over then.
+/// rejected); the takeover is over then. The record says (`ended_with_excluded`) when the move
+/// that ended the turn is one of the rejected moves.
 pub(crate) fn note_takeover_move(
     room: &mut Room,
     takeover: Takeover,
@@ -1303,6 +1304,15 @@ pub(crate) fn note_takeover_move(
     } else {
         room.ai_rejected.take()
     };
+    // The player ended the turn with a move that had been rejected (that move, or a pass where
+    // a pass was rejected). It is accepted like any other — the free actions before it may
+    // differ from the rejected turn's — and the record says so (user 2026-11-25).
+    let ended_with_excluded = rejected.as_ref().is_some_and(|rejected| {
+        record
+            .decisions
+            .last()
+            .is_some_and(|ended_with| is_excluded(ended_with, &rejected.excluded))
+    });
     Some(serde_json::json!({
         "accepted": false,
         "kind": "ai_turn_by_player",
@@ -1312,6 +1322,7 @@ pub(crate) fn note_takeover_move(
         "revision": moved,
         "played_turn": record.decisions,
         "excluded": rejected.as_ref().map(|rejected| &rejected.excluded),
+        "ended_with_excluded": ended_with_excluded,
         "rejections": rejected.as_ref().map(|rejected| rejected.rejections),
         "level": room.ai_level,
         "teacher": room.ai_teacher,
@@ -3266,6 +3277,31 @@ mod tests {
         assert!(note_takeover_move(&mut room, takeover, pass()).is_some());
         room.revision += 1;
         assert_eq!((room.ai_hold.as_ref(), room.ai_rejected.as_ref()), (None, None));
+    }
+
+    #[test]
+    fn the_record_of_a_turn_the_player_played_says_when_it_ended_with_a_rejected_move() {
+        // A pass was rejected (every pass is left out) and the player passes: the record says so.
+        let (mut room, _, other, start) = held_room(pass());
+        let member = room.dev_human_player.unwrap();
+        reject(&mut room, &start).unwrap();
+        room.ai_rejected.as_mut().unwrap().by_player = true;
+        let takeover = takeover_before(&room, member).expect("the player plays the turn");
+        room.game_state = Some(action_phase(&room, other, 1));
+        let played = note_takeover_move(&mut room, takeover, pass()).expect("the turn ended");
+        assert_eq!(played["ended_with_excluded"], true);
+
+        // Another move was rejected: the player's pass is not one of the moves left out.
+        let (mut room, _, other, start) = held_room(pass());
+        let member = room.dev_human_player.unwrap();
+        reject(&mut room, &start).unwrap();
+        let rejected = room.ai_rejected.as_mut().unwrap();
+        rejected.by_player = true;
+        rejected.excluded = vec![Excluded::Move(free_action())];
+        let takeover = takeover_before(&room, member).expect("the player plays the turn");
+        room.game_state = Some(action_phase(&room, other, 1));
+        let played = note_takeover_move(&mut room, takeover, pass()).expect("the turn ended");
+        assert_eq!(played["ended_with_excluded"], false);
     }
 
     #[test]
