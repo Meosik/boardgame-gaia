@@ -1,0 +1,58 @@
+{
+ "name": "136-ppo-speed-single-vs-parallel",
+ "kind": "command",
+ "status": "failed",
+ "note": "코덱스 이상 없음(사용자 2026-11-13 상시 지시), HANDOFF E329 ⏩ → E330: PPO 속도 스모크 — 같은 처음부터(초기 체크포인트 · 교사 없음) 학습을 두 팔로 차례로 돌림: single = 드라이버 한 프로세스 표집(--env-runners 0, 기존 시범 설정), parallel = 원격 표집 프로세스 8개(커밋 b44b795: 러너별 에피소드 시드 흐름 · 난수 상태 저장 · 복원). 공통: 인코딩 4 · 폭 256 · 후보 용량 4096 · 반복당 128결정 · minibatch 32 · 시드 0 · CPU, 팔당 30분(그 뒤 첫 반복 경계에서 멈춤). 판정 없음(강도 측정 아님, 교사 · 엔진 · 배포 변경 없음). 볼 것(정리 턴): ① 팔별 시간당 결정 수와 parallel/single 배수(8 프로세스의 병렬 효율) ② 반복당 표집 초 대 갱신 초(어느 쪽이 병목인지) ③ 끝난 판 수 · 판 길이(처음부터 정책의 판이 몇 결정인지; 30분 안에 끝난 판이 0이면 그대로 적음) → 시간당 판 수 ④ 드라이버 최대 메모리(인코딩 4 · 용량 4096은 결정당 관측 5.6MiB — 배치 크기의 상한) ⑤ 오류: 후보 4096 초과(CandidateCapacityError) · 러너 재시작 · require_current_sources 거부가 있으면 error 꼬리 그대로 ⑥ engine_build_id. 한계: 시드 1개 · 30분, 학습 곡선은 안 봄(손실 첫 · 끝 값만 기록), 수치는 이 설정(배치 128 · minibatch 32 · 러너 8)의 것. 예상 ≈ 65분, 제한 3시간. 도는 동안 같은 기계의 실서버 AI 대국이 느려질 수 있음(프로세스 10개). 리플레이 게시 없음.",
+ "host": "agentmaco",
+ "commit": "8485fd6",
+ "started_at": "2026-11-25T17:50:04+09:00",
+ "finished_at": "2026-11-25T17:50:05+09:00",
+ "command": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "tools/ppo_speed.py",
+  "--out",
+  "runs/lab-136-ppo-speed-single-vs-parallel/metrics.json",
+  "--minutes",
+  "30",
+  "--runners",
+  "8",
+  "--batch-size",
+  "128",
+  "--minibatch-size",
+  "32",
+  "--capacity",
+  "4096",
+  "--encoding",
+  "4"
+ ],
+ "exit_code": 1,
+ "metrics": {
+  "settings": {
+   "minutes": 30.0,
+   "runners": 8,
+   "seed": 0,
+   "encoding": 4,
+   "capacity": 4096,
+   "batch_size": 128,
+   "minibatch_size": 32
+  },
+  "arms": {
+   "single": {
+    "env_runners": 0,
+    "returncode": 1,
+    "wall_seconds": 0.2,
+    "error": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/home/sohegi/projects/gaia-lab/gaia-rl/python/gaia_rl/training.py\", line 11, in <module>\n    import torch\nModuleNotFoundError: No module named 'torch'\n"
+   },
+   "parallel": {
+    "env_runners": 8,
+    "returncode": 1,
+    "wall_seconds": 0.2,
+    "error": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/home/sohegi/projects/gaia-lab/gaia-rl/python/gaia_rl/training.py\", line 11, in <module>\n    import torch\nModuleNotFoundError: No module named 'torch'\n"
+   }
+  },
+  "parallel_over_single_decisions_per_hour": null
+ }
+}
