@@ -96,8 +96,7 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
       {takeover && (
         <p className="teacher-hint-move" role="status">
           ✋ <strong>{nameOf(takeover.player)}</strong>의 차례를 직접 두세요 — 교사가 낼 다른 수가 없습니다
-          {takeover.rejections ? ` (거절 ${takeover.rejections}회)` : ''}. 차례가 끝날 때까지 이 좌석으로 두고, 둔 수는 기록됩니다.
-          {' '}「되돌리기」는 이 차례의 처음 자리로 갑니다(AI가 먼저 둔 자유 행동 포함).
+          {takeover.rejections ? ` (거절 ${takeover.rejections}회)` : ''}
         </p>
       )}
       {replay && !hold && (
@@ -116,10 +115,13 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
               <li key={index}>{hintLabel(decision, state)}</li>
             ))}
           </ol>
-          {!hold.by_player && <p className="teacher-hint-note">{aiHoldOrigin(hold)} · {aiHoldSpares(hold)}</p>}
+          {!hold.by_player && typeof hold.spares_left === 'number' && (
+            <p className="teacher-hint-note">{aiHoldSpares(hold)}</p>
+          )}
+          <div className="ai-turn-review-buttons">
           <button
             type="button"
-            className="btn btn-small btn-primary"
+            className="btn btn-primary"
             disabled={busy !== null}
             onClick={() => void run(
               'continue',
@@ -129,10 +131,9 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
           >
             {busy === 'continue' ? '이어 가는 중…' : '계속'}
           </button>
-          {' '}
           <button
             type="button"
-            className="btn btn-small btn-secondary"
+            className="btn btn-secondary"
             disabled={busy !== null || !hold.can_reject}
             onClick={() => void run(
               'reject',
@@ -142,11 +143,7 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
           >
             {busy === 'reject' ? '되돌리는 중…' : hold.by_player ? '다시 두기' : hold.spares_left === 0 ? '거절하고 직접 두기' : '거절'}
           </button>
-          <p className="teacher-hint-note">
-            {hold.by_player
-              ? '[다시 두기]는 이 차례를 처음 자리로 되돌립니다 — 자유 행동과 차례를 끝낸 수가 모두 사라지고 내가 다시 둡니다.'
-              : '거절하면 이 차례를 되돌리고 차례를 끝낸 수를 뺀 다른 수로 다시 둡니다(기록됨). 교사가 낼 다른 수가 없으면 그 차례를 직접 둡니다. 내 수를 두면 [계속]과 같아 거절할 수 없습니다.'}
-          </p>
+          </div>
         </div>
       )}
       {error && <p className="error-msg" role="alert">{error}</p>}

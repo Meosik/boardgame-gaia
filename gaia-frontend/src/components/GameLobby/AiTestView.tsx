@@ -67,7 +67,7 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
         />
       </div>
       <fieldset className="ai-test-factions">
-        <legend>이번 판 종족 — 하나를 고르면 바로 시작합니다 (차례는 이 맵에서 잘 풀릴 것 같은 종족일수록 뒤)</legend>
+        <legend>이번 판 종족 — 고르면 바로 시작</legend>
         {factions.map((faction) => {
           const portrait = factionBoardImageSrc(faction);
           return (
@@ -100,34 +100,21 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
             disabled={loading}
             onChange={(e) => setReview(e.target.checked)}
           />
-          {' '}AI 차례마다 멈춤 — AI가 둔 수를 보고 [계속] 또는 [거절](다른 수로 다시 두게 함)
+          {' '}AI 차례마다 멈춤
         </label>
       </div>
-      <p>
-        <small>
-          나머지 세 종족은 AI(어려움)가 둡니다. 맵·타일은 실험과 같은 시드({AI_TEST_MAP_SEED})로
-          고정되고 비딩 없이 바로 시작합니다. AI는 수마다 길면 20초쯤 생각합니다.
-        </small>
-      </p>
-      <p>
-        <small>
-          「네 종족 모두 AI로 시작」은 위 네 종족을 전부 AI가 둡니다. 나는 종족을 맡지 않고, AI가
-          차례를 끝낼 때마다 멈춘 수를 보고 [계속] · [거절] · 대신 두기만 합니다(첫 배치 · 부스터
-          포함, 멈춤은 대국 화면에서 끌 수 있음).
-        </small>
-      </p>
 
+      <button
+        type="button"
+        className="btn btn-primary ai-test-all-ai"
+        onClick={() => void start(order[0], true)}
+        disabled={loading}
+      >
+        네 종족 모두 AI로 시작
+      </button>
       {error && <p className="error-msg">{error}</p>}
 
       <div className="form-actions">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => void start(order[0], true)}
-          disabled={loading}
-        >
-          네 종족 모두 AI로 시작
-        </button>
         <button className="btn btn-ghost" onClick={onBack} disabled={loading}>
           뒤로
         </button>

@@ -69,7 +69,8 @@ describe('AiTurnReview', () => {
     expect(review).toHaveTextContent('영희');
     expect(review).toHaveTextContent('자유 행동 A');
     expect(review).toHaveTextContent('본 행동 B');
-    expect(review).toHaveTextContent('교사의 첫 선택');
+    // Only the moves and the two buttons: nothing about where the move came from.
+    expect(review).not.toHaveTextContent('교사의 첫 선택');
     fireEvent.click(proceed);
     await waitFor(() => expect(aiContinue).toHaveBeenCalledWith('ROOM', 'token'));
   });
@@ -124,7 +125,6 @@ describe('AiTurnReview', () => {
     const again = await screen.findByRole('button', { name: '다시 두기' });
     const review = screen.getByRole('region', { name: 'AI 차례 검토' });
     expect(review).toHaveTextContent('영희의 차례가 끝났습니다 — 내가 대신 둔 차례');
-    expect(review).toHaveTextContent('자유 행동과 차례를 끝낸 수가 모두 사라지고 내가 다시 둡니다');
     // Not a move of the teacher: nothing about spares or where the move came from.
     expect(review).not.toHaveTextContent('예비 수');
     expect(screen.queryByRole('button', { name: '거절하고 직접 두기' })).toBeNull();
