@@ -139,5 +139,29 @@ class SpeedSummary(unittest.TestCase):
         self.assertEqual(summarize({'iteration_seconds': [10.0]}, 256)['decisions'], 256.0)
 
 
+class SpeedMemory(unittest.TestCase):
+    def test_meminfo_mib(self):
+        from ppo_speed import meminfo_mib
+        text = ('MemTotal:       16384000 kB\nMemFree:         1024000 kB\nMemAvailable:    8192000 kB\n'
+                'Shmem:           2048000 kB\n')
+        self.assertEqual(meminfo_mib(text), {'MemTotal': 16000.0, 'MemAvailable': 8000.0, 'Shmem': 2000.0})
+        without = meminfo_mib('MemTotal: 1024 kB\nMemAvailable: 2048 kB\n')
+        self.assertEqual(without, {'MemTotal': 1.0, 'MemAvailable': 2.0, 'Shmem': None})
+
+    def test_tree_pss_mib(self):
+        from ppo_speed import tree_pss_mib
+        with tempfile.TemporaryDirectory() as folder:
+            proc = Path(folder)
+            (proc/'self').mkdir()
+            for pid, name, parent, pss in ((10, '(train)', 1, 1024), (11, '(ray::Env Runner)', 10, 2048),
+                                           (12, '(a) b)', 11, 4096), (13, '(other)', 1, 8192)):
+                (proc/str(pid)).mkdir()
+                (proc/str(pid)/'stat').write_text(f'{pid} {name} S {parent} {pid} 0 0 -1 4194304\n')
+                (proc/str(pid)/'smaps_rollup').write_text(f'Rss:  {pss*2} kB\nPss:  {pss} kB\n')
+            self.assertEqual(tree_pss_mib(10, proc), (7.0, 3))
+            (proc/'12'/'smaps_rollup').unlink()
+            self.assertEqual(tree_pss_mib(10, proc), (3.0, 2))
+
+
 if __name__ == '__main__':
     unittest.main()

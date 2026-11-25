@@ -26,6 +26,9 @@ ENCODERS = {3: FeatureEncoder, 4: FeatureEncoderV4}
 MODEL_DEFAULTS = {'encoding': 3, 'width': 64}
 # Settings saved before the sampling processes and the minibatch size were arguments (restore_run compares with these).
 SETTING_DEFAULTS = {**MODEL_DEFAULTS, 'env_runners': 0, 'minibatch_size': 8}
+# RLlib's default sample timeout (60 s) applies to remote env runners only and drops their late fragments: an hour
+# keeps a slow fragment (the sampling in the driver has no limit at all).
+SAMPLE_TIMEOUT_S = 3600.0
 
 
 def shared_policy(agent_id, *args, **kwargs):
@@ -99,7 +102,7 @@ def build_algorithm(seed=0, capacity=2048, batch_size=32, encoding=3, width=64, 
                      disable_env_checking=True)
         .framework('torch')
         .env_runners(num_env_runners=env_runners, rollout_fragment_length=16 if env_runners == 0 else 'auto',
-                     batch_mode='truncate_episodes')
+                     batch_mode='truncate_episodes', sample_timeout_s=SAMPLE_TIMEOUT_S)
         .learners(num_learners=0,num_gpus_per_learner=0)
         .training(gamma=1.0, train_batch_size_per_learner=batch_size,
                   minibatch_size=minibatch_size,num_epochs=1,lr=0.0003,grad_clip=1.0)

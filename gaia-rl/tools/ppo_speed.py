@@ -3,7 +3,9 @@
 Runs `python -m gaia_rl.training` twice from gaia-rl/, one arm after the other, each for --minutes (it stops at the
 first iteration boundary after that): `single` = --env-runners 0, `parallel` = --env-runners N. Same seed, encoding,
 capacity, batch and minibatch size; no initial checkpoint, no teacher. Not a strength measurement: it reports
-decisions and finished games per hour, the sampling and update seconds of an iteration and the driver's peak memory.
+decisions and finished games per hour, the sampling and update seconds of an iteration, the driver's peak memory and
+— sampled every 5 s over the training process and all its descendants — the peak Pss sum, the lowest system
+MemAvailable and the peak Shmem.
 
   cd gaia-rl && GAIA_ENGINE_FIXES_2=1 PYTHONPATH=python:baseline-teacher-20260917:tools .venv/bin/python \\
       tools/ppo_speed.py --out runs/<name>/metrics.json --minutes 30 --runners 12
@@ -57,6 +59,47 @@ def summarize(report, batch_size):
             'total_loss_last': number(learner[-1].get('total_loss')) if learner else None}
 
 
+def meminfo_mib(text):
+    """MemTotal, MemAvailable and Shmem of a /proc/meminfo text, in MiB (pure: tested in test_ppo_runners.py)."""
+    found = dict.fromkeys(('MemTotal', 'MemAvailable', 'Shmem'))
+    for line in text.splitlines():
+        key, _, rest = line.partition(':')
+        if key in found and rest.split():
+            found[key] = float(rest.split()[0])/1024
+    return found
+
+
+def tree_pss_mib(root_pid, proc=Path('/proc')):
+    """(Pss sum in MiB, process count) of root_pid and all its descendants (Ray's raylet and workers are descendants
+    of the training process). Pss counts a shared page once across the processes that map it, so the object store is
+    not multiplied by the number of runners. A process that ends while it is read is skipped."""
+    children = {}
+    for entry in Path(proc).iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            text = (entry/'stat').read_text()
+            parent = int(text[text.rindex(')')+1:].split()[1])
+        except (OSError, ValueError, IndexError):
+            continue
+        children.setdefault(parent, []).append(int(entry.name))
+    tree, pending = [], [root_pid]
+    while pending:
+        pid = pending.pop()
+        if (Path(proc)/str(pid)).exists():
+            tree.append(pid)
+        pending.extend(children.get(pid, []))
+    total_kb, count = 0, 0
+    for pid in tree:
+        try:
+            lines = (Path(proc)/str(pid)/'smaps_rollup').read_text().splitlines()
+            total_kb += next(int(line.split()[1]) for line in lines if line.startswith('Pss:'))
+            count += 1
+        except (OSError, ValueError, IndexError, StopIteration):
+            continue
+    return total_kb/1024, count
+
+
 def run_arm(name, runners, args, folder):
     output = folder/name
     command = [sys.executable, '-m', 'gaia_rl.training', '--output', str(output), '--iterations', '1000000',
@@ -69,13 +112,39 @@ def run_arm(name, runners, args, folder):
     started = time.monotonic()
     # An iteration is not interrupted, so the arm may run past --minutes: three times the budget is the hard stop.
     limit = args.minutes*60*3+900
+    available_start = meminfo_mib(Path('/proc/meminfo').read_text())['MemAvailable']
+    available_min = shmem_peak = pss_peak = processes = None
+    samples = 0
     with open(log, 'w') as stream:
-        try:
-            code = subprocess.run(command, cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT,
-                                  timeout=limit).returncode
-        except subprocess.TimeoutExpired:
-            code = 'timeout'
-    arm = {'env_runners': runners, 'returncode': code, 'wall_seconds': round(time.monotonic()-started, 1)}
+        process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT)
+        while True:
+            try:
+                process.wait(timeout=5)
+                code = process.returncode
+                break
+            except subprocess.TimeoutExpired:
+                info = meminfo_mib(Path('/proc/meminfo').read_text())
+                pss, count = tree_pss_mib(process.pid)
+                samples += 1
+                if info['MemAvailable'] is not None:
+                    available_min = info['MemAvailable'] if available_min is None else min(available_min, info['MemAvailable'])
+                if info['Shmem'] is not None:
+                    shmem_peak = info['Shmem'] if shmem_peak is None else max(shmem_peak, info['Shmem'])
+                if pss_peak is None or pss > pss_peak:
+                    pss_peak, processes = pss, count
+                if time.monotonic()-started > limit:
+                    process.kill()
+                    process.wait()
+                    code = 'timeout'
+                    break
+
+    def rounded(value):
+        return None if value is None else round(value, 1)
+
+    arm = {'env_runners': runners, 'returncode': code, 'wall_seconds': round(time.monotonic()-started, 1),
+           'mem_available_start_mib': rounded(available_start), 'mem_available_min_mib': rounded(available_min),
+           'shmem_peak_mib': rounded(shmem_peak), 'tree_pss_peak_mib': rounded(pss_peak),
+           'tree_processes_at_peak': processes, 'memory_samples': samples}
     pilot = output/'pilot.json'
     if code == 0 and pilot.exists():
         arm.update(summarize(json.loads(pilot.read_text()), args.batch_size))
