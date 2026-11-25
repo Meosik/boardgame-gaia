@@ -389,6 +389,10 @@ pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
         if room.ai_review {
             fields.insert("ai_review".into(), json!(true));
         }
+        // The teacher plays every seat: the room's member has none of their own.
+        if room.ai_all_seats {
+            fields.insert("ai_all_seats".into(), json!(true));
+        }
         if let Some(hold) = room.current_ai_hold() {
             fields.insert("ai_hold".into(), json!(hold));
         }

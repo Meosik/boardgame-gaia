@@ -87,9 +87,14 @@ pub struct Room {
     /// snapshots of that revision as `ai_stalled`.
     pub ai_stalled: Option<AiStall>,
     /// The player looks at every AI turn (`crate::ai`): when an AI seat has ended its turn the
-    /// AI seats wait (`ai_hold`) until the player continues. Kept in memory only, so it is off
-    /// again after a server restart; sent with the snapshots as `ai_review`.
+    /// AI seats wait (`ai_hold`) until the player continues. Saved in the room's row
+    /// (`ai_options`), so it is still on after a server restart; sent with the snapshots as
+    /// `ai_review`.
     pub ai_review: bool,
+    /// The teacher plays every seat of this AI game, the room member's own too (`crate::ai`):
+    /// the member has no seat to play and only looks at the AI turns. Saved in the room's row
+    /// with the review switch (`ai_options`); sent with the snapshots as `ai_all_seats`.
+    pub ai_all_seats: bool,
     /// The moves the AI seat in turn has played since its turn began (`crate::ai`). Memory only.
     pub ai_turn: Option<AiTurn>,
     /// Set while the AI seats wait for the player to look at a finished AI turn. It holds only
@@ -104,6 +109,17 @@ pub struct Room {
     /// one back (`crate::ai::redo_setup_choice`) until their first action of the game. Memory
     /// only.
     pub setup_choices: Vec<u64>,
+}
+
+/// What the member of an AI game chose for it beside the game itself (`Room::ai_all_seats`,
+/// `Room::ai_review`). It is saved in the room's row (`rooms.ai_options`) and not in the game
+/// snapshot: the snapshot's AI mark is a type of the engine crate, and this is the server's
+/// own. A row written before the column existed reads as the default (both off).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize, Serialize)]
+#[serde(default)]
+pub struct AiOptions {
+    pub all_seats: bool,
+    pub review: bool,
 }
 
 /// A move the teacher would play instead of a rejected one (`tools/ai_worker.py` "spares").
@@ -197,6 +213,14 @@ pub enum AiStallReason {
 }
 
 impl Room {
+    /// What is saved in the room's row for an AI game (`AiOptions`).
+    pub fn ai_options(&self) -> AiOptions {
+        AiOptions {
+            all_seats: self.ai_all_seats,
+            review: self.ai_review,
+        }
+    }
+
     /// The stall of the position the room is at now; one left from an earlier revision no
     /// longer counts.
     pub fn current_ai_stall(&self) -> Option<AiStall> {
@@ -413,6 +437,7 @@ impl RoomManager {
             ai_teacher: None,
             ai_stalled: None,
             ai_review: false,
+            ai_all_seats: false,
             ai_turn: None,
             ai_hold: None,
             ai_rejected: None,

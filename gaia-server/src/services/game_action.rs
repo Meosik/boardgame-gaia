@@ -30,6 +30,9 @@ impl GameActionService {
         let mut played_for_ai = None;
         let outcome =
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
+                if crate::ai::refuses_command_of(room, player_id) {
+                    return Err(crate::ai::no_seat_error());
+                }
                 let acting_player = crate::services::dev_game::acting_player(room, player_id);
                 let takeover = crate::ai::takeover_before(room, player_id);
                 let ends_setup_redo = crate::ai::ends_setup_redo(room, player_id);

@@ -48,4 +48,20 @@ describe('manual DEV seat control', () => {
     actions.setGameState(stateWith({ ActionPhase: { active_player: 2 } }));
     expect(useGameStore.getState().myPlayerId).toBe(9);
   });
+  it('gives the player no seat when the AI plays every seat, except a rejected turn they play', () => {
+    // Seat 7 is the session's own and it is that seat's turn: still not the player's to play.
+    const allAi = { phase: { ActionPhase: { active_player: 0 } }, turn_order: [7, 8, 9, 10], ai_all_seats: true } as GameState;
+    expect(controlledPlayer(allAi, 7)).toBeNull();
+    expect(controlledPlayer({ ...allAi, ai_takeover: { player: 9, rejections: 4 } }, 7)).toBe(9);
+    expect(controlledPlayer({ ...allAi, ai_takeover: { player: 7, rejections: 4 } }, 7)).toBe(7);
+    // The session stays known, so the seat comes back with the takeover and goes again after it.
+    const { actions } = useGameStore.getState();
+    actions.setMyPlayerId(7);
+    actions.setGameState(allAi);
+    expect(useGameStore.getState()).toMatchObject({ sessionPlayerId: 7, myPlayerId: null });
+    actions.setGameState({ ...allAi, ai_takeover: { player: 9, rejections: 4 } });
+    expect(useGameStore.getState().myPlayerId).toBe(9);
+    actions.setGameState(allAi);
+    expect(useGameStore.getState().myPlayerId).toBeNull();
+  });
 });

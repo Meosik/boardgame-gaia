@@ -56,7 +56,7 @@ impl AppState {
         }
 
         let repo = GameRepository::new(self.db.clone());
-        let Some((host_player, state_str, seed, _row_revision, setup_json)) =
+        let Some((host_player, state_str, seed, _row_revision, setup_json, ai_options)) =
             repo.load_room_row(room_code).await?
         else {
             return Ok(());
@@ -97,6 +97,7 @@ impl AppState {
             revision as u64,
             setup,
             game_state,
+            ai_options,
         );
 
         let mut rooms = self.rooms.write().await;
@@ -144,6 +145,10 @@ fn resumed_ai_mark(
 /// members, so the room is not paused waiting for them to connect, and for an AI game the
 /// level and the teacher version come back too — its AI seats play on after a server restart.
 /// A game saved before `ai_game` existed has no mark and is loaded as an ordinary room.
+///
+/// `ai_options` is what the room's row says the member chose for an AI game (the teacher
+/// plays every seat, the review of AI turns); it counts only for a game with the AI mark.
+#[allow(clippy::too_many_arguments)]
 fn rehydrated_room(
     room_code: &str,
     host_player: gaia_engine::game_state::PlayerId,
@@ -152,6 +157,7 @@ fn rehydrated_room(
     revision: u64,
     setup: Option<gaia_engine::GameSetup>,
     game_state: gaia_engine::game_state::GameState,
+    ai_options: crate::room::manager::AiOptions,
 ) -> Room {
     let dev_controller = game_state
         .dev_controller
@@ -161,6 +167,7 @@ fn rehydrated_room(
         .clone()
         .filter(|mark| mark.human == host_player && dev_controller.is_none());
     let sole_member = dev_controller.or(ai_game.as_ref().map(|mark| mark.human));
+    let ai_options = ai_game.as_ref().map(|_| ai_options).unwrap_or_default();
     let players = game_state
         .players
         .iter()
@@ -190,8 +197,11 @@ fn rehydrated_room(
         ai_level: ai_game.as_ref().and_then(|mark| mark.level.clone()),
         ai_teacher: ai_game.and_then(|mark| mark.teacher),
         ai_stalled: None,
-        // In memory only: the player turns the review of AI turns on again after a restart.
-        ai_review: false,
+        // From the room's row: the review switch and "the teacher plays every seat" stay as
+        // the member left them. The turn in progress and a wait at a finished turn do not
+        // come back; the AI seats wait again at the end of their next turn.
+        ai_review: ai_options.review,
+        ai_all_seats: ai_options.all_seats,
         ai_turn: None,
         ai_hold: None,
         ai_rejected: None,
@@ -202,6 +212,7 @@ fn rehydrated_room(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::room::manager::AiOptions;
     use gaia_engine::game_state::{AiGameMark, FactionId, GameState};
     use gaia_engine::Randomizer;
 
@@ -229,7 +240,48 @@ mod tests {
     }
 
     fn loaded(host: u8, game: GameState) -> Room {
-        rehydrated_room("AIROOM", host, "in_game", "restart-test".into(), 12, None, game)
+        loaded_with(host, game, AiOptions::default())
+    }
+
+    fn loaded_with(host: u8, game: GameState, options: AiOptions) -> Room {
+        rehydrated_room("AIROOM", host, "in_game", "restart-test".into(), 12, None, game, options)
+    }
+
+    #[test]
+    fn an_ai_game_keeps_what_its_member_chose_after_a_restart() {
+        let mark = AiGameMark {
+            human: 7,
+            level: Some("hard".into()),
+            teacher: None,
+        };
+        let chosen = AiOptions {
+            all_seats: true,
+            review: true,
+        };
+        let room = loaded_with(7, saved_game(Some(mark.clone())), chosen);
+        // The teacher still plays every seat and the AI turns are still looked at; the member
+        // is still the room's only member.
+        assert!(room.ai_all_seats);
+        assert!(room.ai_review);
+        assert_eq!(room.ai_options(), chosen);
+        assert_eq!(room.dev_human_player, Some(7));
+        assert_eq!(room.players.len(), 1);
+
+        // A row written before the column existed ('{}') and one with a single key.
+        let old: AiOptions = serde_json::from_str("{}").unwrap();
+        assert_eq!(old, AiOptions::default());
+        let room = loaded_with(7, saved_game(Some(mark.clone())), old);
+        assert!(!room.ai_all_seats && !room.ai_review);
+        let review_only: AiOptions = serde_json::from_str(r#"{"review":true}"#).unwrap();
+        let room = loaded_with(7, saved_game(Some(mark.clone())), review_only);
+        assert!(!room.ai_all_seats && room.ai_review);
+
+        // The options belong to an AI game: without the mark, or with a mark that does not
+        // name the room's host, the room is an ordinary one.
+        let room = loaded_with(7, saved_game(None), chosen);
+        assert!(!room.ai_all_seats && !room.ai_review);
+        let room = loaded_with(8, saved_game(Some(mark)), chosen);
+        assert!(!room.ai_all_seats && !room.ai_review);
     }
 
     #[test]

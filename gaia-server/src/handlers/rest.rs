@@ -98,6 +98,13 @@ pub struct CreateDevGameRequest {
     /// order itself, so the two do not go together.
     #[serde(default)]
     pub human_seat: Option<u8>,
+    /// The teacher plays every seat of an `ai_opponents` game, the creator's own too: the
+    /// creator has no seat to play and looks at the AI turns (`Room::ai_all_seats`, with
+    /// `ai_review` they wait after each one). `faction` and `human_seat` then only name the
+    /// fourth faction and its place. Needs fixed factions, like `human_seat`: the setup
+    /// auction is not played this way.
+    #[serde(default)]
+    pub ai_all_seats: bool,
 }
 
 #[derive(Serialize)]
@@ -269,6 +276,11 @@ pub async fn create_dev_game(
             "human_seat needs an AI game with fixed factions (setup_mode sequential)".into(),
         ));
     }
+    if req.ai_all_seats && ai_fixed_factions.is_none() {
+        return Err(ServerError::InvalidAction(
+            "ai_all_seats needs an AI game with fixed factions (setup_mode sequential)".into(),
+        ));
+    }
     if req.human_seat.is_some_and(|seat| !(1..=4).contains(&seat)) {
         return Err(ServerError::InvalidAction(
             "human_seat must be 1 to 4".into(),
@@ -374,7 +386,7 @@ pub async fn create_dev_game(
         });
     }
 
-    let (players, host_player_id) = {
+    let (players, host_player_id, ai_options) = {
         let mut rooms = app.rooms.write().await;
         let room = rooms
             .get_room_mut(&code)
@@ -393,11 +405,22 @@ pub async fn create_dev_game(
         };
         room.ai_teacher = ai_teacher;
         room.ai_review = ai_opponents && req.ai_review;
+        room.ai_all_seats = ai_opponents && req.ai_all_seats;
         for (_, _, ready) in &mut room.players {
             *ready = !req.full_setup;
         }
-        (lobby_players(room), room.host_player)
+        (lobby_players(room), room.host_player, room.ai_options())
     };
+    if ai_opponents {
+        // In the room's row, so a room loaded again after a server restart still has the
+        // teacher on every seat and the review switch (`AppState::ensure_room_loaded`).
+        crate::repository::GameRepository::new(app.db.clone())
+            .save_ai_options(&code, ai_options)
+            .await?;
+        if ai_options.all_seats {
+            log::info!("AI room {code}: the teacher plays every seat (member {player_id})");
+        }
+    }
 
     let session_token = app.sessions.create_session(player_id, &code).await?;
     app.event_bus.get_or_create(&code).await;

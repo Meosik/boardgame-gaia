@@ -30,6 +30,9 @@ impl UndoService {
             let room = rooms
                 .get_room(room_code)
                 .ok_or_else(|| CommandError::RoomNotFound(room_code.to_string()))?;
+            if crate::ai::refuses_command_of(room, player_id) {
+                return Err(crate::ai::no_seat_error().into());
+            }
             let player_id = crate::services::dev_game::acting_player(room, player_id);
             (
                 free_action_target(room.game_state.as_ref(), player_id)?,
@@ -78,6 +81,12 @@ impl UndoService {
             let room = rooms
                 .get_room(room_code)
                 .ok_or_else(|| CommandError::RoomNotFound(room_code.to_string()))?;
+            // The teacher plays every seat: a finished turn is taken back by rejecting it
+            // (`crate::ai::reject_turn`), which keeps the record of the turn; the room's member
+            // has no turn of their own to undo.
+            if room.ai_all_seats {
+                return Err(crate::ai::no_seat_error().into());
+            }
             let game_state = room.game_state.as_ref().ok_or(RuleError::WrongPhase)?;
             if game_state.undo_state.pending_request.is_some() {
                 return Err(RuleError::ActionNotAllowed(

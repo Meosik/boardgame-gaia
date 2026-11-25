@@ -1986,7 +1986,8 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && liveGameState && (
               <SetupRedo roomCode={roomCode} sessionToken={sessionToken} state={liveGameState} />
             )}
-            {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && (
+            {/* Not when the AI plays every seat: the player has no move of their own to ask about. */}
+            {!replay && !coach && !gameState.tutorial && !gameState.ai_all_seats && roomCode && sessionToken && (
               <TeacherHint
                 roomCode={roomCode}
                 sessionToken={sessionToken}

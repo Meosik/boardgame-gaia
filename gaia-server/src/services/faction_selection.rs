@@ -32,6 +32,9 @@ impl FactionSelectionService {
                 if room.state != RoomState::FactionSelection {
                     return Err(gaia_engine::RuleError::WrongPhase);
                 }
+                if crate::ai::refuses_command_of(room, player_id) {
+                    return Err(crate::ai::no_seat_error());
+                }
                 let dev_human_player = room.dev_human_player;
                 let acting_player = crate::services::dev_game::acting_player(room, player_id);
                 let takeover = crate::ai::takeover_before(room, player_id);

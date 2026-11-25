@@ -53,6 +53,7 @@ async fn human_plays_a_full_game_against_three_ai_seats() {
             ai_review: false,
             ai_factions: None,
             human_seat: None,
+            ai_all_seats: false,
         }),
     )
     .await

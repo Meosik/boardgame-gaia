@@ -4,6 +4,9 @@ import type { GameState, PlayerId } from './types/game';
 export function controlledPlayer(state: GameState | null, sessionPlayer: PlayerId | null): PlayerId | null {
   // A rejected AI turn no move of the teacher was left for: the player plays it as that seat.
   if (state?.ai_takeover && sessionPlayer !== null) return state.ai_takeover.player;
+  // The AI plays every seat: the player has none of their own, so nothing on the board is theirs
+  // to play (they continue or reject the AI turns instead, `AiTurnReview`).
+  if (state?.ai_all_seats) return null;
   if (!state || sessionPlayer === null || state.dev_controller !== sessionPlayer) return sessionPlayer;
   const phase = state.phase;
   if (typeof phase === 'string') return sessionPlayer;

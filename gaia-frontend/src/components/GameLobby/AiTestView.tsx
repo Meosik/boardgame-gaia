@@ -25,7 +25,10 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
   const [review, setReview] = useState(false);
   const createAiGame = useRoomStore((s) => s.actions.createAiGame);
 
-  async function start(faction: FactionId) {
+  /** `allSeats`: the AI plays all four factions and the player has no seat — they look at the AI
+   * turns (계속 / 거절 / 대신 두기). `faction` is then only the fourth faction's name for the
+   * server, and the wait after every AI turn starts switched on. */
+  async function start(faction: FactionId, allSeats = false) {
     if (!nickname.trim()) {
       setError('닉네임을 입력해주세요');
       return;
@@ -33,12 +36,14 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
     setLoading(true);
     setError('');
     try {
-      await createAiGame(nickname.trim(), 'hard', {
+      const table = {
         seed: AI_TEST_MAP_SEED,
         faction,
         aiFactions: order.filter((other) => other !== faction),
         seat: order.indexOf(faction) + 1,
-      }, review);
+      };
+      if (allSeats) await createAiGame(nickname.trim(), 'hard', table, true, true);
+      else await createAiGame(nickname.trim(), 'hard', table, review);
       onGameCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 테스트를 시작하지 못했습니다');
@@ -104,10 +109,25 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
           고정되고 비딩 없이 바로 시작합니다. AI는 수마다 길면 20초쯤 생각합니다.
         </small>
       </p>
+      <p>
+        <small>
+          「네 종족 모두 AI로 시작」은 위 네 종족을 전부 AI가 둡니다. 나는 종족을 맡지 않고, AI가
+          차례를 끝낼 때마다 멈춘 수를 보고 [계속] · [거절] · 대신 두기만 합니다(첫 배치 · 부스터
+          포함, 멈춤은 대국 화면에서 끌 수 있음).
+        </small>
+      </p>
 
       {error && <p className="error-msg">{error}</p>}
 
       <div className="form-actions">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => void start(order[0], true)}
+          disabled={loading}
+        >
+          네 종족 모두 AI로 시작
+        </button>
         <button className="btn btn-ghost" onClick={onBack} disabled={loading}>
           뒤로
         </button>

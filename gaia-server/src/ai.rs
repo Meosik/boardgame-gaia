@@ -822,10 +822,40 @@ fn asked_as(state: &GameState, player: PlayerId) -> GameState {
     state
 }
 
+/// `player` is a seat of this AI game the teacher plays: every seat but the room member's, and
+/// the member's too when the teacher plays every seat (`Room::ai_all_seats`).
+fn is_ai_seat(room: &Room, player: PlayerId) -> bool {
+    room.ai_all_seats || room.dev_human_player != Some(player)
+}
+
+/// The first AI seat the room waits for: in a charge or income-order queue that is not only
+/// the front, so the AI seats answer while the human still decides (and the human answers
+/// without waiting for them).
+fn awaited_ai_seat(room: &Room, state: &GameState) -> Option<PlayerId> {
+    awaited_players(state)
+        .into_iter()
+        .find(|player| is_ai_seat(room, *player))
+}
+
+/// The room member of a game whose every seat the teacher plays (`Room::ai_all_seats`) has no
+/// seat of their own: their commands count only while they play a rejected AI turn in the
+/// seat's place (`takeover_seat`). Everything else they do goes through the review of AI turns
+/// (continue, reject), which is not a command of a seat.
+pub(crate) fn refuses_command_of(room: &Room, sender: PlayerId) -> bool {
+    room.ai_all_seats && room.dev_human_player == Some(sender) && takeover_seat(room).is_none()
+}
+
+/// What `refuses_command_of` is answered with.
+pub(crate) fn no_seat_error() -> RuleError {
+    RuleError::ActionNotAllowed(
+        "the AI plays every seat of this game: use continue or reject on its turns".into(),
+    )
+}
+
 async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
     let rooms = app.rooms.read().await;
     let room = rooms.get_room(room_code)?;
-    let human = room.dev_human_player?;
+    room.dev_human_player?;
     if room.paused {
         return None;
     }
@@ -840,12 +870,7 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
     {
         return None;
     }
-    // The first AI seat the room waits for: in a charge or income-order queue that is not
-    // only the front, so the AI seats answer while the human still decides (and the human
-    // answers without waiting for them).
-    let player = awaited_players(state)
-        .into_iter()
-        .find(|player| *player != human)?;
+    let player = awaited_ai_seat(room, state)?;
     if state.undo_state.pending_request.is_some() {
         return None;
     }
@@ -1009,7 +1034,9 @@ pub async fn continue_after_hold(
 }
 
 /// Turns the review of AI turns on or off for an AI game (`Room::ai_review`). Turning it off
-/// also ends a wait in progress. In memory only, like the rest of the review state.
+/// also ends a wait in progress. The switch is saved in the room's row (`AiOptions`), so it
+/// is as the player left it after a server restart; the rest of the review state is in memory
+/// only.
 pub async fn set_review(
     app: &AppState,
     room_code: &str,
@@ -1019,16 +1046,24 @@ pub async fn set_review(
     if app.ai.is_none() {
         return Err(HintError::NotAnAiGame);
     }
-    let revision = {
+    let (revision, options) = {
         let mut rooms = app.rooms.write().await;
         let room = ai_room_of(&mut rooms, room_code, player)?;
         room.ai_review = enabled;
         if !enabled {
             room.ai_hold = None;
         }
-        room.revision
+        (room.revision, room.ai_options())
     };
     log::info!("AI turn review of room {room_code} set to {enabled} by seat {player}");
+    // The switch works for this run of the server either way; unsaved, it is only as it was
+    // saved last after a restart.
+    if let Err(error) = crate::repository::GameRepository::new(app.db.clone())
+        .save_ai_options(room_code, options)
+        .await
+    {
+        log::error!("the AI turn review switch of room {room_code} was not saved: {error}");
+    }
     if let Ok(revision) = gaia_protocol::Revision::new(revision) {
         coordinator::broadcast_snapshot(app, room_code, revision).await;
     }
@@ -1168,7 +1203,7 @@ pub fn replay_in_progress(room: &Room) -> Option<&AiRejected> {
     let state = room.game_state.as_ref()?;
     awaited_players(state)
         .into_iter()
-        .filter(|player| Some(*player) != room.dev_human_player)
+        .filter(|player| is_ai_seat(room, *player))
         .find_map(|player| rejection_for(room, player))
         .filter(|rejected| !rejected.by_player)
 }
@@ -2033,6 +2068,7 @@ mod tests {
             ai_teacher: None,
             ai_stalled: None,
             ai_review: false,
+            ai_all_seats: false,
             ai_turn: None,
             ai_hold: None,
             ai_rejected: None,
@@ -3009,5 +3045,42 @@ mod tests {
         let mut moved_on = room.clone();
         moved_on.revision += 1;
         assert_eq!(takeover_seat(&moved_on), None);
+    }
+
+    #[test]
+    fn with_the_teacher_on_every_seat_the_members_own_seat_is_an_ai_seat() {
+        let (mut room, ai, _) = reviewed_room();
+        let member = room.dev_human_player.unwrap();
+        // An ordinary AI game: the teacher is asked for an AI seat, never for the member's.
+        let own = action_phase(&room, member, 1);
+        let others = action_phase(&room, ai, 1);
+        assert_eq!(awaited_ai_seat(&room, &others), Some(ai));
+        assert_eq!(awaited_ai_seat(&room, &own), None);
+        assert!(!refuses_command_of(&room, member));
+        assert!(coordinator::room_snapshot_view(&room).get("ai_all_seats").is_none());
+
+        // The teacher plays every seat: the member's seat is asked like the others, the
+        // member's own commands are refused, and the snapshot says so.
+        room.ai_all_seats = true;
+        room.game_state = Some(own.clone());
+        assert_eq!(awaited_ai_seat(&room, &others), Some(ai));
+        assert_eq!(awaited_ai_seat(&room, &own), Some(member));
+        assert!(refuses_command_of(&room, member));
+        assert_eq!(coordinator::room_snapshot_view(&room)["ai_all_seats"], true);
+
+        // That seat's turn is looked at and rejected like any AI turn ...
+        let turn = asked_at(&room, member, &own);
+        assert!(commit_ai_move(&mut room, &turn, &pass(), others));
+        assert_eq!(room.current_ai_hold().map(|hold| hold.turn.player), Some(member));
+        reject(&mut room, &own).unwrap();
+        assert_eq!(replay_in_progress(&room).map(|replay| replay.player), Some(member));
+        assert!(refuses_command_of(&room, member));
+        // ... and when the teacher has no move left for it the member plays it: only then do
+        // the member's commands count, for the seat of that turn.
+        room.ai_rejected.as_mut().unwrap().by_player = true;
+        assert_eq!(takeover_seat(&room), Some(member));
+        assert_eq!(awaited_ai_seat(&room, &own), Some(member));
+        assert!(!refuses_command_of(&room, member));
+        assert_eq!(crate::services::dev_game::acting_player(&room, member), member);
     }
 }

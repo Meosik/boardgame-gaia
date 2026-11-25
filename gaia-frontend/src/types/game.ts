@@ -450,6 +450,10 @@ export interface GameState {
    * of the teacher was left for it): until that turn ends the player's commands act for
    * `player` (`controlledPlayer`). */
   ai_takeover?: { player: PlayerId; rejections: number | null } | null;
+  /** Added by the server in an AI game whose every seat the AI plays, the creator's own too
+   * (`api.createAiGame` `allSeats`): the player has no seat (`controlledPlayer` is null) and
+   * only looks at the AI turns, or plays one as `ai_takeover.player`. Absent otherwise. */
+  ai_all_seats?: boolean;
   /** Added by the server in an AI game: how many of the player's own setup choices (starting
    * structures, starting booster) can be taken back now (`api.setupRedo`). Absent when none. */
   setup_redo?: number;

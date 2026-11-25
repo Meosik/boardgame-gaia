@@ -6,6 +6,7 @@ use gaia_engine::{
 };
 
 use crate::error::{ServerError, ServerResult};
+use crate::room::manager::AiOptions;
 
 pub struct GameRepository {
     pool: PgPool,
@@ -39,21 +40,36 @@ impl GameRepository {
     }
 
     /// Loads a room's durable row — `(host_player, state, seed, revision,
-    /// setup)` — for rehydration after a restart. `None` if the room
+    /// setup, ai_options)` — for rehydration after a restart. `None` if the room
     /// genuinely doesn't exist (never created, or its row was cleaned up).
     pub async fn load_room_row(
         &self,
         code: &str,
-    ) -> ServerResult<Option<(PlayerId, String, String, i64, serde_json::Value)>> {
-        let row: Option<(i16, String, String, i64, serde_json::Value)> = sqlx::query_as(
-            "SELECT host_player, state, seed, revision, setup FROM rooms WHERE code = $1",
-        )
-        .bind(code)
-        .fetch_optional(&self.pool)
-        .await?;
-        Ok(row.map(|(host, state, seed, revision, setup)| {
-            (host as PlayerId, state, seed, revision, setup)
+    ) -> ServerResult<Option<(PlayerId, String, String, i64, serde_json::Value, AiOptions)>> {
+        let row: Option<(i16, String, String, i64, serde_json::Value, serde_json::Value)> =
+            sqlx::query_as(
+                "SELECT host_player, state, seed, revision, setup, ai_options FROM rooms WHERE code = $1",
+            )
+            .bind(code)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(row.map(|(host, state, seed, revision, setup, ai_options)| {
+            // A value this server cannot read counts as the default: the game itself still loads.
+            let ai_options = serde_json::from_value(ai_options).unwrap_or_default();
+            (host as PlayerId, state, seed, revision, setup, ai_options)
         }))
+    }
+
+    /// Saves what the member of an AI game chose for it (`AiOptions`) in the room's row. It is
+    /// written when the game is created and when the review switch changes, and read back by
+    /// `load_room_row`; no command revision is involved.
+    pub async fn save_ai_options(&self, code: &str, options: AiOptions) -> ServerResult<()> {
+        sqlx::query("UPDATE rooms SET ai_options = $2 WHERE code = $1")
+            .bind(code)
+            .bind(serde_json::to_value(options)?)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 
     // ── Snapshots ─────────────────────────────────────────────────────────────

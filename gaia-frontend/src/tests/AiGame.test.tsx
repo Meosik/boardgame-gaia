@@ -164,6 +164,42 @@ describe('AI test', () => {
     expect(createAiGame.mock.calls[0][3]).toBe(true);
   });
 
+  it('starts a game the AI plays on all four seats, with the wait after every AI turn on', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => new Response('{}', { status: 200 }));
+    await api.createAiGame('나', 'hard', { seed: 's1', faction: 'Ivits', seat: 1 }, true, true);
+    await api.createAiGame('나', 'hard', { seed: 's1', faction: 'Ivits' }, true);
+    const bodies = fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
+    expect(bodies[0]).toMatchObject({ ai_all_seats: true, ai_review: true, setup_mode: 'sequential', human_seat: 1 });
+    expect(bodies[1]).not.toHaveProperty('ai_all_seats');
+    fetchMock.mockRestore();
+
+    const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
+      room_code: 'AI1234',
+      player_id: 5,
+      session_token: 'token',
+      game_setup: null as never,
+      game_state: null as never,
+      players: [{ player_id: 5, nickname: '나', ready: true }] as never,
+      host_player_id: 5,
+    });
+    const onGameCreated = vi.fn();
+    render(<AiTestView onGameCreated={onGameCreated} onBack={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
+    const order = aiTestTurnOrder(dealtFactions());
+    fireEvent.click(screen.getByRole('button', { name: '네 종족 모두 AI로 시작' }));
+    await waitFor(() => expect(onGameCreated).toHaveBeenCalled());
+    // The four dealt factions in their turn order; the first is the one the server seats for the
+    // room's creator, and the AI plays it like the other three.
+    expect(createAiGame).toHaveBeenCalledWith('나', 'hard', {
+      seed: 'quartet-e-88365',
+      faction: order[0],
+      aiFactions: order.slice(1),
+      seat: 1,
+    }, true, true);
+  });
+
   it('opens from its own entry on the lobby front page', async () => {
     vi.spyOn(api, 'listRooms').mockResolvedValue([]);
     const onAiTest = vi.fn();

@@ -74,6 +74,9 @@ fn enter_dev_power_charge(
         ));
     }
 
+    if crate::ai::refuses_command_of(room, player_id) {
+        return Err(crate::ai::no_seat_error());
+    }
     let player_id = acting_player(room, player_id);
     let state = room.game_state.as_mut().ok_or(RuleError::WrongPhase)?;
     let active_player = match state.phase {
@@ -722,6 +725,7 @@ mod tests {
                 ai_teacher: None,
                 ai_stalled: None,
                 ai_review: false,
+                ai_all_seats: false,
                 ai_turn: None,
                 ai_hold: None,
                 ai_rejected: None,

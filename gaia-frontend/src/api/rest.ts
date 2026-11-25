@@ -80,6 +80,9 @@ export const api = {
     table?: AiGameTable,
     /** `true` = the AI seats wait after each of their turns (`aiContinue` / `aiReject`). */
     review = false,
+    /** `true` = the AI plays every seat, the creator's own too (`GameState.ai_all_seats`); the
+     * server takes it only with a `table`, whose `faction` is then just the fourth faction. */
+    allSeats = false,
   ): Promise<DevGameResponse> {
     return request(`${BASE}/dev-games`, {
       method: 'POST',
@@ -88,6 +91,7 @@ export const api = {
         ai_opponents: true,
         ai_level: level,
         ...(review ? { ai_review: true } : {}),
+        ...(allSeats ? { ai_all_seats: true } : {}),
         ...(table
           ? {
               setup_mode: 'sequential',
