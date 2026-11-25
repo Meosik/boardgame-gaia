@@ -416,10 +416,16 @@ pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
         // human seat's commands act for this seat until the turn ends.
         if let Some(player) = crate::ai::takeover_seat(room) {
             let rejections = room.ai_rejected.as_ref().map(|rejected| rejected.rejections);
-            fields.insert(
-                "ai_takeover".into(),
-                json!({ "player": player, "rejections": rejections }),
-            );
+            let mut takeover = json!({ "player": player, "rejections": rejections });
+            // Something has been played in the turn: the player can take it back to its first
+            // position (`crate::ai::takeover_undo_target`).
+            let can_undo = room
+                .dev_human_player
+                .is_some_and(|member| crate::ai::takeover_undo_target(room, member).is_some());
+            if can_undo {
+                takeover["undo"] = json!(true);
+            }
+            fields.insert("ai_takeover".into(), takeover);
         }
     }
     view

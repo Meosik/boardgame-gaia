@@ -196,6 +196,23 @@ describe('SidebarTurnControls', () => {
     expect(onUndoFreeAction).toHaveBeenCalledOnce();
   });
 
+  it('enables the undo in a rejected AI turn the player plays, without a free action of their own', () => {
+    const onUndoFreeAction = vi.fn();
+    const { rerender } = render(
+      <SidebarTurnControls player={player()} isMyTurn onFreeAction={vi.fn()} onUndoFreeAction={onUndoFreeAction} />,
+    );
+    // No free action of this seat is open and nothing was played in the turn.
+    expect(screen.getByRole('button', { name: '이번 차례 자유행동 전부 되돌리기' })).toBeDisabled();
+    rerender(
+      <SidebarTurnControls player={player()} isMyTurn onFreeAction={vi.fn()} onUndoFreeAction={onUndoFreeAction} takeoverUndo />,
+    );
+    const undo = screen.getByRole('button', { name: '이번 차례 자유행동 전부 되돌리기' });
+    expect(undo).toBeEnabled();
+    expect(undo).toHaveAttribute('title', expect.stringContaining('처음 자리로 되돌립니다'));
+    fireEvent.click(undo);
+    expect(onUndoFreeAction).toHaveBeenCalledOnce();
+  });
+
   it('pauses ordinary controls while another player asks for undo approval', () => {
     const onRespondTurnUndo = vi.fn();
     const requester = player(4, { player_id: 1, nickname: '요청자' });

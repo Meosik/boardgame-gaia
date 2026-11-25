@@ -429,6 +429,9 @@ export interface AiHold {
   /** Always `true`: with no spare left (`spares_left` 0) a rejection gives the turn to the
    * player (`GameState.ai_takeover`). */
   can_reject: boolean;
+  /** `true` = the player played this turn in the seat's place: `api.aiReject` takes the whole
+   * turn back (free actions and the move that ended it) for the player to play again. */
+  by_player?: boolean;
 }
 
 export interface GameState {
@@ -449,7 +452,13 @@ export interface GameState {
   /** Added by the server while the player plays a rejected AI turn in the seat's place (no move
    * of the teacher was left for it): until that turn ends the player's commands act for
    * `player` (`controlledPlayer`). */
-  ai_takeover?: { player: PlayerId; rejections: number | null } | null;
+  ai_takeover?: {
+    player: PlayerId;
+    rejections: number | null;
+    /** `true` = something has been played in the turn: the undo takes the turn back to its
+     * first position, whoever played the moves. Absent when nothing has been played. */
+    undo?: boolean;
+  } | null;
   /** Added by the server in an AI game whose every seat the AI plays, the creator's own too
    * (`api.createAiGame` `allSeats`): the player has no seat (`controlledPlayer` is null) and
    * only looks at the AI turns, or plays one as `ai_takeover.player`. Absent otherwise. */

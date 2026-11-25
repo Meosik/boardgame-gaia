@@ -189,6 +189,10 @@ pub struct AiHold {
     /// (`spares_left` is 0) — the player then plays it in the seat's place
     /// (`AiRejected::by_player`).
     pub can_reject: bool,
+    /// The player played this turn in the seat's place (`crate::ai::takeover_seat`): rejecting
+    /// it takes it back to its first position for the player to play again — no move is left
+    /// out and it is not counted as a rejection of the teacher.
+    pub by_player: bool,
 }
 
 /// See `Room::ai_stalled`.

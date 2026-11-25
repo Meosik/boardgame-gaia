@@ -48,6 +48,10 @@ interface SidebarTurnControlsProps {
   immediateTurnUndo?: boolean;
   players?: PlayerState[];
   onUndoFreeAction?: () => void;
+  /** The player plays a rejected AI turn as this seat and something has been played in it
+   * (`GameState.ai_takeover.undo`): the undo goes back to the turn's first position, also when
+   * the only moves so far are the AI seat's own. */
+  takeoverUndo?: boolean;
   onRequestTurnUndo?: () => void;
   onRespondTurnUndo?: (approve: boolean) => void;
 }
@@ -65,6 +69,7 @@ export function SidebarTurnControls({
   immediateTurnUndo = false,
   players = [],
   onUndoFreeAction,
+  takeoverUndo = false,
   onRequestTurnUndo,
   onRespondTurnUndo,
 }: SidebarTurnControlsProps) {
@@ -72,7 +77,7 @@ export function SidebarTurnControls({
   const canUndoFreeAction = pendingUndo === null
     && isMyTurn
     && !player.passed
-    && (rangePreviewQic > 0 || (
+    && (rangePreviewQic > 0 || takeoverUndo || (
       undoState?.open_turn?.player === player.player_id
       && (undoState.open_turn.free_action_revisions.length ?? 0) > 0
     ));
@@ -246,7 +251,9 @@ export function SidebarTurnControls({
             <button
               type="button"
               disabled={!canUndoFreeAction}
-              title={canUndoFreeAction
+              title={takeoverUndo
+                ? '대신 두는 이 차례를 처음 자리로 되돌립니다(AI가 먼저 둔 자유행동 포함). 차례는 그대로 내가 둡니다.'
+                : canUndoFreeAction
                 ? '이번 차례에 수행한 자유행동을 모두 복구하며 현재 행동 기회는 그대로 유지됩니다.'
                 : '현재 차례에 되돌릴 자유행동이 없습니다.'}
               onClick={onUndoFreeAction}

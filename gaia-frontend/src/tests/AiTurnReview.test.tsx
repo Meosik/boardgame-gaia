@@ -117,6 +117,22 @@ describe('AiTurnReview', () => {
     expect(controlledPlayer(state({ ai_review: true }), 0)).toBe(0);
   });
 
+  it('lets the player take back a whole turn they played in the seat\'s place', async () => {
+    vi.spyOn(api, 'aiGame').mockResolvedValue(true);
+    const aiReject = vi.spyOn(api, 'aiReject').mockResolvedValue({ ok: true });
+    show(state({ ai_review: true, ai_hold: hold({ revision: 21, rejections: 3, spares_left: 0, by_player: true }) }));
+    const again = await screen.findByRole('button', { name: '다시 두기' });
+    const review = screen.getByRole('region', { name: 'AI 차례 검토' });
+    expect(review).toHaveTextContent('영희의 차례가 끝났습니다 — 내가 대신 둔 차례');
+    expect(review).toHaveTextContent('자유 행동과 차례를 끝낸 수가 모두 사라지고 내가 다시 둡니다');
+    // Not a move of the teacher: nothing about spares or where the move came from.
+    expect(review).not.toHaveTextContent('예비 수');
+    expect(screen.queryByRole('button', { name: '거절하고 직접 두기' })).toBeNull();
+    expect(screen.getByRole('button', { name: '계속' })).toBeInTheDocument();
+    fireEvent.click(again);
+    await waitFor(() => expect(aiReject).toHaveBeenCalledWith('ROOM', 'token', 21));
+  });
+
   it('says that a rejected turn is being played again', async () => {
     vi.spyOn(api, 'aiGame').mockResolvedValue(true);
     show(state({ ai_review: true, ai_replay: { player: 1, start_revision: 8, rejections: 1 } }));

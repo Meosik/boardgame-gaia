@@ -35,10 +35,7 @@ impl UndoService {
                 return Err(crate::ai::no_seat_error().into());
             }
             let player_id = crate::services::dev_game::acting_player(room, player_id);
-            (
-                free_action_target(room.game_state.as_ref(), player_id)?,
-                player_id,
-            )
+            (undo_target(room, sender, player_id)?, player_id)
         };
         let restored = load_snapshot(app, room_code, target_revision).await?;
 
@@ -48,7 +45,7 @@ impl UndoService {
             command_id,
             expected_revision,
             move |room| {
-                let current_target = free_action_target(room.game_state.as_ref(), player_id)?;
+                let current_target = undo_target(room, sender, player_id)?;
                 if current_target != target_revision {
                     return Err(RuleError::ActionNotAllowed(
                         "the free-action undo checkpoint changed".into(),
@@ -252,6 +249,22 @@ impl UndoService {
 
         broadcast_snapshot(app, room_code, outcome.revision).await;
         Ok(outcome)
+    }
+}
+
+/// The revision `undo_free_action` restores for `sender` acting as `player_id`: the position
+/// before the seat's first free action of the open turn — or, while the sender plays a
+/// rejected AI turn in the seat's place, that turn's first position
+/// (`crate::ai::takeover_undo_target`), which also takes back what the seat itself played in
+/// the turn before it became the player's.
+fn undo_target(
+    room: &crate::room::manager::Room,
+    sender: PlayerId,
+    player_id: PlayerId,
+) -> Result<u64, RuleError> {
+    match crate::ai::takeover_undo_target(room, sender) {
+        Some(turn_start) => Ok(turn_start),
+        None => free_action_target(room.game_state.as_ref(), player_id),
     }
 }
 

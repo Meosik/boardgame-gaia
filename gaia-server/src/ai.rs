@@ -984,6 +984,7 @@ fn note_ai_move(room: &mut Room, turn: &Turn, decision: &AiDecision) -> bool {
             // Without a spare move the next rejection gives the turn to the player
             // (`next_rejection`).
             can_reject: true,
+            by_player: false,
         });
     }
     // A finished turn is kept only in the hold: the seat's next decision, even one asked at
@@ -1121,6 +1122,18 @@ fn next_rejection(room: &Room, hold: &AiHold) -> Result<AiRejected, RejectError>
     let earlier = room.ai_rejected.as_ref().filter(|rejected| {
         rejected.player == hold.turn.player && rejected.start_revision == hold.turn.start_revision
     });
+    // A turn the player played in the seat's place: they play it again from its first
+    // position. Nothing of the teacher's is rejected, so the record is carried on as it is.
+    if hold.by_player {
+        return Ok(AiRejected {
+            player: hold.turn.player,
+            start_revision: room.revision + 1,
+            excluded: earlier.map_or_else(Vec::new, |rejected| rejected.excluded.clone()),
+            spares: Some(Vec::new()),
+            rejections: earlier.map_or(0, |rejected| rejected.rejections),
+            by_player: true,
+        });
+    }
     let mut excluded = earlier.map_or_else(Vec::new, |rejected| rejected.excluded.clone());
     let entry = excluded_entry(ended_with);
     if !excluded.contains(&entry) {
@@ -1273,7 +1286,23 @@ pub(crate) fn note_takeover_move(
         room.ai_turn = Some(record);
         return None;
     }
-    let rejected = room.ai_rejected.take();
+    // With the review of AI turns on, the AI seats wait at this turn too: the player lets them
+    // play on or takes the whole turn back — free actions and the move that ended it — and
+    // plays it again (`next_rejection`). The replay record stays for that; it no longer
+    // applies to any position (`rejection_for`), so the takeover is over either way.
+    let rejected = if room.ai_review {
+        room.ai_hold = Some(AiHold {
+            revision: moved,
+            turn: record.clone(),
+            rejections: room.ai_rejected.as_ref().map_or(0, |rejected| rejected.rejections),
+            spares_left: Some(0),
+            can_reject: true,
+            by_player: true,
+        });
+        room.ai_rejected.clone()
+    } else {
+        room.ai_rejected.take()
+    };
     Some(serde_json::json!({
         "accepted": false,
         "kind": "ai_turn_by_player",
@@ -1289,11 +1318,30 @@ pub(crate) fn note_takeover_move(
     }))
 }
 
+/// The revision an undo goes back to while the player (`sender`) plays a rejected AI turn in
+/// the seat's place (`takeover_seat`): the turn's first position, whoever played the moves
+/// since — free actions the seat itself played in the replay before the turn became the
+/// player's go too, and undoing again after more free actions comes back to the same position
+/// (user 2026-11-25). `None` = no such turn, or nothing has been played in it yet.
+pub(crate) fn takeover_undo_target(room: &Room, sender: PlayerId) -> Option<u64> {
+    if room.dev_human_player != Some(sender) {
+        return None;
+    }
+    let seat = takeover_seat(room)?;
+    let played = room
+        .ai_turn
+        .as_ref()
+        .is_some_and(|turn| turn.player == seat && !turn.decisions.is_empty());
+    let start = room.ai_rejected.as_ref()?.start_revision;
+    played.then_some(start)
+}
+
 /// Keeps a turn the player plays in an AI seat's place (`takeover_seat`) theirs across an undo
-/// of its free actions (`UndoService::undo_free_action`). The undo writes an earlier position
-/// of the turn as a new revision; the record of the turn follows it there, without the moves
-/// taken back, so the turn is still the one being replayed (`rejection_for`). Without this the
-/// takeover ended with the undo: the seat went back to the teacher, with nothing left out.
+/// (`UndoService::undo_free_action`, to `takeover_undo_target`). The undo writes an earlier
+/// position of the turn as a new revision; the record of the turn follows it there, without
+/// the moves taken back, so the turn is still the one being replayed (`rejection_for`).
+/// Without this the takeover ended with the undo: the seat went back to the teacher, with
+/// nothing left out.
 ///
 /// Called inside the undo's command, after the position of `target_revision` was restored and
 /// before the room's revision advances; `takeover` was read before (`takeover_before`).
@@ -1481,7 +1529,9 @@ pub async fn reject_turn(
     let restored_revision = outcome.revision.get();
     let record = serde_json::json!({
         "accepted": false,
-        "kind": "ai_reject",
+        // A turn the player played and takes back is not a judgement of the teacher's move:
+        // it only says the `ai_turn_by_player` record of that turn was replaced.
+        "kind": if hold.by_player { "ai_turn_by_player_redo" } else { "ai_reject" },
         "room": room_code,
         "player": hold.turn.player,
         "held_revision": expected_revision,
@@ -2991,8 +3041,9 @@ mod tests {
         assert_eq!(view.get("ai_takeover"), Some(&serde_json::json!({ "player": ai, "rejections": 3 })));
         assert_eq!(view.get("ai_replay"), None);
 
-        // The player's free action keeps the turn, the move after it ends it: no wait, the
-        // takeover is over and the record says what was played.
+        // The player's free action keeps the turn, the move after it ends it: the takeover is
+        // over and the record says what was played. The review is on, so the AI seats wait at
+        // this turn too (`a_finished_turn_the_player_played_is_held_and_taken_back_whole`).
         let command = |room: &mut Room, decision: AiDecision, after: GameState| {
             let takeover = takeover_before(room, human).expect("the player plays the turn");
             room.game_state = Some(after);
@@ -3017,7 +3068,8 @@ mod tests {
         assert_eq!(record["played_turn"], serde_json::json!([free_action(), tech_tile, pass()]));
         assert_eq!((record["player"].as_u64(), record["rejections"].as_u64()), (Some(u64::from(ai)), Some(3)));
         assert_eq!(takeover_seat(&room), None);
-        assert_eq!((room.current_ai_hold(), room.ai_rejected.as_ref(), room.ai_turn.as_ref()), (None, None, None));
+        assert_eq!(room.current_ai_hold().map(|hold| (hold.by_player, hold.turn.decisions.len())), Some((true, 3)));
+        assert_eq!(room.ai_turn.as_ref(), None);
         assert_eq!(crate::services::dev_game::acting_player(&room, human), human);
     }
 
@@ -3121,6 +3173,9 @@ mod tests {
             assert_eq!((record.start_revision, record.revision), (turn_start, room.revision));
             assert_eq!(record.decisions, Vec::new());
 
+            // Nothing is played in the turn now, so there is nothing to undo.
+            assert_eq!(takeover_undo_target(&room, member), None);
+
             // The move the player ends the turn with is the whole played turn.
             let takeover = takeover_before(&room, member).expect("the player plays the turn");
             room.game_state = Some(action_phase(&room, member, 1));
@@ -3128,6 +3183,89 @@ mod tests {
             assert_eq!(played["played_turn"], serde_json::json!([pass()]));
             assert_eq!(played["turn_start_revision"], turn_start);
         }
+    }
+
+    #[test]
+    fn the_undo_of_a_turn_the_player_plays_goes_back_to_the_turns_first_position() {
+        let (mut room, ai, _, start) = held_room(pass());
+        let member = room.dev_human_player.unwrap();
+        reject(&mut room, &start).unwrap();
+        let turn_start = room.revision;
+        // The seat itself plays a free action of the replay, then the teacher has no move left
+        // (`give_up_replay`): the rest of the turn is the player's.
+        let first = asked_at(&room, ai, &start);
+        assert!(!commit_ai_move(&mut room, &first, &free_action(), start.clone()));
+        room.ai_rejected.as_mut().unwrap().by_player = true;
+        assert_eq!(takeover_seat(&room), Some(ai));
+        // The player has played nothing, and the undo still goes to the turn's first position.
+        assert_eq!(takeover_undo_target(&room, member), Some(turn_start));
+        assert_eq!(coordinator::room_snapshot_view(&room)["ai_takeover"]["undo"], true);
+        // Nobody else's undo, and not the undo of a seat that is not played by the player.
+        assert_eq!(takeover_undo_target(&room, ai), None);
+
+        // After a free action of the player it is the same position, both moves taken back.
+        let takeover = takeover_before(&room, member).expect("the player plays the turn");
+        assert_eq!(note_takeover_move(&mut room, takeover, free_action()), None);
+        room.revision += 1;
+        assert_eq!(room.ai_turn.as_ref().map(|turn| turn.decisions.len()), Some(2));
+        assert_eq!(takeover_undo_target(&room, member), Some(turn_start));
+        let takeover = takeover_before(&room, member).expect("the player plays the turn");
+        room.game_state = Some(start.clone());
+        keep_takeover_after_undo(&mut room, takeover, turn_start);
+        room.revision += 1;
+        assert_eq!(takeover_seat(&room), Some(ai));
+        assert_eq!(room.ai_turn.as_ref().map(|turn| turn.decisions.len()), Some(0));
+        assert_eq!(takeover_undo_target(&room, member), None);
+        assert!(coordinator::room_snapshot_view(&room)["ai_takeover"].get("undo").is_none());
+
+        // Pressing a free action again and undoing again comes back to the same position.
+        let takeover = takeover_before(&room, member).expect("the player plays the turn");
+        assert_eq!(note_takeover_move(&mut room, takeover, free_action()), None);
+        room.revision += 1;
+        assert_eq!(takeover_undo_target(&room, member), Some(turn_start));
+    }
+
+    #[test]
+    fn a_finished_turn_the_player_played_is_held_and_taken_back_whole() {
+        let (mut room, ai, other, start) = held_room(pass());
+        let member = room.dev_human_player.unwrap();
+        reject(&mut room, &start).unwrap();
+        room.ai_rejected.as_mut().unwrap().by_player = true;
+        let before = room.ai_rejected.clone().unwrap();
+        // The player plays a free action and the move that ends the turn.
+        let takeover = takeover_before(&room, member).expect("the player plays the turn");
+        assert_eq!(note_takeover_move(&mut room, takeover, free_action()), None);
+        room.revision += 1;
+        let takeover = takeover_before(&room, member).expect("the player plays the turn");
+        room.game_state = Some(action_phase(&room, other, 1));
+        assert!(note_takeover_move(&mut room, takeover, pass()).is_some());
+        room.revision += 1;
+
+        // The review is on: the AI seats wait at the player's turn too, and it is over.
+        assert_eq!(takeover_seat(&room), None);
+        let hold = room.current_ai_hold().cloned().expect("the AI seats wait");
+        assert!(hold.by_player);
+        assert_eq!(hold.turn.decisions, vec![free_action(), pass()]);
+        assert_eq!(hold.turn.start_revision, before.start_revision);
+        assert_eq!(coordinator::room_snapshot_view(&room)["ai_hold"]["by_player"], true);
+
+        // Taking it back: the turn's first position again, the free action and the pass both
+        // gone, and the player plays it again — nothing more is left out or counted.
+        reject(&mut room, &start).unwrap();
+        assert_eq!(room.game_state.as_ref().map(|state| &state.phase), Some(&start.phase));
+        assert_eq!(takeover_seat(&room), Some(ai));
+        let again = room.ai_rejected.clone().unwrap();
+        assert!(again.by_player);
+        assert_eq!(again.start_revision, room.revision);
+        assert_eq!((again.rejections, &again.excluded), (before.rejections, &before.excluded));
+
+        // Without the review nothing waits and the replay record is gone with the turn.
+        room.ai_review = false;
+        let takeover = takeover_before(&room, member).expect("the player plays the turn");
+        room.game_state = Some(action_phase(&room, other, 1));
+        assert!(note_takeover_move(&mut room, takeover, pass()).is_some());
+        room.revision += 1;
+        assert_eq!((room.ai_hold.as_ref(), room.ai_rejected.as_ref()), (None, None));
     }
 
     #[test]

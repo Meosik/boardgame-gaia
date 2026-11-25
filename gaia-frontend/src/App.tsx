@@ -709,6 +709,9 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
   const isMyActionTurn = !replay && !commandBlocked && activePlayerId === myId && undoPending === null;
   const hasServerFreeActions = gameState.undo_state?.open_turn?.player === myId
     && (gameState.undo_state.open_turn.free_action_revisions.length ?? 0) > 0;
+  // A rejected AI turn the player plays: the undo takes it back to its first position, also
+  // when only the AI seat itself has played in it so far (`GameState.ai_takeover.undo`).
+  const takeoverUndo = !replay && !reviewing && gameState.ai_takeover?.undo === true;
   const usedPowerActions = gameState.used_power_actions;
   const lostPlanetPending =
     typeof gameState.phase === 'object' && 'LostPlanetPlacementPending' in gameState.phase
@@ -2021,8 +2024,9 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
               onUndoFreeAction={() => {
                 setRangePreviewQic(0);
                 setGameNotice(null);
-                if (hasServerFreeActions) gameActions.undoFreeAction();
+                if (hasServerFreeActions || takeoverUndo) gameActions.undoFreeAction();
               }}
+              takeoverUndo={takeoverUndo}
               onRequestTurnUndo={gameActions.requestTurnUndo}
               onRespondTurnUndo={gameActions.respondTurnUndo}
             />
