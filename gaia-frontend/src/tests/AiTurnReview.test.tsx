@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AiTurnReview, aiHoldIsSetupDecision, aiHoldOrigin, aiHoldSpares } from '../components/AiTurnReview';
+import { AiTurnReview, aiHoldOrigin, aiHoldSpares } from '../components/AiTurnReview';
 import { api } from '../api/rest';
 import { controlledPlayer } from '../devControl';
 import type { AiHold, GameState, PlayerState } from '../types/game';
@@ -48,7 +48,7 @@ describe('AiTurnReview', () => {
     const { unmount } = show(state());
     const off = await screen.findByRole('checkbox', { name: /AI 차례마다 멈춤/ });
     expect(off).not.toBeChecked();
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: '계속' })).toBeNull();
     fireEvent.click(off);
     await waitFor(() => expect(aiReview).toHaveBeenCalledWith('ROOM', 'token', true));
     unmount();
@@ -73,6 +73,18 @@ describe('AiTurnReview', () => {
     expect(review).not.toHaveTextContent('교사의 첫 선택');
     fireEvent.click(proceed);
     await waitFor(() => expect(aiContinue).toHaveBeenCalledWith('ROOM', 'token'));
+  });
+
+  it('folds to one line that still says the AI seats wait, and unfolds again', async () => {
+    vi.spyOn(api, 'aiGame').mockResolvedValue(true);
+    show(state({ ai_review: true, ai_hold: hold() }));
+    fireEvent.click(await screen.findByRole('button', { name: '접기' }));
+    const review = screen.getByRole('region', { name: 'AI 차례 검토' });
+    expect(review).toHaveTextContent('영희');
+    expect(review).not.toHaveTextContent('자유 행동 A');
+    expect(screen.queryByRole('button', { name: '계속' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '펼치기' }));
+    expect(screen.getByRole('button', { name: '계속' })).toBeInTheDocument();
   });
 
   it('rejects the turn at the revision the AI seats wait at', async () => {
@@ -112,7 +124,7 @@ describe('AiTurnReview', () => {
     expect(screen.getByRole('region', { name: 'AI 차례 검토' })).toHaveTextContent(
       '영희의 차례를 직접 두세요 — 교사가 낼 다른 수가 없습니다 (거절 3회)',
     );
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: '계속' })).toBeNull();
     // Until that turn ends the player's commands act for the AI seat.
     expect(controlledPlayer(game, 0)).toBe(1);
     expect(controlledPlayer(state({ ai_review: true }), 0)).toBe(0);
@@ -139,7 +151,7 @@ describe('AiTurnReview', () => {
     await screen.findByRole('checkbox');
     const review = screen.getByRole('region', { name: 'AI 차례 검토' });
     expect(review).toHaveTextContent('영희 — 거절된 차례를 다시 두는 중 (거절 1회)');
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: '계속' })).toBeNull();
   });
 });
 
@@ -160,19 +172,5 @@ describe('aiHoldOrigin and aiHoldSpares', () => {
     expect(aiHoldOrigin(single)).toBe('보관해 둔 예비 수(새 탐색 없음)');
     // No spare is left: the next rejection gives the turn to the player.
     expect(aiHoldSpares(hold({ rejections: 2, spares_left: 0 }))).toContain('이 차례를 직접 둡니다');
-  });
-});
-
-describe('aiHoldIsSetupDecision', () => {
-  it('is true only while the AI seats wait at a setup decision', () => {
-    const booster = { phase: 'Setup', action: { type: 'SelectStartingBooster', booster_id: 3 } };
-    const pass = { phase: 'Game', action: { type: 'Pass', booster_id: 4 } };
-    const turn = { player: 1, start_revision: 5, revision: 6 };
-    // The last starting booster: the game has started in the snapshot, the wait is at the booster.
-    expect(aiHoldIsSetupDecision(state({ ai_hold: hold({ turn: { ...turn, decisions: [booster] } }) }))).toBe(true);
-    expect(aiHoldIsSetupDecision(state({ ai_hold: hold({ turn: { ...turn, decisions: [pass] } }) }))).toBe(false);
-    expect(aiHoldIsSetupDecision(state({ ai_hold: hold() }))).toBe(false);
-    expect(aiHoldIsSetupDecision(state({ ai_hold: null }))).toBe(false);
-    expect(aiHoldIsSetupDecision(state())).toBe(false);
   });
 });

@@ -1573,6 +1573,13 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
         />
       )}
       {!replay && <ActionToast entry={toastAction} myPlayerId={myId} />}
+      {/* AI games: the AI turn review floats over the map's lower left corner — outside the
+          sidebar tabs, so it shows whichever tab is open (the same box as on the setup screens). */}
+      {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && liveGameState && (
+        <div className="ai-review-float">
+          <AiTurnReview roomCode={roomCode} sessionToken={sessionToken} state={liveGameState} />
+        </div>
+      )}
       {!replay && (lastError || gameNotice) && (
         <div
           className="error-banner"
@@ -1983,9 +1990,6 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
             />
             {/* Right above the turn controls, where the player acts; the move is also marked on
                 the map (teacherHintHexes). */}
-            {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && liveGameState && (
-              <AiTurnReview roomCode={roomCode} sessionToken={sessionToken} state={liveGameState} />
-            )}
             {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && liveGameState && (
               <SetupRedo roomCode={roomCode} sessionToken={sessionToken} state={liveGameState} />
             )}

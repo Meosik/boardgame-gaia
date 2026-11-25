@@ -32,24 +32,17 @@ export function aiHoldSpares(hold: AiHold): string {
     : '남은 예비 수 없음 — 다시 거절하면 이 차례를 직접 둡니다';
 }
 
-/** The AI seats wait at a setup decision (a starting structure or starting booster). When the
- * position itself is already past setup, that decision was the last one — the last starting
- * booster — and the setup screen keeps showing it until the player continues or rejects
- * (`FactionSelectView`). */
-export function aiHoldIsSetupDecision(state: GameState): boolean {
-  const decisions = state.ai_hold?.turn.decisions ?? [];
-  const last = decisions[decisions.length - 1] as { phase?: unknown } | undefined;
-  return last?.phase === 'Setup';
-}
-
 /** The review of AI turns in an AI game: the switch (the AI seats wait after each of their
  * turns), and while they wait the finished turn's moves with 계속 / 거절. A rejected turn is
  * taken back and played again without the move that ended it; the server records the rejection.
- * Playing one's own move also lets the AI seats go on, so a turn is rejected before that. */
+ * Playing one's own move also lets the AI seats go on, so a turn is rejected before that.
+ * It is shown in a floating box (`.ai-review-float`) on the setup screens and the game screen
+ * and can be folded to one line. */
 export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
   const [available, setAvailable] = useState(false);
   const [busy, setBusy] = useState<'switch' | 'continue' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +68,15 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
   const nameOf = (id: PlayerId) =>
     state.players.find((player) => player.player_id === id)?.nickname ?? `플레이어 ${id}`;
 
+  // Folded, the box is one line that still says what the AI seats are waiting for.
+  const status = hold
+    ? `⏸ ${nameOf(hold.turn.player)}의 차례가 끝났습니다`
+    : takeover
+      ? `✋ ${nameOf(takeover.player)}의 차례를 직접 두는 중`
+      : replay
+        ? `↩ ${nameOf(replay.player)} — 다시 두는 중`
+        : 'AI 차례 검토';
+
   async function run(kind: 'switch' | 'continue' | 'reject', call: () => Promise<unknown>, failed: string) {
     if (busy) return;
     setBusy(kind);
@@ -88,21 +90,44 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
     }
   }
 
+  const foldButton = (
+    <button
+      type="button"
+      className="ai-turn-review-collapse"
+      aria-expanded={!collapsed}
+      onClick={() => setCollapsed((value) => !value)}
+    >
+      {collapsed ? '펼치기' : '접기'}
+    </button>
+  );
+
+  if (collapsed) {
+    return (
+      <section className="teacher-hint ai-turn-review ai-turn-review--collapsed" aria-label="AI 차례 검토">
+        <span className="ai-turn-review-status" role="status">{status}</span>
+        {foldButton}
+      </section>
+    );
+  }
+
   return (
     <section className="teacher-hint ai-turn-review" aria-label="AI 차례 검토">
-      <label className="ai-turn-review-switch">
-        <input
-          type="checkbox"
-          checked={enabled}
-          disabled={busy !== null}
-          onChange={() => void run(
-            'switch',
-            () => api.aiReview(roomCode, sessionToken, !enabled),
-            'AI 차례 멈춤을 바꾸지 못했습니다.',
-          )}
-        />
-        {' '}AI 차례마다 멈춤
-      </label>
+      <div className="ai-turn-review-head">
+        <label className="ai-turn-review-switch">
+          <input
+            type="checkbox"
+            checked={enabled}
+            disabled={busy !== null}
+            onChange={() => void run(
+              'switch',
+              () => api.aiReview(roomCode, sessionToken, !enabled),
+              'AI 차례 멈춤을 바꾸지 못했습니다.',
+            )}
+          />
+          {' '}AI 차례마다 멈춤
+        </label>
+        {foldButton}
+      </div>
       {takeover && (
         <p className="teacher-hint-move" role="status">
           ✋ <strong>{nameOf(takeover.player)}</strong>의 차례를 직접 두세요 — 교사가 낼 다른 수가 없습니다
