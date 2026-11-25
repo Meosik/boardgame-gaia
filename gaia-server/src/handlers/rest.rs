@@ -627,6 +627,33 @@ pub async fn ai_reject(
     }
 }
 
+/// The human seat of an AI game takes back its latest setup choice — a starting structure or
+/// the starting booster (`crate::ai::redo_setup_choice`): the room goes back to the position
+/// that choice was made at, and what the AI seats did after it is played again. Asked for the
+/// revision the player is looking at; the restored position arrives as an ordinary snapshot.
+pub async fn setup_redo(
+    State(app): State<AppState>,
+    Path(code): Path<String>,
+    Json(req): Json<AiHintRequest>,
+) -> ServerResult<Json<serde_json::Value>> {
+    use crate::ai::SetupRedoError;
+    let (player, session_room) = ReconnectService::validate_session(&app, &req.session_token).await?;
+    if session_room != code {
+        return Err(ServerError::InvalidSession);
+    }
+    app.ensure_room_loaded(&code).await?;
+    match crate::ai::redo_setup_choice(&app, &code, player, req.expected_revision).await {
+        Ok(()) => Ok(Json(serde_json::json!({ "ok": true }))),
+        Err(SetupRedoError::NotAnAiGame) => Err(ServerError::InvalidAction(
+            "only the human seat of an AI game takes back a setup choice".into(),
+        )),
+        Err(SetupRedoError::NothingToRedo) => Err(ServerError::InvalidAction(
+            "no setup choice can be taken back at this position".into(),
+        )),
+        Err(SetupRedoError::Server(error)) => Err(ServerError::Internal(error)),
+    }
+}
+
 #[derive(Deserialize)]
 pub struct AiReviewRequest {
     pub session_token: String,

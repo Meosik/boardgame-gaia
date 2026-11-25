@@ -12,6 +12,8 @@ import { RoundBoosters } from '../RoundBoosters';
 import { ScoringBoard } from '../ScoringBoard';
 import { PersonalBoardDrawer } from '../PersonalBoardDrawer';
 import { PlayerDashboard } from '../PlayerDashboard';
+import { AiTurnReview } from '../AiTurnReview';
+import { SetupRedo } from '../SetupRedo';
 import { LostFleetTechRequirementBoard } from '../LostFleetTechRequirementBoard';
 import { FactionBadge } from './FactionBadge';
 import { TerraformingSelectionBoard } from './TerraformingSelectionBoard';
@@ -292,9 +294,19 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
     sendCommand({ type: 'place_setup_action', action }, revision);
   }
 
+  // AI games: the wait after an AI seat's setup decision (계속 / 거절) and taking back the
+  // player's own setup choices. Both show nothing in other rooms.
+  const aiTools = sessionToken && setupGameState ? (
+    <div className="setup-ai-tools">
+      <AiTurnReview roomCode={roomCode} sessionToken={sessionToken} state={setupGameState} />
+      <SetupRedo roomCode={roomCode} sessionToken={sessionToken} state={setupGameState} />
+    </div>
+  ) : null;
+
   if (startingPlacement && setupGameState && startingPlayer && startingFaction) {
     const isMyTurn = playerId !== null && startingPlacement.active_player === playerId;
     return (
+      <>
       <StartingStructureSetup
         game={setupGameState}
         placement={startingPlacement}
@@ -314,12 +326,15 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
           sendSetupAction({ type: 'PlaceStartingStructure', coord: selectedStartingHex });
         }}
       />
+      {aiTools}
+      </>
     );
   }
 
   if (startingBooster && setupGameState) {
     const isMyTurn = playerId !== null && startingBooster.active_player === playerId;
     return (
+      <>
       <StartingBoosterSetup
         game={setupGameState}
         selection={startingBooster}
@@ -340,6 +355,8 @@ export function FactionSelectView({ onGameStart, emphasizeStructures = false }: 
           });
         }}
       />
+      {aiTools}
+      </>
     );
   }
 

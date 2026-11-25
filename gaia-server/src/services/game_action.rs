@@ -32,6 +32,7 @@ impl GameActionService {
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
                 let acting_player = crate::services::dev_game::acting_player(room, player_id);
                 let takeover = crate::ai::takeover_before(room, player_id);
+                let ends_setup_redo = crate::ai::ends_setup_redo(room, player_id);
                 let mut events = {
                     let game_state = room
                         .game_state
@@ -54,12 +55,17 @@ impl GameActionService {
                 if room.dev_human_player == Some(player_id) && !ai_seats {
                     events.extend(auto_advance_dev_actions(room, player_id)?);
                 }
-                if let Some(takeover) = takeover {
-                    played_for_ai = crate::ai::note_takeover_move(
-                        room,
-                        takeover,
-                        gaia_engine::rules::engine::AiDecision::Game(action.clone()),
-                    );
+                match takeover {
+                    Some(takeover) => {
+                        played_for_ai = crate::ai::note_takeover_move(
+                            room,
+                            takeover,
+                            gaia_engine::rules::engine::AiDecision::Game(action.clone()),
+                        );
+                    }
+                    // The human seat's first own action: its setup choices stand from here on.
+                    None if ends_setup_redo => room.setup_choices.clear(),
+                    None => {}
                 }
                 Ok(events)
             })

@@ -108,6 +108,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/rooms/:code/ai-continue", post(rest::ai_continue))
         .route("/rooms/:code/ai-reject", post(rest::ai_reject))
         .route("/rooms/:code/ai-review", post(rest::ai_review))
+        .route("/rooms/:code/setup-redo", post(rest::setup_redo))
         .route("/rooms/:code/preview_board", get(rest::preview_board));
 
     // The WS handshake is a plain HTTP GET (Upgrade request), so it shares the

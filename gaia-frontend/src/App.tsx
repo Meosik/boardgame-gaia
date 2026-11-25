@@ -47,6 +47,7 @@ import { TopPassControl } from './components/TopPassControl';
 import { PlayerActionShelf } from './components/PlayerActionShelf';
 import { TeacherHint } from './components/TeacherHint';
 import { AiTurnReview } from './components/AiTurnReview';
+import { SetupRedo } from './components/SetupRedo';
 import { GameOverScreen } from './components/GameOverScreen';
 import { TurnBanner } from './components/TurnBanner';
 import { ActionToast } from './components/ActionToast';
@@ -458,6 +459,16 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
       switch (msg.type) {
         case 'snapshot':
           roomActions.setRevision(msg.revision);
+          // The room went back into setup (the player took back a setup choice, or rejected an
+          // AI seat's last setup decision): the setup screens take over again — the lobby opens
+          // on the waiting room, which moves on to them with the first snapshot.
+          if (isGameState(msg.state) && !msg.state.tutorial
+            && typeof msg.state.phase === 'object' && 'Setup' in msg.state.phase) {
+            gameActions.setGameState(msg.state);
+            roomActions.setRoomInfo({ roomState: 'faction_selection' });
+            setView('lobby');
+            break;
+          }
           if (isGameState(msg.state)) {
             const before = useGameStore.getState();
             const controlled = before.myPlayerId;
@@ -1971,6 +1982,9 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
                 the map (teacherHintHexes). */}
             {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && liveGameState && (
               <AiTurnReview roomCode={roomCode} sessionToken={sessionToken} state={liveGameState} />
+            )}
+            {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && liveGameState && (
+              <SetupRedo roomCode={roomCode} sessionToken={sessionToken} state={liveGameState} />
             )}
             {!replay && !coach && !gameState.tutorial && roomCode && sessionToken && (
               <TeacherHint

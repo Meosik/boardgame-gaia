@@ -1432,6 +1432,139 @@ pub async fn reject_turn(
     Ok(())
 }
 
+/// Remembers a setup choice the human seat of an AI game made for itself at `revision`, so
+/// that it can be taken back (`redo_setup_choice`): a starting structure or the starting
+/// booster. Bids and the faction choice are not kept. Called inside the command that applies
+/// the choice.
+pub(crate) fn note_setup_choice(
+    room: &mut Room,
+    sender: PlayerId,
+    action: &gaia_engine::SetupAction,
+    revision: u64,
+) {
+    let own_choice = matches!(
+        action,
+        gaia_engine::SetupAction::PlaceStartingStructure { .. }
+            | gaia_engine::SetupAction::SelectStartingBooster { .. }
+    );
+    if own_choice && is_ai_room(room) && room.dev_human_player == Some(sender) {
+        room.setup_choices.push(revision);
+    }
+}
+
+/// Whether the command the human seat is about to play ends the time its setup choices can be
+/// taken back: its first action in an action phase. An answer in a queue (a charge offer the
+/// AI seats' first moves bring, the income order) does not.
+pub(crate) fn ends_setup_redo(room: &Room, sender: PlayerId) -> bool {
+    room.dev_human_player == Some(sender)
+        && !room.setup_choices.is_empty()
+        && room
+            .game_state
+            .as_ref()
+            .is_some_and(|state| matches!(state.phase, GamePhase::ActionPhase { .. }))
+}
+
+/// Why a setup choice was not taken back.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SetupRedoError {
+    /// Not an AI game or not its human seat.
+    NotAnAiGame,
+    /// No setup choice is kept, the room is not at the asked revision, an undo request is
+    /// open, or the game is over.
+    NothingToRedo,
+    /// The position of the choice could not be loaded or the restored room not saved.
+    Server(String),
+}
+
+/// Takes the room back to the position of the human seat's latest setup choice
+/// (`Room::setup_choices`); the body of the transition `redo_setup_choice` commits. What the AI
+/// seats were doing or waiting for belongs to the position that is gone.
+fn restore_setup_choice(
+    room: &mut Room,
+    at: u64,
+    choice: u64,
+    restored: &GameState,
+) -> Result<(), RuleError> {
+    if room.revision != at || room.setup_choices.last() != Some(&choice) {
+        return Err(RuleError::ActionNotAllowed(
+            "the position changed before the setup choice was taken back".into(),
+        ));
+    }
+    room.setup_choices.pop();
+    // After the last booster the room is in the game proper; the choice is a setup position.
+    room.state = if matches!(restored.phase, GamePhase::Setup(_)) {
+        RoomState::FactionSelection
+    } else {
+        RoomState::InGame
+    };
+    room.game_state = Some(restored.clone());
+    room.ai_hold = None;
+    room.ai_turn = None;
+    room.ai_stalled = None;
+    room.ai_rejected = None;
+    Ok(())
+}
+
+/// The human seat of an AI game takes back its latest setup choice (a starting structure or
+/// the starting booster): the room goes back to the position that choice was made at — as a new
+/// revision, like an undo — and the player chooses again. Everything after it is gone with it:
+/// the AI seats play their setup decisions again (the teacher may choose differently now), and
+/// the player their own later ones. Asked again, the choice before that one is taken back.
+/// Possible until the player's first action of the game (`ends_setup_redo`).
+pub async fn redo_setup_choice(
+    app: &AppState,
+    room_code: &str,
+    player: PlayerId,
+    expected_revision: u64,
+) -> Result<(), SetupRedoError> {
+    if app.ai.is_none() {
+        return Err(SetupRedoError::NotAnAiGame);
+    }
+    let choice = {
+        let mut rooms = app.rooms.write().await;
+        let room = ai_room_of(&mut rooms, room_code, player)
+            .map_err(|_| SetupRedoError::NotAnAiGame)?;
+        let open = room.revision == expected_revision
+            && room.game_state.as_ref().is_some_and(|state| {
+                !matches!(state.phase, GamePhase::Ended { .. })
+                    && state.undo_state.pending_request.is_none()
+            });
+        if !open {
+            return Err(SetupRedoError::NothingToRedo);
+        }
+        *room
+            .setup_choices
+            .last()
+            .ok_or(SetupRedoError::NothingToRedo)?
+    };
+    let repository = crate::repository::GameRepository::new(app.db.clone());
+    let restored = repository
+        .load_snapshot_at_revision(room_code, choice)
+        .await
+        .map_err(|error| SetupRedoError::Server(error.to_string()))?
+        .ok_or_else(|| {
+            SetupRedoError::Server(format!("snapshot revision {choice} was not found"))
+        })?;
+    let outcome = coordinator::apply_server_transition(app, room_code, |room| {
+        restore_setup_choice(room, expected_revision, choice, &restored)
+    })
+    .await
+    .map_err(|error| match error {
+        CommandError::Rule(_) | CommandError::RevisionConflict { .. } => {
+            SetupRedoError::NothingToRedo
+        }
+        other => SetupRedoError::Server(other.to_string()),
+    })?;
+    log::info!(
+        "setup choice taken back room={room_code} player={player} held_revision={expected_revision} \
+         choice_revision={choice} restored_revision={}",
+        outcome.revision.get()
+    );
+    coordinator::broadcast_snapshot(app, room_code, outcome.revision).await;
+    spawn_driver(app.clone(), room_code.to_string());
+    Ok(())
+}
+
 /// How often the teacher is asked again for a position it gave no usable move for, before the
 /// room's AI seats stop and wait for the player's retry request (`retry`).
 const TEACHER_RETRIES: u32 = 1;
@@ -1903,6 +2036,7 @@ mod tests {
             ai_turn: None,
             ai_hold: None,
             ai_rejected: None,
+            setup_choices: Vec::new(),
         };
         (room, to_move)
     }
@@ -2810,6 +2944,55 @@ mod tests {
         assert_eq!(takeover_seat(&room), None);
         assert_eq!((room.current_ai_hold(), room.ai_rejected.as_ref(), room.ai_turn.as_ref()), (None, None, None));
         assert_eq!(crate::services::dev_game::acting_player(&room, human), human);
+    }
+
+    #[test]
+    fn the_human_seat_takes_back_its_setup_choices_latest_first() {
+        let (mut room, human) = ai_room_waiting_for_its_human();
+        room.state = RoomState::InGame;
+        let ai = [7, 8, 9, 10].into_iter().find(|seat| *seat != human).unwrap();
+        let booster = gaia_engine::SetupAction::SelectStartingBooster { booster_id: 1 };
+        // Only the human seat's own structure and booster choices are kept.
+        note_setup_choice(&mut room, ai, &booster, 3);
+        note_setup_choice(&mut room, human, &gaia_engine::SetupAction::PassBid, 3);
+        assert!(room.setup_choices.is_empty());
+        assert!(!ends_setup_redo(&room, human));
+        note_setup_choice(&mut room, human, &booster, 3);
+        note_setup_choice(&mut room, human, &booster, 5);
+        assert_eq!(room.setup_choices, vec![3, 5]);
+        let view = crate::coordinator::room_snapshot_view(&room);
+        assert_eq!(view.get("setup_redo"), Some(&serde_json::json!(2)));
+        // The human seat's first action of an action phase ends it, an AI seat's does not.
+        let playing = action_phase(&room, human, 1);
+        room.game_state = Some(playing.clone());
+        assert!(ends_setup_redo(&room, human) && !ends_setup_redo(&room, ai));
+
+        // A request for another revision or another choice changes nothing.
+        let revision = room.revision;
+        let mut setup = playing.clone();
+        setup.phase = GamePhase::Setup(SetupPhase::Complete);
+        assert!(restore_setup_choice(&mut room.clone(), revision + 1, 5, &setup).is_err());
+        assert!(restore_setup_choice(&mut room.clone(), revision, 3, &setup).is_err());
+        // The latest choice is taken back: the room is in setup again at that position, and
+        // what the AI seats waited for is gone with the position.
+        room.ai_stalled = Some(AiStall {
+            revision,
+            player: ai,
+            reason: AiStallReason::NoAnswer,
+        });
+        assert!(restore_setup_choice(&mut room, revision, 5, &setup).is_ok());
+        assert_eq!(room.setup_choices, vec![3]);
+        assert_eq!(room.state, RoomState::FactionSelection);
+        assert_eq!(
+            room.game_state.as_ref().map(GameState::serialize),
+            Some(setup.serialize())
+        );
+        assert_eq!((room.ai_stalled, room.current_ai_hold()), (None, None));
+        // Then the one before it; after that nothing is left to take back.
+        assert!(restore_setup_choice(&mut room, revision, 3, &setup).is_ok());
+        assert!(room.setup_choices.is_empty());
+        let view = crate::coordinator::room_snapshot_view(&room);
+        assert_eq!(view.get("setup_redo"), None);
     }
 
     #[test]

@@ -403,6 +403,11 @@ pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
                 }),
             );
         }
+        // The human seat of an AI game can take back this many of its own setup choices
+        // (`crate::ai::redo_setup_choice`).
+        if !room.setup_choices.is_empty() {
+            fields.insert("setup_redo".into(), json!(room.setup_choices.len()));
+        }
         // No move of the teacher was left for a rejected AI turn: the player plays it, the
         // human seat's commands act for this seat until the turn ends.
         if let Some(player) = crate::ai::takeover_seat(room) {

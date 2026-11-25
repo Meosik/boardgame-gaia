@@ -99,6 +99,11 @@ pub struct Room {
     /// The moves the player has rejected in the AI turn that is being played again
     /// (`crate::ai::reject_turn`). Memory only.
     pub ai_rejected: Option<AiRejected>,
+    /// The revisions at which the human seat of an AI game made its own setup choices
+    /// (starting structures, starting booster), oldest first. The player can take the latest
+    /// one back (`crate::ai::redo_setup_choice`) until their first action of the game. Memory
+    /// only.
+    pub setup_choices: Vec<u64>,
 }
 
 /// A move the teacher would play instead of a rejected one (`tools/ai_worker.py` "spares").
@@ -411,6 +416,7 @@ impl RoomManager {
             ai_turn: None,
             ai_hold: None,
             ai_rejected: None,
+            setup_choices: Vec::new(),
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))

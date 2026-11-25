@@ -59,12 +59,21 @@ impl FactionSelectionService {
                     events.extend(auto_advance_dev_actions(room, human_player)?);
                 }
 
-                if let Some(takeover) = takeover {
-                    played_for_ai = crate::ai::note_takeover_move(
+                match takeover {
+                    Some(takeover) => {
+                        played_for_ai = crate::ai::note_takeover_move(
+                            room,
+                            takeover,
+                            gaia_engine::rules::engine::AiDecision::Setup(action.clone()),
+                        );
+                    }
+                    // The human seat's own choice: it can be taken back (`redo_setup_choice`).
+                    None => crate::ai::note_setup_choice(
                         room,
-                        takeover,
-                        gaia_engine::rules::engine::AiDecision::Setup(action.clone()),
-                    );
+                        player_id,
+                        &action,
+                        expected_revision.get(),
+                    ),
                 }
                 Ok(events)
             })

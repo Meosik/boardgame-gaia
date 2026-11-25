@@ -191,6 +191,16 @@ export const api = {
     });
   },
 
+  /** Takes back the player's latest setup choice in an AI game (`GameState.setup_redo`): the
+   * room goes back to the position of that choice; it arrives as a snapshot. `revision` is the
+   * one the player is looking at. */
+  setupRedo(code: string, sessionToken: string, revision: number): Promise<{ ok: boolean }> {
+    return request(`${BASE}/rooms/${code}/setup-redo`, {
+      method: 'POST',
+      body: JSON.stringify({ session_token: sessionToken, expected_revision: revision }),
+    });
+  },
+
   listRooms(): Promise<RoomSummary[]> {
     return request(`${BASE}/rooms`);
   },

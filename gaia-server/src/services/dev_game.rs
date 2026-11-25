@@ -725,6 +725,7 @@ mod tests {
                 ai_turn: None,
                 ai_hold: None,
                 ai_rejected: None,
+                setup_choices: Vec::new(),
             },
             coord,
         )
