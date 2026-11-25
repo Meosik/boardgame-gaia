@@ -1,0 +1,1151 @@
+{
+ "name": "137-teacher-early-upgrades",
+ "kind": "command",
+ "status": "done",
+ "note": "코덱스 이상 없음(사용자 2026-11-13 상시 지시), HANDOFF E339: 사용자 「점수 비교 유지에서 초반에 업그레이드를 잘 안하진 않나?」 → 현재 교사 6R 완주 141판(114 · 119 · 123, 엔진 fc19671c) 재생(읽기 전용, lab/scratch_e339_upgrades.py). 1–2라운드 주 차례 결정(후보에 패스)을 selected(업그레이드 둠) · lost_compare(업그레이드 합법, 업그레이드 계획이 비교됐는데 다른 계획이 이김) · menu_only(메뉴 · 메뉴 풀에만 있고 비교 못 감) · not_in_menu(합법인데 메뉴에 없음) · not_legal로 나눠 종족별 · 합법 대상 건물별로 셈; 좌석-판마다 1–2R 업그레이드 대상별 수, 첫 업그레이드 라운드, 무료 업그레이드(광석 · 돈 안 줄어듦), lost_compare의 값 차이(최고 계획 − 최고 업그레이드 계획) 분위. 판정 없음(교사 · 엔진 변경 없음, 새 판 없음). 볼 것(정리 턴): ① logged.has_compared_field / main_decisions — 비교 기록이 없는 결정 비율(없으면 lost_compare/menu_only를 나눌 수 없다고 적음) ② 종족별 분류 · 첫 업그레이드 라운드(전문가 기록 observed-uiqoo-20260916-log.md는 1판 4종족이라 같은 종족끼리만 참고, 아이비츠 시작 의회 · 무료 교역소는 따로) ③ lost_compare 값 차이와 예시 ④ engine이 fc19671c인지 ⑤ error_count. 규칙 변경(초반 업그레이드 우선 · 수입 평가)은 결과를 보고 사용자에게 묻는다. 예상 ≈ 15분(141판 전체 재생), 제한 1시간.",
+ "host": "agentmaco",
+ "commit": "73a4997",
+ "started_at": "2026-11-26T01:47:31+09:00",
+ "finished_at": "2026-11-26T01:47:57+09:00",
+ "command": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:tools",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "lab/scratch_e339_upgrades.py",
+  "runs/lab-114-all-tier-selfplay-18f-full",
+  "runs/lab-119-all-tier-selfplay-18f-full-more",
+  "runs/lab-123-all-tier-selfplay-18f-full-third",
+  "--out",
+  "runs/lab-137-teacher-early-upgrades/metrics.json"
+ ],
+ "exit_code": 0,
+ "metrics": {
+  "engine": "49318fefc9954a00afe6e36c1b3c5dd246e06a5bba974a767964c90cb20f65e9",
+  "games": 18,
+  "rounds": "1-2",
+  "logged": {
+   "has_compared_field": 5349,
+   "main_decisions": 5349
+  },
+  "classes_by_faction": {
+   "ALL": {
+    "selected": 1143,
+    "lost_compare": 14,
+    "menu_only": 457,
+    "not_in_menu": 993,
+    "not_legal": 2742
+   },
+   "Ambas": {
+    "selected": 75,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 135,
+    "not_legal": 183
+   },
+   "BalTaks": {
+    "selected": 14,
+    "lost_compare": 0,
+    "menu_only": 1,
+    "not_in_menu": 36,
+    "not_legal": 2
+   },
+   "Bescods": {
+    "selected": 20,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 22,
+    "not_legal": 0
+   },
+   "Darkanians": {
+    "selected": 70,
+    "lost_compare": 0,
+    "menu_only": 1,
+    "not_in_menu": 58,
+    "not_legal": 181
+   },
+   "Firaks": {
+    "selected": 101,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 51,
+    "not_legal": 210
+   },
+   "Geodens": {
+    "selected": 28,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 37,
+    "not_legal": 66
+   },
+   "Gleens": {
+    "selected": 31,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 23,
+    "not_legal": 4
+   },
+   "HadschHallas": {
+    "selected": 101,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 68,
+    "not_legal": 243
+   },
+   "Itars": {
+    "selected": 28,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 24,
+    "not_legal": 1
+   },
+   "Ivits": {
+    "selected": 45,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 130,
+    "not_legal": 230
+   },
+   "Lantids": {
+    "selected": 82,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 98,
+    "not_legal": 189
+   },
+   "Moweyds": {
+    "selected": 11,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 22,
+    "not_legal": 27
+   },
+   "Nevlas": {
+    "selected": 86,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 184,
+    "not_legal": 175
+   },
+   "SpaceGiants": {
+    "selected": 71,
+    "lost_compare": 0,
+    "menu_only": 2,
+    "not_in_menu": 41,
+    "not_legal": 193
+   },
+   "Taklons": {
+    "selected": 29,
+    "lost_compare": 0,
+    "menu_only": 24,
+    "not_in_menu": 6,
+    "not_legal": 85
+   },
+   "Terrans": {
+    "selected": 167,
+    "lost_compare": 7,
+    "menu_only": 209,
+    "not_in_menu": 24,
+    "not_legal": 320
+   },
+   "Tinkeroids": {
+    "selected": 6,
+    "lost_compare": 0,
+    "menu_only": 0,
+    "not_in_menu": 18,
+    "not_legal": 32
+   },
+   "Xenos": {
+    "selected": 178,
+    "lost_compare": 7,
+    "menu_only": 220,
+    "not_in_menu": 16,
+    "not_legal": 601
+   }
+  },
+  "classes_by_legal_target": {
+   "Academy": {
+    "selected": 133,
+    "lost_compare": 0,
+    "menu_only": 4,
+    "not_in_menu": 8,
+    "not_legal": 0
+   },
+   "PlanetaryInstitute": {
+    "selected": 396,
+    "lost_compare": 0,
+    "menu_only": 42,
+    "not_in_menu": 60,
+    "not_legal": 0
+   },
+   "ResearchLab": {
+    "selected": 484,
+    "lost_compare": 1,
+    "menu_only": 57,
+    "not_in_menu": 85,
+    "not_legal": 0
+   },
+   "TradingStation": {
+    "selected": 1043,
+    "lost_compare": 14,
+    "menu_only": 455,
+    "not_in_menu": 987,
+    "not_legal": 0
+   }
+  },
+  "selected_by_faction_target": {
+   "Ambas": {
+    "TradingStation": 34,
+    "ResearchLab": 34,
+    "Academy": 7
+   },
+   "BalTaks": {
+    "TradingStation": 10,
+    "ResearchLab": 4
+   },
+   "Bescods": {
+    "TradingStation": 13,
+    "ResearchLab": 7
+   },
+   "Darkanians": {
+    "TradingStation": 25,
+    "ResearchLab": 25,
+    "Academy": 20
+   },
+   "Firaks": {
+    "TradingStation": 51,
+    "ResearchLab": 39,
+    "Academy": 1,
+    "PlanetaryInstitute": 10
+   },
+   "Geodens": {
+    "TradingStation": 11,
+    "ResearchLab": 10,
+    "PlanetaryInstitute": 2,
+    "Academy": 5
+   },
+   "Gleens": {
+    "TradingStation": 19,
+    "ResearchLab": 12
+   },
+   "HadschHallas": {
+    "TradingStation": 52,
+    "ResearchLab": 37,
+    "Academy": 12
+   },
+   "Itars": {
+    "TradingStation": 17,
+    "ResearchLab": 10,
+    "Academy": 1
+   },
+   "Ivits": {
+    "TradingStation": 21,
+    "ResearchLab": 23,
+    "Academy": 1
+   },
+   "Lantids": {
+    "TradingStation": 36,
+    "ResearchLab": 31,
+    "Academy": 11,
+    "PlanetaryInstitute": 4
+   },
+   "Moweyds": {
+    "TradingStation": 6,
+    "ResearchLab": 4,
+    "Academy": 1
+   },
+   "Nevlas": {
+    "TradingStation": 37,
+    "ResearchLab": 36,
+    "Academy": 13
+   },
+   "SpaceGiants": {
+    "TradingStation": 38,
+    "PlanetaryInstitute": 24,
+    "ResearchLab": 9
+   },
+   "Taklons": {
+    "TradingStation": 12,
+    "ResearchLab": 12,
+    "Academy": 5
+   },
+   "Terrans": {
+    "TradingStation": 71,
+    "ResearchLab": 70,
+    "Academy": 26
+   },
+   "Tinkeroids": {
+    "TradingStation": 4,
+    "ResearchLab": 2
+   },
+   "Xenos": {
+    "TradingStation": 95,
+    "ResearchLab": 63,
+    "Academy": 20
+   }
+  },
+  "free_selected_by_faction": {},
+  "seat_games": {
+   "Xenos": 16,
+   "Terrans": 16,
+   "Ambas": 9,
+   "HadschHallas": 9,
+   "Darkanians": 4,
+   "SpaceGiants": 4,
+   "Taklons": 4,
+   "Geodens": 4,
+   "Lantids": 1,
+   "Nevlas": 1,
+   "Ivits": 1,
+   "Firaks": 1,
+   "Moweyds": 1,
+   "Tinkeroids": 1
+  },
+  "first_upgrade_round_by_faction": {
+   "Ambas": {
+    "1": 9
+   },
+   "Darkanians": {
+    "1": 4
+   },
+   "Firaks": {
+    "1": 1
+   },
+   "Geodens": {
+    "1": 4
+   },
+   "HadschHallas": {
+    "1": 9
+   },
+   "Ivits": {
+    "2": 1
+   },
+   "Lantids": {
+    "1": 1
+   },
+   "Moweyds": {
+    "1": 1
+   },
+   "Nevlas": {
+    "1": 1
+   },
+   "SpaceGiants": {
+    "1": 4
+   },
+   "Taklons": {
+    "1": 4
+   },
+   "Terrans": {
+    "1": 16
+   },
+   "Tinkeroids": {
+    "1": 1
+   },
+   "Xenos": {
+    "1": 16
+   }
+  },
+  "lost_compare_value_gap": {
+   "n": 14,
+   "median": 4.11,
+   "p25": 0.0,
+   "p75": 16.75
+  },
+  "examples": {
+   "not_in_menu": [
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-000/game-0-A02",
+     "step": 21,
+     "faction": "Geodens",
+     "round": 1,
+     "legal": [
+      "PlanetaryInstitute",
+      "ResearchLab",
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@1,-5"
+     ],
+     "selected": "current-choice"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-000/game-0-A02",
+     "step": 22,
+     "faction": "Geodens",
+     "round": 1,
+     "legal": [
+      "PlanetaryInstitute",
+      "ResearchLab",
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@1,-5"
+     ],
+     "selected": "current-choice"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 26,
+     "faction": "Geodens",
+     "round": 1,
+     "legal": [
+      "PlanetaryInstitute",
+      "ResearchLab",
+      "TradingStation"
+     ],
+     "menu": [
+      "Geodens-PI@-4,2-new-type@-5,3"
+     ],
+     "selected": "BGG-R1-1PI+4M via BGG-R1-1PI+4M"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 41,
+     "faction": "Geodens",
+     "round": 1,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "Geodens-new-type@-6,6"
+     ],
+     "selected": "BGG-R1-1PI+4M via Geodens-PI@-4,2-new-type@-6,6"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 48,
+     "faction": "Geodens",
+     "round": 1,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "Geodens-new-type@-3,2"
+     ],
+     "selected": "BGG-R1-1PI+4M via root-2"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 52,
+     "faction": "Geodens",
+     "round": 1,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "Geodens-new-type@-6,6"
+     ],
+     "selected": "BGG-R1-1PI+4M via Geodens-PI@-4,2-new-type@-6,6"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 65,
+     "faction": "Terrans",
+     "round": 2,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@-1,-3"
+     ],
+     "selected": "menu-tie colony@-1,-3"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 70,
+     "faction": "Xenos",
+     "round": 2,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@-7,-2"
+     ],
+     "selected": "track-plan-Economy-2"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 73,
+     "faction": "Terrans",
+     "round": 2,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@-1,-3"
+     ],
+     "selected": "menu-tie colony@-1,-3"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 79,
+     "faction": "Terrans",
+     "round": 2,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@-1,-3"
+     ],
+     "selected": "track-plan-ArtificialIntelligence-1>colony@4,-1"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 83,
+     "faction": "Terrans",
+     "round": 2,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@-1,-3"
+     ],
+     "selected": "current-choice"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01",
+     "step": 92,
+     "faction": "Xenos",
+     "round": 2,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@-7,-2"
+     ],
+     "selected": "current-choice"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-002/game-0-A03",
+     "step": 13,
+     "faction": "Nevlas",
+     "round": 1,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@0,-5"
+     ],
+     "selected": "Nevlas-knowledge-then-Science"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-002/game-0-A03",
+     "step": 14,
+     "faction": "Nevlas",
+     "round": 1,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@0,-5"
+     ],
+     "selected": "Nevlas-knowledge-then-Science"
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-002/game-0-A03",
+     "step": 15,
+     "faction": "Nevlas",
+     "round": 1,
+     "legal": [
+      "TradingStation"
+     ],
+     "menu": [
+      "colony@0,-5"
+     ],
+     "selected": "Nevlas-knowledge-then-Science"
+    }
+   ],
+   "lost_compare": [
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-041/game-0-A03",
+     "step": 89,
+     "faction": "Terrans",
+     "round": 2,
+     "selected": "current-choice",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "81a1d60af0",
+       "family": "current",
+       "first": 0,
+       "complete": true,
+       "value": 340.85
+      },
+      {
+       "goal": "track-plan-Terraforming-1",
+       "spec": "61ddf0c6e3",
+       "family": "ordered",
+       "first": 0,
+       "complete": true,
+       "value": 304.03
+      },
+      {
+       "goal": "root-8",
+       "spec": "d8b9b49e3d",
+       "family": "root",
+       "first": 8,
+       "complete": true,
+       "value": 298.96
+      },
+      {
+       "goal": "Terrans-academy-Gaia@-10,6",
+       "spec": "27406c0e57",
+       "family": "sequence",
+       "first": 12,
+       "complete": true,
+       "value": 315.86
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-043/game-0-A01",
+     "step": 65,
+     "faction": "Xenos",
+     "round": 2,
+     "selected": "Xenos-academy-range@-11,3",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "bd446c3cf8",
+       "family": "current",
+       "first": 2,
+       "complete": true,
+       "value": 238.01
+      },
+      {
+       "goal": "Xenos-academy-range@-11,3",
+       "spec": "732f1f491c",
+       "family": "sequence",
+       "first": 2,
+       "complete": true,
+       "value": 273.16
+      },
+      {
+       "goal": "root-1",
+       "spec": "ba96c2a489",
+       "family": "root",
+       "first": 1,
+       "complete": true,
+       "value": 234.03
+      },
+      {
+       "goal": "track-plan-Economy-2",
+       "spec": "86d55f24ac",
+       "family": "ordered",
+       "first": 2,
+       "complete": true,
+       "value": 263.63
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-114-all-tier-selfplay-18f-full/pair-046/game-0-A01",
+     "step": 87,
+     "faction": "Xenos",
+     "round": 2,
+     "selected": "PlanetaryInstitute@0,2",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "81a1d60af0",
+       "family": "current",
+       "first": 0,
+       "complete": true,
+       "value": 289.88
+      },
+      {
+       "goal": "PlanetaryInstitute@0,2",
+       "spec": "02fbe8e732",
+       "family": "upgrade",
+       "first": 0,
+       "complete": true,
+       "value": 297.26
+      },
+      {
+       "goal": "root-22",
+       "spec": "955934c412",
+       "family": "root",
+       "first": 22,
+       "complete": true,
+       "value": 246.89
+      },
+      {
+       "goal": "track-plan-Navigation-2>colony@-4,0",
+       "spec": "1b656bdc9f",
+       "family": "ordered",
+       "first": 19,
+       "complete": true,
+       "value": 248.69
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-119-all-tier-selfplay-18f-full-more/pair-001/game-0-A01",
+     "step": 94,
+     "faction": "Xenos",
+     "round": 2,
+     "selected": "menu-tie colony@5,-7",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "3bd82c5762",
+       "family": "current",
+       "first": 8,
+       "complete": true,
+       "value": 303.71
+      },
+      {
+       "goal": "colony@5,-7",
+       "spec": "b9e3c89deb",
+       "family": "colony",
+       "first": 8,
+       "complete": true,
+       "value": 303.71
+      },
+      {
+       "goal": "root-15",
+       "spec": "41938cbfd3",
+       "family": "root",
+       "first": 15,
+       "complete": true,
+       "value": 301.58
+      },
+      {
+       "goal": "Xenos-academy-range@1,-6",
+       "spec": "f8336e38d4",
+       "family": "sequence",
+       "first": 8,
+       "complete": true,
+       "value": 286.96
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-119-all-tier-selfplay-18f-full-more/pair-022/game-0-A01",
+     "step": 82,
+     "faction": "Terrans",
+     "round": 2,
+     "selected": "track-plan-Terraforming-1",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "cb970375a5",
+       "family": "current",
+       "first": 87,
+       "complete": true,
+       "value": 275.48
+      },
+      {
+       "goal": "track-plan-Terraforming-1",
+       "spec": "61ddf0c6e3",
+       "family": "ordered",
+       "first": 159,
+       "complete": true,
+       "value": 304.93
+      },
+      {
+       "goal": "root-93",
+       "spec": "7a3a60eb50",
+       "family": "root",
+       "first": 93,
+       "complete": true,
+       "value": 276.06
+      },
+      {
+       "goal": "Terrans-academy-Gaia@-7,6",
+       "spec": "28a2b3a758",
+       "family": "sequence",
+       "first": 87,
+       "complete": true,
+       "value": 275.48
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-119-all-tier-selfplay-18f-full-more/pair-022/game-0-A01",
+     "step": 88,
+     "faction": "Terrans",
+     "round": 2,
+     "selected": "root-10",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "81a1d60af0",
+       "family": "current",
+       "first": 0,
+       "complete": true,
+       "value": 303.96
+      },
+      {
+       "goal": "Terraforming-3",
+       "spec": "5e10c5c196",
+       "family": "research",
+       "first": 0,
+       "complete": true,
+       "value": 290.16
+      },
+      {
+       "goal": "root-10",
+       "spec": "67aa24ff85",
+       "family": "root",
+       "first": 10,
+       "complete": true,
+       "value": 312.33
+      },
+      {
+       "goal": "Terrans-academy-Gaia@-7,6",
+       "spec": "28a2b3a758",
+       "family": "sequence",
+       "first": 0,
+       "complete": true,
+       "value": 303.96
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-119-all-tier-selfplay-18f-full-more/pair-030/game-0-A02",
+     "step": 97,
+     "faction": "Terrans",
+     "round": 2,
+     "selected": "Science@5,-2",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "81a1d60af0",
+       "family": "current",
+       "first": 0,
+       "complete": true,
+       "value": 249.9
+      },
+      {
+       "goal": "Science@5,-2",
+       "spec": "16d8e61751",
+       "family": "upgrade",
+       "first": 0,
+       "complete": true,
+       "value": 263.86
+      },
+      {
+       "goal": "root-1",
+       "spec": "ba96c2a489",
+       "family": "root",
+       "first": 1,
+       "complete": true,
+       "value": 259.04
+      },
+      {
+       "goal": "Terrans-academy-Gaia@5,-3",
+       "spec": "f3e208e67b",
+       "family": "sequence",
+       "first": 12,
+       "complete": true,
+       "value": 241.32
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-119-all-tier-selfplay-18f-full-more/pair-040/game-0-A01",
+     "step": 63,
+     "faction": "Xenos",
+     "round": 2,
+     "selected": "root-26",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "c7ae65698e",
+       "family": "current",
+       "first": 31,
+       "complete": true,
+       "value": 240.32
+      },
+      {
+       "goal": "Xenos-academy-range@-5,-3",
+       "spec": "ddc1aed098",
+       "family": "sequence",
+       "first": 54,
+       "complete": true,
+       "value": 258.48
+      },
+      {
+       "goal": "root-26",
+       "spec": "c05ab35767",
+       "family": "root",
+       "first": 26,
+       "complete": true,
+       "value": 260.56
+      },
+      {
+       "goal": "tile-action-60-then-colony@6,-1",
+       "spec": "94c120b159",
+       "family": "colony",
+       "first": 60,
+       "complete": true,
+       "value": 220.47
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-119-all-tier-selfplay-18f-full-more/pair-040/game-0-A01",
+     "step": 70,
+     "faction": "Xenos",
+     "round": 2,
+     "selected": "Xenos-academy-range@-5,-3",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "2804e51b37",
+       "family": "current",
+       "first": 20,
+       "complete": true,
+       "value": 262.23
+      },
+      {
+       "goal": "Xenos-academy-range@-5,-3",
+       "spec": "ddc1aed098",
+       "family": "sequence",
+       "first": 20,
+       "complete": true,
+       "value": 268.66
+      },
+      {
+       "goal": "root-22",
+       "spec": "955934c412",
+       "family": "root",
+       "first": 22,
+       "complete": true,
+       "value": 262.23
+      },
+      {
+       "goal": "colony@6,-1",
+       "spec": "37e8019df6",
+       "family": "colony",
+       "first": 20,
+       "complete": true,
+       "value": 262.23
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-119-all-tier-selfplay-18f-full-more/pair-040/game-0-A01",
+     "step": 74,
+     "faction": "Xenos",
+     "round": 2,
+     "selected": "Xenos-academy-range@-5,-3",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "cd3b49582f",
+       "family": "current",
+       "first": 29,
+       "complete": true,
+       "value": 262.23
+      },
+      {
+       "goal": "Xenos-academy-range@-5,-3",
+       "spec": "ddc1aed098",
+       "family": "sequence",
+       "first": 24,
+       "complete": true,
+       "value": 268.66
+      },
+      {
+       "goal": "root-20",
+       "spec": "a522d2b7f3",
+       "family": "root",
+       "first": 20,
+       "complete": true,
+       "value": 239.43
+      },
+      {
+       "goal": "colony@6,-1",
+       "spec": "37e8019df6",
+       "family": "colony",
+       "first": 29,
+       "complete": true,
+       "value": 262.23
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-123-all-tier-selfplay-18f-full-third/pair-024/game-0-A02",
+     "step": 83,
+     "faction": "Terrans",
+     "round": 2,
+     "selected": "track-plan-Terraforming-3",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "310203ca1d",
+       "family": "current",
+       "first": 23,
+       "complete": true,
+       "value": 267.68
+      },
+      {
+       "goal": "track-plan-Terraforming-3",
+       "spec": "22e0c118f1",
+       "family": "ordered",
+       "first": 15,
+       "complete": true,
+       "value": 282.84
+      },
+      {
+       "goal": "root-30",
+       "spec": "06933a1d17",
+       "family": "root",
+       "first": 30,
+       "complete": true,
+       "value": 280.17
+      },
+      {
+       "goal": "Terrans-academy-Gaia@-7,4",
+       "spec": "1436fe8ef7",
+       "family": "sequence",
+       "first": 30,
+       "complete": true,
+       "value": 280.17
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-123-all-tier-selfplay-18f-full-third/pair-027/game-0-A02",
+     "step": 91,
+     "faction": "Xenos",
+     "round": 2,
+     "selected": "current-choice",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "81a1d60af0",
+       "family": "current",
+       "first": 0,
+       "complete": true,
+       "value": 265.65
+      },
+      {
+       "goal": "Xenos-academy-range@-6,3",
+       "spec": "19f8ece0c2",
+       "family": "sequence",
+       "first": 14,
+       "complete": true,
+       "value": 252.25
+      },
+      {
+       "goal": "root-15",
+       "spec": "41938cbfd3",
+       "family": "root",
+       "first": 15,
+       "complete": true,
+       "value": 227.9
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-123-all-tier-selfplay-18f-full-third/pair-046/game-0-A01",
+     "step": 52,
+     "faction": "Terrans",
+     "round": 2,
+     "selected": "current-choice",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "49952943df",
+       "family": "current",
+       "first": 6,
+       "complete": true,
+       "value": 267.3
+      },
+      {
+       "goal": "colony@3,1",
+       "spec": "4ffaddff95",
+       "family": "colony",
+       "first": 6,
+       "complete": true,
+       "value": 246.17
+      },
+      {
+       "goal": "root-29",
+       "spec": "1a05cd97a4",
+       "family": "root",
+       "first": 29,
+       "complete": true,
+       "value": 256.3
+      },
+      {
+       "goal": "Terrans-academy-Gaia@-3,3",
+       "spec": "01b03ec38f",
+       "family": "sequence",
+       "first": 33,
+       "complete": true,
+       "value": 266.55
+      }
+     ]
+    },
+    {
+     "game": "runs/lab-123-all-tier-selfplay-18f-full-third/pair-046/game-0-A01",
+     "step": 57,
+     "faction": "Terrans",
+     "round": 2,
+     "selected": "current-choice",
+     "compared": [
+      {
+       "goal": "current-choice",
+       "spec": "3bd82c5762",
+       "family": "current",
+       "first": 8,
+       "complete": true,
+       "value": 267.3
+      },
+      {
+       "goal": "colony@3,1",
+       "spec": "4ffaddff95",
+       "family": "colony",
+       "first": 8,
+       "complete": true,
+       "value": 246.17
+      },
+      {
+       "goal": "root-5",
+       "spec": "3840d56399",
+       "family": "root",
+       "first": 5,
+       "complete": true,
+       "value": 252.19
+      },
+      {
+       "goal": "Terrans-academy-Gaia@-3,3",
+       "spec": "01b03ec38f",
+       "family": "sequence",
+       "first": 12,
+       "complete": true,
+       "value": 263.19
+      }
+     ]
+    }
+   ]
+  },
+  "errors": [
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-000/game-0-A02: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-001/game-0-A01: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-002/game-0-A03: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-003/game-0-A02: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-004/game-0-A01: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-005/game-0-A03: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-006/game-0-A02: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-007/game-0-A01: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-008/game-0-A03: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-009/game-0-A02: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-010/game-0-A01: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-011/game-0-A03: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-013/game-0-A01: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-014/game-0-A03: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-015/game-0-A02: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-016/game-0-A01: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-017/game-0-A03: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-018/game-0-A02: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-019/game-0-A01: IndexError('list index out of range')",
+   "runs/lab-114-all-tier-selfplay-18f-full/pair-020/game-0-A03: IndexError('list index out of range')"
+  ],
+  "error_count": 123
+ }
+}
