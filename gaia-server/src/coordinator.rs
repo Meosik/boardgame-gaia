@@ -407,6 +407,10 @@ pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
                 }),
             );
         }
+        // This many finished AI turns can still be rejected (`crate::ai::past_turns` lists them).
+        if !room.ai_past.is_empty() {
+            fields.insert("ai_past_turns".into(), json!(room.ai_past.len()));
+        }
         // The human seat of an AI game can take back this many of its own setup choices
         // (`crate::ai::redo_setup_choice`).
         if !room.setup_choices.is_empty() {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/rest';
 import { hintLabel } from './TeacherHint';
-import type { AiHold, GameState, PlayerId } from '../types/game';
+import type { AiHold, AiPastTurn, GameState, PlayerId } from '../types/game';
 
 interface Props {
   roomCode: string;
@@ -37,12 +37,32 @@ export function aiHoldSpares(hold: AiHold): string {
  * taken back and played again without the move that ended it; the server records the rejection.
  * Playing one's own move also lets the AI seats go on, so a turn is rejected before that.
  * It is shown in a floating box (`.ai-review-float`) on the setup screens and the game screen
- * and can be folded to one line. */
+ * and can be folded to one line.
+ * An earlier AI turn can be rejected too (「지난 AI 차례」): the room goes back to that turn's
+ * first position and everything played since — the player's own moves too — is gone, so it is
+ * asked about once more before it is done. */
 export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
   const [available, setAvailable] = useState(false);
-  const [busy, setBusy] = useState<'switch' | 'continue' | 'reject' | null>(null);
+  const [busy, setBusy] = useState<'switch' | 'continue' | 'reject' | 'past' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [pastOpen, setPastOpen] = useState(false);
+  const [past, setPast] = useState<AiPastTurn[] | null>(null);
+  /** `turn.start_revision` of the earlier turn the player is asked about. */
+  const [pastChosen, setPastChosen] = useState<number | null>(null);
+  const pastCount = state.ai_past_turns ?? 0;
+  const pastHeldAt = state.ai_hold?.revision ?? null;
+
+  // The list is read when it is opened and again when the game has moved on.
+  useEffect(() => {
+    if (!pastOpen) return undefined;
+    let cancelled = false;
+    setPastChosen(null);
+    api.aiTurns(roomCode, sessionToken)
+      .then((answer) => { if (!cancelled) setPast(answer.turns); })
+      .catch(() => { if (!cancelled) setPast([]); });
+    return () => { cancelled = true; };
+  }, [pastOpen, pastCount, pastHeldAt, roomCode, sessionToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +97,7 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
         ? `↩ ${nameOf(replay.player)} — 다시 두는 중`
         : 'AI 차례 검토';
 
-  async function run(kind: 'switch' | 'continue' | 'reject', call: () => Promise<unknown>, failed: string) {
+  async function run(kind: 'switch' | 'continue' | 'reject' | 'past', call: () => Promise<unknown>, failed: string) {
     if (busy) return;
     setBusy(kind);
     setError(null);
@@ -179,6 +199,67 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
             {busy === 'reject' ? '되돌리는 중…' : hold.by_player ? '다시 두기' : hold.spares_left === 0 ? '거절하고 직접 두기' : '거절'}
           </button>
           </div>
+        </div>
+      )}
+      {pastCount > 0 && (
+        <div className="ai-turn-review-past">
+          <button
+            type="button"
+            className="ai-turn-review-collapse"
+            aria-expanded={pastOpen}
+            onClick={() => setPastOpen((value) => !value)}
+          >
+            지난 AI 차례 {pastCount}개 {pastOpen ? '닫기' : '보기'}
+          </button>
+          {pastOpen && past === null && <p className="teacher-hint-note">불러오는 중…</p>}
+          {pastOpen && past !== null && (
+            <ul className="ai-turn-review-past-list">
+              {/* Newest first; the turn the AI seats wait at has its own buttons above. */}
+              {[...past].reverse().filter((entry) => entry.turn.start_revision !== hold?.turn.start_revision).map((entry) => {
+                const start = entry.turn.start_revision;
+                return (
+                  <li key={start}>
+                    <span>
+                      {entry.round > 0 ? `${entry.round}R` : '셋업'} · <strong>{nameOf(entry.turn.player)}</strong>
+                      {entry.by_player ? ' (내가 둠)' : entry.rejections > 0 ? ` (거절 ${entry.rejections}회 뒤)` : ''}
+                      {' — '}{entry.turn.decisions.map((decision) => hintLabel(decision, state)).join(' → ')}
+                    </span>
+                    {pastChosen === start ? (
+                      <span className="ai-turn-review-past-confirm" role="alert">
+                        이 차례의 처음으로 되돌립니다. 그 뒤에 둔 수는 내 수까지 모두 사라집니다.
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={busy !== null}
+                          onClick={() => void run(
+                            'past',
+                            // The room's revision is asked for at the click: it may have moved on.
+                            async () => {
+                              const now = await api.aiTurns(roomCode, sessionToken);
+                              await api.aiReject(roomCode, sessionToken, now.revision, start);
+                              setPastChosen(null);
+                              setPastOpen(false);
+                            },
+                            '지난 AI 차례로 되돌리지 못했습니다.',
+                          )}
+                        >
+                          {busy === 'past' ? '되돌리는 중…' : entry.by_player ? '되돌려 다시 두기' : '되돌려 거절'}
+                        </button>
+                        <button type="button" className="ai-turn-review-collapse" disabled={busy !== null} onClick={() => setPastChosen(null)}>
+                          취소
+                        </button>
+                      </span>
+                    ) : (
+                      <button type="button" className="ai-turn-review-collapse" disabled={busy !== null} onClick={() => setPastChosen(start)}>
+                        여기로 되돌리기
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {pastOpen && <p className="teacher-hint-note">서버가 다시 시작되기 전의 차례는 목록에 없습니다.</p>}
         </div>
       )}
       {error && <p className="error-msg" role="alert">{error}</p>}

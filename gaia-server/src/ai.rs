@@ -52,7 +52,8 @@ use tokio::sync::{watch, Mutex};
 use crate::{
     coordinator::{self, CommandError},
     room::manager::{
-        AiHold, AiRejected, AiStall, AiStallReason, AiTurn, Excluded, Room, RoomState, Spare,
+        AiHold, AiPastTurn, AiRejected, AiStall, AiStallReason, AiTurn, Excluded, Room, RoomState,
+        Spare,
     },
     services::{
         dev_game::required_player,
@@ -970,6 +971,20 @@ fn note_ai_move(room: &mut Room, turn: &Turn, decision: &AiDecision) -> bool {
         .as_ref()
         .is_some_and(|now| turn_goes_on(&turn.state, decision, now, turn.player));
     let held = room.ai_review && !goes_on;
+    if !goes_on {
+        // Kept whether the player looks at every AI turn or not: a turn can be rejected later
+        // too (`reject_turn` with the turn's start).
+        let replay = room.ai_rejected.as_ref().filter(|rejected| {
+            rejected.player == record.player && rejected.start_revision == record.start_revision
+        });
+        room.ai_past.push(AiPastTurn {
+            turn: record.clone(),
+            round: turn.state.round,
+            by_player: false,
+            excluded: replay.map_or_else(Vec::new, |rejected| rejected.excluded.clone()),
+            rejections: replay.map_or(0, |rejected| rejected.rejections),
+        });
+    }
     if held {
         // A turn that is the replay of a rejected one says how much is left to reject.
         let replay = room.ai_rejected.as_ref().filter(|rejected| {
@@ -1160,6 +1175,30 @@ fn next_rejection(room: &Room, hold: &AiHold) -> Result<AiRejected, RejectError>
     })
 }
 
+/// The replay record for rejecting an earlier turn (`Room::ai_past`) that the room no longer
+/// holds at: the move that ended it is left out, with the moves that were left out when it was
+/// played, and the teacher is asked anew for its move and the spares (the spares of that time
+/// are not kept). A turn the player played is theirs to play again, with nothing new left out.
+/// `None` = the turn has no move.
+fn past_rejection(room: &Room, past: &AiPastTurn) -> Option<AiRejected> {
+    let ended_with = past.turn.decisions.last()?;
+    let mut excluded = past.excluded.clone();
+    if !past.by_player {
+        let entry = excluded_entry(ended_with);
+        if !excluded.contains(&entry) {
+            excluded.push(entry);
+        }
+    }
+    Some(AiRejected {
+        player: past.turn.player,
+        start_revision: room.revision + 1,
+        excluded,
+        spares: past.by_player.then(Vec::new),
+        rejections: past.rejections + u32::from(!past.by_player),
+        by_player: past.by_player,
+    })
+}
+
 /// Takes the room back to the first position of the turn it holds at; the body of the
 /// transition `reject_turn` commits. Refused when the room is no longer held at `held`.
 fn restore_turn(
@@ -1168,11 +1207,50 @@ fn restore_turn(
     restored: &GameState,
     rejection: AiRejected,
 ) -> Result<(), RuleError> {
-    if room.revision != held || room.current_ai_hold().is_none() {
+    let turn_start = room
+        .current_ai_hold()
+        .filter(|_| room.revision == held)
+        .map(|hold| hold.turn.start_revision)
+        .ok_or_else(|| {
+            RuleError::ActionNotAllowed(
+                "the position changed before the AI turn was rejected".into(),
+            )
+        })?;
+    put_back(room, turn_start, restored, rejection);
+    Ok(())
+}
+
+/// Takes the room back to the first position of an earlier AI turn (`Room::ai_past`, the one
+/// that began at `turn_start`); the body of the transition `reject_turn` commits for a turn
+/// the room does not hold at. Refused when the room is no longer at `at` or the turn is no
+/// longer part of the game (an undo took it back).
+fn restore_past_turn(
+    room: &mut Room,
+    at: u64,
+    turn_start: u64,
+    restored: &GameState,
+    rejection: AiRejected,
+) -> Result<(), RuleError> {
+    let known = room
+        .ai_past
+        .iter()
+        .any(|past| past.turn.start_revision == turn_start);
+    if room.revision != at || !known {
         return Err(RuleError::ActionNotAllowed(
             "the position changed before the AI turn was rejected".into(),
         ));
     }
+    put_back(room, turn_start, restored, rejection);
+    Ok(())
+}
+
+/// The room at `restored`, the first position of the AI turn that began at `turn_start`, with
+/// that turn to be played again (`rejection`). Everything played since is gone: the later AI
+/// turns leave the list of past turns, and the human seat's own setup choices made after that
+/// position can no longer be taken back.
+fn put_back(room: &mut Room, turn_start: u64, restored: &GameState, rejection: AiRejected) {
+    room.forget_ai_turns_from(turn_start);
+    room.setup_choices.retain(|choice| *choice < turn_start);
     // A rejected last setup decision takes the room back out of the game proper (`drive`).
     room.state = if matches!(restored.phase, GamePhase::Setup(_)) {
         RoomState::FactionSelection
@@ -1184,7 +1262,6 @@ fn restore_turn(
     room.ai_turn = None;
     room.ai_stalled = None;
     room.ai_rejected = Some(rejection);
-    Ok(())
 }
 
 /// The replay record that applies to the decision `player` is asked for now: the first
@@ -1287,6 +1364,17 @@ pub(crate) fn note_takeover_move(
         room.ai_turn = Some(record);
         return None;
     }
+    // A turn the player played is a past turn like the seat's own (`Room::ai_past`).
+    room.ai_past.push(AiPastTurn {
+        turn: record.clone(),
+        round: takeover.asked.round,
+        by_player: true,
+        excluded: room
+            .ai_rejected
+            .as_ref()
+            .map_or_else(Vec::new, |rejected| rejected.excluded.clone()),
+        rejections: room.ai_rejected.as_ref().map_or(0, |rejected| rejected.rejections),
+    });
     // With the review of AI turns on, the AI seats wait at this turn too: the player lets them
     // play on or takes the whole turn back — free actions and the move that ended it — and
     // plays it again (`next_rejection`). The replay record stays for that; it no longer
@@ -1490,47 +1578,93 @@ async fn give_up_replay(app: &AppState, room_code: &str, turn: &Turn) {
 /// after that turn's start is gone with it. The rejected turn is kept as a record
 /// (`GameRepository::record_ai_reject` and the log): positions where the teacher's move was
 /// judged wrong.
+///
+/// `past` = the first revision of an earlier AI turn to reject instead (`Room::ai_past`, user
+/// 2026-11-25: a move found wrong long after it was played). The room need not hold at
+/// anything then; it goes back to that turn's first position the same way, and every turn
+/// played since — the player's own too — is gone. `None` = the turn the room holds at.
 pub async fn reject_turn(
     app: &AppState,
     room_code: &str,
     player: PlayerId,
     expected_revision: u64,
+    past: Option<u64>,
 ) -> Result<(), RejectError> {
     if app.ai.is_none() {
         return Err(RejectError::NotAnAiGame);
     }
-    let (hold, rejection, level, teacher) = {
+    let (turn, by_player, held, rejection, later_turns, level, teacher) = {
         let mut rooms = app.rooms.write().await;
         let room = ai_room_of(&mut rooms, room_code, player)
             .map_err(|_| RejectError::NotAnAiGame)?;
-        let hold = room
-            .current_ai_hold()
-            .filter(|hold| hold.revision == expected_revision)
-            .cloned()
-            .ok_or(RejectError::NothingHeld)?;
-        let open = room.game_state.as_ref().is_some_and(|state| {
-            !matches!(state.phase, GamePhase::Ended { .. })
-                && state.undo_state.pending_request.is_none()
-        });
+        let open = room.revision == expected_revision
+            && room.game_state.as_ref().is_some_and(|state| {
+                !matches!(state.phase, GamePhase::Ended { .. })
+                    && state.undo_state.pending_request.is_none()
+            });
         if !open {
             return Err(RejectError::NothingHeld);
         }
-        let rejection = next_rejection(room, &hold)?;
-        (hold, rejection, room.ai_level.clone(), room.ai_teacher.clone())
+        // The turn the room holds at is rejected as such (its spares are kept), also when it
+        // is named by its start.
+        let hold = room
+            .current_ai_hold()
+            .filter(|hold| past.map_or(true, |start| hold.turn.start_revision == start))
+            .cloned();
+        let (turn, by_player, held, rejection) = match (hold, past) {
+            (Some(hold), _) => {
+                let rejection = next_rejection(room, &hold)?;
+                (hold.turn, hold.by_player, true, rejection)
+            }
+            (None, Some(start)) => {
+                let earlier = room
+                    .ai_past
+                    .iter()
+                    .find(|earlier| earlier.turn.start_revision == start)
+                    .ok_or(RejectError::NothingHeld)?;
+                let rejection = past_rejection(room, earlier).ok_or(RejectError::NothingHeld)?;
+                (earlier.turn.clone(), earlier.by_player, false, rejection)
+            }
+            (None, None) => return Err(RejectError::NothingHeld),
+        };
+        let later_turns = room
+            .ai_past
+            .iter()
+            .filter(|later| later.turn.start_revision > turn.start_revision)
+            .count();
+        (
+            turn,
+            by_player,
+            held,
+            rejection,
+            later_turns,
+            room.ai_level.clone(),
+            room.ai_teacher.clone(),
+        )
     };
     let repository = crate::repository::GameRepository::new(app.db.clone());
     let restored = repository
-        .load_snapshot_at_revision(room_code, hold.turn.start_revision)
+        .load_snapshot_at_revision(room_code, turn.start_revision)
         .await
         .map_err(|error| RejectError::Server(error.to_string()))?
         .ok_or_else(|| {
             RejectError::Server(format!(
                 "snapshot revision {} was not found",
-                hold.turn.start_revision
+                turn.start_revision
             ))
         })?;
     let outcome = coordinator::apply_server_transition(app, room_code, |room| {
-        restore_turn(room, expected_revision, &restored, rejection.clone())
+        if held {
+            restore_turn(room, expected_revision, &restored, rejection.clone())
+        } else {
+            restore_past_turn(
+                room,
+                expected_revision,
+                turn.start_revision,
+                &restored,
+                rejection.clone(),
+            )
+        }
     })
     .await
     .map_err(|error| match error {
@@ -1542,13 +1676,17 @@ pub async fn reject_turn(
         "accepted": false,
         // A turn the player played and takes back is not a judgement of the teacher's move:
         // it only says the `ai_turn_by_player` record of that turn was replaced.
-        "kind": if hold.by_player { "ai_turn_by_player_redo" } else { "ai_reject" },
+        "kind": if by_player { "ai_turn_by_player_redo" } else { "ai_reject" },
         "room": room_code,
-        "player": hold.turn.player,
+        "player": turn.player,
         "held_revision": expected_revision,
-        "turn_start_revision": hold.turn.start_revision,
+        "turn_start_revision": turn.start_revision,
         "restored_revision": restored_revision,
-        "rejected_turn": hold.turn.decisions,
+        "rejected_turn": turn.decisions,
+        // `true` = an earlier turn, rejected after the game had gone on: the AI turns played
+        // after it (`later_ai_turns` of them) were taken back with it.
+        "past": !held,
+        "later_ai_turns": later_turns,
         "excluded": rejection.excluded,
         "rejections": rejection.rejections,
         "by_player": rejection.by_player,
@@ -1565,6 +1703,22 @@ pub async fn reject_turn(
     coordinator::broadcast_snapshot(app, room_code, outcome.revision).await;
     spawn_driver(app.clone(), room_code.to_string());
     Ok(())
+}
+
+/// The finished AI turns the player can still reject (`Room::ai_past`, oldest first) with the
+/// revision the room is at, for the game's human seat: `reject_turn` takes a turn's
+/// `turn.start_revision` as `past`. The turn the room holds at is among them.
+pub async fn past_turns(
+    app: &AppState,
+    room_code: &str,
+    player: PlayerId,
+) -> Result<serde_json::Value, HintError> {
+    if app.ai.is_none() {
+        return Err(HintError::NotAnAiGame);
+    }
+    let mut rooms = app.rooms.write().await;
+    let room = ai_room_of(&mut rooms, room_code, player)?;
+    Ok(serde_json::json!({ "revision": room.revision, "turns": room.ai_past }))
 }
 
 /// Remembers a setup choice the human seat of an AI game made for itself at `revision`, so
@@ -1626,6 +1780,7 @@ fn restore_setup_choice(
         ));
     }
     room.setup_choices.pop();
+    room.forget_ai_turns_from(choice);
     // After the last booster the room is in the game proper; the choice is a setup position.
     room.state = if matches!(restored.phase, GamePhase::Setup(_)) {
         RoomState::FactionSelection
@@ -2173,6 +2328,7 @@ mod tests {
             ai_hold: None,
             ai_rejected: None,
             setup_choices: Vec::new(),
+            ai_past: Vec::new(),
         };
         (room, to_move)
     }
@@ -2996,6 +3152,120 @@ mod tests {
         assert_eq!(hold.turn.start_revision, 8);
         // A finished replay is a held turn, no longer a replay in progress.
         assert_eq!(replay_mark(&room), None);
+    }
+
+    #[test]
+    fn an_earlier_turn_is_rejected_after_the_game_went_on() {
+        // Revisions 5–7: the AI seat's turn (a free action, then research). The player lets
+        // the game go on and the next seat passes at 7 → 8.
+        let (mut room, ai, other, start) = held_room(research());
+        room.ai_hold = None;
+        let next = room.game_state.clone().unwrap();
+        let asked = asked_at(&room, other, &next);
+        let back_to_ai = action_phase(&room, ai, 1);
+        assert!(commit_ai_move(&mut room, &asked, &pass(), back_to_ai));
+        room.ai_hold = None;
+        assert_eq!(room.revision, 8);
+        let starts =
+            |room: &Room| room.ai_past.iter().map(|past| past.turn.start_revision).collect::<Vec<_>>();
+        assert_eq!(starts(&room), vec![5, 7]);
+        assert_eq!((room.ai_past[0].round, room.ai_past[0].by_player), (1, false));
+        assert_eq!(coordinator::room_snapshot_view(&room)["ai_past_turns"], 2);
+
+        // The first turn is rejected now: its research is left out and the teacher is asked
+        // anew, as at a first rejection.
+        let rejection = past_rejection(&room, &room.ai_past[0]).unwrap();
+        assert_eq!(
+            rejection,
+            AiRejected {
+                player: ai,
+                start_revision: 9,
+                excluded: vec![Excluded::Move(research())],
+                spares: None,
+                rejections: 1,
+                by_player: false,
+            }
+        );
+        // A stale request (the room moved on) or a turn that is not in the list changes nothing.
+        assert!(restore_past_turn(&mut room.clone(), 7, 5, &start, rejection.clone()).is_err());
+        assert!(restore_past_turn(&mut room.clone(), 8, 6, &start, rejection.clone()).is_err());
+        assert!(server_transition(&mut room, |room| {
+            restore_past_turn(room, 8, 5, &start, rejection).is_ok()
+        }));
+        assert_eq!(room.revision, 9);
+        assert_eq!(
+            room.game_state.as_ref().map(GameState::serialize),
+            Some(start.serialize())
+        );
+        // Both turns are gone from the game: the rejected one and the one played after it.
+        assert_eq!(starts(&room), Vec::<u64>::new());
+        assert!(coordinator::room_snapshot_view(&room).get("ai_past_turns").is_none());
+        let first = asked_at(&room, ai, &start);
+        let rejected = first.rejected.clone().expect("the replay applies at its start");
+        assert_eq!(
+            replay_step(&first, &rejected),
+            Some(Replay::Ask(Exclusions {
+                moves: vec![Excluded::Move(research())],
+                spares: MAX_SPARES,
+            }))
+        );
+
+        // The replay ends with a pass and the game goes on; rejected later as well, both
+        // moves are left out.
+        let after = action_phase(&room, other, 1);
+        assert!(commit_ai_move(&mut room, &first, &pass(), after));
+        room.ai_hold = None;
+        assert_eq!(starts(&room), vec![9]);
+        let again = past_rejection(&room, &room.ai_past[0]).unwrap();
+        assert_eq!(
+            (again.excluded, again.rejections, again.spares),
+            (
+                vec![Excluded::Move(research()), Excluded::ActionType("Pass".into())],
+                2,
+                None
+            )
+        );
+    }
+
+    #[test]
+    fn a_restored_position_takes_the_later_turns_out_of_the_past_turns() {
+        let (mut room, ai, _, start) = held_room(research());
+        assert_eq!(room.ai_past.len(), 1);
+        // Rejecting the held turn takes it out; so does an undo to its first position or before.
+        let mut undone = room.clone();
+        undone.forget_ai_turns_from(6);
+        assert_eq!(undone.ai_past.len(), 1);
+        undone.forget_ai_turns_from(5);
+        assert!(undone.ai_past.is_empty());
+        reject(&mut room, &start).unwrap();
+        assert!(room.ai_past.is_empty());
+
+        // A turn the player played in the seat's place is the player's to play again: nothing
+        // new is left out and it is not another rejection of the teacher.
+        let played = AiPastTurn {
+            turn: AiTurn {
+                player: ai,
+                start_revision: 8,
+                revision: 9,
+                decisions: vec![pass()],
+            },
+            round: 1,
+            by_player: true,
+            excluded: vec![Excluded::Move(research())],
+            rejections: 3,
+        };
+        let again = past_rejection(&room, &played).unwrap();
+        assert_eq!(
+            again,
+            AiRejected {
+                player: ai,
+                start_revision: room.revision + 1,
+                excluded: vec![Excluded::Move(research())],
+                spares: Some(vec![]),
+                rejections: 3,
+                by_player: true,
+            }
+        );
     }
 
     #[test]

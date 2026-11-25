@@ -54,6 +54,8 @@ impl UndoService {
                 // A rejected AI turn the player plays in the seat's place stays theirs.
                 let takeover = crate::ai::takeover_before(room, sender);
                 room.game_state = Some(restored.clone());
+                // AI turns played from that position on are gone (`Room::ai_past`).
+                room.forget_ai_turns_from(target_revision);
                 if let Some(takeover) = takeover {
                     crate::ai::keep_takeover_after_undo(room, takeover, target_revision);
                 }
@@ -145,6 +147,7 @@ impl UndoService {
 
                 if let Some(restored) = &restored {
                     room.game_state = Some(restored.clone());
+                    room.forget_ai_turns_from(target_revision);
                     return Ok(vec![GameEvent::UndoApplied {
                         requester,
                         free_action_only: false,
@@ -236,6 +239,7 @@ impl UndoService {
                         RuleError::ActionNotAllowed("undo snapshot was not loaded".into())
                     })?;
                     room.game_state = Some(restored.clone());
+                    room.forget_ai_turns_from(target_revision);
                     return Ok(vec![GameEvent::UndoApplied {
                         requester,
                         free_action_only: false,

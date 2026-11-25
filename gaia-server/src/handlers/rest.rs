@@ -627,10 +627,13 @@ pub async fn ai_continue(
 /// room goes back to that turn's first position and the seat plays it again without the move
 /// that ended it. Asked by the game's human seat for the revision it is looking at; the
 /// restored position and the new move arrive as ordinary snapshots.
+///
+/// With `turn_start_revision` an earlier AI turn is rejected instead (one of `ai_turns`): the
+/// room goes back to that turn's first position and everything played since is gone.
 pub async fn ai_reject(
     State(app): State<AppState>,
     Path(code): Path<String>,
-    Json(req): Json<AiHintRequest>,
+    Json(req): Json<AiRejectRequest>,
 ) -> ServerResult<Json<serde_json::Value>> {
     use crate::ai::RejectError;
     let (player, session_room) = ReconnectService::validate_session(&app, &req.session_token).await?;
@@ -638,7 +641,15 @@ pub async fn ai_reject(
         return Err(ServerError::InvalidSession);
     }
     app.ensure_room_loaded(&code).await?;
-    match crate::ai::reject_turn(&app, &code, player, req.expected_revision).await {
+    let rejected = crate::ai::reject_turn(
+        &app,
+        &code,
+        player,
+        req.expected_revision,
+        req.turn_start_revision,
+    )
+    .await;
+    match rejected {
         Ok(()) => Ok(Json(serde_json::json!({ "ok": true }))),
         Err(RejectError::NotAnAiGame) => Err(ServerError::InvalidAction(
             "only the human seat of an AI game rejects an AI turn".into(),
@@ -648,6 +659,38 @@ pub async fn ai_reject(
         )),
         Err(RejectError::Server(error)) => Err(ServerError::Internal(error)),
     }
+}
+
+#[derive(Deserialize)]
+pub struct AiRejectRequest {
+    pub session_token: String,
+    /// The room revision the player is looking at.
+    pub expected_revision: u64,
+    /// The first revision of an earlier AI turn to reject (`turn.start_revision` of an entry
+    /// of `ai_turns`); absent = the turn the AI seats wait at.
+    #[serde(default)]
+    pub turn_start_revision: Option<u64>,
+}
+
+/// The finished AI turns of an AI game that can still be rejected, oldest first
+/// (`crate::ai::past_turns`), for the game's human seat. Kept in memory only: the turns played
+/// before the last server restart are not listed.
+pub async fn ai_turns(
+    State(app): State<AppState>,
+    Path(code): Path<String>,
+    Json(req): Json<AiRetryRequest>,
+) -> ServerResult<Json<serde_json::Value>> {
+    let (player, session_room) = ReconnectService::validate_session(&app, &req.session_token).await?;
+    if session_room != code {
+        return Err(ServerError::InvalidSession);
+    }
+    app.ensure_room_loaded(&code).await?;
+    crate::ai::past_turns(&app, &code, player)
+        .await
+        .map(Json)
+        .map_err(|_| {
+            ServerError::InvalidAction("only the human seat of an AI game lists its AI turns".into())
+        })
 }
 
 /// The human seat of an AI game takes back its latest setup choice — a starting structure or

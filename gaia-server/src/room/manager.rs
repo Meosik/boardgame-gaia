@@ -109,6 +109,27 @@ pub struct Room {
     /// one back (`crate::ai::redo_setup_choice`) until their first action of the game. Memory
     /// only.
     pub setup_choices: Vec<u64>,
+    /// The finished turns of the AI seats in the line of play the room is in, oldest first
+    /// (`crate::ai::note_ai_move`): the player can take the room back to any of them and have
+    /// it played again without the move that ended it (`crate::ai::reject_turn`). A position
+    /// that is restored takes the turns from it on out of the list (`forget_ai_turns_from`).
+    /// Memory only: after a server restart the list starts empty.
+    pub ai_past: Vec<AiPastTurn>,
+}
+
+/// One entry of `Room::ai_past`.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AiPastTurn {
+    pub turn: AiTurn,
+    /// The round the turn was played in (0 = setup).
+    pub round: u8,
+    /// The player played this turn in the seat's place (`crate::ai::takeover_seat`).
+    pub by_player: bool,
+    /// The moves that were left out when this turn was played (it was the replay of a rejected
+    /// turn); rejecting it later leaves them out again.
+    pub excluded: Vec<Excluded>,
+    /// How often the turn had been rejected before it was played like this.
+    pub rejections: u32,
 }
 
 /// What the member of an AI game chose for it beside the game itself (`Room::ai_all_seats`,
@@ -223,6 +244,15 @@ impl Room {
             all_seats: self.ai_all_seats,
             review: self.ai_review,
         }
+    }
+
+    /// The room is taken back to the position of `revision` (an undo, a rejected AI turn, a
+    /// setup choice taken back): the AI turns that began there or later are no longer part of
+    /// the game. Revisions only grow and a restored position is written as a new one, so every
+    /// turn still in the list that began before `revision` was played before that position.
+    pub fn forget_ai_turns_from(&mut self, revision: u64) {
+        self.ai_past
+            .retain(|past| past.turn.start_revision < revision);
     }
 
     /// The stall of the position the room is at now; one left from an earlier revision no
@@ -446,6 +476,7 @@ impl RoomManager {
             ai_hold: None,
             ai_rejected: None,
             setup_choices: Vec::new(),
+            ai_past: Vec::new(),
         };
         self.rooms.insert(code.clone(), room);
         Ok((code, player_id))

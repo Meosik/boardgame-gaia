@@ -434,6 +434,18 @@ export interface AiHold {
   by_player?: boolean;
 }
 
+/** A finished AI turn that can still be rejected (server: `AiPastTurn`, `api.aiTurns`). */
+export interface AiPastTurn {
+  /** `start_revision` names the turn in `api.aiReject`. */
+  turn: AiHold['turn'];
+  /** The round it was played in (0 = setup). */
+  round: number;
+  /** `true` = the player played it in the seat's place. */
+  by_player: boolean;
+  /** How often it had been rejected before it was played like this. */
+  rejections: number;
+}
+
 export interface GameState {
   tutorial?: TutorialState | null;
   dev_controller?: PlayerId | null;
@@ -466,6 +478,9 @@ export interface GameState {
   /** Added by the server in an AI game: how many of the player's own setup choices (starting
    * structures, starting booster) can be taken back now (`api.setupRedo`). Absent when none. */
   setup_redo?: number;
+  /** Added by the server in an AI game: how many finished AI turns can still be rejected
+   * (`api.aiTurns` lists them; the server keeps them in memory only). Absent when none. */
+  ai_past_turns?: number;
   players: PlayerState[];
   board: BoardState;
   research_board: ResearchBoard;

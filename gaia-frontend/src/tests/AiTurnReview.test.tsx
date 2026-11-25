@@ -145,6 +145,28 @@ describe('AiTurnReview', () => {
     await waitFor(() => expect(aiReject).toHaveBeenCalledWith('ROOM', 'token', 21));
   });
 
+  it('rejects an earlier AI turn after asking once more', async () => {
+    vi.spyOn(api, 'aiGame').mockResolvedValue(true);
+    const turns = [
+      { turn: { player: 1, start_revision: 5, revision: 7, decisions: ['오래된 수'] }, round: 1, by_player: false, rejections: 0 },
+      { turn: { player: 1, start_revision: 30, revision: 31, decisions: ['최근 수'] }, round: 2, by_player: false, rejections: 0 },
+    ];
+    const aiTurns = vi.spyOn(api, 'aiTurns').mockResolvedValue({ revision: 40, turns });
+    const aiReject = vi.spyOn(api, 'aiReject').mockResolvedValue({ ok: true });
+    show(state({ ai_past_turns: 2 }));
+    // Nothing is read until the list is opened.
+    fireEvent.click(await screen.findByRole('button', { name: '지난 AI 차례 2개 보기' }));
+    await waitFor(() => expect(aiTurns).toHaveBeenCalledWith('ROOM', 'token'));
+    const review = screen.getByRole('region', { name: 'AI 차례 검토' });
+    await waitFor(() => expect(review).toHaveTextContent('1R · 영희 — 오래된 수'));
+    // Newest first: the second button belongs to the older turn.
+    fireEvent.click(screen.getAllByRole('button', { name: '여기로 되돌리기' })[1]);
+    expect(aiReject).not.toHaveBeenCalled();
+    expect(review).toHaveTextContent('그 뒤에 둔 수는 내 수까지 모두 사라집니다');
+    fireEvent.click(screen.getByRole('button', { name: '되돌려 거절' }));
+    await waitFor(() => expect(aiReject).toHaveBeenCalledWith('ROOM', 'token', 40, 5));
+  });
+
   it('says that a rejected turn is being played again', async () => {
     vi.spyOn(api, 'aiGame').mockResolvedValue(true);
     show(state({ ai_review: true, ai_replay: { player: 1, start_revision: 8, rejections: 1 } }));

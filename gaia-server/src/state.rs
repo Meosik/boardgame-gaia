@@ -206,6 +206,7 @@ fn rehydrated_room(
         ai_hold: None,
         ai_rejected: None,
         setup_choices: Vec::new(),
+        ai_past: Vec::new(),
     }
 }
 

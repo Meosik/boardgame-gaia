@@ -1,4 +1,5 @@
 import type {
+  AiPastTurn,
   CreateRoomResponse,
   DevGameResponse,
   FactionId,
@@ -187,11 +188,27 @@ export const api = {
 
   /** Rejects the finished AI turn the AI seats wait at: the room goes back to that turn's first
    * position and the seat plays it again without the move that ended it. `revision` is the
-   * hold's (`GameState.ai_hold.revision`); the new position arrives as snapshots. */
-  aiReject(code: string, sessionToken: string, revision: number): Promise<{ ok: boolean }> {
+   * hold's (`GameState.ai_hold.revision`); the new position arrives as snapshots.
+   * With `turnStart` (`turn.start_revision` of an entry of `aiTurns`) an earlier AI turn is
+   * rejected instead: the room goes back to that turn's first position and everything played
+   * since is gone; `revision` is then the room's (`aiTurns` gives it). */
+  aiReject(code: string, sessionToken: string, revision: number, turnStart?: number): Promise<{ ok: boolean }> {
     return request(`${BASE}/rooms/${code}/ai-reject`, {
       method: 'POST',
-      body: JSON.stringify({ session_token: sessionToken, expected_revision: revision }),
+      body: JSON.stringify({
+        session_token: sessionToken,
+        expected_revision: revision,
+        ...(turnStart === undefined ? {} : { turn_start_revision: turnStart }),
+      }),
+    });
+  },
+
+  /** The finished AI turns that can still be rejected, oldest first, with the room's revision
+   * (`GameState.ai_past_turns` counts them). Turns played before a server restart are not kept. */
+  aiTurns(code: string, sessionToken: string): Promise<{ revision: number; turns: AiPastTurn[] }> {
+    return request(`${BASE}/rooms/${code}/ai-turns`, {
+      method: 'POST',
+      body: JSON.stringify({ session_token: sessionToken }),
     });
   },
 
