@@ -894,8 +894,19 @@ fn turn_goes_on(
     {
         return false;
     }
-    matches!(decision, AiDecision::Game(GameAction::FreeAction { .. }))
-        || !matches!(now.phase, GamePhase::ActionPhase { .. })
+    keeps_the_turn(decision) || !matches!(now.phase, GamePhase::ActionPhase { .. })
+}
+
+/// The actions after which the same seat still has its main action: a free action, and the
+/// Space Giants' technology tile taken outside an action (the same two the undo checkpoints
+/// treat as free, `game_action::apply_tracked_action`).
+fn keeps_the_turn(decision: &AiDecision) -> bool {
+    matches!(
+        decision,
+        AiDecision::Game(
+            GameAction::FreeAction { .. } | GameAction::SpaceGiantsGainTechTile { .. }
+        )
+    )
 }
 
 /// Records a move of an AI seat in the seat's turn (`Room::ai_turn`) and, when the player
@@ -2782,9 +2793,19 @@ mod tests {
         };
         assert_eq!(command(&mut room, free_action(), start.clone()), None);
         assert_eq!(takeover_seat(&room), Some(ai));
+        // Nor does the Space Giants' technology tile end it: the main action is still to come.
+        let tech_tile = AiDecision::Game(GameAction::SpaceGiantsGainTechTile {
+            choice: gaia_engine::rules::actions::TechTileChoice::Standard {
+                tile: gaia_engine::game_state::TechTile(2),
+                advance_track: None,
+                bonus_build_coord: None,
+            },
+        });
+        assert_eq!(command(&mut room, tech_tile.clone(), start.clone()), None);
+        assert_eq!(takeover_seat(&room), Some(ai));
         let record = command(&mut room, pass(), after).expect("the turn ended");
         assert_eq!(record["kind"], "ai_turn_by_player");
-        assert_eq!(record["played_turn"], serde_json::json!([free_action(), pass()]));
+        assert_eq!(record["played_turn"], serde_json::json!([free_action(), tech_tile, pass()]));
         assert_eq!((record["player"].as_u64(), record["rejections"].as_u64()), (Some(u64::from(ai)), Some(3)));
         assert_eq!(takeover_seat(&room), None);
         assert_eq!((room.current_ai_hold(), room.ai_rejected.as_ref(), room.ai_turn.as_ref()), (None, None, None));
