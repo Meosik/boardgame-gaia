@@ -6,14 +6,15 @@ save_run keeps each process's RNG, restore_run gives it back and a resumed run r
 """
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import numpy as np
 import ray
 import torch
 
-from gaia_rl.training import (_runner_rng, _runner_threads, build_algorithm, episode_env, parameter_vector,
-                              remote_runners, restore_run, save_run)
+from gaia_rl.training import (_runner_rng, _runner_threads, build_algorithm, episode_env, learner_device,
+                              parameter_vector, remote_runners, require_learner_device, restore_run, save_run)
 
 SEED = 5
 
@@ -118,6 +119,48 @@ class RemoteRunners(unittest.TestCase):
         self.assertEqual(restore_run(resumed, self.root/'single', settings(0)), 1)
         self.assertTrue(same(episode_env(resumed.env_runner).episode_rng_state(), state))
         train(resumed)
+
+
+class LearnerDevice(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        torch.set_num_threads(2)
+        ray.init(num_cpus=4, include_dashboard=False, object_store_memory=1024**3, log_to_driver=False)
+
+    @classmethod
+    def tearDownClass(cls):
+        ray.shutdown()
+
+    def test_learner_device(self):
+        self.assertEqual(learner_device(False), 'cpu')
+        with unittest.mock.patch('torch.cuda.is_available', return_value=False):
+            with self.assertRaises(ValueError):
+                learner_device(True)
+        with unittest.mock.patch('torch.cuda.is_available', return_value=True):
+            self.assertEqual(learner_device(True), 'cuda')
+
+    def test_cpu_learner_is_checked_and_saved_on_cpu(self):
+        algorithm = build_algorithm(SEED, env_runners=0)
+        self.addCleanup(algorithm.stop)
+        require_learner_device(algorithm, 'cpu')
+        with self.assertRaises(RuntimeError):
+            require_learner_device(algorithm, 'cuda')
+        train(algorithm)
+        with tempfile.TemporaryDirectory() as folder:
+            run = Path(folder)/'run'
+            save_run(algorithm, run, {**settings(0), 'device': 'cpu'}, 1)
+            self.assertIsNone(torch.load(run/'rng.pt', weights_only=False)['torch_cuda'])
+            weights = torch.load(run/'inference.pt', weights_only=True)
+            self.assertTrue(weights)
+            self.assertTrue(all(value.device.type == 'cpu' for value in weights.values()))
+
+    @unittest.skipUnless(torch.cuda.is_available(), 'no CUDA device')
+    def test_gpu_learner_updates_on_cuda(self):
+        algorithm = build_algorithm(SEED, env_runners=0, learner_gpu=True)
+        self.addCleanup(algorithm.stop)
+        require_learner_device(algorithm, 'cuda')
+        learner = algorithm.train()['learners']['shared']
+        self.assertTrue(np.isfinite(learner['total_loss']))
 
 
 class SpeedSummary(unittest.TestCase):

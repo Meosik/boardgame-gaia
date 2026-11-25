@@ -1,5 +1,6 @@
 """Bounded local RLlib PPO runs. No server integration and no implicit long training."""
 import argparse
+from collections import OrderedDict
 from functools import partial
 import json
 from pathlib import Path
@@ -84,12 +85,25 @@ def remote_runners(algorithm, function):
     return results
 
 
-def build_algorithm(seed=0, capacity=2048, batch_size=32, encoding=3, width=64, env_runners=0, minibatch_size=8):
+def learner_device(learner_gpu):
+    """'cuda' when the update runs on a GPU, else 'cpu'. No CPU fallback: asking for the GPU without a visible CUDA
+    device is an error, so a run never records `device: cuda` for an update that ran on the CPU."""
+    if not learner_gpu:
+        return 'cpu'
+    if not torch.cuda.is_available():
+        raise ValueError('--learner-gpu needs a visible CUDA device (no CPU fallback)')
+    return 'cuda'
+
+
+def build_algorithm(seed=0, capacity=2048, batch_size=32, encoding=3, width=64, env_runners=0, minibatch_size=8,
+                    learner_gpu=False):
     """encoding 4: FeatureEncoderV4 observations (GaiaAEC previews every candidate) and the encoding 4 network.
 
     env_runners 0 = the pilot's single process (sampling in the driver, fragments of 16 decisions). N > 0 = N
     remote sampling processes, each with one environment, one torch thread and its own episode seed stream; an
-    iteration's batch is split between them (rollout fragment 'auto')."""
+    iteration's batch is split between them (rollout fragment 'auto').
+
+    learner_gpu: the local learner updates on one CUDA GPU; sampling (the env runners' inference included) stays on the CPU."""
     if encoding not in ENCODERS:
         raise ValueError(f'unknown encoding {encoding}')
     if env_runners < 0 or minibatch_size < 1:
@@ -103,7 +117,7 @@ def build_algorithm(seed=0, capacity=2048, batch_size=32, encoding=3, width=64, 
         .framework('torch')
         .env_runners(num_env_runners=env_runners, rollout_fragment_length=16 if env_runners == 0 else 'auto',
                      batch_mode='truncate_episodes', sample_timeout_s=SAMPLE_TIMEOUT_S)
-        .learners(num_learners=0,num_gpus_per_learner=0)
+        .learners(num_learners=0,num_gpus_per_learner=1 if learner_gpu else 0)
         .training(gamma=1.0, train_batch_size_per_learner=batch_size,
                   minibatch_size=minibatch_size,num_epochs=1,lr=0.0003,grad_clip=1.0)
         .multi_agent(policies={'shared'},policy_mapping_fn=shared_policy)
@@ -115,6 +129,19 @@ def build_algorithm(seed=0, capacity=2048, batch_size=32, encoding=3, width=64, 
 
 def parameter_vector(algorithm):
     return torch.cat([p.detach().cpu().flatten() for p in algorithm.get_module('shared').parameters()])
+
+
+def require_learner_device(algorithm, device):
+    """Raise unless every parameter of the learner's `shared` module is on `device` ('cpu' or 'cuda')."""
+    def devices(learner):
+        return sorted({p.device.type for p in learner.module['shared'].parameters()})
+    results = list(algorithm.learner_group.foreach_learner(devices))
+    if len(results) != 1:
+        raise RuntimeError('Expected exactly one local learner')
+    if not results[0].ok:
+        raise results[0].get()
+    if results[0].get() != [device]:
+        raise RuntimeError(f'PPO learner parameters are on {results[0].get()}, not {device}')
 
 
 def require_initial_model(metadata, settings):
@@ -155,13 +182,16 @@ def save_run(algorithm, destination, settings, iteration, initialized_from=None)
     destination = Path(destination).resolve()
     destination.mkdir(parents=True,exist_ok=False)
     algorithm.save_to_path(str(destination/'algorithm'))
-    torch.save(algorithm.get_module('shared').state_dict(),destination/'inference.pt')
+    torch.save(OrderedDict((key,value.cpu()) for key,value in algorithm.get_module('shared').state_dict().items()),
+               destination/'inference.pt')
     # The driver's RNG (the learner's minibatch order; with env_runners 0 also the sampling) and the episode seed
     # stream of every sampling process. With remote runners the driver has no environment: `runners` holds each
     # remote process's own python/numpy/torch state and episode stream, keyed by worker index.
+    # With a GPU learner also the CUDA generators.
     remote = settings.get('env_runners', 0)
     torch.save({'python':random.getstate(),'numpy':np.random.get_state(),
                 'torch':torch.get_rng_state(),
+                'torch_cuda':torch.cuda.get_rng_state_all() if settings.get('device') == 'cuda' else None,
                 'episode_rng':None if remote else episode_env(algorithm.env_runner).episode_rng_state(),
                 'runners':dict(remote_runners(algorithm, _runner_rng)) if remote else {}},destination/'rng.pt')
     model = model_settings(settings)
@@ -189,6 +219,8 @@ def restore_run(algorithm, source, settings):
     # This is a local, trusted checkpoint created by save_run, never an uploaded file.
     rng=torch.load(source/'rng.pt',weights_only=False,map_location='cpu')
     random.setstate(rng['python']);np.random.set_state(rng['numpy']);torch.set_rng_state(rng['torch'])
+    if rng.get('torch_cuda') is not None:
+        torch.cuda.set_rng_state_all(rng['torch_cuda'])
     remote=settings.get('env_runners',0)
     if remote:
         # Every saved sampling process gets its own state back; a different set of workers is not a resume.
@@ -220,6 +252,7 @@ def main():
     parser.add_argument('--minibatch-size',type=int,default=8)
     parser.add_argument('--max-minutes',type=float,
                         help='stop at the first iteration boundary after this many minutes (at least one iteration)')
+    parser.add_argument('--learner-gpu',action='store_true',help='update on one CUDA GPU (sampling stays on the CPU); refused when no CUDA device is visible; a CPU checkpoint cannot be resumed with it, nor the reverse')
     args=parser.parse_args()
     if args.iterations<1:
         parser.error('iterations must be positive')
@@ -227,6 +260,10 @@ def main():
         parser.error('--env-runners must be >= 0 and --minibatch-size positive')
     if args.init and args.resume:
         parser.error('--init starts a new run, --resume continues one: give one of them')
+    try:
+        device=learner_device(args.learner_gpu)
+    except ValueError as error:
+        parser.error(str(error))
     width=args.width or (256 if args.encoding==4 else 64)
     root=Path(__file__).resolve().parents[3]
     require_current_sources(root)
@@ -234,8 +271,10 @@ def main():
         parser.error('output must not already exist')
     torch.set_num_threads(2)
     random.seed(args.seed);np.random.seed(args.seed);torch.manual_seed(args.seed)
+    if device=='cuda':
+        torch.cuda.manual_seed_all(args.seed)
     start_versions=runtime_versions()
-    settings={'seed':args.seed,'capacity':args.capacity,'batch_size':args.batch_size,'device':'cpu',
+    settings={'seed':args.seed,'capacity':args.capacity,'batch_size':args.batch_size,'device':device,
               'encoding':args.encoding,'width':width,'env_runners':args.env_runners,
               'minibatch_size':args.minibatch_size}
     # Remote runners hand their fragments to the driver through the object store: room for a few batches of
@@ -244,12 +283,14 @@ def main():
     decision_bytes=sum(int(np.prod(space.shape))*space.dtype.itemsize for space in spaces)
     store=(128*1024**2 if args.env_runners==0 else
            max(1024**3,3*args.batch_size*decision_bytes))
-    ray.init(num_cpus=2+args.env_runners,include_dashboard=False,object_store_memory=store,
-             log_to_driver=False)
+    ray.init(num_cpus=2+args.env_runners,num_gpus=1 if device=='cuda' else 0,include_dashboard=False,
+             object_store_memory=store,log_to_driver=False)
     algorithm=None
     try:
         algorithm=build_algorithm(args.seed,args.capacity,args.batch_size,args.encoding,width,
-                                  args.env_runners,args.minibatch_size)
+                                  args.env_runners,args.minibatch_size,learner_gpu=device=='cuda')
+        if device=='cuda':
+            require_learner_device(algorithm,'cuda')
         previous=restore_run(algorithm,args.resume,settings) if args.resume else 0
         # A resumed run keeps the record of where its first weights came from.
         origin=(initialize_from(algorithm,args.init,settings) if args.init else
@@ -276,7 +317,7 @@ def main():
         require_compatible_versions(start_versions)
         save_run(algorithm,args.output,settings,previous+done,origin)
         report={'seconds':time.monotonic()-start,
-                'iterations':done,'iteration_seconds':iteration_seconds,
+                'iterations':done,'learner_device':device,'iteration_seconds':iteration_seconds,
                 'peak_driver_rss_mib':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024,
                 'parameter_delta_l2':torch.linalg.vector_norm(after-before).item(),
                 'results':results}
