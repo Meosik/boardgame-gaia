@@ -91,6 +91,12 @@ describe('AI replay controls', () => {
     const game = { ...catalog.games[0], id: 'game-004-0', file: 'game-004-0.json.gz', policy: '004-0번 판',
       factions: ['BalTaks', 'Bescods', 'Gleens', 'Itars'], rounds: 1 };
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ schema_version: 1, games: [game] }) })));
+    // The viewer refuses a replay that disagrees with its catalog entry (seed, policy, steps).
+    vi.mocked(loadReplay).mockImplementation(async () => {
+      const replay = parseReplay(fixture);
+      replay.metadata.policy = game.policy;
+      return replay;
+    });
     render(<AiReplay />);
     await screen.findByRole('button', { name: '기록 시점 이동' });
     expect(screen.getByRole('option', { name: '004-0번 판 · 발 타크·매드 안드로이드·글린·아이타 · 1R까지' })).toBeInTheDocument();
