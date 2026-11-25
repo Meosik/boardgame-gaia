@@ -200,6 +200,42 @@ describe('AI test', () => {
     }, true, true);
   });
 
+  it('takes over the table of an earlier AI game and starts another one like it', async () => {
+    const aiTable = vi.spyOn(api, 'aiTable').mockResolvedValue({
+      seed: 'older-map',
+      factions: ['Terrans', 'Xenos', 'Taklons', 'Ivits'],
+      all_seats: true,
+      review: true,
+    });
+    const createAiGame = vi.spyOn(api, 'createAiGame').mockResolvedValue({
+      room_code: 'AI1234',
+      player_id: 5,
+      session_token: 'token',
+      game_setup: null as never,
+      game_state: null as never,
+      players: [{ player_id: 5, nickname: '나', ready: true }] as never,
+      host_player_id: 5,
+    });
+    const onGameCreated = vi.fn();
+    render(<AiTestView onGameCreated={onGameCreated} onBack={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '나' } });
+    fireEvent.change(screen.getByLabelText('이전 방 세팅 그대로'), { target: { value: '3a6809' } });
+    fireEvent.click(screen.getByRole('button', { name: '불러오기' }));
+    await waitFor(() => expect(aiTable).toHaveBeenCalledWith('3A6809'));
+    await screen.findByText(/방 3A6809의 종족 · 지도를 불러왔습니다/);
+    expect([...dealtFactions()].sort()).toEqual(['Ivits', 'Taklons', 'Terrans', 'Xenos']);
+    const order = aiTestTurnOrder(dealtFactions());
+    fireEvent.click(screen.getByRole('button', { name: '네 종족 모두 AI로 시작' }));
+    await waitFor(() => expect(onGameCreated).toHaveBeenCalled());
+    // That room's map and factions; the turn order is the lab's for those four.
+    expect(createAiGame).toHaveBeenCalledWith('나', 'hard', {
+      seed: 'older-map',
+      faction: order[0],
+      aiFactions: order.slice(1),
+      seat: 1,
+    }, true, true);
+  });
+
   it('opens from its own entry on the lobby front page', async () => {
     vi.spyOn(api, 'listRooms').mockResolvedValue([]);
     const onAiTest = vi.fn();

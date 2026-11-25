@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { api } from '../../api/rest';
 import { useRoomStore } from '../../store/roomStore';
 import { readRecentRoom } from '../../store/recentRoom';
 import { factionDisplayName } from '../../displayNames';
@@ -24,6 +25,36 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
   /** The AI seats wait after each of their turns for 계속 / 거절 (can be switched in the game too). */
   const [review, setReview] = useState(false);
   const createAiGame = useRoomStore((s) => s.actions.createAiGame);
+  /** The map of the game: the lab's fixed one, or that of the earlier room taken over (`like`). */
+  const [mapSeed, setMapSeed] = useState(AI_TEST_MAP_SEED);
+  /** An earlier AI game whose table is taken over: its code (the last room by default) and,
+   * once read, what kind of game it was. */
+  const [likeCode, setLikeCode] = useState(() => readRecentRoom()?.roomCode ?? '');
+  const [like, setLike] = useState<{ code: string; allSeats: boolean } | null>(null);
+
+  /** Takes over the factions, map and review switch of an earlier AI game; the game itself is
+   * started with the buttons below, as after a draw. */
+  async function takeOver() {
+    const code = likeCode.trim().toUpperCase();
+    if (!code) return;
+    setLoading(true);
+    setError('');
+    try {
+      const table = await api.aiTable(code);
+      if (!table || table.factions.length !== 4) {
+        setError(`방 ${code}의 세팅을 읽지 못했습니다 (AI 대전이 아니거나 종족이 정해지지 않은 방)`);
+        return;
+      }
+      setFactions(table.factions);
+      setMapSeed(table.seed);
+      setReview(table.review);
+      setLike({ code, allSeats: table.all_seats });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : `방 ${code}의 세팅을 읽지 못했습니다`);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   /** `allSeats`: the AI plays all four factions and the player has no seat — they look at the AI
    * turns (계속 / 거절 / 대신 두기). `faction` is then only the fourth faction's name for the
@@ -37,7 +68,7 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
     setError('');
     try {
       const table = {
-        seed: AI_TEST_MAP_SEED,
+        seed: mapSeed,
         faction,
         aiFactions: order.filter((other) => other !== faction),
         seat: order.indexOf(faction) + 1,
@@ -65,6 +96,26 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
           maxLength={16}
           placeholder="닉네임 입력"
         />
+      </div>
+      <div className="form-group ai-test-like">
+        <label htmlFor="ai-test-like">이전 방 세팅 그대로</label>
+        <input
+          id="ai-test-like"
+          type="text"
+          value={likeCode}
+          onChange={(e) => setLikeCode(e.target.value)}
+          maxLength={8}
+          placeholder="방 코드"
+        />
+        <button type="button" className="btn btn-ghost" onClick={() => void takeOver()} disabled={loading || !likeCode.trim()}>
+          불러오기
+        </button>
+        {like && (
+          <p className="teacher-hint-note" role="status">
+            방 {like.code}의 종족 · 지도를 불러왔습니다
+            {like.allSeats ? ' — 그 방은 네 종족 모두 AI였습니다(아래 「네 종족 모두 AI로 시작」)' : ''}
+          </p>
+        )}
       </div>
       <fieldset className="ai-test-factions">
         <legend>이번 판 종족 — 고르면 바로 시작</legend>
@@ -121,7 +172,12 @@ export function AiTestView({ onGameCreated, onBack }: Props) {
         <button
           type="button"
           className="btn btn-ghost"
-          onClick={() => setFactions(drawAiTestFactions())}
+          onClick={() => {
+            // A new draw is on the lab's map again, whatever room was taken over before.
+            setFactions(drawAiTestFactions());
+            setMapSeed(AI_TEST_MAP_SEED);
+            setLike(null);
+          }}
           disabled={loading}
         >
           다시 뽑기

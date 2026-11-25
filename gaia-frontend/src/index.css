@@ -5698,6 +5698,11 @@ button.lobby-entry { font: inherit; text-align: left; cursor: pointer; }
 .ai-turn-review-buttons { display: flex; gap: 0.5rem; margin: 0.5rem 0 0.2rem; }
 .ai-turn-review-buttons .btn { flex: 1 1 0; min-height: 2.75rem; padding: 0.6rem 0.8rem; font-size: 1rem; font-weight: 600; }
 .ai-test-all-ai { width: 100%; min-height: 3rem; margin: 0.5rem 0; font-size: 1.05rem; font-weight: 600; }
+/* The table of an earlier AI game taken over: a room code and a button on one row. */
+.ai-test-like { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.ai-test-like label { flex-basis: 100%; }
+.ai-test-like input { flex: 1 1 8rem; min-width: 0; text-transform: uppercase; }
+.ai-test-like .teacher-hint-note { flex-basis: 100%; margin: 0; }
 /* AI games: the AI turn review floats over the lower left corner of the map area, the same box
    on the setup screens (there with "take back my setup choice") and on the game screen. Empty
    (not an AI game, nothing to show) it is not drawn. */

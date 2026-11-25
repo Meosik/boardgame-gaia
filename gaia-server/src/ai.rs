@@ -2157,6 +2157,30 @@ pub fn is_ai_room(room: &Room) -> bool {
             .is_some_and(|state| state.tutorial.is_none() && state.dev_controller.is_none())
 }
 
+/// The table of an AI game, enough to start another game like it (user 2026-11-25 「방 세팅
+/// 그대로」): the map seed, the four factions in seat order, and whether the teacher plays
+/// every seat and waits after each turn. Sent with the room's public row (`rest::get_room`).
+/// `None` = not an AI game, or a seat has no faction yet (a setup auction in progress).
+pub fn table_of(room: &Room) -> Option<serde_json::Value> {
+    if !is_ai_room(room) {
+        return None;
+    }
+    let factions = room
+        .game_state
+        .as_ref()?
+        .players
+        .iter()
+        .map(|player| player.faction)
+        .collect::<Option<Vec<_>>>()?;
+    Some(serde_json::json!({
+        "seed": room.seed,
+        "factions": factions,
+        "all_seats": room.ai_all_seats,
+        "review": room.ai_review,
+        "level": room.ai_level,
+    }))
+}
+
 /// Why no hint was given.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HintError {
@@ -2331,6 +2355,30 @@ mod tests {
             ai_past: Vec::new(),
         };
         (room, to_move)
+    }
+
+    #[test]
+    fn the_table_of_an_ai_game_names_its_seed_factions_and_options() {
+        let (mut room, _) = ai_room_waiting_for_its_human();
+        room.ai_all_seats = true;
+        let table = table_of(&room).expect("an AI game with four factions");
+        assert_eq!(table["seed"], "hint-test");
+        assert_eq!((table["all_seats"].as_bool(), table["review"].as_bool()), (Some(true), Some(false)));
+        assert_eq!(table["level"], "hard");
+        let mut factions = table["factions"]
+            .as_array()
+            .expect("four factions")
+            .iter()
+            .map(|faction| faction.as_str().unwrap_or_default().to_string())
+            .collect::<Vec<_>>();
+        factions.sort();
+        assert_eq!(factions, ["HadschHallas", "Taklons", "Terrans", "Xenos"]);
+        // A seat without a faction, or a room that is not an AI game, has no table.
+        let mut unchosen = room.clone();
+        unchosen.game_state.as_mut().unwrap().players[0].faction = None;
+        assert_eq!(table_of(&unchosen), None);
+        room.dev_human_player = None;
+        assert_eq!(table_of(&room), None);
     }
 
     #[test]

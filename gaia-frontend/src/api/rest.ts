@@ -28,6 +28,14 @@ export interface AiGameTable {
   seat?: number;
 }
 
+/** See `api.aiTable`. */
+export interface AiTableOfRoom {
+  seed: string;
+  factions: FactionId[];
+  all_seats: boolean;
+  review: boolean;
+}
+
 /** The teacher's move for one position: `decision` is `{ phase, action }` as the engine names it. */
 export interface AiHintReply {
   revision: number;
@@ -148,6 +156,14 @@ export const api = {
   async aiGame(code: string): Promise<boolean> {
     const room = await request<{ ai_game?: boolean }>(`${BASE}/rooms/${code}`);
     return room.ai_game === true;
+  },
+
+  /** The table of an AI game — map seed, the four factions in seat order, whether the AI played
+   * every seat and waited after each turn — so that another game like it can be started
+   * (`AiTestView`). `null` = no such room, not an AI game, or its factions are not chosen yet. */
+  async aiTable(code: string): Promise<AiTableOfRoom | null> {
+    const room = await request<{ ai_table?: AiTableOfRoom | null }>(`${BASE}/rooms/${code}`);
+    return room.ai_table ?? null;
   },
 
   /** What the teacher would play for the human seat at `revision` (nothing is applied). The

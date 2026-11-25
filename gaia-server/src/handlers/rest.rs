@@ -533,6 +533,8 @@ pub async fn get_room(
         "host_player_id": room.host_player,
         // The other seats are played by the teacher workers: the game screen offers hints.
         "ai_game":      app.ai.is_some() && crate::ai::is_ai_room(room),
+        // An AI game's map seed, factions and options: another game like it can be started.
+        "ai_table":     crate::ai::table_of(room),
         "players":      room.players.iter()
             .map(|(id, nick, ready)| serde_json::json!({ "id": id, "player_id": id, "nickname": nick, "ready": ready }))
             .collect::<Vec<_>>(),
