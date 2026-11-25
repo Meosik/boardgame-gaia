@@ -1,0 +1,32 @@
+{
+ "name": "136a-ppo-speed-single-vs-parallel",
+ "kind": "command",
+ "status": "failed",
+ "note": "코덱스 이상 없음(사용자 2026-11-13 상시 지시), HANDOFF E331: 136 재실행 — 136은 큐 파일의 {python}(torch 없는 lab 파이썬)으로 두 팔 모두 1초 만에 No module named 'torch' 실패(수치 없음). 같은 설계를 작업 트리 venv 파이썬(122 · 124와 같은 경로)으로: 처음부터(초기 체크포인트 · 교사 없음) 학습 두 팔을 차례로 — single = 드라이버 한 프로세스 표집(--env-runners 0), parallel = 원격 표집 프로세스 8개. 공통: 인코딩 4 · 폭 256 · 후보 용량 4096 · 반복당 128결정 · minibatch 32 · 시드 0 · CPU 갱신, 팔당 30분(그 뒤 첫 반복 경계에서 멈춤). 136과 다른 점(커밋 08a7ffc, 토론 1/1 수용): 원격 러너 표집 제한을 3600초로 명시(RLlib 기본 60초는 원격 러너에만 걸림), 팔이 도는 동안 5초마다 학습 프로세스 트리의 Pss 합 최대 · 시스템 MemAvailable 최솟값 · Shmem 최대 기록. 판정 없음(강도 측정 아님, 교사 · 엔진 · 배포 변경 없음). 볼 것(정리 턴): ① 팔별 시간당 결정 수와 parallel/single 배수 ② 반복당 표집 초 대 갱신 초(갱신 비중 = GPU로 옮길 수 있는 몫의 상한) ③ 끝난 판 수 · 판 길이 → 시간당 판 수(끝난 판이 0이면 그대로 적음) ④ 메모리: tree_pss_peak_mib · mem_available_min_mib · shmem_peak_mib · peak_driver_rss_mib — tree_processes_at_peak가 러너 수보다 작으면(Ray 프로세스가 자손이 아님) Pss 합은 버리고 MemAvailable 최솟값만 씀 ⑤ 오류: 후보 4096 초과(CandidateCapacityError) · 러너 재시작 · require_current_sources 거부 · import 실패는 error 꼬리 그대로 ⑥ engine_build_id. 한계: 시드 1개 · 30분, 학습 곡선은 안 봄(손실 첫 · 끝 값만), 수치는 이 설정(배치 128 · minibatch 32 · 러너 8)의 것, 메모리 표본은 5초 간격이라 짧은 봉우리를 놓칠 수 있음. 예상 ≈ 65분, 제한 3시간. 도는 동안 같은 기계의 실서버 AI 대국이 느려질 수 있음(프로세스 10개). 리플레이 게시 없음.",
+ "host": "agentmaco",
+ "commit": "9cec2e1",
+ "started_at": "2026-11-25T18:41:13+09:00",
+ "finished_at": "2026-11-25T18:41:14+09:00",
+ "command": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "/home/sohegi/projects/gaia-work/gaia-rl/.venv/bin/python",
+  "tools/ppo_speed.py",
+  "--out",
+  "runs/lab-136a-ppo-speed-single-vs-parallel/metrics.json",
+  "--minutes",
+  "30",
+  "--runners",
+  "8",
+  "--batch-size",
+  "128",
+  "--minibatch-size",
+  "32",
+  "--capacity",
+  "4096",
+  "--encoding",
+  "4"
+ ],
+ "exit_code": 2
+}
