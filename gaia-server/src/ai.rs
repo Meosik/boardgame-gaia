@@ -849,6 +849,10 @@ async fn next_ai_turn(app: &AppState, room_code: &str) -> Option<Turn> {
     if state.undo_state.pending_request.is_some() {
         return None;
     }
+    // The player plays this seat's rejected turn in its place (`takeover_seat`).
+    if rejection_for(room, player).is_some_and(|rejected| rejected.by_player) {
+        return None;
+    }
     Some(Turn {
         revision: room.revision,
         player,
@@ -941,8 +945,9 @@ fn note_ai_move(room: &mut Room, turn: &Turn, decision: &AiDecision) -> bool {
             turn: record.clone(),
             rejections: replay.map_or(0, |rejected| rejected.rejections),
             spares_left,
-            can_reject: !replay.is_some_and(|rejected| rejected.no_alternative)
-                && spares_left != Some(0),
+            // Without a spare move the next rejection gives the turn to the player
+            // (`next_rejection`).
+            can_reject: true,
         });
     }
     // A finished turn is kept only in the hold: the seat's next decision, even one asked at
@@ -1032,9 +1037,6 @@ pub enum RejectError {
     /// The AI seats do not wait at a finished turn at the asked revision: nothing was held,
     /// the player played on, an undo request is open, or the game is over.
     NothingHeld,
-    /// No spare move is left for the turn, or the teacher had no move without the rejected
-    /// ones.
-    NoAlternative,
     /// The turn's first position could not be loaded or the restored room not saved.
     Server(String),
 }
@@ -1062,7 +1064,8 @@ fn is_excluded(decision: &AiDecision, excluded: &[Excluded]) -> bool {
 /// The replay record for rejecting the turn the room holds at (`hold`), or why it cannot be
 /// rejected. The replay starts at the revision the restore is committed as, the next one. A
 /// turn that is itself a replay carries its exclusions and unplayed spares on; a spare that is
-/// one of the rejected moves is dropped.
+/// one of the rejected moves is dropped. When that leaves no spare, no move of the teacher is
+/// left: the replay is the player's (`AiRejected::by_player`, `takeover_seat`).
 fn next_rejection(room: &Room, hold: &AiHold) -> Result<AiRejected, RejectError> {
     let ended_with = hold
         .turn
@@ -1072,9 +1075,6 @@ fn next_rejection(room: &Room, hold: &AiHold) -> Result<AiRejected, RejectError>
     let earlier = room.ai_rejected.as_ref().filter(|rejected| {
         rejected.player == hold.turn.player && rejected.start_revision == hold.turn.start_revision
     });
-    if earlier.is_some_and(|rejected| rejected.no_alternative) {
-        return Err(RejectError::NoAlternative);
-    }
     let mut excluded = earlier.map_or_else(Vec::new, |rejected| rejected.excluded.clone());
     let entry = excluded_entry(ended_with);
     if !excluded.contains(&entry) {
@@ -1089,16 +1089,15 @@ fn next_rejection(room: &Room, hold: &AiHold) -> Result<AiRejected, RejectError>
                 .cloned()
                 .collect::<Vec<_>>()
         });
-    if spares.as_ref().is_some_and(Vec::is_empty) {
-        return Err(RejectError::NoAlternative);
-    }
+    // Every spare the teacher gave has been rejected: the player plays the turn.
+    let by_player = spares.as_ref().is_some_and(Vec::is_empty);
     Ok(AiRejected {
         player: hold.turn.player,
         start_revision: room.revision + 1,
         excluded,
         spares,
         rejections: earlier.map_or(0, |rejected| rejected.rejections) + 1,
-        no_alternative: false,
+        by_player,
     })
 }
 
@@ -1160,6 +1159,110 @@ pub fn replay_in_progress(room: &Room) -> Option<&AiRejected> {
         .into_iter()
         .filter(|player| Some(*player) != room.dev_human_player)
         .find_map(|player| rejection_for(room, player))
+        .filter(|rejected| !rejected.by_player)
+}
+
+/// The AI seat whose rejected turn the player plays in its place now: no move of the teacher
+/// is left for it (`AiRejected::by_player`) and the turn has not ended. The human seat's
+/// commands act for this seat (`dev_game::acting_player`), the AI seats wait
+/// (`next_ai_turn`), and the snapshot says so (`ai_takeover`).
+pub(crate) fn takeover_seat(room: &Room) -> Option<PlayerId> {
+    let rejected = room.ai_rejected.as_ref().filter(|rejected| rejected.by_player)?;
+    let state = room.game_state.as_ref()?;
+    (!answers_a_queue(state)
+        && required_player(state) == Some(rejected.player)
+        && rejection_for(room, rejected.player).is_some())
+    .then_some(rejected.player)
+}
+
+/// The takeover a command of the human seat is about to continue, read before the command is
+/// applied (`note_takeover_move`).
+pub(crate) struct Takeover {
+    player: PlayerId,
+    /// The position the command is applied to, and its revision.
+    asked: GameState,
+    revision: u64,
+}
+
+pub(crate) fn takeover_before(room: &Room, sender: PlayerId) -> Option<Takeover> {
+    if room.dev_human_player != Some(sender) {
+        return None;
+    }
+    Some(Takeover {
+        player: takeover_seat(room)?,
+        asked: room.game_state.clone()?,
+        revision: room.revision,
+    })
+}
+
+/// Records a move the player made in the place of an AI seat (`takeover_seat`) in the seat's
+/// turn, like `note_ai_move` does for the seat's own moves — but the finished turn is not held
+/// for review: it is the player's. Called inside the command that applies the move, before the
+/// room's revision advances. Returns the record of the turn when this move ended it (kept
+/// beside the rejections: what the player played where every move of the teacher was
+/// rejected); the takeover is over then.
+pub(crate) fn note_takeover_move(
+    room: &mut Room,
+    takeover: Takeover,
+    decision: AiDecision,
+) -> Option<serde_json::Value> {
+    let moved = takeover.revision + 1;
+    let continued = room
+        .ai_turn
+        .take()
+        .filter(|known| known.player == takeover.player && known.revision == takeover.revision);
+    let mut record = continued.unwrap_or_else(|| AiTurn {
+        player: takeover.player,
+        start_revision: takeover.revision,
+        revision: takeover.revision,
+        decisions: Vec::new(),
+    });
+    let goes_on = room
+        .game_state
+        .as_ref()
+        .is_some_and(|now| turn_goes_on(&takeover.asked, &decision, now, takeover.player));
+    record.decisions.push(decision);
+    record.revision = moved;
+    if goes_on {
+        room.ai_turn = Some(record);
+        return None;
+    }
+    let rejected = room.ai_rejected.take();
+    Some(serde_json::json!({
+        "accepted": false,
+        "kind": "ai_turn_by_player",
+        "room": room.code,
+        "player": record.player,
+        "turn_start_revision": record.start_revision,
+        "revision": moved,
+        "played_turn": record.decisions,
+        "excluded": rejected.as_ref().map(|rejected| &rejected.excluded),
+        "rejections": rejected.as_ref().map(|rejected| rejected.rejections),
+        "level": room.ai_level,
+        "teacher": room.ai_teacher,
+    }))
+}
+
+/// Keeps the record of a rejected AI turn the player played (`note_takeover_move`) beside the
+/// rejections: a row `ai-reject-<revision>` of the revision the turn ended as
+/// (`GameRepository::record_ai_reject`, `kind` = `ai_turn_by_player`) and the log.
+pub(crate) async fn record_turn_by_player(
+    app: &AppState,
+    room_code: &str,
+    revision: u64,
+    record: Option<serde_json::Value>,
+) {
+    let Some(record) = record else {
+        return;
+    };
+    log::info!("AI turn played by the player {record}");
+    let repository = crate::repository::GameRepository::new(app.db.clone());
+    if let Err(error) = repository
+        .record_ai_reject(room_code, revision, &record)
+        .await
+    {
+        log::error!("the record of the AI turn the player played in room {room_code} was not saved: {error}");
+    }
 }
 
 /// How one decision of a replay is found.
@@ -1180,7 +1283,8 @@ enum Replay {
 /// later decision of the turn is a search without the rejected moves, so that a rejected
 /// action does not come back behind another free action.
 fn replay_step(turn: &Turn, rejected: &AiRejected) -> Option<Replay> {
-    if rejected.no_alternative {
+    // The player plays this turn (`takeover_seat`); `next_ai_turn` does not come here then.
+    if rejected.by_player {
         return None;
     }
     let first = turn.revision == rejected.start_revision;
@@ -1208,25 +1312,31 @@ fn replay_step(turn: &Turn, rejected: &AiRejected) -> Option<Replay> {
 }
 
 /// The teacher had no move for the replay of `turn` without the rejected ones (they were all
-/// that is legal, or the worker failed): the turn is played without exclusions and cannot be
-/// rejected again.
+/// it would play, or the worker failed): the AI seat plays nothing more of this turn and the
+/// player plays the rest of it in the seat's place (`takeover_seat`). The clients are told
+/// with a snapshot.
 async fn give_up_replay(app: &AppState, room_code: &str, turn: &Turn) {
-    let mut rooms = app.rooms.write().await;
-    let Some(room) = rooms.get_room_mut(room_code) else {
-        return;
-    };
-    let start = turn.rejected.as_ref().map(|rejected| rejected.start_revision);
-    if let Some(rejected) = room
-        .ai_rejected
-        .as_mut()
-        .filter(|rejected| rejected.player == turn.player && Some(rejected.start_revision) == start)
-    {
-        rejected.no_alternative = true;
+    let revision = {
+        let mut rooms = app.rooms.write().await;
+        let Some(room) = rooms.get_room_mut(room_code) else {
+            return;
+        };
+        let start = turn.rejected.as_ref().map(|rejected| rejected.start_revision);
+        let Some(rejected) = room.ai_rejected.as_mut().filter(|rejected| {
+            rejected.player == turn.player && Some(rejected.start_revision) == start
+        }) else {
+            return;
+        };
+        rejected.by_player = true;
         log::warn!(
             "AI seat {} of room {room_code} has no move without the rejected ones; \
-             its turn is played without exclusions",
+             the player plays its turn",
             turn.player
         );
+        room.revision
+    };
+    if let Ok(revision) = gaia_protocol::Revision::new(revision) {
+        coordinator::broadcast_snapshot(app, room_code, revision).await;
     }
 }
 
@@ -1295,6 +1405,7 @@ pub async fn reject_turn(
         "rejected_turn": hold.turn.decisions,
         "excluded": rejection.excluded,
         "rejections": rejection.rejections,
+        "by_player": rejection.by_player,
         "level": level,
         "teacher": teacher,
     });
@@ -2550,7 +2661,7 @@ mod tests {
                 excluded: vec![Excluded::Move(research())],
                 spares: None,
                 rejections: 1,
-                no_alternative: false,
+                by_player: false,
             })
         );
     }
@@ -2641,28 +2752,58 @@ mod tests {
         assert!(!commit_ai_move(&mut room, &second, &free_action(), start.clone()));
         let ended = AiDecision::Game(GameAction::FinishGaiaDecision);
         let later = asked_at(&room, ai, &start);
-        assert!(commit_ai_move(&mut room, &later, &ended, after));
+        assert!(commit_ai_move(&mut room, &later, &ended, after.clone()));
 
-        // No spare is left: the hold says so and a third rejection is refused, room untouched.
+        // No spare is left: the hold says so, and a third rejection gives the turn to the
+        // player.
         let hold = room.current_ai_hold().cloned().expect("the replay is held");
-        assert_eq!((hold.rejections, hold.spares_left, hold.can_reject), (2, Some(0), false));
-        let before = room.clone();
-        assert_eq!(reject(&mut room, &start), Err(RejectError::NoAlternative));
-        assert_eq!((room.revision, room.current_ai_hold()), (before.revision, Some(&hold)));
+        assert_eq!((hold.rejections, hold.spares_left, hold.can_reject), (2, Some(0), true));
+        assert_eq!(takeover_seat(&room), None);
+        reject(&mut room, &start).unwrap();
+        let rejected = room.ai_rejected.clone().unwrap();
+        assert_eq!((rejected.rejections, rejected.by_player), (3, true));
+        assert_eq!(takeover_seat(&room), Some(ai));
+        let human = room.dev_human_player.unwrap();
+        // The human seat's commands act for the AI seat; another seat's do not.
+        assert_eq!(crate::services::dev_game::acting_player(&room, human), ai);
+        assert_eq!(crate::services::dev_game::acting_player(&room, other), other);
+        let view = crate::coordinator::room_snapshot_view(&room);
+        assert_eq!(view.get("ai_takeover"), Some(&serde_json::json!({ "player": ai, "rejections": 3 })));
+        assert_eq!(view.get("ai_replay"), None);
+
+        // The player's free action keeps the turn, the move after it ends it: no wait, the
+        // takeover is over and the record says what was played.
+        let command = |room: &mut Room, decision: AiDecision, after: GameState| {
+            let takeover = takeover_before(room, human).expect("the player plays the turn");
+            room.game_state = Some(after);
+            let record = note_takeover_move(room, takeover, decision);
+            room.revision += 1;
+            record
+        };
+        assert_eq!(command(&mut room, free_action(), start.clone()), None);
+        assert_eq!(takeover_seat(&room), Some(ai));
+        let record = command(&mut room, pass(), after).expect("the turn ended");
+        assert_eq!(record["kind"], "ai_turn_by_player");
+        assert_eq!(record["played_turn"], serde_json::json!([free_action(), pass()]));
+        assert_eq!((record["player"].as_u64(), record["rejections"].as_u64()), (Some(u64::from(ai)), Some(3)));
+        assert_eq!(takeover_seat(&room), None);
+        assert_eq!((room.current_ai_hold(), room.ai_rejected.as_ref(), room.ai_turn.as_ref()), (None, None, None));
+        assert_eq!(crate::services::dev_game::acting_player(&room, human), human);
     }
 
     #[test]
-    fn a_turn_without_another_move_is_played_as_the_teacher_chose_and_not_rejected_again() {
-        let (mut room, ai, other, start) = held_room(pass());
+    fn a_replay_the_teacher_has_no_move_for_is_the_players() {
+        let (mut room, ai, _, start) = held_room(pass());
         reject(&mut room, &start).unwrap();
+        assert_eq!(takeover_seat(&room), None);
         // The teacher had no move without a pass (`give_up_replay`).
-        room.ai_rejected.as_mut().unwrap().no_alternative = true;
+        room.ai_rejected.as_mut().unwrap().by_player = true;
         let again = asked_at(&room, ai, &start);
         assert_eq!(replay_step(&again, again.rejected.as_ref().unwrap()), None);
-        let after = action_phase(&room, other, 1);
-        assert!(commit_ai_move(&mut room, &again, &pass(), after));
-        let hold = room.current_ai_hold().expect("the turn is held");
-        assert_eq!((hold.rejections, hold.can_reject), (1, false));
-        assert_eq!(reject(&mut room, &start), Err(RejectError::NoAlternative));
+        assert_eq!(takeover_seat(&room), Some(ai));
+        // Not for a room that moved on without the turn being recorded (an undo).
+        let mut moved_on = room.clone();
+        moved_on.revision += 1;
+        assert_eq!(takeover_seat(&moved_on), None);
     }
 }

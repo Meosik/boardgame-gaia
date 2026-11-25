@@ -623,9 +623,6 @@ pub async fn ai_reject(
         Err(RejectError::NothingHeld) => Err(ServerError::InvalidAction(
             "no finished AI turn waits at this position".into(),
         )),
-        Err(RejectError::NoAlternative) => Err(ServerError::InvalidAction(
-            "no other move is left for this AI turn".into(),
-        )),
         Err(RejectError::Server(error)) => Err(ServerError::Internal(error)),
     }
 }

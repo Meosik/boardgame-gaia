@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AiTurnReview, aiHoldOrigin, aiHoldSpares } from '../components/AiTurnReview';
 import { api } from '../api/rest';
+import { controlledPlayer } from '../devControl';
 import type { AiHold, GameState, PlayerState } from '../types/game';
 
 const players = [
@@ -83,18 +84,37 @@ describe('AiTurnReview', () => {
 
   it('shows why a rejection failed', async () => {
     vi.spyOn(api, 'aiGame').mockResolvedValue(true);
-    vi.spyOn(api, 'aiReject').mockRejectedValue(new Error('no other move is left for this AI turn'));
+    vi.spyOn(api, 'aiReject').mockRejectedValue(new Error('no finished AI turn waits at this position'));
     show(state({ ai_review: true, ai_hold: hold() }));
     fireEvent.click(await screen.findByRole('button', { name: '거절' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('no other move is left for this AI turn');
+    expect(await screen.findByRole('alert')).toHaveTextContent('no finished AI turn waits at this position');
   });
 
-  it('offers no rejection when no other move is left', async () => {
+  it('says that a rejection without a spare move gives the turn to the player', async () => {
     vi.spyOn(api, 'aiGame').mockResolvedValue(true);
-    show(state({ ai_review: true, ai_hold: hold({ rejections: 2, spares_left: 0, can_reject: false }) }));
-    expect(await screen.findByRole('button', { name: '거절' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '계속' })).not.toBeDisabled();
-    expect(screen.getByRole('region', { name: 'AI 차례 검토' })).toHaveTextContent('남은 예비 수 없음');
+    const aiReject = vi.spyOn(api, 'aiReject').mockResolvedValue({ ok: true });
+    show(state({ ai_review: true, ai_hold: hold({ rejections: 2, spares_left: 0 }) }));
+    const reject = await screen.findByRole('button', { name: '거절하고 직접 두기' });
+    expect(reject).not.toBeDisabled();
+    expect(screen.getByRole('region', { name: 'AI 차례 검토' })).toHaveTextContent(
+      '남은 예비 수 없음 — 다시 거절하면 이 차례를 직접 둡니다',
+    );
+    fireEvent.click(reject);
+    await waitFor(() => expect(aiReject).toHaveBeenCalledWith('ROOM', 'token', 7));
+  });
+
+  it('asks the player to play the turn no move of the teacher is left for', async () => {
+    vi.spyOn(api, 'aiGame').mockResolvedValue(true);
+    const game = state({ ai_review: true, ai_takeover: { player: 1, rejections: 3 } });
+    show(game);
+    await screen.findByRole('checkbox');
+    expect(screen.getByRole('region', { name: 'AI 차례 검토' })).toHaveTextContent(
+      '영희의 차례를 직접 두세요 — 교사가 낼 다른 수가 없습니다 (거절 3회)',
+    );
+    expect(screen.queryByRole('button')).toBeNull();
+    // Until that turn ends the player's commands act for the AI seat.
+    expect(controlledPlayer(game, 0)).toBe(1);
+    expect(controlledPlayer(state({ ai_review: true }), 0)).toBe(0);
   });
 
   it('says that a rejected turn is being played again', async () => {
@@ -122,9 +142,7 @@ describe('aiHoldOrigin and aiHoldSpares', () => {
       turn: { player: 1, start_revision: 5, revision: 6, decisions: ['본 행동 B'] },
     });
     expect(aiHoldOrigin(single)).toBe('보관해 둔 예비 수(새 탐색 없음)');
-    // The teacher had nothing but the rejected move: its own choice again, no further rejection.
-    const none = hold({ rejections: 1, spares_left: null, can_reject: false });
-    expect(aiHoldOrigin(none)).toContain('원래 판단대로');
-    expect(aiHoldSpares(none)).toBe('다시 거절할 수 없습니다');
+    // No spare is left: the next rejection gives the turn to the player.
+    expect(aiHoldSpares(hold({ rejections: 2, spares_left: 0 }))).toContain('이 차례를 직접 둡니다');
   });
 });

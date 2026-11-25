@@ -426,7 +426,8 @@ export interface AiHold {
   rejections: number;
   /** Spare moves left for another rejection; `null` until the turn was rejected once. */
   spares_left: number | null;
-  /** `false` = no other move is left for this turn. */
+  /** Always `true`: with no spare left (`spares_left` 0) a rejection gives the turn to the
+   * player (`GameState.ai_takeover`). */
   can_reject: boolean;
 }
 
@@ -445,6 +446,10 @@ export interface GameState {
   ai_hold?: AiHold | null;
   /** Added by the server while an AI seat plays a rejected turn again and has not finished it. */
   ai_replay?: { player: PlayerId; start_revision: number; rejections: number } | null;
+  /** Added by the server while the player plays a rejected AI turn in the seat's place (no move
+   * of the teacher was left for it): until that turn ends the player's commands act for
+   * `player` (`controlledPlayer`). */
+  ai_takeover?: { player: PlayerId; rejections: number | null } | null;
   players: PlayerState[];
   board: BoardState;
   research_board: ResearchBoard;

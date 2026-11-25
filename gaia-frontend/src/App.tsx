@@ -380,6 +380,7 @@ export function App({ replay, sidePanel, coach }: { replay?: AppReplayControls; 
         state.ai_hold ?? null,
         state.ai_review ?? false,
         state.ai_replay ?? null,
+        state.ai_takeover ?? null,
       ]);
       if (
         last

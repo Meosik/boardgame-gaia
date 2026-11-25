@@ -134,9 +134,10 @@ pub struct AiRejected {
     pub spares: Option<Vec<Spare>>,
     /// How often the turn has been rejected.
     pub rejections: u32,
-    /// The teacher had no move without the rejected ones: the replay is played without
-    /// exclusions (its own choice again) and cannot be rejected.
-    pub no_alternative: bool,
+    /// No move of the teacher is left for the replay (every spare was rejected, or the teacher
+    /// had no move without the rejected ones): the AI seat does not play it, the player plays
+    /// the turn in the seat's place (`crate::ai::takeover_seat`).
+    pub by_player: bool,
 }
 
 /// One turn of an AI seat: every decision the seat made from the position it was first asked
@@ -163,8 +164,9 @@ pub struct AiHold {
     /// Spare moves left for another rejection; `None` = the teacher has not been asked for
     /// them yet (a turn that was never rejected).
     pub spares_left: Option<usize>,
-    /// `false` = the turn cannot be rejected (again): no spare move is left, or the teacher
-    /// had no move without the rejected ones and played its own choice again.
+    /// Always `true`: a turn can be rejected again even when no spare move is left
+    /// (`spares_left` is 0) — the player then plays it in the seat's place
+    /// (`AiRejected::by_player`).
     pub can_reject: bool,
 }
 

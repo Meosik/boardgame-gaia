@@ -273,11 +273,16 @@ export function aiStallWarning(state: GameState | null | undefined): string | nu
 /** The banner's line while the AI seats wait at a finished AI turn (`GameState.ai_hold`): the
  * game goes on only when the player continues, rejects the turn or plays their own move. */
 export function aiHoldNotice(state: GameState | null | undefined): string | null {
+  const nameOf = (id: PlayerId) =>
+    state?.players.find((player) => player.player_id === id)?.nickname ?? `플레이어 ${id}`;
+  // No move of the teacher was left for a rejected turn: the player plays it as that seat.
+  const takeover = state?.ai_takeover;
+  if (takeover) {
+    return `✋ ${nameOf(takeover.player)}의 차례를 직접 두세요 — 교사가 낼 다른 수가 없습니다. 차례가 끝날 때까지 이 좌석으로 둡니다.`;
+  }
   const hold = state?.ai_hold;
   if (!hold) return null;
-  const seat = state.players.find((player) => player.player_id === hold.turn.player)?.nickname
-    ?? `플레이어 ${hold.turn.player}`;
-  return `⏸ AI 멈춤 — ${seat}의 차례가 끝났습니다. 「AI 차례 검토」에서 계속하거나 거절하세요.`;
+  return `⏸ AI 멈춤 — ${nameOf(hold.turn.player)}의 차례가 끝났습니다. 「AI 차례 검토」에서 계속하거나 거절하세요.`;
 }
 
 /** One sentence for the banner: who acts now, and what the viewing player must do. */

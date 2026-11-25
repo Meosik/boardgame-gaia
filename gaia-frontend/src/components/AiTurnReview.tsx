@@ -15,21 +15,21 @@ interface Props {
  * turn's first move is the spare, every move after it is searched again). */
 export function aiHoldOrigin(hold: AiHold): string {
   if (hold.rejections === 0) return '교사의 첫 선택';
-  if (!hold.can_reject && hold.spares_left !== 0) {
-    return '교사가 거절한 수 말고는 둘 수를 찾지 못해 원래 판단대로 다시 뒀습니다';
-  }
   if (hold.rejections === 1) return '거절한 수를 빼고 다시 탐색한 수';
   return hold.turn.decisions.length > 1
     ? '보관해 둔 예비 수(새 탐색 없음) — 첫 수만 예비이고 이어진 수는 새로 탐색'
     : '보관해 둔 예비 수(새 탐색 없음)';
 }
 
-/** What another rejection would use. */
+/** What another rejection would use: a new search, a spare, or — with no spare left — the
+ * player, who then plays the turn in the seat's place. */
 export function aiHoldSpares(hold: AiHold): string {
   if (hold.spares_left === null || hold.spares_left === undefined) {
-    return hold.can_reject ? '거절하면 그 수를 빼고 다시 탐색합니다(예비 수 최대 3개 보관)' : '다시 거절할 수 없습니다';
+    return '거절하면 그 수를 빼고 다시 탐색합니다(예비 수 최대 3개 보관)';
   }
-  return hold.spares_left > 0 ? `남은 예비 수 ${hold.spares_left}개` : '남은 예비 수 없음 — 더 거절할 수 없습니다';
+  return hold.spares_left > 0
+    ? `남은 예비 수 ${hold.spares_left}개`
+    : '남은 예비 수 없음 — 다시 거절하면 이 차례를 직접 둡니다';
 }
 
 /** The review of AI turns in an AI game: the switch (the AI seats wait after each of their
@@ -53,6 +53,7 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
   const enabled = state.ai_review === true;
   const hold = state.ai_hold ?? null;
   const replay = state.ai_replay ?? null;
+  const takeover = state.ai_takeover ?? null;
   const heldAt = hold?.revision ?? null;
   // A message is about the position it was raised at.
   useEffect(() => {
@@ -92,6 +93,12 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
         />
         {' '}AI 차례마다 멈춤
       </label>
+      {takeover && (
+        <p className="teacher-hint-move" role="status">
+          ✋ <strong>{nameOf(takeover.player)}</strong>의 차례를 직접 두세요 — 교사가 낼 다른 수가 없습니다
+          {takeover.rejections ? ` (거절 ${takeover.rejections}회)` : ''}. 차례가 끝날 때까지 이 좌석으로 두고, 둔 수는 기록됩니다.
+        </p>
+      )}
       {replay && !hold && (
         <p className="teacher-hint-note" role="status">
           ↩ {nameOf(replay.player)} — 거절된 차례를 다시 두는 중 (거절 {replay.rejections}회). 탐색이 끝나면 새 수가 나옵니다.
@@ -132,10 +139,10 @@ export function AiTurnReview({ roomCode, sessionToken, state }: Props) {
               'AI 차례를 거절하지 못했습니다.',
             )}
           >
-            {busy === 'reject' ? '되돌리는 중…' : '거절'}
+            {busy === 'reject' ? '되돌리는 중…' : hold.spares_left === 0 ? '거절하고 직접 두기' : '거절'}
           </button>
           <p className="teacher-hint-note">
-            거절하면 이 차례를 되돌리고 차례를 끝낸 수를 뺀 다른 수로 다시 둡니다(기록됨). 내 수를 두면 [계속]과 같아 거절할 수 없습니다.
+            거절하면 이 차례를 되돌리고 차례를 끝낸 수를 뺀 다른 수로 다시 둡니다(기록됨). 교사가 낼 다른 수가 없으면 그 차례를 직접 둡니다. 내 수를 두면 [계속]과 같아 거절할 수 없습니다.
           </p>
         </div>
       )}

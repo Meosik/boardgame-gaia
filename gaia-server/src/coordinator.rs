@@ -403,6 +403,15 @@ pub fn room_snapshot_view(room: &Room) -> serde_json::Value {
                 }),
             );
         }
+        // No move of the teacher was left for a rejected AI turn: the player plays it, the
+        // human seat's commands act for this seat until the turn ends.
+        if let Some(player) = crate::ai::takeover_seat(room) {
+            let rejections = room.ai_rejected.as_ref().map(|rejected| rejected.rejections);
+            fields.insert(
+                "ai_takeover".into(),
+                json!({ "player": player, "rejections": rejections }),
+            );
+        }
     }
     view
 }

@@ -25,9 +25,13 @@ impl GameActionService {
         expected_revision: Revision,
     ) -> CommandResult {
         let ai_seats = state.ai.is_some();
+        // The record of a rejected AI turn the player finished in the seat's place with this
+        // command (`crate::ai::note_takeover_move`).
+        let mut played_for_ai = None;
         let outcome =
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
                 let acting_player = crate::services::dev_game::acting_player(room, player_id);
+                let takeover = crate::ai::takeover_before(room, player_id);
                 let mut events = {
                     let game_state = room
                         .game_state
@@ -50,9 +54,18 @@ impl GameActionService {
                 if room.dev_human_player == Some(player_id) && !ai_seats {
                     events.extend(auto_advance_dev_actions(room, player_id)?);
                 }
+                if let Some(takeover) = takeover {
+                    played_for_ai = crate::ai::note_takeover_move(
+                        room,
+                        takeover,
+                        gaia_engine::rules::engine::AiDecision::Game(action.clone()),
+                    );
+                }
                 Ok(events)
             })
             .await?;
+        crate::ai::record_turn_by_player(state, room_code, outcome.revision.get(), played_for_ai)
+            .await;
 
         broadcast_snapshot(state, room_code, outcome.revision).await;
 

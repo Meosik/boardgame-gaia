@@ -24,6 +24,9 @@ impl FactionSelectionService {
         expected_revision: Revision,
     ) -> CommandResult {
         let ai_seats = state.ai.is_some();
+        // See `GameActionService::process_action`: a rejected AI setup decision the player
+        // made in the seat's place.
+        let mut played_for_ai = None;
         let outcome =
             coordinator::apply_command(state, room_code, command_id, expected_revision, |room| {
                 if room.state != RoomState::FactionSelection {
@@ -31,6 +34,7 @@ impl FactionSelectionService {
                 }
                 let dev_human_player = room.dev_human_player;
                 let acting_player = crate::services::dev_game::acting_player(room, player_id);
+                let takeover = crate::ai::takeover_before(room, player_id);
                 let game_state = room
                     .game_state
                     .as_mut()
@@ -55,9 +59,18 @@ impl FactionSelectionService {
                     events.extend(auto_advance_dev_actions(room, human_player)?);
                 }
 
+                if let Some(takeover) = takeover {
+                    played_for_ai = crate::ai::note_takeover_move(
+                        room,
+                        takeover,
+                        gaia_engine::rules::engine::AiDecision::Setup(action.clone()),
+                    );
+                }
                 Ok(events)
             })
             .await?;
+        crate::ai::record_turn_by_player(state, room_code, outcome.revision.get(), played_for_ai)
+            .await;
 
         broadcast_snapshot(state, room_code, outcome.revision).await;
         crate::ai::spawn_driver(state.clone(), room_code.to_string());

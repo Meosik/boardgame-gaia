@@ -190,6 +190,10 @@ describe('aiHoldNotice', () => {
     expect(aiHoldNotice(state({ ai_review: true, ai_hold: hold }))).toBe(
       '⏸ AI 멈춤 — 영희의 차례가 끝났습니다. 「AI 차례 검토」에서 계속하거나 거절하세요.',
     );
+    // No move of the teacher is left for a rejected turn: the player plays it.
+    expect(aiHoldNotice(state({ ai_review: true, ai_takeover: { player: 1, rejections: 3 } }))).toBe(
+      '✋ 영희의 차례를 직접 두세요 — 교사가 낼 다른 수가 없습니다. 차례가 끝날 때까지 이 좌석으로 둡니다.',
+    );
   });
 });
 

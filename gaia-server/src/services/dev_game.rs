@@ -26,6 +26,12 @@ pub(crate) fn is_manual_controller(room: &Room, player: PlayerId) -> bool {
 }
 
 pub(crate) fn acting_player(room: &Room, authenticated_player: PlayerId) -> PlayerId {
+    // The human seat of an AI game plays a rejected AI turn no move of the teacher is left for.
+    if room.dev_human_player == Some(authenticated_player) {
+        if let Some(seat) = crate::ai::takeover_seat(room) {
+            return seat;
+        }
+    }
     if !is_manual_controller(room, authenticated_player) {
         return authenticated_player;
     }
