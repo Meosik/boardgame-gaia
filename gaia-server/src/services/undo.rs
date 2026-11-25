@@ -25,6 +25,7 @@ impl UndoService {
         command_id: CommandId,
         expected_revision: Revision,
     ) -> CommandResult {
+        let sender = player_id;
         let (target_revision, player_id) = {
             let rooms = app.rooms.read().await;
             let room = rooms
@@ -53,7 +54,12 @@ impl UndoService {
                         "the free-action undo checkpoint changed".into(),
                     ));
                 }
+                // A rejected AI turn the player plays in the seat's place stays theirs.
+                let takeover = crate::ai::takeover_before(room, sender);
                 room.game_state = Some(restored.clone());
+                if let Some(takeover) = takeover {
+                    crate::ai::keep_takeover_after_undo(room, takeover, target_revision);
+                }
                 Ok(vec![GameEvent::UndoApplied {
                     requester: player_id,
                     free_action_only: true,

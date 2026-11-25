@@ -1289,6 +1289,45 @@ pub(crate) fn note_takeover_move(
     }))
 }
 
+/// Keeps a turn the player plays in an AI seat's place (`takeover_seat`) theirs across an undo
+/// of its free actions (`UndoService::undo_free_action`). The undo writes an earlier position
+/// of the turn as a new revision; the record of the turn follows it there, without the moves
+/// taken back, so the turn is still the one being replayed (`rejection_for`). Without this the
+/// takeover ended with the undo: the seat went back to the teacher, with nothing left out.
+///
+/// Called inside the undo's command, after the position of `target_revision` was restored and
+/// before the room's revision advances; `takeover` was read before (`takeover_before`).
+pub(crate) fn keep_takeover_after_undo(room: &mut Room, takeover: Takeover, target_revision: u64) {
+    let Some(start_revision) = room
+        .ai_rejected
+        .as_ref()
+        .filter(|rejected| rejected.by_player && rejected.player == takeover.player)
+        .map(|rejected| rejected.start_revision)
+    else {
+        return;
+    };
+    let mut record = room
+        .ai_turn
+        .take()
+        .filter(|known| {
+            known.player == takeover.player
+                && known.start_revision == start_revision
+                && known.revision == takeover.revision
+        })
+        .unwrap_or_else(|| AiTurn {
+            player: takeover.player,
+            start_revision,
+            revision: takeover.revision,
+            decisions: Vec::new(),
+        });
+    // A turn that goes on has one decision per revision since it began (`turn_goes_on`): the
+    // ones played from the restored position on are taken back.
+    let kept = usize::try_from(target_revision.saturating_sub(start_revision)).unwrap_or(usize::MAX);
+    record.decisions.truncate(kept);
+    record.revision = takeover.revision + 1;
+    room.ai_turn = Some(record);
+}
+
 /// Keeps the record of a rejected AI turn the player played (`note_takeover_move`) beside the
 /// rejections: a row `ai-reject-<revision>` of the revision the turn ended as
 /// (`GameRepository::record_ai_reject`, `kind` = `ai_turn_by_player`) and the log.
@@ -3045,6 +3084,50 @@ mod tests {
         let mut moved_on = room.clone();
         moved_on.revision += 1;
         assert_eq!(takeover_seat(&moved_on), None);
+    }
+
+    #[test]
+    fn a_turn_the_player_plays_stays_theirs_when_they_undo_its_free_actions() {
+        for all_seats in [false, true] {
+            let (mut room, ai, _, start) = held_room(pass());
+            room.ai_all_seats = all_seats;
+            let member = room.dev_human_player.unwrap();
+            reject(&mut room, &start).unwrap();
+            room.ai_rejected.as_mut().unwrap().by_player = true;
+            let turn_start = room.revision;
+            assert_eq!(takeover_seat(&room), Some(ai));
+
+            // The player plays a free action for the seat: a command, one revision on.
+            let takeover = takeover_before(&room, member).expect("the player plays the turn");
+            assert_eq!(note_takeover_move(&mut room, takeover, free_action()), None);
+            room.revision += 1;
+            assert_eq!(takeover_seat(&room), Some(ai));
+
+            // The undo of that free action restores the turn's first position as a new
+            // revision. With the position alone the turn would no longer be the player's ...
+            let mut position_only = room.clone();
+            position_only.game_state = Some(start.clone());
+            position_only.revision += 1;
+            assert_eq!(takeover_seat(&position_only), None);
+            // ... so the record of the turn goes along, without the move taken back.
+            let takeover = takeover_before(&room, member).expect("the player plays the turn");
+            room.game_state = Some(start.clone());
+            keep_takeover_after_undo(&mut room, takeover, turn_start);
+            room.revision += 1;
+            assert_eq!(takeover_seat(&room), Some(ai));
+            assert!(!refuses_command_of(&room, member));
+            assert_eq!(crate::services::dev_game::acting_player(&room, member), ai);
+            let record = room.ai_turn.clone().expect("the turn is still recorded");
+            assert_eq!((record.start_revision, record.revision), (turn_start, room.revision));
+            assert_eq!(record.decisions, Vec::new());
+
+            // The move the player ends the turn with is the whole played turn.
+            let takeover = takeover_before(&room, member).expect("the player plays the turn");
+            room.game_state = Some(action_phase(&room, member, 1));
+            let played = note_takeover_move(&mut room, takeover, pass()).expect("the turn ended");
+            assert_eq!(played["played_turn"], serde_json::json!([pass()]));
+            assert_eq!(played["turn_start_revision"], turn_start);
+        }
     }
 
     #[test]
