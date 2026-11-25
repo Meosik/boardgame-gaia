@@ -65,6 +65,11 @@ class GaiaAEC(AECEnv):
                 "the episode must be discarded, not truncated into a training sample"
             )
 
+    def episode_rng_state(self):
+        """The state the next episode seed is drawn from (a restored state that no reset has used yet counts)."""
+        pending = self._resume_rng_state
+        return copy.deepcopy(pending if pending is not None else self._seed_rng.bit_generator.state)
+
     def restore_episode_rng(self, state):
         """Resume with the next fresh episode, even if RLlib supplies its initial seed."""
         self._resume_rng_state = copy.deepcopy(state)
