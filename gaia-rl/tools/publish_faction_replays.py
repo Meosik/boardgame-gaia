@@ -1,6 +1,7 @@
 """Export and publish one replay per distinct game from a lab run; games are chosen as the seat per faction whose 1-3 round charges are closest to that faction's median.
 
-Usage (cwd gaia-rl/): python tools/publish_faction_replays.py runs/<lab run> --destination <dir> [--output <work dir>] [--also PAIR/GAME ...]
+Usage (cwd gaia-rl/): python tools/publish_faction_replays.py runs/<lab run> --destination <dir> [--output <work dir>] [--also PAIR/GAME ...] [--all-games]
+--all-games exports every game at focus seat 0 without charges.json; for setup-only runs (teacher_ab --stop-after-setup) that have none.
 """
 import argparse
 import os
@@ -50,12 +51,15 @@ def main():
     parser.add_argument('--output', type=Path)
     parser.add_argument('--also', action='append', default=[], metavar='PAIR/GAME',
                         help='extra game (e.g. pair-001/game-0-A23) to republish with --focus best, so a game that is not a median pick is kept when old files of the run are taken down')
+    parser.add_argument('--all-games', action='store_true',
+                        help='export every pair-*/game-* with --focus 0 and ignore charges.json and --also (setup-only runs)')
     args = parser.parse_args()
     run_dir = args.run_dir.resolve()
     destination = args.destination.resolve()
     output = (args.output or Path(f'/tmp/faction-replays-{run_dir.name}')).resolve()
-    seats = json.loads((run_dir/'charges.json').read_text())['seats']
-    picks = pick_median_seats(seats)
+    if not args.all_games:
+        seats = json.loads((run_dir/'charges.json').read_text())['seats']
+        picks = pick_median_seats(seats)
 
     env = {**os.environ, 'GAIA_ENGINE_FIXES_2': '1', 'PYTHONPATH': 'python:tools'}
     failed = False
@@ -80,21 +84,29 @@ def main():
             catalog.append(item)
         return True
 
-    grouped = group_by_game(picks)
-    for game, reps in sorted(grouped.items()):
-        # min is stable, so ties go to the first faction in the sorted list.
-        focus = min(reps, key=lambda row: abs(row[2] - row[3]))[1]
-        listed = ', '.join(f'{faction} seat {seat} (charges {charges:.1f}, median {median:.1f})'
-                           for faction, seat, charges, median in reps)
-        print(f'{game}: focus seat {focus}; representatives {listed}', flush=True)
-        if not export_game(game, focus):
-            failed = True
-    for game in args.also:
-        if game in grouped:
-            continue
-        print(f'{game}: focus best; extra (--also)', flush=True)
-        if not export_game(game, 'best'):
-            failed = True
+    if args.all_games:
+        # Setup-only runs have no charges.json: export every game at seat 0 (--also is ignored, so no duplicates).
+        for path in sorted(run_dir.glob('pair-*/game-*')):
+            game = path.relative_to(run_dir).as_posix()
+            print(f'{game}: focus seat 0; all-games', flush=True)
+            if not export_game(game, '0'):
+                failed = True
+    else:
+        grouped = group_by_game(picks)
+        for game, reps in sorted(grouped.items()):
+            # min is stable, so ties go to the first faction in the sorted list.
+            focus = min(reps, key=lambda row: abs(row[2] - row[3]))[1]
+            listed = ', '.join(f'{faction} seat {seat} (charges {charges:.1f}, median {median:.1f})'
+                               for faction, seat, charges, median in reps)
+            print(f'{game}: focus seat {focus}; representatives {listed}', flush=True)
+            if not export_game(game, focus):
+                failed = True
+        for game in args.also:
+            if game in grouped:
+                continue
+            print(f'{game}: focus best; extra (--also)', flush=True)
+            if not export_game(game, 'best'):
+                failed = True
     if failed:
         print('export failed; nothing published', file=sys.stderr)
         return 1
