@@ -446,6 +446,7 @@ _guide = {'qic_reach': True,            # False: install_guide_r1 (QIC priced on
           'ship_adjacent_mine': False,  # True: ..._ships_shipmine (see ship_adjacent_mine_scores)
           'endgame_prices': False,      # True: ..._ships_endgame (round 6 stock at the final-scoring rates)
           'track_plans': False,         # True: ..._ships_plans (a research step compared as the plan it opens)
+          'fed_plan': False,            # True: ..._tier_prune_fedplan (federation planned from adjacent power 3)
           'round_tile_lead': False,     # True: ..._ships_roundtile (the goals this round's tile scores lead)
           'plan_menu': False,           # True: ..._ships_menu (one plan menu: tile, federation, token, track, ability)
           'menu_first': 3,              # plan_menu front slots (MENU_FIRST); ..._ships_menu1 sets 1 (E89 (ㄷ) B')
@@ -4537,6 +4538,9 @@ def _plan_cost(snapshot, goal):
         qic_gain = 0
         if step.family == 'colony' and step.coord:
             cost = _mine_cost(state, player, step.coord)
+            # The planned mine stands for the later steps (debate 1/1 11-27): the next planet's range is measured from
+            # it too, and an upgrade step on it finds the mine (codex: range QIC was counted again for chained mines).
+            player = {**player, 'structures': [*player['structures'], {'kind': 'Mine', 'hex': step.coord}]}
         elif step.family == 'faction-action' and mj01 and step.target == 'FiraksDowngradeResearchLab' and step.coord:
             cost = {}       # the lab goes back to a trading station (rulebook p.21 Firaks institute), so the rebuild pays again
             player = {**player, 'structures': [{**s, 'kind': 'TradingStation'} if s['hex'] == step.coord else s
@@ -4591,8 +4595,9 @@ def _plan_budget(state, player):
 
 
 def _menu_multi_step(snapshot, goal):
-    """A track / ability plan with two or more pending steps — the plans the affordability rule covers."""
-    if goal.family != 'ordered' or _menu_family(snapshot, goal) not in ('track', 'ability'):
+    """A track / ability / federation plan (federation-plan-*, user 2026-11-27 「광산 만들기 할때 썻던거 그대로」) with two
+    or more pending steps — the plans the affordability rule covers."""
+    if goal.family != 'ordered' or _menu_family(snapshot, goal) not in ('track', 'ability', 'federation'):
         return False
     from four_factions.preparation import achieved
     player = snapshot['state']['players'][snapshot['player']]

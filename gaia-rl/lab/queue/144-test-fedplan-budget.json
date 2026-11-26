@@ -1,0 +1,14 @@
+{
+ "kind": "command",
+ "note": "사용자 11-27 「광산 만들기 할때 썻던거 그대로 연방 계획에 재활용」(코덱스 이상 없음): ① _plan_cost가 광산 단계마다 가상 광산을 더함(다음 광산의 사거리 QIC 중복 계산 수정 — 광산 2개 이상 계획 전부에 적용) ② 예산 검사(E86 plan_affordable) 대상에 federation-plan-* 추가 ③ 143 실패 3건 원인(_guide에 fed_plan 기본값이 없어 테스트 사이에 켜진 채 남음) 수정 + 143 이후 차원 변형 기준 변경(533652b) 확인. 봇 턴에서 python 실행이 막혀 단위 테스트만 lab에서 돌린다(실험 아님, 판정 없음). 건강 기준: 종료 코드 0, test_teacher_patches 전부 통과(164 예상, 새 test_plan_cost_measures_the_next_mine_from_the_planned_one · test_plan_affordable_drops_a_federation_plan_the_budget_cannot_pay 포함). 실패하면 정리 턴에 고친다. 예상 1분, 제한 0.25시간.",
+ "run": [
+  "env",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "{python}",
+  "-m",
+  "unittest",
+  "-v",
+  "test_teacher_patches"
+ ],
+ "timeout_hours": 0.25
+}

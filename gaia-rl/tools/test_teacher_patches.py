@@ -887,6 +887,30 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(colonies('Lantids'), set())                        # (d) nothing planned
         self.assertEqual(colonies('Lantids', fit='Eclipse'), {'-1,0'})      # Eclipse fitted
 
+    def _two_mine_plan(self):
+        from four_factions.preparation import Goal
+        snapshot = self._fed_plan_fixture([('Mine', '0,0')], ['2,0', '4,0'])     # Terra: the Terrans home, no terraform
+        snapshot['state']['players'][0]['resources'] = {'qic': 0}
+        steps = (Goal('colony@2,0', 'colony', '2,0'), Goal('colony@4,0', 'colony', '4,0'))
+        return snapshot, Goal('federation-plan-mines', 'ordered', steps=steps)
+
+    def test_plan_cost_measures_the_next_mine_from_the_planned_one(self):
+        snapshot, plan = self._two_mine_plan()
+        with mock.patch.object(tp, '_faction_parts', return_value=set()):
+            cost = tp._plan_cost(snapshot, plan)
+        # Navigation 1: 2,0 is 2 away (1 QIC); 4,0 is 4 from 0,0 (2 QIC) but 2 from the planned 2,0 (1 QIC).
+        self.assertEqual(cost['qic'], 2)
+        self.assertEqual(cost['ore'], 2 * tp.MINE_COST['ore'])
+
+    def test_plan_affordable_drops_a_federation_plan_the_budget_cannot_pay(self):
+        snapshot, plan = self._two_mine_plan()
+        rich = {'ore': 9, 'credits': 20, 'qic': 9, 'knowledge': 9}
+        with mock.patch.object(tp, '_faction_parts', return_value=set()):
+            with mock.patch.object(tp, '_plan_budget', return_value={**rich, 'ore': 2 * tp.MINE_COST['ore'] - 1}):
+                self.assertFalse(tp.plan_affordable(snapshot, plan))             # one ore short: not generated
+            with mock.patch.object(tp, '_plan_budget', return_value=rich):
+                self.assertTrue(tp.plan_affordable(snapshot, plan))
+
     def test_eclipse_colony_counts_the_eclipse_asteroid_mine_only_with_fed_plan(self):
         from four_factions import preparation
         from four_factions.preparation import Goal
