@@ -30,6 +30,8 @@ for env, snap in t.play(rounds=3):
         steps = (tp._terraform_steps(st, p, kind) or 0) if kind in RING else 0
         qic = max(0, (path_distance(st, starts, a['coord']) - navigation(p) + 1) // 2)
         rows.append((a.get('id'), max(0, steps - FREE.get(a.get('id'), 0)), steps, qic, a['coord']))
+        if kind not in RING:
+            tot[('off-ring', kind, a.get('id'))] += 1
     for r in rows:
         tot[(r[0], 'left%d' % r[1], 'qic%d' % r[3])] += 1
     if rows and (worst is None or len(rows) > len(worst[1])):
