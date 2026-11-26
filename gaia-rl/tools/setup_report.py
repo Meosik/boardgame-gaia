@@ -1,13 +1,16 @@
 """Heuristic report of starting-structure placements and early build sites.
 
 Usage (from gaia-rl, PYTHONPATH=python:baseline-teacher-20260917:tools):
-    python tools/setup_report.py <run dir>
+    python tools/setup_report.py <run dir> [--out DIR]
 
 Reads every **/setup_state.json (written by `teacher_ab.py run --stop-after-setup`) and writes
-<run dir>/setup_report.md and <run dir>/setup_report.json."""
+setup_report.md and setup_report.json into DIR (created; default: the run dir). Both start with a
+pooled summary over all seats; seats also carry added_planets_qic (second-mine overlap at reach+QIC)."""
+import argparse
 import json
-import sys
+from collections import Counter
 from pathlib import Path
+from statistics import mean, median
 
 QIC_RANGE = 2
 TOP_SITES = 5
@@ -48,6 +51,12 @@ def seat_report(state, seat):
     if len(own) >= 2:
         first, second = set(reached[own[0]]), set(reached[own[1]])
         added = {'second_adds': len(second-first), 'first_adds': len(first-second)}
+    added_qic = None
+    if len(own) >= 2:
+        first = _free_planets_near(state, own[0], reach+QIC_RANGE)
+        second = _free_planets_near(state, own[1], reach+QIC_RANGE)
+        added_qic = {'first_sees': len(first), 'second_sees': len(second),
+                     'second_adds': len(second-first), 'shared': len(first & second)}
     hexes = state['board']['hexes']
     sites = []
     for c, cell in hexes.items():
@@ -67,7 +76,7 @@ def seat_report(state, seat):
     return {'seat': seat, 'faction': player['faction'], 'home': home, 'reach': reach, 'structures': own,
             'pairwise_distance': pairwise, 'min_distance_to_opponent': opponent_gap,
             'free_planets_in_reach': reached, 'added_planets': added,
-            'sites': sites, 'top_sites': sites[:TOP_SITES]}
+            'added_planets_qic': added_qic, 'sites': sites, 'top_sites': sites[:TOP_SITES]}
 
 
 def game_report(path):
@@ -86,10 +95,91 @@ def _site_text(site):
     return f"{site['coord']} ({steps}{', '+flags if flags else ''})"
 
 
+def _hist(values):
+    """Sorted [value, count] pairs; ints first, then string keys."""
+    return [[k, v] for k, v in sorted(Counter(values).items(),
+                                      key=lambda kv: (isinstance(kv[0], str), str(kv[0]) if isinstance(kv[0], str)
+                                                      else kv[0]))]
+
+
+def _hist_text(hist):
+    return ', '.join(f'{k}:{v}' for k, v in hist) or '-'
+
+
+def _mean(values):
+    values = [v for v in values if v is not None]
+    return round(mean(values), 2) if values else None
+
+
+def summary(games):
+    """Pooled patterns across every seat of every game."""
+    seats = [s for g in games for s in g['seats']]
+    pair = [d for s in seats for d in s['pairwise_distance']]
+    reach_adds = [s['added_planets']['second_adds'] for s in seats if s['added_planets']]
+    qics = [s['added_planets_qic'] for s in seats if s['added_planets_qic']]
+    nearest = []
+    for s in seats:
+        gaps = [v for v in s['min_distance_to_opponent'].values() if v is not None]
+        nearest.append(min(gaps) if gaps else None)
+    near_known = [v for v in nearest if v is not None]
+    tops = [t for s in seats for t in s['top_sites']]
+    steps = Counter(('off:'+t['planet']) if t['steps'] is None else t['steps'] for t in tops)
+    by_faction = {}
+    for s, near in zip(seats, nearest):
+        row = by_faction.setdefault(s['faction'], {'dist': [], 'adds': [], 'near': [], 'seats': 0})
+        row['seats'] += 1
+        row['dist'] += s['pairwise_distance']
+        if s['added_planets_qic']:
+            row['adds'].append(s['added_planets_qic']['second_adds'])
+        row['near'].append(near)
+    return {
+        'games': len(games), 'seats': len(seats),
+        'own_distance_hist': _hist(pair), 'own_distance_median': median(pair) if pair else None,
+        'second_adds_reach_hist': _hist(reach_adds),
+        'second_adds_qic_hist': _hist([q['second_adds'] for q in qics]),
+        'shared_qic_hist': _hist([q['shared'] for q in qics]),
+        'first_sees_qic_mean': _mean([q['first_sees'] for q in qics]),
+        'second_sees_qic_mean': _mean([q['second_sees'] for q in qics]),
+        'two_structure_seats': len(qics),
+        'nearest_opponent_hist': _hist(near_known),
+        'seats_within_2_of_opponent': sum(v <= 2 for v in near_known),
+        'top_sites': {'total': len(tops), 'qic': sum(t['qic'] for t in tops),
+                      'near_opponent': sum(t['near_opponent'] for t in tops), 'steps_hist': _hist(steps.elements())},
+        'non_qic_sites_per_seat_hist': _hist([sum(not x['qic'] for x in s['top_sites']) for s in seats]),
+        'by_faction': {f: {'seats': r['seats'], 'own_distance_mean': _mean(r['dist']),
+                           'second_adds_qic_mean': _mean(r['adds']), 'nearest_opponent_mean': _mean(r['near'])}
+                       for f, r in sorted(by_faction.items())},
+    }
+
+
+def summary_lines(sm):
+    t = sm['top_sites']
+    lines = ['## Summary', '', f"{sm['games']} games, {sm['seats']} seats "
+             f"({sm['two_structure_seats']} with two structures).", '',
+             f"- own distance (value:count): {_hist_text(sm['own_distance_hist'])}; median {sm['own_distance_median']}",
+             f"- 2nd mine adds at reach: {_hist_text(sm['second_adds_reach_hist'])}",
+             f"- 2nd mine adds at reach+QIC: {_hist_text(sm['second_adds_qic_hist'])}",
+             f"- shared planets at reach+QIC: {_hist_text(sm['shared_qic_hist'])}",
+             f"- planets seen at reach+QIC, mean: first {sm['first_sees_qic_mean']}, second {sm['second_sees_qic_mean']}",
+             f"- nearest opponent distance: {_hist_text(sm['nearest_opponent_hist'])}; "
+             f"seats within 2: {sm['seats_within_2_of_opponent']}/{sm['seats']}",
+             f"- top sites: {t['total']}, needing QIC {t['qic']}, near opponent {t['near_opponent']}; "
+             f"steps {_hist_text(t['steps_hist'])}",
+             f"- non-QIC top sites per seat: {_hist_text(sm['non_qic_sites_per_seat_hist'])}", '',
+             '| faction | seats | own distance mean | 2nd adds (reach+QIC) mean | nearest opponent mean |',
+             '|---|---|---|---|---|']
+    for f, r in sm['by_faction'].items():
+        cells = ['-' if v is None else v for v in (r['own_distance_mean'], r['second_adds_qic_mean'],
+                                                   r['nearest_opponent_mean'])]
+        lines.append(f"| {f} | {r['seats']} | {cells[0]} | {cells[1]} | {cells[2]} |")
+    return lines + ['']
+
+
 def markdown(games):
     out = ['# Setup report', '',
            'Sites: coord (planet type, terraform steps from home; Gaia/Transdim off the ring), Q = needs a QIC, '
            'N = next to an opponent. Rank: no QIC, fewer steps, near opponent first.', '']
+    out += summary_lines(summary(games))
     for g in games:
         out += [f"## {g['path']}", '', f"seed {g['seed']}; factions {', '.join(g['factions'])}", '',
                 '| seat | faction | structures | own distance | min opp distance | added by 2nd / 1st |',
@@ -109,14 +199,18 @@ def markdown(games):
 
 
 def main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
-    if len(argv) != 1:
-        raise SystemExit(__doc__)
-    run = Path(argv[0])
+    parser = argparse.ArgumentParser(description='Setup placement report')
+    parser.add_argument('run', help='run dir containing **/setup_state.json')
+    parser.add_argument('--out', help='output dir (default: the run dir)')
+    args = parser.parse_args(argv)
+    run = Path(args.run)
+    out = Path(args.out) if args.out else run
+    out.mkdir(parents=True, exist_ok=True)
     games = [game_report(p) for p in sorted(run.glob('**/setup_state.json'))]
-    (run/'setup_report.json').write_text(json.dumps({'games': games}, ensure_ascii=False, indent=1)+'\n')
-    (run/'setup_report.md').write_text(markdown(games)+'\n')
-    print(f'{len(games)} games -> {run/"setup_report.md"}')
+    report = {'summary': summary(games), 'games': games}
+    (out/'setup_report.json').write_text(json.dumps(report, ensure_ascii=False, indent=1)+'\n')
+    (out/'setup_report.md').write_text(markdown(games)+'\n')
+    print(f'{len(games)} games -> {out/"setup_report.md"}')
 
 
 if __name__ == '__main__':

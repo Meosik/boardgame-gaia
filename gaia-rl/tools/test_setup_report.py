@@ -55,6 +55,46 @@ class SetupReportTest(unittest.TestCase):
         self.assertIsNone(seat['added_planets'])
         self.assertEqual(seat['faction'], 'Xenos')
 
+    def test_added_planets_qic(self):
+        seat = sr.seat_report(synthetic_state(), 0)
+        self.assertEqual(seat['added_planets_qic'],
+                         {'first_sees': 4, 'second_sees': 4, 'second_adds': 2, 'shared': 2})
+        self.assertIsNone(sr.seat_report(synthetic_state(), 1)['added_planets_qic'])
+
+    def test_summary(self):
+        state = synthetic_state()
+        games = [{'seats': [sr.seat_report(state, 0), sr.seat_report(state, 1)]}]
+        sm = sr.summary(games)
+        self.assertEqual((sm['games'], sm['seats'], sm['two_structure_seats']), (1, 2, 1))
+        self.assertEqual(sm['own_distance_hist'], [[3, 1]])
+        self.assertEqual(sm['own_distance_median'], 3)
+        self.assertEqual(sm['second_adds_reach_hist'], [[2, 1]])
+        self.assertEqual(sm['second_adds_qic_hist'], [[2, 1]])
+        self.assertEqual(sm['shared_qic_hist'], [[2, 1]])
+        self.assertEqual(sm['first_sees_qic_mean'], 4)
+        self.assertEqual(sm['nearest_opponent_hist'], [[3, 2]])
+        self.assertEqual(sm['seats_within_2_of_opponent'], 0)
+        tops = sm['top_sites']
+        self.assertEqual(tops['total'], sum(len(s['top_sites']) for s in games[0]['seats']))
+        self.assertIn(['off:Gaia', 1], tops['steps_hist'])
+        self.assertEqual(sm['by_faction']['Terrans']['seats'], 1)
+        self.assertEqual(sm['by_faction']['Terrans']['own_distance_mean'], 3)
+        self.assertEqual(sm['by_faction']['Xenos']['second_adds_qic_mean'], None)
+        self.assertEqual(sr.summary_lines(sm)[0], '## Summary')
+
+    def test_out_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)/'run'
+            game = run/'pair-000'/'game-0'
+            game.mkdir(parents=True)
+            (game/'setup_state.json').write_text(json.dumps(synthetic_state()))
+            out = Path(tmp)/'nested'/'out'
+            sr.main([str(run), '--out', str(out)])
+            self.assertFalse((run/'setup_report.md').exists())
+            report = json.loads((out/'setup_report.json').read_text())
+            self.assertEqual(report['summary']['games'], 1)
+            self.assertTrue((out/'setup_report.md').read_text().startswith('# Setup report'))
+
     def test_main_writes_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             game = Path(tmp)/'pair-000'/'game-0'
