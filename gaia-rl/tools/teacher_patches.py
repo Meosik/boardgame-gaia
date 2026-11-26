@@ -5701,10 +5701,11 @@ GAIA_ASTEROID_HOLD_LAST_ROUND = 3
 # ── prune (user 2026-11-26, E356–E362; research/strategy/candidate-pruning-tables.md) ─────────────
 # Candidates the user's tables say not to calculate at all are blocked in every ranking (root and
 # rollouts). Each family falls back to its original list when the filter would leave none of it.
-# Implemented: 1.1 off-track standard tile track (2 attack tracks + navigation below 2; Lost Fleet ship
-# tiles are off-track standard tiles too, so they are filtered the same way), P1, P2 (Gaia
-# exception only), P4, P5 (Gleens), F1, F2, F5 (rounds 1-5). Not implemented yet: 1.2 per-faction
-# tile table, P2 sector/federation-link exceptions, P5 Lantids, F3, F4, score/competition tracks.
+# Implemented: standard tiles by the E369 tier (1.2 per-faction tile class × 1.1 track on plan: 2 attack
+# tracks + navigation below 2; Lost Fleet ship tiles too), only the best tier offered stays; P1, P2 (Gaia
+# exception only), P4, P5 (Gleens), F1, F2, F5 (rounds 1-5). Not implemented yet: E369 exception for a
+# track step that opens expansion / income / a level-5 race now (navigation below 2 is on plan already),
+# 1.2 opening conditions (both sides kept), P2 sector/federation-link exceptions, P5 Lantids, F3, F4.
 TRACK_KEYS = {'Terraforming': 'terraforming', 'Navigation': 'navigation', 'ArtificialIntelligence': 'ai',
               'GaiaProject': 'gaia', 'Economy': 'economy', 'Science': 'science'}
 
@@ -5720,16 +5721,77 @@ def prune_tracks(player):
     return set(attack)
 
 
+# Table 1.2 per-faction standard tiles (user E369, candidate-pruning-tables.md 1.2 · 1.4). Engine ids: 2 ore +
+# charge income, 3 four credits income, 4 ore + QIC now, 5 knowledge + credit income, 6 big buildings power 4,
+# 7 seven VP now, 8 VP per Gaia mine, 9 knowledge per planet type now, 10 charge-4 action, 11 free mine
+# (2 terraforming), 12 navigation +1, 13 ore + 3 knowledge now. 'good' keeps both sides of a ⚔ conflict
+# (BalTaks' charge-4 tile is neither good nor avoided, ⚔B4); 'avoid' is the table's 피할 것 column.
+PRUNE_TILE_TABLE = {
+    'Terrans': {'good': (10, 8)},
+    'Taklons': {'good': (10, 2, 5, 3, 9), 'avoid': (8,), 'not_under_gaia': (10,)},
+    'Geodens': {'good': (10, 3, 2), 'avoid': (8,), 'late': {9: 4}},
+    'Xenos': {'good': (3, 5, 10, 2), 'avoid': (8,)},
+    'Gleens': {'good': (3, 8)},
+    'Ambas': {'good': (3, 6), 'avoid': (2,)},
+    'Itars': {'good': (10, 8), 'late': {9: 4}},
+    'Nevlas': {'good': (10, 2, 5, 3), 'not_under_gaia': (10,)},
+    'Firaks': {'good': (2, 10, 4, 6), 'avoid': (8,)},
+    'BalTaks': {'good': (4, 3, 6)},
+    'Ivits': {'good': (10, 4, 6)},
+    'Bescods': {'good': (5, 4, 6), 'avoid': (3,)},
+    'Lantids': {'good': (3, 6), 'avoid': (10, 8)},
+    'HadschHallas': {'good': (4, 2, 5), 'avoid': (3,)},
+    'SpaceGiants': {'good': (11, 2, 5, 3), 'avoid': (8,)},
+    'Darkanians': {'good': (2, 11)},
+    'Moweyds': {'good': (2, 3, 5, 4, 8)},
+    'Tinkeroids': {'good': (6, 11)},
+}
+PRUNE_TILE_COMMON = (13, 4, 11, 10)    # 1.2 공통: ore + 3 knowledge, this round's mine tiles, charge 4
+PRUNE_TILE_LATE_FROM = 4               # one-shot tiles worth more later (9) wait until this round
+# E369 tiers by (tile class, track on plan): lower is kept, the rest of the tile family is blocked.
+PRUNE_TILE_TIERS = {('good', True): 0, ('good', False): 1, ('ok', True): 1, ('ok', False): 2,
+                    ('avoid', True): 2, ('later', True): 3, ('avoid', False): 4, ('later', False): 4}
+
+
+def _tile_class(state, player, tile):
+    """'good' / 'ok' / 'avoid' / 'later' for one standard tile (table 1.2 with its conditions, 1.3 ship tiles)."""
+    row = PRUNE_TILE_TABLE.get(player['faction'])
+    good = set(row['good'] if row else PRUNE_TILE_COMMON) | {13}
+    avoid = set((row or {}).get('avoid', ()))
+    kinds = [_kind_of(s) for s in player['structures']]
+    labs, rnd = kinds.count('ResearchLab'), state['round']
+    slots = (state.get('research_board') or {}).get('tech_tile_slots') or ()
+    if row and len(slots) > GAIA_SLOT and slots[GAIA_SLOT] == tile and tile in row.get('not_under_gaia', ()):
+        good.discard(tile)
+        avoid.add(tile)                          # Taklons / Nevlas: charge 4 under Gaia (B19-S46, B19-S60)
+    if player['faction'] == 'Bescods':
+        if labs == 1:
+            avoid.discard(3)                     # four credits fine with a single lab
+        if labs >= 2:
+            good.add(2)
+    if tile == 12:                               # navigation +1: rounds 1-2 below navigation 2 (1.3)
+        (good if rnd <= 2 and player['research_tracks'].get('navigation', 0) < 2 else avoid).add(12)
+    if tile == 11 and kinds.count('Mine') >= 8:
+        avoid.add(11)
+    late = (row or {}).get('late', {9: PRUNE_TILE_LATE_FROM} if 9 not in good else {})
+    if tile in late and rnd < late[tile]:
+        return 'later'
+    if tile in late:
+        good.add(tile)
+    return 'avoid' if tile in avoid else 'good' if tile in good else 'ok'
+
+
 def _prune_tile(state, player, action):
-    """True when this standard-tile choice advances a track outside prune_tracks (off-track tiles only)."""
+    """E369 tier of a standard-tile choice (None when the action takes none): tile class from table 1.2,
+    track on plan = prune_tracks (on-track tiles advance their own column)."""
     choice = action.get('tech_tile_choice') if isinstance(action, dict) else None
     if not isinstance(choice, dict) or choice.get('kind') != 'Standard':
         return None
     slots = (state.get('research_board') or {}).get('tech_tile_slots') or []
-    if choice.get('tile') in slots[:len(TRACK_ORDER)]:
-        return None    # on-track tile: the track is fixed, one variant only
-    track = TRACK_KEYS.get(choice.get('advance_track'))
-    return track not in prune_tracks(player)
+    tile = choice.get('tile')
+    on_track = list(slots[:len(TRACK_ORDER)])
+    track = TRACK_KEYS.get(TRACK_ORDER[on_track.index(tile)] if tile in on_track else choice.get('advance_track'))
+    return PRUNE_TILE_TIERS[(_tile_class(state, player, tile), track in prune_tracks(player))]
 
 
 def _prune_mine(state, player, action):
@@ -5984,9 +6046,12 @@ def prune_indices(snapshot):
         return set()
     player = state['players'][actor]
     candidates = snapshot['candidates']
-    families = {'tile': (set(), set()), 'mine': (set(), set()), 'power_tf': (set(), set())}
+    families = {'mine': (set(), set()), 'power_tf': (set(), set())}
+    tiers = {i: t for i, c in enumerate(candidates) if (t := _prune_tile(state, player, c['action'])) is not None}
+    best = min(tiers.values(), default=None)
+    families['tile'] = (set(tiers), {i for i, t in tiers.items() if t > best})
     for i, c in enumerate(candidates):
-        for name, test in (('tile', _prune_tile), ('mine', _prune_mine), ('power_tf', _prune_power_tf)):
+        for name, test in (('mine', _prune_mine), ('power_tf', _prune_power_tf)):
             verdict = test(state, player, c['action'])
             if verdict is not None:
                 families[name][0].add(i)
