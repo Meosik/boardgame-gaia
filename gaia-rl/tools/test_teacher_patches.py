@@ -862,7 +862,8 @@ class OpeningBudgetTests(unittest.TestCase):
         from four_factions.preparation import Goal
 
         def colonies(faction, formers=0, explored=(), fit='Rebellion', menu=(), knowledge=0):
-            snapshot = self._fed_plan_fixture([('Mine', '0,0'), ('TradingStation', '1,0')], ['2,1', '-1,0'])
+            # power 4 (mine, station, mine): one usable planet + a +2 upgrade reaches 7, so a single colony is plannable
+            snapshot = self._fed_plan_fixture([('Mine', '0,0'), ('TradingStation', '1,0'), ('Mine', '0,1')], ['2,1', '-1,0'])
             hexes = snapshot['state']['board']['hexes']
             hexes['2,1']['planet']['planet_type'] = 'Transdim'
             hexes['-1,0']['planet']['planet_type'] = 'Asteroid'
