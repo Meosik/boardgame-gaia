@@ -127,6 +127,18 @@ def tile_entry(folder, prefix, tid):
     return [tid, folder + "/" + base, desc]
 
 
+# gaia-frontend/src/displayNames.ts SPACESHIP_DISPLAY_NAMES
+SHIP_KO = {"Twilight": "트와일라잇", "Rebellion": "리벨리온", "TFMars": "T F 마스", "Eclipse": "이클립스"}
+
+
+def fed_entry(tid):
+    """Federation token art as in assets/federationTokenImages.ts: base webp, else Lost Fleet png (id 7: none)."""
+    e = tile_entry("federation_tokens/normalized", "fed", tid)
+    if e[1] is None:
+        e = tile_entry("federation_tokens_lost_fleet/normalized", "fed", tid)
+    return e
+
+
 def tid_of(x):
     return x.get("id") if isinstance(x, dict) else x
 
@@ -166,8 +178,29 @@ def game_start_panel(st):
     adv = [tile_entry("tech_tiles/rendered", "adv", t) for t in rb.get("advanced_tech_tiles") or []]
     by_id = {p["player_id"]: p["faction"] for p in st["players"]}
     seats = [by_id.get(pid, str(pid)) for pid in st.get("turn_order") or []]
+    ship_tech, ship_fed, ship_art = [], [], []
+    for b in st.get("spaceship_boards") or []:
+        name = SHIP_KO.get(b.get("id"), str(b.get("id")))
+        for t in dict.fromkeys(b.get("tech_tiles") or []):
+            ship_tech.append(tile_entry("tech_tiles/rendered", "std", t) + [name])
+        if b.get("federation_token") is not None:
+            ship_fed.append(fed_entry(b["federation_token"]) + [name])
+        for a in b.get("artifact_pool") or []:
+            ship_art.append(tile_entry("artifacts/normalized", "artifact", a) + [name])
+    fcount = {}
+    for t in rb.get("federation_tokens") or []:
+        fcount[t] = fcount.get(t, 0) + 1
+    fed_supply = []
+    for t in sorted(fcount, key=lambda x: (not isinstance(x, int), x)):
+        e = fed_entry(t)
+        if fcount[t] > 1:
+            e[2] += " ×%d" % fcount[t]
+        fed_supply.append(e + [""])
+    if rb.get("terraforming_level_5_token") is not None:
+        fed_supply.append(fed_entry(rb["terraforming_level_5_token"]) + ["테라 5단계"])
     return {"rounds": rounds, "final": final, "boosters": boosters, "std": std,
-            "adv": adv, "seats": seats,
+            "adv": adv, "seats": seats, "ship_tech": ship_tech, "ship_fed": ship_fed,
+            "ship_art": ship_art, "fed_supply": fed_supply,
             "close": faction_closeness(PLANET_RING, seats)}
 
 
@@ -256,7 +289,7 @@ def asset_files(data):
         for h in g["hexes"]:
             if h[3]:
                 names.add(h[3])
-        for key in ("rounds", "final", "boosters", "std", "adv"):
+        for key in START_KEYS:
             for e in g["start"][key]:
                 if e[1]:
                     names.add(e[1])
@@ -269,7 +302,9 @@ def build_data(paths, prefix="mark-assets/"):
     return {"games": games, "ko": FACTION_KO, "home": FACTION_PLANET, "exp": "138", "assets": prefix, "tracks": TRACKS_KO}
 
 
-TILE_DIRS = ("round_scoring_tiles/", "final_scoring_tiles/", "round_boosters/", "tech_tiles/")
+START_KEYS = ("rounds", "final", "boosters", "std", "adv", "ship_tech", "ship_fed", "ship_art", "fed_supply")
+TILE_DIRS = ("round_scoring_tiles/", "final_scoring_tiles/", "round_boosters/", "tech_tiles/",
+             "artifacts/", "federation_tokens/", "federation_tokens_lost_fleet/")
 
 
 def shrink_tile(src, rel, dst, max_w=240):
@@ -311,7 +346,7 @@ def render(data, title):
             s[4] = os.path.basename(s[4]) if s[4] else None
         for h in g["hexes"]:
             h[3] = os.path.basename(h[3]) if h[3] else None
-        for key in ("rounds", "final", "boosters", "std", "adv"):
+        for key in START_KEYS:
             for e in g["start"][key]:
                 e[1] = os.path.basename(e[1]) if e[1] else None
     blob = json.dumps(d, ensure_ascii=False, separators=(",", ":"))
@@ -463,6 +498,11 @@ function startPanel(){
   var tr=DATA.tracks;
   row("기술 타일",s.std,s.std.map(function(e,i){return i<tr.length?tr[i]:"추가"}));
   row("고급 기술 타일",s.adv,s.adv.map(function(e,i){return i<tr.length?tr[i]:""}));
+  function tg(l){return (l||[]).map(function(e){return e[3]||""})}
+  row("함선 기술 타일",s.ship_tech||[],tg(s.ship_tech));
+  row("함선 연방 토큰",s.ship_fed||[],tg(s.ship_fed));
+  row("함선 유물",s.ship_art||[],tg(s.ship_art));
+  row("연방 토큰 공급",s.fed_supply||[],tg(s.fed_supply));
 }
 function draw(){
   startPanel();

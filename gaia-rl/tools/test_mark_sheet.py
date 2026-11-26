@@ -1,3 +1,4 @@
+import glob
 import gzip
 import json
 import os
@@ -92,6 +93,50 @@ class MarkSheetTest(unittest.TestCase):
             self.assertEqual(ds, sorted(ds))
             self.assertNotIn('class":"sec"', html)
             self.assertNotIn('"class":"sec"', html)
+
+
+class ShipFedTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, HERE)
+        import mark_sheet
+        self.ms = mark_sheet
+
+    def panel(self, boards, fed, t5):
+        st = {"players": [{"player_id": 0, "faction": "Nevlas"}], "turn_order": [0],
+              "research_board": {"federation_tokens": fed, "terraforming_level_5_token": t5},
+              "spaceship_boards": boards}
+        return self.ms.game_start_panel(st)
+
+    def test_synthetic(self):
+        p = self.panel([{"id": "Twilight", "tech_tiles": [], "federation_token": 9, "artifact_pool": [4, 10]},
+                        {"id": "Rebellion", "tech_tiles": [11, 11, 11, 11], "federation_token": 11,
+                         "artifact_pool": []}], [1, 7, 1, 2], 4)
+        for k in ("ship_tech", "ship_fed", "ship_art", "fed_supply"):
+            self.assertIn(k, p)
+        self.assertEqual([e[3] for e in p["ship_tech"]], ["리벨리온"])
+        self.assertTrue(p["ship_tech"][0][1].startswith("tech_tiles/rendered/std_11_"))
+        self.assertEqual(len(p["ship_art"]), 2)
+        self.assertTrue(p["ship_art"][0][1].startswith("artifacts/normalized/artifact_04_"))
+        self.assertTrue(p["ship_fed"][0][1].startswith("federation_tokens_lost_fleet/normalized/fed_09_"))
+        sup = {e[0]: e for e in p["fed_supply"]}
+        self.assertIn("×2", sup[1][2])
+        self.assertTrue(sup[1][1].startswith("federation_tokens/normalized/fed_01_"))
+        self.assertIsNone(sup[7][1])
+        self.assertEqual(sup[4][3], "테라 5단계")
+
+    def test_real_first_replay(self):
+        paths = sorted(glob.glob(os.path.expanduser(
+            "~/gaia-media/ai-replays/ab-lab-138-setup-placement-sim-20-pair-*.json.gz")))
+        if not paths:
+            self.skipTest("no replays")
+        g = self.ms.load_game(paths[0])["start"]
+        self.assertTrue(g["fed_supply"])
+        with gzip.open(paths[0], "rt") as f:
+            has = bool(json.load(f)["frames"][0]["state"].get("spaceship_boards"))
+        if has:
+            self.assertTrue(g["ship_fed"])
+            self.assertTrue(g["ship_art"])
+            self.assertTrue(g["ship_tech"])
 
 
 class WheelTest(unittest.TestCase):
