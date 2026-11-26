@@ -1,0 +1,17 @@
+{
+ "name": "139s-r1-replays-rebuild",
+ "kind": "command",
+ "status": "done",
+ "note": "사용자 2026-11-26 「일단 초반에 지은 광산 볼수 있나?」 → 「천천히 진행해」: 139r 실패(수입 재계산 바이너리 target/release/examples/replay_income이 2026-10-12 빌드라 지금 규칙과 달라 거부) → 같은 작업에서 그 바이너리를 지금 엔진으로 다시 빌드한 뒤 139 20판 리플레이를 다시 게시(139r과 같은 명령). 판정 없음(게시 전용). 성공 = 종료 코드 0, 리플레이 20개 게시. 실패하면 로그 끝을 보고 원인만 기록(재시도는 사용자 결정). 예상 10–20분(빌드 실측 없음), 제한 1시간.",
+ "host": "agentmaco",
+ "commit": "9011e85",
+ "started_at": "2026-11-26T17:59:27+09:00",
+ "finished_at": "2026-11-26T17:59:48+09:00",
+ "command": [
+  "bash",
+  "-c",
+  "/home/sohegi/.cargo/bin/cargo build --manifest-path ../Cargo.toml -p gaia-engine --release --example replay_income && \"$0\" tools/publish_faction_replays.py runs/lab-139-r1-placement-sim-20 --destination /home/sohegi/gaia-media/ai-replays --all-games",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python"
+ ],
+ "exit_code": 0
+}
