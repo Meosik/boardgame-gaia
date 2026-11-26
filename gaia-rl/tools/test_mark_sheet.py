@@ -67,6 +67,8 @@ class MarkSheetTest(unittest.TestCase):
                 self.assertIn(k, st)
             self.assertEqual(len(st["rounds"]), 6)
             self.assertEqual(len(st["seats"]), 4)
+            self.assertEqual(len(st["tf"]), 4)
+            self.assertEqual(data["ring"][0], "Terra")
             self.assertEqual(st["seats"], ["Terrans", "Nevlas", "Firaks", "Ivits"])
             # engine id 10 uses image 11 and vice versa; ids stay engine ids
             r = {e[0]: e[1] for e in st["rounds"]}
@@ -123,11 +125,14 @@ class ShipFedTest(unittest.TestCase):
         self.assertEqual(len(p["ship_art"]), 2)
         self.assertTrue(p["ship_art"][0][1].startswith("artifacts/normalized/artifact_04_"))
         self.assertTrue(p["ship_fed"][0][1].startswith("federation_tokens_lost_fleet/normalized/fed_09_"))
-        sup = {e[0]: e for e in p["fed_supply"]}
-        self.assertIn("×2", sup[1][2])
-        self.assertTrue(sup[1][1].startswith("federation_tokens/normalized/fed_01_"))
-        self.assertIsNone(sup[7][1])
-        self.assertEqual(sup[4][3], "테라 5단계")
+        self.assertEqual([e[0] for e in p["fed_supply"]], [4])
+        self.assertEqual(p["fed_supply"][0][3], "테라 5단계")
+        self.assertEqual(len(p["tf"]), 1)
+
+    def test_terraform_steps(self):
+        t = {e[0]: e for e in self.ms.terraform_steps(["Terrans", "Tinkeroids"])}
+        self.assertEqual(t["Terrans"], ["Terrans", "Terra", [0, 1, 2, 3, 3, 2, 1]])
+        self.assertEqual(t["Tinkeroids"][2], [None] * 7)
 
     def test_real_first_replay(self):
         paths = sorted(glob.glob(os.path.expanduser(

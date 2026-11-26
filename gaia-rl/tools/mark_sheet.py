@@ -144,6 +144,23 @@ def tid_of(x):
 
 
 BOARD_IMG = "boards/normalized/scoring_board.webp"
+# gaia-engine/src/rules/terraforming.rs ring
+PLANET_RING = ["Terra", "Oxide", "Volcanic", "Desert", "Swamp", "Titanium", "Ice"]
+
+
+def terraform_steps(seats):
+    """[faction, home, [distance to each PLANET_RING planet]] per seat; None cells when home is off the ring."""
+    out = []
+    n = len(PLANET_RING)
+    for f in seats:
+        home = FACTION_PLANET.get(f)
+        if home in PLANET_RING:
+            i = PLANET_RING.index(home)
+            ds = [min(abs(i - j), n - abs(i - j)) for j in range(n)]
+        else:
+            ds = [None] * n
+        out.append([f, home, ds])
+    return out
 
 
 def game_start_panel(st):
@@ -168,20 +185,12 @@ def game_start_panel(st):
             ship_fed.append(fed_entry(b["federation_token"]) + [name])
         for a in b.get("artifact_pool") or []:
             ship_art.append(tile_entry("artifacts/normalized", "artifact", a) + [name])
-    fcount = {}
-    for t in rb.get("federation_tokens") or []:
-        fcount[t] = fcount.get(t, 0) + 1
     fed_supply = []
-    for t in sorted(fcount, key=lambda x: (not isinstance(x, int), x)):
-        e = fed_entry(t)
-        if fcount[t] > 1:
-            e[2] += " ×%d" % fcount[t]
-        fed_supply.append(e + [""])
     if rb.get("terraforming_level_5_token") is not None:
         fed_supply.append(fed_entry(rb["terraforming_level_5_token"]) + ["테라 5단계"])
     return {"rounds": rounds, "final": final, "boosters": boosters, "std": std,
             "adv": adv, "seats": seats, "ship_tech": ship_tech, "ship_fed": ship_fed,
-            "ship_art": ship_art, "fed_supply": fed_supply}
+            "ship_art": ship_art, "fed_supply": fed_supply, "tf": terraform_steps(seats)}
 
 
 def xy_of(c):
@@ -282,7 +291,7 @@ def build_data(paths, prefix="mark-assets/"):
     games = [g for g in (load_game(p) for p in paths) if g]
     games.sort(key=lambda g: g["id"])
     return {"games": games, "ko": FACTION_KO, "home": FACTION_PLANET, "exp": "138", "assets": prefix, "tracks": TRACKS_KO,
-            "board": BOARD_IMG}
+            "board": BOARD_IMG, "ring": PLANET_RING}
 
 
 START_KEYS = ("rounds", "final", "boosters", "std", "adv", "ship_tech", "ship_fed", "ship_art", "fed_supply")
@@ -471,6 +480,18 @@ function startPanel(){
   if(DATA.board){
     var bi=document.createElement("img");bi.src=DATA.assets+encodeURIComponent(DATA.board);bi.alt="점수판";
     bi.style.width="140px";bi.style.height="auto";bi.style.display="block";bi.style.margin="4px 0";d.appendChild(bi)}
+  if(s.tf&&s.tf.length){
+    var td=document.createElement("div");td.className="seats";
+    var tt=document.createElement("div");tt.textContent="테라포밍 거리 (단계)";td.appendChild(tt);
+    var tb=document.createElement("table");tb.style.borderCollapse="collapse";tb.style.fontSize="13px";
+    function cell(tr,txt,col,bold,sq){var c=document.createElement("td");c.style.padding="1px 4px";c.style.textAlign="center";
+      if(sq){var i=document.createElement("i");i.style.cssText="display:inline-block;width:10px;height:10px;border:1px solid #888;vertical-align:middle;margin-right:2px;background:"+sq;c.appendChild(i)}
+      c.appendChild(document.createTextNode(txt));if(col)c.style.color=col;if(bold)c.style.fontWeight="bold";tr.appendChild(c)}
+    var hr=document.createElement("tr");cell(hr,"");
+    (DATA.ring||[]).forEach(function(p){cell(hr,(PK[p]||p).split("=")[0],null,false,PC[p]||"#9aa5b1")});tb.appendChild(hr);
+    s.tf.forEach(function(e){var br=document.createElement("tr");cell(br,ko(e[0]),fcol(e[0],s.seats.indexOf(e[0])),true);
+      e[2].forEach(function(v){cell(br,v===null?"–":String(v),null,v===0)});tb.appendChild(br)});
+    td.appendChild(tb);d.appendChild(td)}
   row("라운드 점수 R1–R6",s.rounds,s.rounds.map(function(e,i){return "R"+(i+1)}));
   row("최종 점수",s.final);
   row("부스터",s.boosters);
@@ -481,7 +502,7 @@ function startPanel(){
   row("함선 기술 타일",s.ship_tech||[],tg(s.ship_tech));
   row("함선 연방 토큰",s.ship_fed||[],tg(s.ship_fed));
   row("함선 유물",s.ship_art||[],tg(s.ship_art));
-  row("연방 토큰 공급",s.fed_supply||[],tg(s.fed_supply));
+  row("테라포밍 5단계 연방 토큰",s.fed_supply||[],tg(s.fed_supply));
 }
 function draw(){
   startPanel();
