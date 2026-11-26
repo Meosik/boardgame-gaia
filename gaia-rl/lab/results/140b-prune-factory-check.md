@@ -1,0 +1,11 @@
+# 140b-prune-factory-check — 완료
+
+토론 1/1 코덱스 ② 수용(HANDOFF E362): 140a는 쉬운 교사의 스냅샷에 prune_indices만 불렀으므로, 새 팩토리 guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune 교사로 geo-quartet-24 1라운드를 직접 두어(쉬운 예산 budget_teacher 0) 막힌 후보를 고른 결정 수를 센다. 140a 결과(3R 38결정 후보 1784 → 1509, 기술 타일 245 · 광산 30 · 연방 0 걸림)는 후보 수이지 계산 절감률이 아니다(막힌 후보도 점수는 먼저 계산). 건강 기준: 종료 코드 0, FACTORY 줄 찍힘, chose_blocked 0, with_blocked ≥ 1. 판정 없음. 정리 턴: 기준을 채우면 140(시드 e362-20388@factions=Firaks,Itars,BalTaks,Xenos — 140a PICK, 4좌석 prune 스펙, 6R 1판) 큐. 예상 ≈ 1–10분, 제한 1시간.
+
+종료 코드 0
+
+```
+FACTORY decisions 51 with_blocked 9 chose_blocked 0
+```
+
+<sub>agentmaco · 커밋 4b85bf3 · 2026-11-26T19:55:18+09:00 → 2026-11-26T20:02:28+09:00</sub>
