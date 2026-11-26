@@ -326,7 +326,7 @@ HTML = r"""<!DOCTYPE html>
 <title>__TITLE__</title>
 <style>
 body{margin:0;font-family:sans-serif;background:#111;color:#eee}
-#wrap{padding:8px;max-width:900px;margin:0 auto}
+#wrap{padding:8px;max-width:1500px;margin:0 auto}
 h1{font-size:18px;margin:4px 0}
 button,select{font-size:16px;padding:10px 12px;margin:3px;border-radius:8px;border:2px solid #555;background:#222;color:#eee}
 button.on{border-width:3px;background:#333;font-weight:bold}
@@ -342,8 +342,11 @@ button.on{border-width:3px;background:#333;font-weight:bold}
 #start{margin:4px 0;font-size:12px}
 #start .row{display:flex;flex-wrap:wrap;gap:4px;align-items:flex-start;margin:3px 0}
 #start .lab{width:100%;font-weight:bold;color:#9ab}
-#start .t{width:64px;text-align:center;line-height:1.15;color:#ccc}
-#start .t img{width:64px;height:auto;display:block;border-radius:4px}
+#start .t{width:48px;text-align:center;line-height:1.15;color:#ccc;font-size:10px}
+#start .t img{width:48px;height:auto;display:block;border-radius:4px}
+#main{display:flex;flex-direction:row;gap:6px;align-items:flex-start}
+#main #start{flex:0 0 38%;max-height:calc(100vh - 150px);overflow-y:auto;margin:0;box-sizing:border-box}
+#main #svg{flex:1 1 auto;min-width:0;width:100%;height:auto;max-height:100vh}
 #start .t b{display:block;color:#fc6}
 #start .seats{font-size:14px}
 </style></head><body><div id="wrap">
@@ -351,8 +354,8 @@ button.on{border-width:3px;background:#333;font-weight:bold}
 <div id="games"></div>
 <div id="facs"></div>
 <div id="kinds"></div>
-<div id="start"></div>
-<svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+<div id="main"><div id="start"></div>
+<svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
 <div class="legend" id="legend"></div>
 <div id="cnt"></div>
 <div><button id="copy">결과 복사</button><button id="clear">이 판 지우기</button></div>

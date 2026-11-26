@@ -49,6 +49,7 @@ class MarkSheetTest(unittest.TestCase):
             self.assertEqual([g["id"] for g in data["games"]], ["pair-003", "pair-007"])
             self.assertEqual(len(data["games"][0]["hexes"]), 7)
             self.assertIn("mark-assets/", html)
+            self.assertIn('id="main"', html)
             files = sorted(os.listdir(os.path.join(td, "mark-assets")))
             self.assertIn("01.webp", files)
             self.assertIn("11-2.webp", files)  # Asteroid-only layout = side B
