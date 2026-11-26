@@ -25,7 +25,7 @@ e362-20388 Firaks(좌석 0) · Itars(1) · BalTaks(2) · Xenos(3), `teacher_ab r
 ## Activation (결정 로그 `decisions.jsonl.gz`, python 한 줄 집계)
 
 - **fed_plan 목표가 비교에 들어간 것: BalTaks만, 8결정 9번**(R2 5결정 · R3 3결정: federation-plan-mines 8 · federation-plan-up1 1). **이긴 횟수 0** — 매번 current-choice 또는 다른 root가 위(차 0.7 ~ 26.7, 가장 가까운 것 step 100 up1 272.2 대 root-10 277.9). 이기지 않았으니 `_plans`로 기억돼 실행된 계획도 없음.
-- **메뉴에서 밀려난 것(menu_dropped): 66번** — Firaks 42(R2 12 · R3 30), BalTaks 24(R2 10 · R3 14). Firaks는 비교에 한 번도 못 들어감. 밀린 까닭(비교 4자리 경쟁인지 예산 검사 E86인지)은 로그 칸으로 구분 안 됨.
+- **메뉴에서 밀려난 것(menu_dropped): 66번** — Firaks 42(R2 12 · R3 30), BalTaks 24(R2 10 · R3 14). Firaks는 비교에 한 번도 못 들어감. 밀린 까닭은 **예산 검사 E86 탈락**(토론 1/1 수용): `menu_dropped`는 `teacher_patches.py:4710`(예산 못 맞춘 연구 계획) · `:4711`(`plan_affordable` 실패)에서만 채워지고 비교 자리 선별은 그 뒤 `:4715`부터. 어느 비용·자원이 막았는지는 미확인.
 - **Itars · Xenos: fed_plan 목표 0**(menu_pool · menu · menu_dropped · compared 어디에도 없음). Xenos는 그래도 3연방(140과 같은 수).
 - fed_plan 목표가 보인 라운드는 2–3R뿐(R2 9 · R3 15 결정); 4R 이후 0.
 - 기존 three-federations-separate 목표는 그대로 비교에 나옴(Xenos 16 · BalTaks 6 · Firaks 5 · Itars 1).
@@ -33,7 +33,7 @@ e362-20388 Firaks(좌석 0) · Itars(1) · BalTaks(2) · Xenos(3), `teacher_ab r
 
 ## Reading (HANDOFF 1 order)
 
-- 연방 수: ② **활성 부족이 먼저** — 부품은 넷 중 둘에게만 후보를 냈고, 비교에 든 BalTaks에서도 한 번도 안 이김, Firaks는 메뉴에서 전부 밀림. 그래서 연방 수 6(140: 7)은 fed_plan의 효과를 말하지 못함(부품이 고른 수 0). ① 1판이라 잡음도 큼, ④ power_first가 같이 바뀜.
+- 연방 수: ② **활성 부족이 먼저** — 부품은 넷 중 둘에게만 후보를 냈고, 비교에 든 BalTaks에서도 한 번도 안 이김, Firaks는 메뉴에서 전부 밀림. 그래서 연방 수 6(140: 7)은 fed_plan의 효과를 말하지 못함. 단 **「계획 채택 0건」이지 「부품 미작동」은 아님**(토론 1/1 수용): 같은 플래그가 `federation_progress`에서 2파워 건물 기여를 묶음당 `FED_PLAN_TWO_POWER`개로 묶음(`teacher_patches.py:486` · `:496–498`) — 이 평가 변경의 영향은 미확인. ① 1판이라 잡음도 큼, ④ power_first가 같이 바뀜.
 - ③ 범위·구현: Itars · Xenos에서 목표가 하나도 안 생긴 까닭(예산 검사로 생성 단계에서 빠짐인지, 조건 미충족인지)은 로그에 없음 — 생성 단계 기록이 없으면 다음 실행도 같은 물음이 남음.
 - ⑤ 측정 창: 계획이 2–3R에만 나옴. 사전 설계(E371)의 의도가 2–4R 연방 준비라면 창은 맞고, 4R 이후 0은 기존 연방이 이미 있거나 예산 미달일 공산(미확인).
 - 건강·시간: 깨끗, 중앙 결정 시간 11.0 → 4.9초(1판, 원인 미분해).
@@ -43,7 +43,7 @@ e362-20388 Firaks(좌석 0) · Itars(1) · BalTaks(2) · Xenos(3), `teacher_ab r
 ## Proposal (user decision, nothing queued)
 
 - (ㄱ) fed_plan 생성 단계 기록(봇 턴 + Sonnet 작은 수정): 결정마다 만든 계획 수 · 예산 검사로 걸러진 수와 까닭을 로그 한 칸에 → 같은 판 재실행 없이도 다음 판에서 「왜 Itars · Xenos 0」인지 바로 보임. 
-- (ㄴ) 메뉴 밀림 원인 읽기(봇 턴, 코드 읽기만): Firaks 42번이 비교 4자리 경쟁인지 다른 필터인지.
+- (ㄴ) 예산 탈락 원인 읽기(봇 턴, 코드 읽기 + 로그 상태): Firaks 42번 · BalTaks 24번이 `plan_affordable`의 어느 비용·자원에서 막혔는지.
 - (ㄷ) 작업 트리 엔진 재빌드(사용자 명령, E367 (ㄱ)) → 140 · 146 1–3R 충전 재생.
 - (ㄹ) 리플레이 게시(사용자 원하면).
 Bot recommendation: (ㄴ) → (ㄱ) (봇 턴, 실험 아님). 새 판은 보류 해제 전 제안 안 함.
