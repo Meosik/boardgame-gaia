@@ -38,8 +38,10 @@ class PruneTile(unittest.TestCase):
             self.assertEqual(tp._tile_class(state, player, 9), want, rnd)
 
     def test_tile9_round_limit_only_where_table_says(self):
-        state, player = make_state('Taklons', rnd=5)
+        state, player = make_state('Xenos', rnd=5)
         self.assertEqual(tp._tile_class(state, player, 9), 'later')
+        state, player = make_state('Taklons', rnd=5)
+        self.assertEqual(tp._tile_class(state, player, 9), 'good')
         state, player = make_state('Itars', rnd=5)
         self.assertEqual(tp._tile_class(state, player, 9), 'later')
         state, player = make_state('Geodens', rnd=4)
