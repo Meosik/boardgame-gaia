@@ -1,0 +1,43 @@
+{
+ "kind": "command",
+ "note": "사용자(2026-11-26 「(나) ㄱㄱ」 — 초반 땅도 AI 판단으로 찍어 달라, 이 실행에 한해 실험 보류 해제): 138과 같은 20개 맵(같은 시드를 일부러 재사용 — 표시 시트의 맵을 맞추려고)에서 같은 교사(ships_menu1_all_tier cap60-p2, 비교 4, 4좌석 같은 교사)가 1라운드 끝까지 둔다(--stop-round 1 = 2라운드 시작 때 멈춤). 판정 없음(관찰). 쓰임: 표시 시트(mark_sheet)에 AI 시작 광산 + 1라운드에 새로 지은 건물(= AI의 초반 땅)을 미리 찍고 사용자는 이상한 것만 고침. 정리 턴: 판마다 좌석별 1R 새 광산 수 · 자리(QIC · 테라포밍 단계)만 적고, 138 배치와 시작 광산이 같은 판 수를 센다(탐색이라 달라질 수 있음 — 다르면 시트는 이번 판 기준). 예상 ≈ 2–4시간(실측 없음, 138 셋업만 26분), 제한 8시간. 리플레이는 139r에서 게시.",
+ "run": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "{python}",
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-cap60-p2.json",
+  "--games",
+  "20",
+  "--seeds",
+  "quartet-a-72220", "quartet-a-72577", "quartet-a-72715", "quartet-a-72907",
+  "quartet-b-64488", "quartet-b-67485", "quartet-b-68171", "quartet-b-69415",
+  "quartet-c-67629", "quartet-c-68570", "quartet-c-70334", "quartet-c-71680",
+  "quartet-d-61287", "quartet-d-64530", "quartet-d-65353", "quartet-d-67492",
+  "quartet-e-73387", "quartet-e-73826", "quartet-e-75183", "quartet-e-77089",
+  "--comparisons",
+  "4",
+  "--jobs",
+  "{jobs}",
+  "--fast-copy",
+  "--single",
+  "--stop-round",
+  "1",
+  "--output",
+  "runs/lab-139-r1-placement-sim-20"
+ ],
+ "metrics": "runs/lab-139-r1-placement-sim-20/results.json",
+ "seeds": [
+  "quartet-a-72220", "quartet-a-72577", "quartet-a-72715", "quartet-a-72907",
+  "quartet-b-64488", "quartet-b-67485", "quartet-b-68171", "quartet-b-69415",
+  "quartet-c-67629", "quartet-c-68570", "quartet-c-70334", "quartet-c-71680",
+  "quartet-d-61287", "quartet-d-64530", "quartet-d-65353", "quartet-d-67492",
+  "quartet-e-73387", "quartet-e-73826", "quartet-e-75183", "quartet-e-77089"
+ ],
+ "timeout_hours": 8
+}

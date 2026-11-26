@@ -1,0 +1,1 @@
+{"kind": "command", "note": "사용자 2026-11-26 「(나) ㄱㄱ」: 139(같은 20개 맵, 1라운드까지) 리플레이 20개 전부 게시 — 표시 시트가 이 리플레이에서 AI 시작 광산과 1R 초반 땅을 미리 찍는다(시트 생성은 사용자가 mark_sheet.py --replays로). 판정 없음.", "run": ["{python}", "tools/publish_faction_replays.py", "runs/lab-139-r1-placement-sim-20", "--destination", "/home/sohegi/gaia-media/ai-replays", "--all-games"], "timeout_hours": 1}
