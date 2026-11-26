@@ -356,7 +356,7 @@ def copy_assets(data, dest):
     return n
 
 
-def render(data, title):
+def render(data, title, storage_key):
     # asset names are stored by basename in the page (files are copied flat)
     d = json.loads(json.dumps(data))
     if d.get("board"):
@@ -371,7 +371,9 @@ def render(data, title):
                 e[1] = os.path.basename(e[1]) if e[1] else None
     blob = json.dumps(d, ensure_ascii=False, separators=(",", ":"))
     blob = blob.replace("</", "<\\/")
-    return (HTML.replace("__TITLE__", title.replace("<", "&lt;"))
+    sk = json.dumps(storage_key).replace("</", "<\\/")
+    return (HTML.replace("__SK__", sk)
+            .replace("__TITLE__", title.replace("<", "&lt;"))
             .replace("__DATA__", blob))
 
 
@@ -382,6 +384,8 @@ def main():
     ap.add_argument("--assets-out", default=None,
                     help="folder for copied art (default: mark-assets next to --out)")
     ap.add_argument("--title", default="실험 138 초반 위치 표시")
+    ap.add_argument("--storage-key", default=None,
+                    help="localStorage key (default: <--out basename without ext>-v2)")
     a = ap.parse_args()
     paths = sorted(glob.glob(os.path.expanduser(a.replays)))
     if not paths:
@@ -393,7 +397,8 @@ def main():
     data = build_data(paths, prefix)
     n = copy_assets(data, assets)
     with open(out, "w", encoding="utf-8") as f:
-        f.write(render(data, a.title))
+        f.write(render(data, a.title, a.storage_key
+                       or os.path.splitext(os.path.basename(out))[0] + "-v2"))
     print("wrote %s: %d games, %d bytes, %d asset files copied to %s"
           % (out, len(data["games"]), os.path.getsize(out), n, assets))
 
@@ -447,7 +452,7 @@ var PC={Terra:"#2e6fd8",Volcanic:"#e8862a",Oxide:"#c0392b",Desert:"#f1c40f",Swam
 var PK={Terra:"테란=파랑",Volcanic:"화산=주황",Oxide:"산화=빨강",Desert:"사막=노랑",Swamp:"늪=갈색",Titanium:"티타늄=회색",Ice:"얼음=흰색",Gaia:"가이아=초록",Transdim:"차원 변환=보라",Asteroid:"소행성",ProtoPlanet:"원시 행성"};
 var FC=["#00e5ff","#ff2bd6","#aaff00","#ff5a36"];
 function fcol(f,i){return PC[DATA.home[f]]||FC[i%4]}
-var SK="mark138-v2";
+var SK=__SK__;
 var store={};try{store=JSON.parse(localStorage.getItem(SK)||"{}")}catch(e){store={}}
 var gi=0,fi=0,kind="start";
 function save(){try{localStorage.setItem(SK,JSON.stringify(store))}catch(e){}}
