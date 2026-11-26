@@ -3501,6 +3501,7 @@ def _fed_plan_groups(player, touching):
 
 def fed_plan_goals(snapshot):
     """federation-plan-* goals for the strongest group with power FED_PLAN_START..6 (empty when none)."""
+    from itertools import product
     from four_factions.preparation import Goal
     from strategy_teacher import kind
     state, actor = snapshot['state'], snapshot.get('player')
@@ -3533,34 +3534,50 @@ def fed_plan_goals(snapshot):
             planets.append((d, cost.get('ore', 0) + cost.get('qic', 0), coord))
     planets.sort()
     colonies = [Goal(f'colony@{c}', 'colony', c) for _, _, c in planets]
-    mines = [h for h in hexes if kinds[h] == 'Mine']
-    stations = [h for h in hexes if kinds[h] == 'TradingStation']
     has_institute = any(kind(s['kind']) == 'PlanetaryInstitute' for s in player['structures'])
+    # Upgrade shapes of the group (one action = +1 power): mine -> station (+1), station -> institute (+1),
+    # mine -> institute (+2, two actions); one institute per player. User 2026-11-27: with enough good planets
+    # nearby mines alone are ideal; with only one or two the missing power comes from upgrades.
+    choices = []
+    for h in hexes:
+        k = kinds[h]
+        options_h = [(k, 0)]
+        if k == 'Mine':
+            options_h.append(('TradingStation', 1))
+        if k in ('Mine', 'TradingStation') and not has_institute:
+            options_h.append(('PlanetaryInstitute', 2 if k == 'Mine' else 1))
+        choices.append(options_h)
+    upgrades = {}   # (gain, limit) -> best upgrade tuple
+    for combo in product(*choices):
+        if sum(final == 'PlanetaryInstitute' for final, _ in combo) > 1:
+            continue
+        gain = sum(g for _, g in combo)
+        if gain > need or need - gain > len(colonies):
+            continue
+        final_two = two + sum((final in ('TradingStation', 'ResearchLab')) - (_structure_power({'kind': kinds[h]}) == 2)
+                              for h, (final, g) in zip(hexes, combo) if g)
+        ups = tuple(Goal(f'{final}@{h}', 'upgrade', h, final) for h, (final, g) in zip(hexes, combo) if g)
+        for limit in (FED_PLAN_TWO_POWER, FED_PLAN_TWO_POWER + 1):
+            if final_two <= limit and (gain, limit) not in upgrades:
+                upgrades[(gain, limit)] = ups
 
-    def plan(shape, upgrades, limit):
-        rest = need - len(upgrades)
-        if rest < 0 or rest > len(colonies):
-            return None
-        if two + sum(u.target == 'TradingStation' for u in upgrades) > limit:
-            return None
-        steps = tuple(colonies[:rest]) + tuple(upgrades)
-        satellites = sum(d - 1 for d, _, _ in planets[:rest])
-        return (len(steps), satellites, Goal(f'federation-plan-{shape}', 'ordered', steps=steps,
-                                             sources=('user-2026-11-27',)))
+    def plans(limit, shape):
+        out = []
+        for (gain, lim), ups in sorted(upgrades.items()):
+            if lim != limit:
+                continue
+            rest = need - gain
+            steps = tuple(colonies[:rest]) + ups
+            satellites = sum(d - 1 for d, _, _ in planets[:rest])
+            name = shape if shape else ('mines' if gain == 0 else f'up{gain}')
+            out.append((gain, satellites, Goal(f'federation-plan-{name}', 'ordered', steps=steps,
+                                               sources=('user-2026-11-27',))))
+        return out
 
-    options = [plan('mines', (), FED_PLAN_TWO_POWER)]
-    if stations and not has_institute:
-        options.append(plan('institute', (Goal(f'PlanetaryInstitute@{stations[0]}', 'upgrade', stations[0],
-                                                'PlanetaryInstitute'),), FED_PLAN_TWO_POWER))
-    if mines:
-        options.append(plan('station', (Goal(f'TradingStation@{mines[0]}', 'upgrade', mines[0], 'TradingStation'),),
-                            FED_PLAN_TWO_POWER))
-    options = [o for o in options if o is not None]
+    options = plans(FED_PLAN_TWO_POWER, None)
     if not options and not _fed_plan_exception_used(player):
-        ups = tuple(Goal(f'TradingStation@{h}', 'upgrade', h, 'TradingStation')
-                    for h in mines[:max(0, 3 - two)])
-        o = plan('ts3', ups, FED_PLAN_TWO_POWER + 1)
-        options = [o] if o is not None else []
+        options = plans(FED_PLAN_TWO_POWER + 1, 'ts3')[:1]
+    # Fewest upgrades first (mines ideal), then fewest satellites.
     return [g for _, _, g in sorted(options, key=lambda o: o[:2])]
 
 
