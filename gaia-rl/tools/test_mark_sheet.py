@@ -102,13 +102,15 @@ class WheelTest(unittest.TestCase):
 
     def test_distance(self):
         d = self.ms.wheel_distance
-        self.assertEqual(d(WHEEL, "Volcanic", "Desert"), 1)
-        self.assertEqual(d(WHEEL, "Volcanic", "Ice"), 3)
-        self.assertEqual(d(WHEEL, "Terra", "Terra"), 0)
-        self.assertIsNone(d(WHEEL, "Asteroid", "Terra"))
+        ring = self.ms.PLANET_RING
+        self.assertEqual(d(ring, "Terra", "Oxide"), 1)
+        self.assertEqual(d(ring, "Terra", "Desert"), 3)
+        self.assertEqual(d(ring, "Titanium", "Terra"), 2)
+        self.assertEqual(d(ring, "Terra", "Terra"), 0)
+        self.assertIsNone(d(ring, "Asteroid", "Terra"))
 
     def test_pairs(self):
-        c = self.ms.faction_closeness(WHEEL, ["Geodens", "Nevlas", "Xenos", "Tinkeroids"])
+        c = self.ms.faction_closeness(self.ms.PLANET_RING, ["Geodens", "Nevlas", "Xenos", "Tinkeroids"])
         self.assertEqual(len(c), 6)
         self.assertEqual([x[2] for x in c if x[2] is None], [None] * 3)
         self.assertIsNone(c[-1][2])

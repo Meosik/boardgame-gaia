@@ -131,6 +131,10 @@ def tid_of(x):
     return x.get("id") if isinstance(x, dict) else x
 
 
+# gaia-engine/src/rules/terraforming.rs PLANET_RING (fixed ring used for terraform steps)
+PLANET_RING = ["Terra", "Oxide", "Volcanic", "Desert", "Swamp", "Titanium", "Ice"]
+
+
 def wheel_distance(wheel, a, b):
     """Cyclic terraforming distance on the wheel (engine: rules/terraforming.rs ring_distance)."""
     if a not in wheel or b not in wheel:
@@ -164,7 +168,7 @@ def game_start_panel(st):
     seats = [by_id.get(pid, str(pid)) for pid in st.get("turn_order") or []]
     return {"rounds": rounds, "final": final, "boosters": boosters, "std": std,
             "adv": adv, "seats": seats,
-            "close": faction_closeness(st.get("terraforming_color_order") or [], seats)}
+            "close": faction_closeness(PLANET_RING, seats)}
 
 
 def xy_of(c):
