@@ -5733,7 +5733,7 @@ PRUNE_TILE_TABLE = {
     'Xenos': {'good': (3, 5, 10, 2), 'avoid': (8,)},
     'Gleens': {'good': (3, 8)},
     'Ambas': {'good': (3, 6), 'avoid': (2,)},
-    'Itars': {'good': (10, 8), 'late': {9: 4}},
+    'Itars': {'good': (10, 8)},
     'Nevlas': {'good': (10, 2, 5, 3), 'not_under_gaia': (10,)},
     'Firaks': {'good': (2, 10, 4, 6), 'avoid': (8,)},
     'BalTaks': {'good': (4, 3, 6)},
@@ -5747,7 +5747,6 @@ PRUNE_TILE_TABLE = {
     'Tinkeroids': {'good': (6, 11)},
 }
 PRUNE_TILE_COMMON = (13, 4, 11, 10)    # 1.2 공통: ore + 3 knowledge, this round's mine tiles, charge 4
-PRUNE_TILE_LATE_FROM = 4               # one-shot tiles worth more later (9) wait until this round
 # E369 tiers by (tile class, track on plan): lower is kept, the rest of the tile family is blocked.
 PRUNE_TILE_TIERS = {('good', True): 0, ('good', False): 1, ('ok', True): 1, ('ok', False): 2,
                     ('avoid', True): 2, ('later', True): 3, ('avoid', False): 4, ('later', False): 4}
@@ -5773,11 +5772,13 @@ def _tile_class(state, player, tile):
         (good if rnd <= 2 and player['research_tracks'].get('navigation', 0) < 2 else avoid).add(12)
     if tile == 11 and kinds.count('Mine') >= 8:
         avoid.add(11)
-    late = (row or {}).get('late', {9: PRUNE_TILE_LATE_FROM} if 9 not in good else {})
+    late = (row or {}).get('late', {})
     if tile in late and rnd < late[tile]:
         return 'later'
     if tile in late:
         good.add(tile)
+    elif tile == 9 and 9 not in good:
+        return 'later'                           # one-shot tile loses future reward; round switch only where the table says
     return 'avoid' if tile in avoid else 'good' if tile in good else 'ok'
 
 
@@ -6048,8 +6049,15 @@ def prune_indices(snapshot):
     candidates = snapshot['candidates']
     families = {'mine': (set(), set()), 'power_tf': (set(), set())}
     tiers = {i: t for i, c in enumerate(candidates) if (t := _prune_tile(state, player, c['action'])) is not None}
-    best = min(tiers.values(), default=None)
-    families['tile'] = (set(tiers), {i for i, t in tiers.items() if t > best})
+    groups = {}
+    for i in tiers:
+        base = {k: v for k, v in candidates[i]['action'].items() if k != 'tech_tile_choice'}
+        groups.setdefault(json.dumps(base, sort_keys=True, default=str), []).append(i)
+    tile_out = set()
+    for idxs in groups.values():
+        best = min(tiers[i] for i in idxs)
+        tile_out |= {i for i in idxs if tiers[i] > best}
+    families['tile'] = (set(tiers), tile_out)
     for i, c in enumerate(candidates):
         for name, test in (('mine', _prune_mine), ('power_tf', _prune_power_tf)):
             verdict = test(state, player, c['action'])

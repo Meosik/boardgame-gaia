@@ -37,6 +37,16 @@ class PruneTile(unittest.TestCase):
             state, player = make_state('Geodens', slots=[2, 3, 4, 10, 6, 7, 5, 8, 9], rnd=rnd)
             self.assertEqual(tp._tile_class(state, player, 9), want, rnd)
 
+    def test_tile9_round_limit_only_where_table_says(self):
+        state, player = make_state('Taklons', rnd=5)
+        self.assertEqual(tp._tile_class(state, player, 9), 'later')
+        state, player = make_state('Itars', rnd=5)
+        self.assertEqual(tp._tile_class(state, player, 9), 'later')
+        state, player = make_state('Geodens', rnd=4)
+        self.assertNotEqual(tp._tile_class(state, player, 9), 'later')
+        state, player = make_state('Geodens', rnd=3)
+        self.assertEqual(tp._tile_class(state, player, 9), 'later')
+
     def test_bescods_tile3_by_labs(self):
         for labs, want in ((0, 'avoid'), (1, 'ok')):
             state, player = make_state('Bescods', labs=labs)
@@ -68,6 +78,12 @@ class PruneTile(unittest.TestCase):
     def test_indices_block_worse_tiers(self):
         state, _ = make_state('Taklons')
         got = self.run_indices(state, [upgrade(5, 'Economy'), upgrade(5, 'Terraforming'), upgrade(8, 'Economy')])
+        self.assertEqual(got, {1, 2})
+
+    def test_indices_tiers_compared_per_base_action(self):
+        state, _ = make_state('Taklons')
+        got = self.run_indices(state, [upgrade(5, 'Economy', 'x'), upgrade(5, 'Terraforming', 'x'),
+                                       upgrade(8, 'Economy', 'x'), upgrade(5, 'Terraforming', 'y')])
         self.assertEqual(got, {1, 2})
 
     def test_indices_same_tier_keeps_all(self):
