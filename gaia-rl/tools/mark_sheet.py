@@ -2,8 +2,9 @@
 """Generate one self-contained HTML page where the owner taps map hexes to mark
 per-faction start hexes and early sites for lab experiment 138 replays.
 
-Only the bare map (hexes, planets, sector centres) and the faction list are
-embedded; no structures or teacher placements, so marks are unbiased.
+The page opens with the AI teacher's actual setup placements (structures in the
+last replay frame) already marked; the owner only corrects the odd ones, and
+the page lists what was changed (removed / added hexes per faction).
 """
 import argparse
 import glob
@@ -264,8 +265,24 @@ def load_game(path):
         hexes.append([q, r, pt, img, covered])
     hexes.sort(key=lambda x: (x[0], x[1]))
     factions = [p["faction"] for p in st["players"]]
+    # teacher's setup placements: structure hexes of each player in the LAST frame
+    last = d["frames"][-1]["state"]
+    by_hex = {}
+    for key, h in (last.get("board", {}).get("hexes") or {}).items():
+        for s in (h.get("structures") or []) if isinstance(h, dict) else []:
+            by_hex.setdefault(s.get("owner"), set()).add("%d,%d" % xy_of(key))
+    ai = {}
+    for p in last.get("players") or []:
+        keys = set()
+        for s in p.get("structures") or []:
+            if s.get("hex") is not None:
+                keys.add("%d,%d" % xy_of(s["hex"]))
+        if not keys:
+            keys = by_hex.get(p.get("player_id"), set())
+        ai[p.get("faction")] = sorted(keys, key=parse_xy)
     return {"id": "pair-%03d" % int(m.group(1)), "hexes": hexes,
-            "sectors": sectors, "factions": factions, "start": game_start_panel(st)}
+            "sectors": sectors, "factions": factions, "start": game_start_panel(st),
+            "ai": {f: ai.get(f, []) for f in factions}}
 
 
 def deep_hexes(s):
@@ -412,6 +429,7 @@ button.on{border-width:3px;background:#333;font-weight:bold}
 #start .seats{font-size:14px}
 </style></head><body><div id="wrap">
 <h1>__TITLE__</h1>
+<div style="font-size:14px;color:#fc6;margin:2px 0">AI가 둔 시작 자리가 찍혀 있습니다. 이상한 것만 탭해서 빼거나 옮기세요.</div>
 <div id="games"></div>
 <div id="facs"></div>
 <div id="kinds"></div>
@@ -419,7 +437,9 @@ button.on{border-width:3px;background:#333;font-weight:bold}
 <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
 <div class="legend" id="legend"></div>
 <div id="cnt"></div>
-<div><button id="copy">결과 복사</button><button id="clear">이 판 지우기</button></div>
+<div><button id="copy">결과 복사</button><button id="clear">이 판 되돌리기</button></div>
+<div style="font-size:13px;margin:4px 0">바뀐 것</div>
+<pre id="chg" style="font-size:12px;white-space:pre-wrap;margin:0 0 8px;color:#cde"></pre>
 <textarea id="ta" readonly></textarea>
 <script>
 var DATA=__DATA__;
@@ -427,15 +447,27 @@ var PC={Terra:"#2e6fd8",Volcanic:"#e8862a",Oxide:"#c0392b",Desert:"#f1c40f",Swam
 var PK={Terra:"테란=파랑",Volcanic:"화산=주황",Oxide:"산화=빨강",Desert:"사막=노랑",Swamp:"늪=갈색",Titanium:"티타늄=회색",Ice:"얼음=흰색",Gaia:"가이아=초록",Transdim:"차원 변환=보라",Asteroid:"소행성",ProtoPlanet:"원시 행성"};
 var FC=["#00e5ff","#ff2bd6","#aaff00","#ff5a36"];
 function fcol(f,i){return PC[DATA.home[f]]||FC[i%4]}
-var SK="mark138-v1";
+var SK="mark138-v2";
 var store={};try{store=JSON.parse(localStorage.getItem(SK)||"{}")}catch(e){store={}}
 var gi=0,fi=0,kind="start";
 function save(){try{localStorage.setItem(SK,JSON.stringify(store))}catch(e){}}
 function ko(f){return DATA.ko[f]||f}
 function G(){return DATA.games[gi]}
 function gm(){var id=G().id;return store[id]||(store[id]={})}
-function fm(f){var g=gm();return g[f]||(g[f]={start:[],early:[]})}
-function hasMarks(id){var g=store[id];if(!g)return false;for(var f in g)if(g[f].start.length||g[f].early.length)return true;return false}
+function aiOf(f){return (G().ai&&G().ai[f])||[]}
+function fm(f){var g=gm();return g[f]||(g[f]={start:aiOf(f).slice(),early:[]})}
+function sameSet(a,b){return a.length==b.length&&a.every(function(k){return b.indexOf(k)>=0})}
+function hasMarks(id){var g=store[id];if(!g)return false;if(g._ok)return true;
+  var gg=null;DATA.games.forEach(function(x){if(x.id==id)gg=x});
+  for(var f in g){if(f=="_ok")continue;var a=(gg&&gg.ai&&gg.ai[f])||[];
+    if(!sameSet(g[f].start,a)||g[f].early.length)return true}return false}
+function diffs(g){var s=store[g.id],out=[];if(!s)return out;
+  g.factions.forEach(function(f){var m=s[f];if(!m)return;var a=(g.ai&&g.ai[f])||[];
+    var rem=a.filter(function(k){return m.start.indexOf(k)<0}),add=m.start.filter(function(k){return a.indexOf(k)<0});
+    if(rem.length||add.length||m.early.length)out.push(ko(f)+" 뺀: "+(rem.join(" ")||"-")+" / 넣은: "+(add.join(" ")||"-")+(m.early.length?" / 초반 땅: "+m.early.join(" "):""))});
+  return out}
+function changes(){var t=[];DATA.games.forEach(function(g,i){var d=diffs(g);if(d.length)t.push("판 "+(i+1)+" ("+g.id+")\n  "+d.join("\n  "))});
+  return t.length?t.join("\n"):"(바뀐 것 없음, AI 그대로)"}
 function el(n,a,p){var e=document.createElementNS("http://www.w3.org/2000/svg",n);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
 function btn(t,on,fn,col){var b=document.createElement("button");b.textContent=t;if(on)b.className="on";if(col)b.style.borderColor=col;b.onclick=fn;return b}
 var S=10,SQ=Math.sqrt(3);
@@ -459,7 +491,11 @@ function ui(){
   k.appendChild(btn("스타트",kind=="start",function(){kind="start";ui()}));
   k.appendChild(btn("초반 땅",kind=="early",function(){kind="early";ui()}));
   var n=0;DATA.games.forEach(function(g){if(hasMarks(g.id))n++});
-  document.getElementById("cnt").textContent="표시한 판: "+n+" / "+DATA.games.length;
+  document.getElementById("cnt").textContent="확인·수정한 판: "+n+" / "+DATA.games.length;
+  var ok=document.createElement("button");ok.textContent=(store[G().id]&&store[G().id]._ok?"✓ ":"")+"이 판 확인";
+  if(store[G().id]&&store[G().id]._ok)ok.className="on";
+  ok.onclick=function(){var s=gm();if(s._ok)delete s._ok;else s._ok=true;save();ui()};k.appendChild(ok);
+  document.getElementById("chg").textContent=changes();
 }
 function toggle(key){
   var m=fm(G().factions[fi]);
@@ -563,9 +599,12 @@ function marks(){
   var mg=document.getElementById("mg");mg.innerHTML="";
   var g=G(),gmk=store[g.id]||{};
   g.factions.forEach(function(f,i){
-    var m=gmk[f];if(!m)return;var col=fcol(f,i),lab=ko(f).replace(/\s/g,"").slice(0,2);
+    var ai=aiOf(f),m=gmk[f]||{start:ai.slice(),early:[]};var col=fcol(f,i),lab=ko(f).replace(/\s/g,"").slice(0,2);
+    ai.forEach(function(k){if(m.start.indexOf(k)<0){var xy=k.split(","),p=px(+xy[0],+xy[1]);
+      el("circle",{cx:p[0],cy:p[1],r:S*(0.78-i*0.06),fill:"none",stroke:col,"stroke-width":.8,"stroke-dasharray":"1.5 1.5","stroke-opacity":.55},mg)}});
     function put(key,txt,big){var xy=key.split(",");var p=px(+xy[0],+xy[1]);
       var off=(i-1.5)*1.6;
+      if(big&&ai.indexOf(key)<0)el("circle",{cx:p[0],cy:p[1],r:S*(0.78-i*0.06)+1.6,fill:"none",stroke:"#fff","stroke-width":1.4},mg);
       el("circle",{cx:p[0],cy:p[1],r:S*(0.78-i*0.06),fill:"none",stroke:"#000","stroke-width":(big?2.2:1.6)+1.2},mg);
       el("circle",{cx:p[0],cy:p[1],r:S*(0.78-i*0.06),fill:"none",stroke:col,"stroke-width":big?2.2:1.6},mg);
       var t=el("text",{x:p[0]+off,y:p[1]+S*(0.35),"font-size":4,"text-anchor":"middle",fill:col,stroke:"#000","stroke-width":.5,"paint-order":"stroke","font-weight":"bold"},mg);
@@ -577,8 +616,8 @@ function marks(){
 function result(){
   var o={};o[DATA.exp]={};
   DATA.games.forEach(function(g){var s=store[g.id];if(!s)return;var r={};
-    for(var f in s){if(s[f].start.length||s[f].early.length)r[f]={start:s[f].start,early:s[f].early}}
-    if(Object.keys(r).length)o[DATA.exp][g.id]=r});
+    for(var f in s){if(f=="_ok")continue;if(s[f].start.length||s[f].early.length)r[f]={start:s[f].start,early:s[f].early}}
+    if(Object.keys(r).length||s._ok)o[DATA.exp][g.id]=r});
   return JSON.stringify(o);
 }
 document.getElementById("copy").onclick=function(){
