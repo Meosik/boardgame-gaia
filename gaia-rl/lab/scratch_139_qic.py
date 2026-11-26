@@ -39,7 +39,7 @@ for res in sorted(R9.glob('pair-*/game-*/result.json')):
             if t in RANGE:
                 key = 'range-action'
             elif d <= reach:
-                key = 'in reach (reach %d)' % reach
+                key = 'in reach (reach %d, distance %d)' % (reach, d)
             else:
                 key = 'beyond reach %d: qic spent %s' % (reach, None if q0 is None else q0 - q1)
             out[key] += 1
