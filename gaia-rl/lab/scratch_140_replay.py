@@ -45,8 +45,12 @@ bad_digest = chose_blocked = with_blocked = 0
 kinds = collections.Counter()
 by_round = collections.defaultdict(lambda: [0, 0, 0])
 logged_mismatch = 0
+consumed = 0
 for r in rows:
-    bad_digest += ab.digest(snap) != r['digest']
+    if ab.digest(snap) != r['digest']:
+        print('DIGEST MISMATCH at step', r['step'], 'round', r['round'])
+        bad_digest += 1
+        break
     if (snap['decision_id'] != r['decision_id'] or len(snap['candidates']) != r['candidates']
             or snap['candidates'][r['index']] != r['chosen']):
         print('DIVERGE at step', r['step'], 'round', r['round'], 'ncand', len(snap['candidates']), r['candidates'],
@@ -74,10 +78,14 @@ for r in rows:
     b[2] += len(out)
     env.step(r['decision_id'], r['index'])
     snap = json.loads(env.snapshot_json())
+    consumed += 1
+verified = bad_digest == 0 and consumed == len(rows) and env.is_terminal()
+pre = '' if verified else 'UNVERIFIED '
+print('REPLAY verified', verified, 'consumed', consumed, 'of', len(rows))
 print('REPLAY rows', len(rows), 'digest_mismatch', bad_digest, 'terminal', env.is_terminal(),
       'logged_count_mismatch', logged_mismatch)
-print('REPLAY with_blocked', with_blocked, 'chose_blocked', chose_blocked)
-print('REPLAY kinds', sorted(kinds.items()))
+print(pre + 'REPLAY with_blocked', with_blocked, 'chose_blocked', chose_blocked)
+print(pre + 'REPLAY kinds', sorted(kinds.items()))
 print('REPLAY by_round (decisions, candidates, blocked)', dict(sorted(by_round.items())))
 for seat, p in enumerate(snap['state']['players']):
     print('SEAT', seat, p['faction'], 'feds', len(p.get('federations') or []), 'vp', p.get('vp'))

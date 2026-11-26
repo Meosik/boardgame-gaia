@@ -46,8 +46,7 @@ R6 has the highest blocked share (21.9%).
 **Not done: blocked-choice check and per-kind tags.** `lab/scratch_140_replay.py` replays the logged choices and
 recomputes `prune_indices` with a rule tag per blocked candidate, but in the work tree the replay leaves the log at
 step 17 (round 1: 32 candidates here, 34 logged; digest differs from step 0). The work-tree `gaia_rl` build is not the
-lab's build (same source commit). Up to step 17 the recomputed counts match the log (0 mismatches; 1 decision, 2 P1
-mine candidates blocked, not chosen). So "0 blocked chosen" and "does F1/F2/F5 fire" stay open.
+lab's build (same source commit). The digest already differs at step 0, so the matching counts before step 17 are no evidence. The script now stops at the first digest mismatch and reports `verified` only when every digest matches, the whole log is consumed and the game ends terminal (debate 1/1); only a verified run can confirm 0 blocked chosen. So "0 blocked chosen" and "does F1/F2/F5 fire" stay open.
 
 ## Reading (HANDOFF 1 order)
 
@@ -64,6 +63,6 @@ No code or deployment change. Lab queue: empty after this game; experiment hold 
 
 - (ㄱ) Rebuild the work-tree engine (owner command: `cd ~/projects/gaia-work/gaia-rl` then
   `VIRTUAL_ENV=$PWD/.venv .venv/bin/maturin develop --release`), then one bot turn runs `lab/scratch_140_replay.py`
-  and `charge_rounds.py`: blocked-choice 0 check, F1/F2/F5 tags, R1–3 charges. Cost: a few minutes + one bot turn.
+  and `charge_rounds.py`: blocked-choice 0 check, F1/F2/F5 tags, R1–3 charges. Cost: a few minutes + one bot turn. Only `REPLAY verified True` counts.
 - (ㄴ) Publish the game's replay (Xenos seat) for the user to watch. Bot turn.
 - Bot recommendation: (ㄱ) then (ㄴ); no new games while the theory phase holds.
