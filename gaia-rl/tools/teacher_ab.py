@@ -450,7 +450,7 @@ def seat_script_step(candidates, moves):
 
 
 def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, max_steps=None, script=None,
-         seat_scripts=None):
+         seat_scripts=None, stop_after_setup=False):
     """One game. With stop_round, the game ends when round stop_round+1 starts and 'scores' are the
     VP held then (user 2026-10-07: A/B is judged by charges in rounds 1-3, later rounds are unused).
     With state (a file holding an engine state, players numbered 0..3), the game starts there instead of
@@ -489,6 +489,11 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, ma
             with gzip.open(output/'decisions.jsonl.gz', 'wt') as trace:
                 while (not env.is_terminal() and not (stop_round and snapshot['state']['round'] > stop_round)
                        and not (max_steps and snapshot['steps'] >= max_steps)):
+                    if stop_after_setup and not any(c['action']['type'] == 'PlaceStartingStructure'
+                                                    for c in snapshot['candidates']):
+                        with (output/'setup_state.json').open('w') as handle:
+                            json.dump(snapshot['state'], handle, indent=1)
+                        break
                     seat, arm = snapshot['player'], arm_of[snapshot['player']]
                     faction = factions[seat]
                     limits = snapshot.get('candidate_generation') or {}
@@ -605,7 +610,8 @@ def run(args):
             if frozen_problems(teacher):
                 raise SystemExit(f'Frozen teacher {arm} changed during the match; stopping')
         path = output/f"pair-{pair['pair']:03d}"/f"game-{g}-A{''.join(map(str, game['a_seats']))}"
-        result = play(path, pair['seed'], teachers, set(game['a_seats']), clock, args.stop_round)
+        result = play(path, pair['seed'], teachers, set(game['a_seats']), clock, args.stop_round,
+                       stop_after_setup=args.stop_after_setup)
         with lock:
             finished.append(str(path))
             write_json(output/'progress.json', {'games_done': len(finished), 'games_planned': len(jobs),
@@ -650,6 +656,8 @@ def main():
                        help='Decision-preserving teacher speedups in workers (tools/fast_teacher.py)')
     match.add_argument('--stop-round', type=int,
                        help='End each game when this round is over; scores are then the VP held')
+    match.add_argument('--stop-after-setup', action='store_true',
+                       help='End each game when all starting structures are placed (before boosters); writes setup_state.json')
     match.add_argument('--single', action='store_true',
                        help='One game per seed (N = number of seeds): self-play data collection with A = B, no pair differences')
     match.add_argument('--output', required=True)

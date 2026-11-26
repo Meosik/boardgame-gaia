@@ -214,5 +214,72 @@ class ComparedPlansTests(unittest.TestCase):
         self.assertEqual(rows[0]['value'], 1.23)
 
 
+def _setup_snapshots():
+    def snap(step, kinds, marker):
+        return {'steps': step, 'decision_id': step, 'player': 0,
+                'candidates': [{'action': {'type': k}} for k in kinds],
+                'state': {'round': 0, 'marker': marker,
+                          'players': [{'faction': 'Terrans', 'vp': 10}, {'faction': 'Xenos', 'vp': 10}]}}
+    return [snap(0, ['PlaceStartingStructure'], 'first'), snap(1, ['PlaceStartingStructure'], 'last'),
+            snap(2, ['PickBooster'], 'after-setup'), snap(3, ['PickBooster'], 'later')]
+
+
+class StopAfterSetupTests(unittest.TestCase):
+    def play(self, stop_after_setup):
+        import sys
+        snapshots, chosen = _setup_snapshots(), []
+
+        class FakeEnvironment:
+            def __init__(self, *args):
+                self.at = 0
+            def snapshot_json(self):
+                return json.dumps(snapshots[self.at])
+            def is_terminal(self):
+                return self.at >= len(snapshots)-1
+            def step(self, decision_id, index):
+                self.at += 1
+            def final_scores(self):
+                return {0: 1, 1: 2}
+
+        class FakeWorker:
+            def __init__(self, *args):
+                self.at = 0
+            def request(self, command, timeout=None):
+                if command is None:
+                    return {'digest': ab.digest(snapshots[0])}
+                if command['op'] == 'choose':
+                    chosen.append(snapshots[self.at]['candidates'][0]['action']['type'])
+                    return {'decision_id': self.at, 'index': 0, 'fallback_timeout': False,
+                            'unsearched_comparisons': 0, 'completed_comparisons': 0, 'selected': 'x'}
+                self.at += 1
+                return {'digest': ab.digest(snapshots[self.at])}
+            def close(self):
+                pass
+
+        clock = {'long_seconds': 1}
+        with tempfile.TemporaryDirectory() as tmp, patch.object(ab, 'Worker', FakeWorker), \
+                patch.dict(sys.modules, {'gaia_rl': type(sys)('gaia_rl')}):
+            sys.modules['gaia_rl'].Environment = FakeEnvironment
+            output = Path(tmp)/'game'
+            result = ab.play(output, 'seed', {'A': {}, 'B': {}}, {0}, clock, stop_after_setup=stop_after_setup)
+            written = output/'setup_state.json'
+            state = json.loads(written.read_text()) if written.exists() else None
+        return result, chosen, state
+
+    def test_stops_before_the_booster_pick_and_writes_the_state(self):
+        result, chosen, state = self.play(True)
+        self.assertEqual(chosen, ['PlaceStartingStructure', 'PlaceStartingStructure'])
+        self.assertEqual(state, _setup_snapshots()[2]['state'])
+        self.assertTrue(result['complete'])
+        self.assertEqual(result['steps'], 2)
+        self.assertNotIn('failure_kind', result)
+
+    def test_without_the_option_the_game_goes_on(self):
+        result, chosen, state = self.play(False)
+        self.assertEqual(chosen[2:], ['PickBooster'])
+        self.assertIsNone(state)
+        self.assertEqual(result['steps'], 3)
+
+
 if __name__ == '__main__':
     unittest.main()
