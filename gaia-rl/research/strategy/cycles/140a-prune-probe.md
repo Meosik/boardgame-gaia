@@ -48,6 +48,7 @@ Seed arg for 140: `e362-20388@factions=Firaks,Itars,BalTaks,Xenos`.
   `…_ships_menu1_all_tier_prune` really never picks a blocked candidate in play is 140b (queued, debate 1/1).
 - ⑥ condition: the fit score is a home-area proxy (no ship range, no Lost Fleet, no round/final tiles), so
   "best four" means "best starting land on this map", not a measured strength.
+- Not tested here: the user's 11-26 principle (E364) — keep each faction's must-take tile whatever track it sits under, and let a no-gaiaforming plan give up gaia tiles. The current filter only trims the track choice of the middle-row tiles (`tools/teacher_patches.py:5723–5732`) and never removes a tile; the per-faction table 1.2 is not implemented, so the 1784 → 1509 numbers say nothing about this principle.
 - No second-model review section on this page (command job); the debate 1/1 findings were already taken in 140b.
 
 No code or deploy change in this record. Lab queue: `140b-prune-factory-check` → in its review turn, if
