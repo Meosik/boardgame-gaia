@@ -1,0 +1,33 @@
+{
+ "kind": "command",
+ "note": "사용자 11-27 「한번 해봐」(HANDOFF E372 (ㄱ), 이론 단계 보류의 한 판 예외): 연방 사전 계획 부품 fed_plan(E371)을 켠 팩토리 ..._tier_prune_fedplan cap60-p2 비교 4, 4좌석 같은 교사, teacher_ab run --single 1판 6R 끝까지. 맵 · 종족은 140-prune-one-game과 같은 e362-20388 Firaks · Itars · BalTaks · Xenos라 140(fed_plan 없음)과 같은 판에서 비교한다(같은 교사 차이는 fed_plan 하나; 1판이라 강도 판단 아님). 판정 없음(관찰). 건강 기준: 종료 코드 0, 판 완주, 오류 · 타임아웃 0, 폴백 타임아웃 수와 최대 결정 시간(≈ 80초 이내). 볼 것(정리 턴): ① 좌석별 연방 수 · 라운드별 연방 시점 · 최종 VP · 1–3R 충전(참고), 140과 나란히 ② 활성: 결정 로그에서 federation-plan-{mines,institute,station}(-upfirst 포함) · ts3 계획이 후보로 나온 횟수 · 이긴 횟수 · _plans로 기억된 계획이 끝까지 실행됐는지 ③ 예산 검사(E86)로 걸러진 연방 계획 수. 예상 ≈ 1–2시간, 제한 4시간. 리플레이 게시는 정리 턴 제안.",
+ "run": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "{python}",
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-prune-fedplan-cap60-p2.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-prune-fedplan-cap60-p2.json",
+  "--games",
+  "1",
+  "--seeds",
+  "e362-20388@factions=Firaks,Itars,BalTaks,Xenos",
+  "--comparisons",
+  "4",
+  "--jobs",
+  "{jobs}",
+  "--fast-copy",
+  "--single",
+  "--output",
+  "runs/lab-146-fedplan-one-game"
+ ],
+ "metrics": "runs/lab-146-fedplan-one-game/results.json",
+ "seeds": [
+  "e362-20388@factions=Firaks,Itars,BalTaks,Xenos"
+ ],
+ "timeout_hours": 4
+}
