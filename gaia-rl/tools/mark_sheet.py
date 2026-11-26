@@ -31,7 +31,30 @@ FACTION_PLANET = {
     "SpaceGiants": "ProtoPlanet", "Darkanians": "Asteroid",
 }
 
-DEFAULT_REPLAYS = "~/gaia-media/ai-replays/ab-lab-138-setup-placement-sim-20-pair-*.json.gz"
+# per-faction [opening, play] guide; source: SH04 보드라이프 "종족 별 추천 빌드"
+# (gaia-rl/research/strategy/claims-new/SH04-SH05.csv)
+FACTION_GUIDE = {
+    "Terrans": ["1순위 연4광·연교2광 / 2순위 의교광광(1R 기술 연방 될 때만)·연2광", "가이아포밍 각, 8토큰이라 유물 각. 가이아 3점 타일은 중반에"],
+    "Lantids": ["1순위 의4광 / 2순위 의교2광 (연방은 그 뒤)", "의회 먼저, 기생. 기생 안 한 광산 2개 남기고 업그레이드 후 연방"],
+    "HadschHallas": ["1순위 연4광·연교2광·2연2광 / 2순위 의4광·의교2광(리벨리온 3큐브 될 때) / 3순위 아2광", "의회 전까지 광석 수급 집중"],
+    "Ivits": ["1순위 의연2광·의연1광 / 2순위 의4광·의교2광 / 3순위 의아", "3큐브 액션, 빠른 첫 연방. 유물·가이아포밍 각"],
+    "Geodens": ["1순위 의4광·의교2광 / 2순위 의2광 / 3순위 연4광·연교2광(테라포밍 액션 없을 때)", "의회 먼저, 새 행성 유형 계속"],
+    "BalTaks": ["1순위 연4광·연교2광·아2광", "가이아 트랙 먼저. 함선 2거리 타일 최고, 리벨리온 3큐브 중요"],
+    "Gleens": ["1순위 연4광·아2광(리벨리온 3큐브 될 때) / 2순위 연교광광", "4돈 수입 타일, 가이아 3점 타일"],
+    "Xenos": ["1순위 연4광·연교2광 / 2순위 의교광(1R 기술 연방 될 때만)", "3큐브 액션·고급 기술 타일 집중, 파워 액션 한 박자 빠르게"],
+    "Ambas": ["1순위 연4광 / 2순위 아광광(빠른 연방, 항해 고급 타일 2R)·연교2광", "4돈 수입·큰 건물 4티어 타일. 의회는 3~4R, 그 전엔 광산"],
+    "Taklons": ["1순위 연4광 / 2순위 아2광·연교2광", "항해·큐브로 파워 받는 자리. 4파워 회전 타일 최고"],
+    "Firaks": ["1순위 의교(사실상 의연) / 2순위 연교2광(2R 의회)", "트와일라잇 2광석3파워→연구소. 경제 트랙"],
+    "Bescods": ["1순위 연4광·2연2광·연교2광 / 2순위 의교(1R 기술 연방 될 때만)", "회색 행성 확보. 지식은 이미 올린 트랙에"],
+    "Nevlas": ["1순위 의교2광·의연2광 / 2순위 연교2광·의연", "파워 받는 땅. 4파워 액션, 3그릇 2토큰 유물"],
+    "Itars": ["1순위 아광광(지식 아카데미, 경제)·의교광광(가이아 구역 8토큰+) / 2순위 연교광광", "의회 시작이면 가이아 트랙, 아카데미 시작이면 경제 트랙"],
+    "Moweyds": ["1순위 연4광·연교2광·의교·의교광·의연 / 2순위 의광광(기술 연방 될 때)", "티에프마스 능력, 8토큰 유물, 가이아포밍"],
+    "SpaceGiants": ["1순위 의교2광·의연광 / 2순위 의4광·의연2광", "8토큰 유물, 가이아포밍, 2테라포밍 액션"],
+    "Tinkeroids": ["1순위 의교2광·의연2광 / 2순위 의4광", "1R엔 1테라포밍 능력, 티에프마스 위치, 빠른 연방"],
+    "Darkanians": ["1순위 연4광·연교2광 / 2순위 의교광광(의회 후 땅 3개 더)·아광(땅 없을 때)", "티에프마스 위치, 땅 먹는 액션 찾기"],
+}
+
+DEFAULT_REPLAYS ="~/gaia-media/ai-replays/ab-lab-138-setup-placement-sim-20-pair-*.json.gz"
 DEFAULT_OUT = "~/gaia-media/ai-replays/mark-138.html"
 
 
@@ -144,23 +167,6 @@ def tid_of(x):
 
 
 BOARD_IMG = "boards/normalized/scoring_board.webp"
-# gaia-engine/src/rules/terraforming.rs ring
-PLANET_RING = ["Terra", "Oxide", "Volcanic", "Desert", "Swamp", "Titanium", "Ice"]
-
-
-def terraform_steps(seats):
-    """[faction, home, [distance to each PLANET_RING planet]] per seat; None cells when home is off the ring."""
-    out = []
-    n = len(PLANET_RING)
-    for f in seats:
-        home = FACTION_PLANET.get(f)
-        if home in PLANET_RING:
-            i = PLANET_RING.index(home)
-            ds = [min(abs(i - j), n - abs(i - j)) for j in range(n)]
-        else:
-            ds = [None] * n
-        out.append([f, home, ds])
-    return out
 
 
 def game_start_panel(st):
@@ -190,7 +196,7 @@ def game_start_panel(st):
         fed_supply.append(fed_entry(rb["terraforming_level_5_token"]) + ["테라 5단계"])
     return {"rounds": rounds, "final": final, "boosters": boosters, "std": std,
             "adv": adv, "seats": seats, "ship_tech": ship_tech, "ship_fed": ship_fed,
-            "ship_art": ship_art, "fed_supply": fed_supply, "tf": terraform_steps(seats)}
+            "ship_art": ship_art, "fed_supply": fed_supply}
 
 
 def xy_of(c):
@@ -291,7 +297,7 @@ def build_data(paths, prefix="mark-assets/"):
     games = [g for g in (load_game(p) for p in paths) if g]
     games.sort(key=lambda g: g["id"])
     return {"games": games, "ko": FACTION_KO, "home": FACTION_PLANET, "exp": "138", "assets": prefix, "tracks": TRACKS_KO,
-            "board": BOARD_IMG, "ring": PLANET_RING}
+            "board": BOARD_IMG, "guide": FACTION_GUIDE}
 
 
 START_KEYS = ("rounds", "final", "boosters", "std", "adv", "ship_tech", "ship_fed", "ship_art", "fed_supply")
@@ -480,18 +486,17 @@ function startPanel(){
   if(DATA.board){
     var bi=document.createElement("img");bi.src=DATA.assets+encodeURIComponent(DATA.board);bi.alt="점수판";
     bi.style.width="140px";bi.style.height="auto";bi.style.display="block";bi.style.margin="4px 0";d.appendChild(bi)}
-  if(s.tf&&s.tf.length){
-    var td=document.createElement("div");td.className="seats";
-    var tt=document.createElement("div");tt.textContent="테라포밍 거리 (단계)";td.appendChild(tt);
-    var tb=document.createElement("table");tb.style.borderCollapse="collapse";tb.style.fontSize="13px";
-    function cell(tr,txt,col,bold,sq){var c=document.createElement("td");c.style.padding="1px 4px";c.style.textAlign="center";
-      if(sq){var i=document.createElement("i");i.style.cssText="display:inline-block;width:10px;height:10px;border:1px solid #888;vertical-align:middle;margin-right:2px;background:"+sq;c.appendChild(i)}
-      c.appendChild(document.createTextNode(txt));if(col)c.style.color=col;if(bold)c.style.fontWeight="bold";tr.appendChild(c)}
-    var hr=document.createElement("tr");cell(hr,"");
-    (DATA.ring||[]).forEach(function(p){cell(hr,(PK[p]||p).split("=")[0],null,false,PC[p]||"#9aa5b1")});tb.appendChild(hr);
-    s.tf.forEach(function(e){var br=document.createElement("tr");cell(br,ko(e[0]),fcol(e[0],s.seats.indexOf(e[0])),true);
-      e[2].forEach(function(v){cell(br,v===null?"–":String(v),null,v===0)});tb.appendChild(br)});
-    td.appendChild(tb);d.appendChild(td)}
+  if(DATA.guide){
+    var gd=document.createElement("div");gd.className="seats";gd.style.fontSize="13px";
+    var gt=document.createElement("div");gt.textContent="종족별 추천 (SH04 · 1R 끝 건물: 의=의회 연=연구소 아=아카데미 교=교역소 광=광산)";gd.appendChild(gt);
+    s.seats.forEach(function(f,i){
+      var g=DATA.guide[f];if(!g)return;
+      var fd=document.createElement("div");
+      var nm=document.createElement("b");nm.textContent=ko(f);nm.style.color=fcol(f,i);fd.appendChild(nm);
+      var l1=document.createElement("div");l1.textContent="오프닝: "+g[0];fd.appendChild(l1);
+      var l2=document.createElement("div");l2.textContent="운영: "+g[1];fd.appendChild(l2);
+      gd.appendChild(fd)});
+    d.appendChild(gd)}
   row("라운드 점수 R1–R6",s.rounds,s.rounds.map(function(e,i){return "R"+(i+1)}));
   row("최종 점수",s.final);
   row("부스터",s.boosters);
