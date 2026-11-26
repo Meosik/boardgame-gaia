@@ -131,6 +131,24 @@ def tid_of(x):
     return x.get("id") if isinstance(x, dict) else x
 
 
+def wheel_distance(wheel, a, b):
+    """Cyclic terraforming distance on the wheel (engine: rules/terraforming.rs ring_distance)."""
+    if a not in wheel or b not in wheel:
+        return None
+    d = abs(wheel.index(a) - wheel.index(b))
+    return min(d, len(wheel) - d)
+
+
+def faction_closeness(wheel, seats):
+    out = []
+    for i in range(len(seats)):
+        for j in range(i + 1, len(seats)):
+            d = wheel_distance(wheel, FACTION_PLANET.get(seats[i]), FACTION_PLANET.get(seats[j]))
+            out.append([seats[i], seats[j], d])
+    out.sort(key=lambda x: (x[2] is None, x[2] if x[2] is not None else 0))
+    return out
+
+
 def game_start_panel(st):
     rt = [tid_of(t) for t in st.get("round_tiles") or []]
     rounds = [tile_entry("round_scoring_tiles/normalized", "round", ROUND_IMG_ID.get(i, i)) for i in rt]
@@ -145,7 +163,8 @@ def game_start_panel(st):
     by_id = {p["player_id"]: p["faction"] for p in st["players"]}
     seats = [by_id.get(pid, str(pid)) for pid in st.get("turn_order") or []]
     return {"rounds": rounds, "final": final, "boosters": boosters, "std": std,
-            "adv": adv, "seats": seats}
+            "adv": adv, "seats": seats,
+            "close": faction_closeness(st.get("terraforming_color_order") or [], seats)}
 
 
 def xy_of(c):
@@ -423,6 +442,17 @@ function startPanel(){
     d.appendChild(r)}
   var sd=document.createElement("div");sd.className="seats";
   sd.textContent="순서: "+s.seats.map(function(f,i){return (i+1)+". "+ko(f)}).join("  ");d.appendChild(sd);
+  if(s.close&&s.close.length){
+    var cd=document.createElement("div");cd.className="seats";
+    var ct=document.createElement("div");ct.textContent="종족 가까운 정도 (테라포밍 단계)";cd.appendChild(ct);
+    s.close.forEach(function(c){
+      var ln=document.createElement("div");
+      [c[0],c[1]].forEach(function(f,k){
+        var sp=document.createElement("span");sp.textContent=ko(f);sp.style.color=fcol(f,s.seats.indexOf(f));
+        ln.appendChild(sp);if(k==0)ln.appendChild(document.createTextNode("–"))});
+      ln.appendChild(document.createTextNode(" "+(c[2]===null?"–":c[2]+"단계")));
+      cd.appendChild(ln)});
+    d.appendChild(cd)}
   row("라운드 점수 R1–R6",s.rounds,s.rounds.map(function(e,i){return "R"+(i+1)}));
   row("최종 점수",s.final);
   row("부스터",s.boosters);

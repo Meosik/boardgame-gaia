@@ -11,6 +11,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPT = os.path.join(HERE, "mark_sheet.py")
 
 
+WHEEL = ["Volcanic", "Oxide", "Swamp", "Ice", "Terra", "Titanium", "Desert"]
+
+
 def fake(path, factions):
     hexes = {"0,0": {"planet": {"planet_type": "Terra"}, "structure": "x"},
              "1,0": {"planet": None}, "0,1": {"planet": {"planet_type": "Gaia"}}}
@@ -18,7 +21,8 @@ def fake(path, factions):
     hexes["10,9"] = {"planet": None}
     hexes["9,10"] = {"planet": None}
     hexes["20,0"] = {"planet": None}  # interspace hole
-    state = {"board": {"hexes": hexes, "spaceship_tiles": {"Eclipse": {"q": 20, "r": 0}},
+    state = {"terraforming_color_order": WHEEL,
+             "board": {"hexes": hexes, "spaceship_tiles": {"Eclipse": {"q": 20, "r": 0}},
                        "sectors": [{"id": 1, "rotation": 0, "origin": "0,0"},
                                    {"id": 11, "rotation": 0, "origin": "9,9"}]},
              "players": [{"player_id": i, "faction": f} for i, f in enumerate(factions)],
@@ -82,8 +86,33 @@ class MarkSheetTest(unittest.TestCase):
                     self.assertIn(data["home"].get(f), pc_keys, f)
             for f in data["ko"]:
                 self.assertIn(data["home"].get(f), pc_keys, f)
+            self.assertEqual(len(st["close"]), 6)
+            self.assertIn("종족 가까운 정도 (테라포밍 단계)", html)
+            ds = [c[2] for c in st["close"]]
+            self.assertEqual(ds, sorted(ds))
             self.assertNotIn('class":"sec"', html)
             self.assertNotIn('"class":"sec"', html)
+
+
+class WheelTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, HERE)
+        import mark_sheet
+        self.ms = mark_sheet
+
+    def test_distance(self):
+        d = self.ms.wheel_distance
+        self.assertEqual(d(WHEEL, "Volcanic", "Desert"), 1)
+        self.assertEqual(d(WHEEL, "Volcanic", "Ice"), 3)
+        self.assertEqual(d(WHEEL, "Terra", "Terra"), 0)
+        self.assertIsNone(d(WHEEL, "Asteroid", "Terra"))
+
+    def test_pairs(self):
+        c = self.ms.faction_closeness(WHEEL, ["Geodens", "Nevlas", "Xenos", "Tinkeroids"])
+        self.assertEqual(len(c), 6)
+        self.assertEqual([x[2] for x in c if x[2] is None], [None] * 3)
+        self.assertIsNone(c[-1][2])
+        self.assertEqual(c[0][2], 1)
 
 
 if __name__ == "__main__":
