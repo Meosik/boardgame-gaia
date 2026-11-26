@@ -3473,8 +3473,11 @@ def fed_cluster_scores(env, snapshot, scores):
 # Exception (user): one TSx3 + mine federation per game, offered only when no default plan exists. Upgrade vs mine
 # order is left to the search (one plan per shape). Rounds 1-5, action phase.
 # Usable land (user 2026-11-27): Gaia planets, home type, 1-step terraform; plus planets where an Eclipse or a former
-# is to be thrown (user 2026-11-27 「이클립스 혹은 포머를 던질 예정」): Transdim for a faction whose guide tracks include
-# Gaia (GAIA_RIDERS from FACTION_TRACKS) or any faction with a former left; Asteroid with a former left or the Eclipse explored/fitted.
+# is to be thrown (user 2026-11-27 「이클립스 혹은 포머를 던질 예정」): Asteroid with a former left or the Eclipse
+# explored/fitted; Transdim (user 2026-11-27 「포머가 이미 있거나 이번 라운드 포머를 얻을 계획이 있는 종족만」) with a
+# former left, or when this decision's menu offers a Gaia research to a former level (FORMER_LEVELS) and the knowledge
+# held now pays it (FED_PLAN_RESEARCH_KNOWLEDGE, so within this round) — see _fed_plan_gaia_planned.
+FED_PLAN_RESEARCH_KNOWLEDGE = 4     # rulebook: a research step costs 4 knowledge
 FED_PLAN_START = 3
 FED_PLAN_POWER = 7
 FED_PLAN_TWO_POWER = 2
@@ -3482,9 +3485,24 @@ FED_PLAN_LAST_ROUND = 5
 FED_PLAN_MAX_STEPS = 1
 
 
-def _fed_plan_usable(state, player, planet):
-    """Usable land (user 2026-11-27): a Gaia planet; Transdim for a Gaia-track faction or with a former left; Asteroid
-    with a former left or the Eclipse planned; else a ring planet at most FED_PLAN_MAX_STEPS terraform steps away."""
+def _fed_plan_gaia_planned(player, goals):
+    """A former is planned this round: among `goals` (this decision's menu) a Gaia research to a former level, or an
+    ordered plan whose first pending step is one, and the knowledge held now pays one research step."""
+    if player.get('resources', {}).get('knowledge', 0) < FED_PLAN_RESEARCH_KNOWLEDGE:
+        return False
+    level = player.get('research_tracks', {}).get('gaia', 0)
+    for goal in goals:
+        step = goal.steps[0] if getattr(goal, 'family', None) == 'ordered' and goal.steps else goal
+        if (getattr(step, 'family', None) == 'research' and step.target == 'GaiaProject'
+                and step.level in FORMER_LEVELS and step.level == level + 1):
+            return True
+    return False
+
+
+def _fed_plan_usable(state, player, planet, gaia_planned=False):
+    """Usable land (user 2026-11-27): a Gaia planet; Transdim with a former left or a former planned this round
+    (`gaia_planned`); Asteroid with a former left or the Eclipse planned; else a ring planet at most
+    FED_PLAN_MAX_STEPS terraform steps away."""
     kind = planet['planet_type']
     if kind == 'Gaia':
         return True
@@ -3493,7 +3511,7 @@ def _fed_plan_usable(state, player, planet):
         if formers > 0:
             return True
         if kind == 'Transdim':
-            return player['faction'] in GAIA_RIDERS
+            return gaia_planned
         return ECLIPSE_SHIP in (player.get('explored_ships') or ()) or _ship_fit(state, player)[0] == 'Eclipse'
     steps = _terraform_steps(state, player, planet['planet_type'])
     return steps is not None and steps <= FED_PLAN_MAX_STEPS
@@ -3519,8 +3537,9 @@ def _fed_plan_groups(player, touching):
     return groups
 
 
-def fed_plan_goals(snapshot):
-    """federation-plan-* goals for the strongest group with power FED_PLAN_START..6 (empty when none)."""
+def fed_plan_goals(snapshot, menu=()):
+    """federation-plan-* goals for the strongest group with power FED_PLAN_START..6 (empty when none). `menu`: this
+    decision's other goals, read only for a Gaia research that brings a former this round (_fed_plan_gaia_planned)."""
     from itertools import product
     from four_factions.preparation import Goal
     from strategy_teacher import kind
@@ -3542,10 +3561,11 @@ def fed_plan_goals(snapshot):
     need = FED_PLAN_POWER - power
     kinds = {str(s['hex']): kind(s['kind']) for s in group}
     two = sum(_structure_power(s) == 2 for s in group)
+    gaia_planned = _fed_plan_gaia_planned(player, menu)
     planets = []
     for coord, cell in state['board']['hexes'].items():
         planet = cell.get('planet')
-        if (not planet or not _fed_plan_usable(state, player, planet) or planet['owner'] not in (None, actor)
+        if (not planet or not _fed_plan_usable(state, player, planet, gaia_planned) or planet['owner'] not in (None, actor)
                 or cell['structures'] or coord in touching):
             continue
         d = min(_hex_distance(coord, h) for h in hexes)
@@ -4671,7 +4691,7 @@ def plan_menu_goals(snapshot, goals):
     covered = {step.name for plan in plans for step in plan.steps if step.family == 'research'}
     fed_now = fed_compare_goal(snapshot, part=False)
     # fed_plan: with no legal federation now, the planned set takes the federation slot (federation-plan-*).
-    fed_plans = [] if fed_now is not None else fed_plan_goals(snapshot)
+    fed_plans = [] if fed_now is not None else fed_plan_goals(snapshot, menu=plans + list(goals))
     pool = [g for g in (fed_now, *fed_plans, token_compare_goal(snapshot, part=False)) if g]
     pool += plans + [g for g in goals if not (getattr(g, 'family', None) == 'research' and g.name in covered)]
     # A dropped plan's research stays a bare goal (the goals_for wrapper may already have removed it from `goals`).
