@@ -82,6 +82,31 @@ def pick():
     print('PICK seedarg', f'{seed}@factions={",".join(chosen)}')
 
 
+def check_factory(rounds=1):
+    """The prune factory's own choices (search on, easy budget) never pick a blocked candidate."""
+    import budget_teacher
+    budget_teacher.install(0)
+    budget_teacher.set_horizon(2)
+    env = Environment(t.SEED, 2000)
+    teacher = tp.guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune(
+        t.SEED, bgg_openings=True, shared_factions=True)
+    teacher.bind(env)
+    snap = json.loads(env.snapshot_json())
+    checked = blocked_decisions = bad = 0
+    while not env.is_terminal() and snap['state']['round'] <= rounds:
+        out = tp.prune_indices(snap)
+        decision_id, index = teacher.choose(snap)
+        checked += 1
+        blocked_decisions += bool(out)
+        bad += index in out
+        before = snap
+        env.step(decision_id, index)
+        snap = json.loads(env.snapshot_json())
+        teacher.observe(before, index, snap)
+    print('FACTORY decisions', checked, 'with_blocked', blocked_decisions, 'chose_blocked', bad)
+
+
 if __name__ == '__main__':
     pick()
     probe()
+    check_factory()

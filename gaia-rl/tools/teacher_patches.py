@@ -5701,7 +5701,8 @@ GAIA_ASTEROID_HOLD_LAST_ROUND = 3
 # ── prune (user 2026-11-26, E356–E362; research/strategy/candidate-pruning-tables.md) ─────────────
 # Candidates the user's tables say not to calculate at all are blocked in every ranking (root and
 # rollouts). Each family falls back to its original list when the filter would leave none of it.
-# Implemented: 1.1 off-track standard tile track (2 attack tracks + navigation below 2), P1, P2 (Gaia
+# Implemented: 1.1 off-track standard tile track (2 attack tracks + navigation below 2; Lost Fleet ship
+# tiles are off-track standard tiles too, so they are filtered the same way), P1, P2 (Gaia
 # exception only), P4, P5 (Gleens), F1, F2, F5 (rounds 1-5). Not implemented yet: 1.2 per-faction
 # tile table, P2 sector/federation-link exceptions, P5 Lantids, F3, F4, score/competition tracks.
 TRACK_KEYS = {'Terraforming': 'terraforming', 'Navigation': 'navigation', 'ArtificialIntelligence': 'ai',
