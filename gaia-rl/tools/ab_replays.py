@@ -82,14 +82,16 @@ def replay_game(game_dir, focus):
             snapshot = json.loads(env.snapshot_json())
             frames.append(frame(snapshot, actor, before['candidates'][row['index']]['action'],
                                 before['candidates']))
-    if result.get('stopped_at_round'):
-        # teacher_ab --stop-round ends the game early; the recorded scores are the VP held then.
+    # teacher_ab --stop-round / --stop-after-setup end the game early (the latter at round 0, which is falsy);
+    # the recorded scores are the VP held then.
+    stopped = 'stopped_at_round' in result
+    if stopped:
         if snapshot['steps'] != result['steps']:
             raise ValueError(f'{game_dir}: replay does not reach the recorded stop')
         scores = result['scores']
     else:
         scores = {str(k): v for k, v in env.final_scores()}
-    if not result.get('stopped_at_round') and (not env.is_terminal() or scores != result['scores']):
+    if not stopped and (not env.is_terminal() or scores != result['scores']):
         raise ValueError(f'{game_dir}: replay does not reproduce the recorded final scores')
     seat = focus_seat(result, focus)
     # The viewer requires the engine versions; teacher_ab's manifest records those of the match.
@@ -110,7 +112,7 @@ def replay_game(game_dir, focus):
         'policy': f'{pair}-{index.group(1)}번 판',
         'versions': versions, 'scores': scores, 'steps': snapshot['steps'], 'reproduced_original': True,
         'source': str(game_dir)}, 'frames': frames, 'events': []}
-    if result.get('stopped_at_round'):
+    if stopped:
         replay['metadata']['stopped_at_round'] = result['stopped_at_round']
     replay = add_decision_log(replay)
     validate_replay(replay)
@@ -138,8 +140,9 @@ def cmd_export(args):
                         'faction': meta['faction'], 'seed': meta['seed'],
                         'vp': meta['scores'][str(meta['focus_player'])], 'steps': meta['steps'],
                         'factions': meta['factions']})
-        if meta.get('stopped_at_round'):
-            catalog[-1]['rounds'] = meta['stopped_at_round'] - 1
+        if 'stopped_at_round' in meta:
+            # Setup-only games stop at round 0: no round was played.
+            catalog[-1]['rounds'] = max(0, meta['stopped_at_round'] - 1)
         print(f"{name}: {meta['faction']} seat {meta['focus_player']}, {catalog[-1]['vp']} VP, "
               f"{meta['steps']} decisions")
     write_catalog(output/'index.json', catalog)

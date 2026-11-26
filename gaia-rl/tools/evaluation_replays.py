@@ -40,8 +40,8 @@ def validate_replay(replay):
     terminal = frames[-1]['state']['phase']
     if end != len(events):
         raise ValueError('Invalid replay log boundary')
-    if metadata.get('stopped_at_round'):
-        # teacher_ab --stop-round: the game ends early and scores are the VP held at that point.
+    if 'stopped_at_round' in metadata:
+        # teacher_ab --stop-round / --stop-after-setup (round 0): the game ends early and scores are the VP held then.
         scores = {str(seat): player['vp'] for seat, player in enumerate(frames[-1]['state']['players'])}
     elif not isinstance(terminal, dict) or 'Ended' not in terminal:
         raise ValueError('Replay is not a completed game')

@@ -31,7 +31,35 @@ def fake_game(root, seed='geo-quartet-9840'):
     return game
 
 
+def fake_setup_only_game(root, seed='geo-quartet-9840', decisions=6):
+    """A game stopped during setup (teacher_ab --stop-after-setup): stopped_at_round is 0."""
+    from gaia_rl import Environment
+    env = Environment(seed, 2000)
+    rng = random.Random(1)
+    snapshot = json.loads(env.snapshot_json())
+    game = root/'lab-test'/'pair-000'/'game-0-A02'
+    game.mkdir(parents=True)
+    with gzip.open(game/'decisions.jsonl.gz', 'wt') as out:
+        for _ in range(decisions):
+            index = rng.randrange(len(snapshot['candidates']))
+            out.write(json.dumps({'decision_id': snapshot['decision_id'], 'index': index, 'arm': 'A', 'seconds': 0})+'\n')
+            env.step(snapshot['decision_id'], index)
+            snapshot = json.loads(env.snapshot_json())
+    state = snapshot['state']
+    (game/'result.json').write_text(json.dumps({'seed': seed, 'a_seats': [0, 2], 'complete': True,
+        'factions': [p['faction'] for p in state['players']], 'steps': snapshot['steps'],
+        'scores': {str(i): p['vp'] if 'vp' in p else 0 for i, p in enumerate(state['players'])},
+        'stopped_at_round': state['round']}))
+    return game
+
+
 class AbReplayTests(unittest.TestCase):
+    def test_setup_only_game_with_round_zero_exports(self):
+        game = fake_setup_only_game(Path(tempfile.mkdtemp()))
+        self.assertEqual(json.loads((game/'result.json').read_text())['stopped_at_round'], 0)
+        replay = ab_replays.replay_game(game, 'best')
+        self.assertEqual(replay['metadata']['stopped_at_round'], 0)
+
     def test_export_reproduces_scores_and_writes_a_catalog(self):
         root = Path(tempfile.mkdtemp())
         game = fake_game(root)
