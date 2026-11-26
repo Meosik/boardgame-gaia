@@ -1,0 +1,14 @@
+{
+ "kind": "command",
+ "note": "사용자 11-27 「이클립스 혹은 포머를 던질 예정」: fed_plan 쓸만한 땅에 차원 변형(가이드 트랙에 가이아가 있는 종족 GAIA_RIDERS, 또는 포머가 남은 종족)과 소행성(포머가 남음, 또는 이클립스 진입·맞춤 함선)을 더함; 연방 계획의 광산 단계가 소행성에서 EclipseAsteroidMine도 인정. 봇 턴에서 python 실행이 막혀 단위 테스트만 lab에서 돌린다(실험 아님, 판정 없음). 건강 기준: 종료 코드 0, test_teacher_patches 전부 통과(161 예상, 새 test_fed_plan_goals_count_transdim_and_asteroid_when_former_or_eclipse_is_planned 포함). 실패하면 정리 턴에 고친다. 예상 1분, 제한 0.25시간.",
+ "run": [
+  "env",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "{python}",
+  "-m",
+  "unittest",
+  "-v",
+  "test_teacher_patches"
+ ],
+ "timeout_hours": 0.25
+}

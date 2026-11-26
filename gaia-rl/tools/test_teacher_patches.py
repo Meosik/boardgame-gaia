@@ -850,9 +850,32 @@ class OpeningBudgetTests(unittest.TestCase):
         snapshot = self._fed_plan_fixture([('Mine', '0,0'), ('TradingStation', '1,0')], list(kinds))
         for coord, planet_type in kinds.items():
             snapshot['state']['board']['hexes'][coord]['planet']['planet_type'] = planet_type
+        player = snapshot['state']['players'][0]
+        player.update(faction='Lantids', gaiaformers_total=0, resources={'spent_gaia_formers': 0})   # no Gaia track, no former
         goals = tp.fed_plan_goals(snapshot)
         coords = {s.coord for g in goals for s in g.steps if s.family == 'colony'}
         self.assertEqual(coords, {'0,-1', '3,0'})
+
+    def test_fed_plan_goals_count_transdim_and_asteroid_when_former_or_eclipse_is_planned(self):
+        tp._guide['fed_plan'] = True                                        # restored by setUp's cleanup
+
+        def colonies(faction, formers=0, explored=(), fit='Rebellion'):
+            snapshot = self._fed_plan_fixture([('Mine', '0,0'), ('TradingStation', '1,0')], ['2,1', '-1,0'])
+            hexes = snapshot['state']['board']['hexes']
+            hexes['2,1']['planet']['planet_type'] = 'Transdim'
+            hexes['-1,0']['planet']['planet_type'] = 'Asteroid'
+            snapshot['state']['players'][0].update(
+                faction=faction, gaiaformers_total=formers, resources={'spent_gaia_formers': 0},
+                explored_ships=list(explored))
+            with mock.patch.object(tp, '_ship_fit', return_value=(fit, 0)):
+                goals = tp.fed_plan_goals(snapshot)
+            return {s.coord for g in goals for s in g.steps if s.family == 'colony'}
+
+        self.assertEqual(colonies('Terrans'), {'2,1'})                      # (a) Gaia-track faction, Transdim only
+        self.assertEqual(colonies('Lantids', formers=1), {'2,1', '-1,0'})   # (b) a former left: both
+        self.assertEqual(colonies('Lantids', explored=[3]), {'-1,0'})       # (c) Eclipse explored: asteroid only
+        self.assertEqual(colonies('Lantids'), set())                        # (d) nothing planned
+        self.assertEqual(colonies('Lantids', fit='Eclipse'), {'-1,0'})      # Eclipse fitted
 
     def test_fed_plan_goals_plan_the_federation_from_adjacent_power_three(self):
         near = ['-1,0', '0,-1', '3,0', '2,1', '-2,0']      # distance 1, 1, 2, 2, 2 from the group

@@ -1927,6 +1927,7 @@ def _colony_costs(state, player, home):
     return options
 
 
+ECLIPSE_SHIP = 3                # engine ship id of Eclipse
 TFMARS_SHIP = 2                 # engine spaceship_id_to_ship_id(TFMars)
 TFMARS_GAIA_ACTION = 6          # engine SPACESHIP_ACTION_TFMARS_GAIA_FORMATION
 TFMARS_GAIA_POWER = 2           # printed power cost (each token spent from bowl III is 2 charges in the charge measure)
@@ -3471,8 +3472,9 @@ def fed_cluster_scores(env, snapshot, scores):
 # federation family; a won plan is remembered by preparation.search and dropped when a step stops being viable).
 # Exception (user): one TSx3 + mine federation per game, offered only when no default plan exists. Upgrade vs mine
 # order is left to the search (one plan per shape). Rounds 1-5, action phase.
-# Usable land (user 2026-11-27): Gaia planets, home type, 1-step terraform; asteroid special cases and Transdim for
-# gaia-track factions not yet.
+# Usable land (user 2026-11-27): Gaia planets, home type, 1-step terraform; plus planets where an Eclipse or a former
+# is to be thrown (user 2026-11-27 「이클립스 혹은 포머를 던질 예정」): Transdim for a faction whose guide tracks include
+# Gaia (GAIA_RIDERS from FACTION_TRACKS) or any faction with a former left; Asteroid with a former left or the Eclipse explored/fitted.
 FED_PLAN_START = 3
 FED_PLAN_POWER = 7
 FED_PLAN_TWO_POWER = 2
@@ -3481,9 +3483,18 @@ FED_PLAN_MAX_STEPS = 1
 
 
 def _fed_plan_usable(state, player, planet):
-    """Usable land (user 2026-11-27): a Gaia planet, or a ring planet at most FED_PLAN_MAX_STEPS terraform steps away."""
-    if planet['planet_type'] == 'Gaia':
+    """Usable land (user 2026-11-27): a Gaia planet; Transdim for a Gaia-track faction or with a former left; Asteroid
+    with a former left or the Eclipse planned; else a ring planet at most FED_PLAN_MAX_STEPS terraform steps away."""
+    kind = planet['planet_type']
+    if kind == 'Gaia':
         return True
+    if kind in ('Transdim', 'Asteroid'):
+        formers = max(0, player.get('gaiaformers_total', 0) - player.get('resources', {}).get('spent_gaia_formers', 0))
+        if formers > 0:
+            return True
+        if kind == 'Transdim':
+            return player['faction'] in GAIA_RIDERS
+        return ECLIPSE_SHIP in (player.get('explored_ships') or ()) or _ship_fit(state, player)[0] == 'Eclipse'
     steps = _terraform_steps(state, player, planet['planet_type'])
     return steps is not None and steps <= FED_PLAN_MAX_STEPS
 
