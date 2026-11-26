@@ -861,7 +861,7 @@ class OpeningBudgetTests(unittest.TestCase):
 
         from four_factions.preparation import Goal
 
-        def colonies(faction, formers=0, explored=(), fit='Rebellion', menu=(), knowledge=0):
+        def colonies(faction, formers=0, explored=(), fit='Rebellion', menu=(), knowledge=0, gaia=0):
             # power 4 (mine, station, mine): one usable planet + a +2 upgrade reaches 7, so a single colony is plannable
             snapshot = self._fed_plan_fixture([('Mine', '0,0'), ('TradingStation', '1,0'), ('Mine', '0,1')], ['2,1', '-1,0'])
             hexes = snapshot['state']['board']['hexes']
@@ -870,6 +870,7 @@ class OpeningBudgetTests(unittest.TestCase):
             snapshot['state']['players'][0].update(
                 faction=faction, gaiaformers_total=formers, resources={'spent_gaia_formers': 0, 'knowledge': knowledge},
                 explored_ships=list(explored))
+            snapshot['state']['players'][0]['research_tracks']['gaia'] = gaia
             with mock.patch.object(tp, '_ship_fit', return_value=(fit, 0)):
                 goals = tp.fed_plan_goals(snapshot, menu=menu)
             return {s.coord for g in goals for s in g.steps if s.family == 'colony'}
@@ -877,12 +878,16 @@ class OpeningBudgetTests(unittest.TestCase):
         gaia1 = Goal('GaiaProject-1', 'research', target='GaiaProject', level=1)
         plan1 = Goal('track-plan-GaiaProject-1', 'ordered', steps=(gaia1,))
         gaia2 = Goal('GaiaProject-2', 'research', target='GaiaProject', level=2)
-        # (a) user 11-27: Transdim only with a former or a former planned this round — a Gaia-track faction alone is not
-        self.assertEqual(colonies('Terrans'), set())
-        self.assertEqual(colonies('Terrans', menu=[plan1], knowledge=4), {'2,1'})   # plan to Gaia 1, payable now
+        # (a) user 11-27: Transdim only with a former or a former planned this round (a Gaia-0 faction: Lantids)
+        self.assertEqual(colonies('Lantids'), set())
+        self.assertEqual(colonies('Lantids', menu=[plan1], knowledge=4), {'2,1'})   # plan to Gaia 1, payable now
         self.assertEqual(colonies('Lantids', menu=[gaia1], knowledge=4), {'2,1'})   # bare research goal counts too
-        self.assertEqual(colonies('Terrans', menu=[plan1], knowledge=3), set())     # not payable this round
-        self.assertEqual(colonies('Terrans', menu=[gaia2], knowledge=4), set())     # level 2 brings no former
+        self.assertEqual(colonies('Lantids', menu=[plan1], knowledge=3), set())     # not payable this round
+        self.assertEqual(colonies('Lantids', menu=[gaia2], knowledge=4), set())     # level 2 brings no former
+        # Terrans start on Gaia 1 with one former (engine setup, rulebook): the former makes Transdim usable at once;
+        # once it is spent, the next Gaia step (level 2) brings none, so a Gaia research plan does not count.
+        self.assertEqual(colonies('Terrans', formers=1), {'2,1', '-1,0'})
+        self.assertEqual(colonies('Terrans', menu=[gaia2], knowledge=4, gaia=1), set())
         self.assertEqual(colonies('Lantids', formers=1), {'2,1', '-1,0'})   # (b) a former left: both
         self.assertEqual(colonies('Lantids', explored=[3]), {'-1,0'})       # (c) Eclipse explored: asteroid only
         self.assertEqual(colonies('Lantids'), set())                        # (d) nothing planned
