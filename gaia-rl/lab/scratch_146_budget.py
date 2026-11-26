@@ -50,7 +50,9 @@ def main():
             # _fed_plan_gaia_planned (a Gaia research to the next level). The log keeps goal names only, so a
             # 'track-plan-GaiaProject-L' in this decision's menu stands for its first step, Gaia research to level+1.
             level = player.get('research_tracks', {}).get('gaia', 0)
-            names = [str(g) for g in (row.get('menu_pool') or []) + (row.get('menu_dropped') or [])]
+            # menu_pool only (debate 1/1 after E375): the real menu holds the plans that passed plan_affordable
+            # (teacher_patches.py:4695-4699); menu_dropped plans were not in it.
+            names = [str(g) for g in row.get('menu_pool') or []]
             gaia = any(n.startswith('track-plan-GaiaProject-') and int(n.split('-')[3].split('>')[0]) > level
                        for n in names)
             menu = [SimpleNamespace(family='research', target='GaiaProject', level=level+1)] if gaia else []
