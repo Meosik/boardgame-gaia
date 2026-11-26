@@ -858,7 +858,9 @@ class OpeningBudgetTests(unittest.TestCase):
         by = {g.name: g for g in goals}
         # Fewest upgrades first (user: with enough good planets, mines alone are ideal).
         self.assertEqual([g.name for g in goals],
-                         ['federation-plan-mines', 'federation-plan-up1', 'federation-plan-up2'])
+                         ['federation-plan-mines', 'federation-plan-up1', 'federation-plan-up1-upfirst',
+                          'federation-plan-up2', 'federation-plan-up2-upfirst'])
+        self.assertEqual(by['federation-plan-up1-upfirst'].steps[0].family, 'upgrade')
         mines = by['federation-plan-mines']
         self.assertEqual([s.coord for s in mines.steps], ['-1,0', '0,-1', '-2,0', '2,1'])   # nearest first
         self.assertTrue(all(s.family == 'colony' for s in mines.steps))
@@ -871,7 +873,7 @@ class OpeningBudgetTests(unittest.TestCase):
         # Only two usable planets for 4 missing power: the rest comes from upgrades (user 2026-11-27).
         few = self._fed_plan_fixture(group, ['-1,0', '0,-1'])
         goals = tp.fed_plan_goals(few)
-        self.assertEqual([g.name for g in goals], ['federation-plan-up2'])
+        self.assertEqual([g.name for g in goals], ['federation-plan-up2', 'federation-plan-up2-upfirst'])
         self.assertEqual([(s.family, s.coord, s.target) for s in goals[0].steps],
                          [('colony', '-1,0', None), ('colony', '0,-1', None),
                           ('upgrade', '0,0', 'TradingStation'), ('upgrade', '1,0', 'PlanetaryInstitute')])

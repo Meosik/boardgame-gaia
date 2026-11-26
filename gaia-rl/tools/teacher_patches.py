@@ -3572,6 +3572,10 @@ def fed_plan_goals(snapshot):
             name = shape if shape else ('mines' if gain == 0 else f'up{gain}')
             out.append((gain, satellites, Goal(f'federation-plan-{name}', 'ordered', steps=steps,
                                                sources=('user-2026-11-27',))))
+            # 'ordered' plays only the first pending step, so the upgrade-first order is its own plan (debate 1/1).
+            if ups and rest:
+                out.append((gain, satellites, Goal(f'federation-plan-{name}-upfirst', 'ordered',
+                                                   steps=ups + tuple(colonies[:rest]), sources=('user-2026-11-27',))))
         return out
 
     options = plans(FED_PLAN_TWO_POWER, None)
