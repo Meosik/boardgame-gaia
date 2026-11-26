@@ -94,6 +94,28 @@ class PayFilter(unittest.TestCase):
         self.assertEqual((before, after), (1, 2))
         self.assertEqual(self.blocked_kinds(snap), {'KnowledgeToCredit'})
 
+    def test_power_action_first_for_ore(self):
+        # User 2026-11-26: a mine is 1 ore short (ore 0); the 2-ore power action (id 3) covers it, so
+        # power→ore goes; absent, or too small for a 3-ore shortfall (lab, 3 ore), the conversion stays.
+        mine = {'ore': 0, 'credits': 9, 'knowledge': 9, 'qic': 0}
+        pa = {'type': 'PowerAction', 'id': 3, 'coord': None}
+        snap = snapshot(mine, [], [conv('PowerToOre'), pa, {'type': 'Pass'}], bowl3=3)
+        self.assertEqual(self.blocked_kinds(snap), {'PowerToOre'})
+        snap = snapshot(mine, [], [conv('PowerToOre'), {'type': 'Pass'}], bowl3=3)
+        self.assertEqual(self.blocked_kinds(snap), set())
+        lab = {'ore': 0, 'credits': 9, 'knowledge': 9, 'qic': 0}
+        snap = snapshot(lab, ['TradingStation'], [conv('PowerToOre'), pa, {'type': 'Pass'}], bowl3=9)
+        self.assertEqual(self.blocked_kinds(snap), set())
+
+    def test_power_action_first_for_knowledge(self):
+        # Research needs 4 knowledge: 2 short is covered by id 5 (2 knowledge) or id 1 (3); 4 short is not.
+        for have, actions, blocked in ((2, [5], {'PowerToKnowledge'}), (2, [1], {'PowerToKnowledge'}),
+                                       (2, [], set()), (0, [1, 5], set())):
+            cands = [conv('PowerToKnowledge')] + [{'type': 'PowerAction', 'id': i, 'coord': None}
+                                                  for i in actions] + [{'type': 'Pass'}]
+            snap = snapshot({'ore': 9, 'credits': 20, 'knowledge': have, 'qic': 0}, [], cands, bowl3=16)
+            self.assertEqual(self.blocked_kinds(snap), blocked, (have, actions))
+
     def test_never_blocks_everything(self):
         snap = snapshot({'ore': 9, 'credits': 20, 'knowledge': 9, 'qic': 3}, [], [conv('OreToCredit')])
         self.assertEqual(tp.prune_indices(snap), set())

@@ -5870,9 +5870,23 @@ def _built(player, built):
     return {**player, 'structures': structures}
 
 
-def _pay_kinds(state, player, cost, big, built=None):
+# Power actions that give a resource (engine.rs apply_power_effect): id 3 = 2 ore, id 1 = 3 knowledge,
+# id 5 = 2 knowledge. Only legal ones are candidates (slot taken / not enough power are not listed).
+POWER_ACTION_ORE = {3: 2}
+POWER_ACTION_KNOWLEDGE = {1: 3, 5: 2}
+
+
+def _power_action_covers(candidates, rewards, shortfall):
+    """User 2026-11-26: power action first, conversion only when the power action is unavailable or not
+    enough: True when a legal candidate PowerAction of `rewards` (id -> amount) covers `shortfall`."""
+    return any(c['action'].get('type') == 'PowerAction' and rewards.get(c['action'].get('id'), 0) >= shortfall
+               for c in candidates)
+
+
+def _pay_kinds(state, player, cost, big, built=None, candidates=()):
     """Conversion kinds in a payment that makes `cost` affordable, or an empty set when even every
-    conversion cannot (power counted with burning; QIC→ore only for a lab/PI/academy, memory 11-23)."""
+    conversion cannot (power counted with burning; QIC→ore only for a lab/PI/academy, memory 11-23).
+    PowerToOre / PowerToKnowledge are left out when a legal power action covers the shortfall."""
     r = player['resources']
     p = r['power']
     power = p.get('bowl3', 0)*(2 if player['faction'] == 'Nevlas' and any(
@@ -5888,10 +5902,10 @@ def _pay_kinds(state, player, cost, big, built=None):
         used = min(ore_short, qic_spare)
         ore_short, qic_spare = ore_short-used, qic_spare-used
         kinds.add('QicToOre')
-    if ore_short:
+    if ore_short and not _power_action_covers(candidates, POWER_ACTION_ORE, ore_short):
         kinds.add('PowerToOre')
     power -= 3*ore_short + 4*need['knowledge'] + 4*need['qic']
-    if need['knowledge']:
+    if need['knowledge'] and not _power_action_covers(candidates, POWER_ACTION_KNOWLEDGE, need['knowledge']):
         kinds.add('PowerToKnowledge')
     if need['qic']:
         kinds.add('PowerToQic')
@@ -5927,7 +5941,7 @@ def _prune_convs(state, player, candidates):
         return set()
     allowed = set()
     for _, cost, big, built in _pay_targets(state, player, candidates):
-        allowed |= _pay_kinds(state, player, cost, big, built)
+        allowed |= _pay_kinds(state, player, cost, big, built, candidates)
     return {i for i, kind in convs.items() if kind not in allowed}
 
 
