@@ -27,7 +27,9 @@ All four criteria met.
 The filter fired inside the factory on 9 of 51 round-1 decisions, and the search never returned a blocked move.
 The job prints totals only: which rule blocked (tile track, P1, P2, P4, P5, F1/F2/F5) and how many candidates per
 decision are not broken down here. 140a already showed federation rules 0 hits in 3R snapshots, so F1/F2/F5 are
-still unverified; the per-kind count comes from the `prune_blocked` field of the 140 decision log.
+still unverified. The 140 decision log's `prune_blocked` holds only a count (`tools/teacher_ab.py:452–456`), so the
+per-kind count and the chosen-vs-blocked check need a replay of the recorded choices that recomputes `_prune_tile`,
+`_prune_mine`, `_prune_feds` (F1/F2/F5 split) and `prune_indices` per decision (debate 1/1).
 
 ## Reading (HANDOFF 1 order)
 
@@ -47,5 +49,6 @@ No code or deployment change. Lab queue empty after this job.
 - (ㄱ) Queue 140 now, the one-game exception already agreed in E362/E363: seed `e362-20388@factions=Firaks,Itars,BalTaks,Xenos`,
   4 seats on the prune spec `tools/teacher-a-…-all-tier-prune-cap60-p2.json`, 6R, 1 game, ≈1–2 lab hours. Health:
   game ends, 0 errors/timeouts, chose_blocked 0 over all rounds.
-- (ㄴ) At 140 review: count `prune_blocked` by round and kind (bot turn) to see whether F1/F2/F5 ever fire.
+- (ㄴ) At 140 review: replay the recorded choices, recompute the blocked set per decision by kind (F1/F2/F5 split),
+  check the chosen index against it, count by round (Sonnet replay script + bot turn).
 Bot recommendation: (ㄱ) → (ㄴ); other new experiments stay on hold (theory phase).
