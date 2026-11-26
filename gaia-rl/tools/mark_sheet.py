@@ -101,6 +101,44 @@ def interspace_file(tile_id):
     return "interspace_tiles/normalized/" + os.path.basename(hits[0]) if hits else None
 
 
+TRACKS_KO = ["테라포밍", "항해", "AI", "가이아", "경제", "과학"]
+# gaia-frontend/src/assets/roundScoringTileImages.ts: engine ids 10/11 have swapped art
+ROUND_IMG_ID = {10: 11, 11: 10}
+
+
+def tile_entry(folder, prefix, tid):
+    """[id, path relative to assets or None, caption] for tile image <prefix>_<NN>_<desc>.<ext>."""
+    if not isinstance(tid, int):
+        return [tid, None, str(tid)]
+    hits = sorted(glob.glob(os.path.join(ASSET_ROOT, folder, "%s_%02d_*" % (prefix, tid))))
+    if not hits:
+        return [tid, None, str(tid)]
+    base = os.path.basename(hits[0])
+    desc = os.path.splitext(base)[0].split("_", 2)[2].replace("_", " ")
+    return [tid, folder + "/" + base, desc]
+
+
+def tid_of(x):
+    return x.get("id") if isinstance(x, dict) else x
+
+
+def game_start_panel(st):
+    rt = [tid_of(t) for t in st.get("round_tiles") or []]
+    rounds = [tile_entry("round_scoring_tiles/normalized", "round", ROUND_IMG_ID.get(i, i)) for i in rt]
+    for e, i in zip(rounds, rt):
+        e[0] = i
+    final = [tile_entry("final_scoring_tiles/normalized", "final", tid_of(t))
+             for t in st.get("final_scoring_tiles") or []]
+    boosters = [tile_entry("round_boosters/normalized", "booster", b) for b in st.get("boosters") or []]
+    rb = st.get("research_board") or {}
+    std = [tile_entry("tech_tiles/rendered", "std", t) for t in rb.get("tech_tile_slots") or []]
+    adv = [tile_entry("tech_tiles/rendered", "adv", t) for t in rb.get("advanced_tech_tiles") or []]
+    by_id = {p["player_id"]: p["faction"] for p in st["players"]}
+    seats = [by_id.get(pid, str(pid)) for pid in st.get("turn_order") or []]
+    return {"rounds": rounds, "final": final, "boosters": boosters, "std": std,
+            "adv": adv, "seats": seats}
+
+
 def xy_of(c):
     if isinstance(c, dict):
         return c["q"], c["r"]
@@ -166,7 +204,7 @@ def load_game(path):
     hexes.sort(key=lambda x: (x[0], x[1]))
     factions = [p["faction"] for p in st["players"]]
     return {"id": "pair-%03d" % int(m.group(1)), "hexes": hexes,
-            "sectors": sectors, "factions": factions}
+            "sectors": sectors, "factions": factions, "start": game_start_panel(st)}
 
 
 def deep_hexes(s):
@@ -186,13 +224,38 @@ def asset_files(data):
         for h in g["hexes"]:
             if h[3]:
                 names.add(h[3])
+        for key in ("rounds", "final", "boosters", "std", "adv"):
+            for e in g["start"][key]:
+                if e[1]:
+                    names.add(e[1])
     return sorted(names)
 
 
 def build_data(paths, prefix="mark-assets/"):
     games = [g for g in (load_game(p) for p in paths) if g]
     games.sort(key=lambda g: g["id"])
-    return {"games": games, "ko": FACTION_KO, "exp": "138", "assets": prefix}
+    return {"games": games, "ko": FACTION_KO, "exp": "138", "assets": prefix, "tracks": TRACKS_KO}
+
+
+TILE_DIRS = ("round_scoring_tiles/", "final_scoring_tiles/", "round_boosters/", "tech_tiles/")
+
+
+def shrink_tile(src, rel, dst, max_w=240):
+    """Write a downscaled webp copy of a tile image if PIL is available; True when done."""
+    if not rel.startswith(TILE_DIRS):
+        return False
+    try:
+        from PIL import Image
+    except ImportError:
+        return False
+    try:
+        with Image.open(src) as im:
+            if im.width > max_w:
+                im = im.resize((max_w, max(1, round(im.height * max_w / im.width))), Image.LANCZOS)
+            im.save(dst, "WEBP", quality=80)
+        return True
+    except Exception:
+        return False
 
 
 def copy_assets(data, dest):
@@ -201,7 +264,9 @@ def copy_assets(data, dest):
     for rel in asset_files(data):
         src = os.path.join(ASSET_ROOT, rel)
         if os.path.isfile(src):
-            shutil.copy2(src, os.path.join(dest, os.path.basename(rel)))
+            dst = os.path.join(dest, os.path.basename(rel))
+            if not shrink_tile(src, rel, dst):
+                shutil.copy2(src, dst)
             n += 1
     return n
 
@@ -214,6 +279,9 @@ def render(data, title):
             s[4] = os.path.basename(s[4]) if s[4] else None
         for h in g["hexes"]:
             h[3] = os.path.basename(h[3]) if h[3] else None
+        for key in ("rounds", "final", "boosters", "std", "adv"):
+            for e in g["start"][key]:
+                e[1] = os.path.basename(e[1]) if e[1] else None
     blob = json.dumps(d, ensure_ascii=False, separators=(",", ":"))
     blob = blob.replace("</", "<\\/")
     return (HTML.replace("__TITLE__", title.replace("<", "&lt;"))
@@ -263,11 +331,19 @@ button.on{border-width:3px;background:#333;font-weight:bold}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:7px;vertical-align:middle;margin-right:4px;border:1px solid #888}
 #ta{width:100%;height:140px;display:none;font-size:12px}
 #cnt{margin:4px;font-size:15px}
+#start{margin:4px 0;font-size:12px}
+#start .row{display:flex;flex-wrap:wrap;gap:4px;align-items:flex-start;margin:3px 0}
+#start .lab{width:100%;font-weight:bold;color:#9ab}
+#start .t{width:64px;text-align:center;line-height:1.15;color:#ccc}
+#start .t img{width:64px;height:auto;display:block;border-radius:4px}
+#start .t b{display:block;color:#fc6}
+#start .seats{font-size:14px}
 </style></head><body><div id="wrap">
 <h1>__TITLE__</h1>
 <div id="games"></div>
 <div id="facs"></div>
 <div id="kinds"></div>
+<div id="start"></div>
 <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
 <div class="legend" id="legend"></div>
 <div id="cnt"></div>
@@ -321,7 +397,29 @@ function toggle(key){
   else m.early.push(key);
   save();ui();marks();
 }
+function startPanel(){
+  var d=document.getElementById("start");d.innerHTML="";var s=G().start;if(!s)return;
+  function row(label,list,tags){
+    if(!list.length)return;
+    var r=document.createElement("div");r.className="row";
+    var l=document.createElement("div");l.className="lab";l.textContent=label;r.appendChild(l);
+    list.forEach(function(e,i){
+      var t=document.createElement("div");t.className="t";
+      if(tags){var b=document.createElement("b");b.textContent=tags[i]||"";t.appendChild(b)}
+      if(e[1]){var im=document.createElement("img");im.src=DATA.assets+encodeURIComponent(e[1]);im.alt=e[2];im.loading="lazy";t.appendChild(im)}
+      t.appendChild(document.createTextNode(e[2]));r.appendChild(t)});
+    d.appendChild(r)}
+  var sd=document.createElement("div");sd.className="seats";
+  sd.textContent="순서: "+s.seats.map(function(f,i){return (i+1)+". "+ko(f)}).join("  ");d.appendChild(sd);
+  row("라운드 점수 R1–R6",s.rounds,s.rounds.map(function(e,i){return "R"+(i+1)}));
+  row("최종 점수",s.final);
+  row("부스터",s.boosters);
+  var tr=DATA.tracks;
+  row("기술 타일",s.std,s.std.map(function(e,i){return i<tr.length?tr[i]:"추가"}));
+  row("고급 기술 타일",s.adv,s.adv.map(function(e,i){return i<tr.length?tr[i]:""}));
+}
 function draw(){
+  startPanel();
   var svg=document.getElementById("svg");svg.innerHTML="";
   var g=G(),x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   g.hexes.forEach(function(h){var p=px(h[0],h[1]);x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])});

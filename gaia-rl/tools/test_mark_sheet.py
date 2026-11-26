@@ -21,7 +21,13 @@ def fake(path, factions):
     state = {"board": {"hexes": hexes, "spaceship_tiles": {"Eclipse": {"q": 20, "r": 0}},
                        "sectors": [{"id": 1, "rotation": 0, "origin": "0,0"},
                                    {"id": 11, "rotation": 0, "origin": "9,9"}]},
-             "players": [{"player_id": i, "faction": f} for i, f in enumerate(factions)]}
+             "players": [{"player_id": i, "faction": f} for i, f in enumerate(factions)],
+             "turn_order": [2, 0, 1, 3],
+             "round_tiles": [{"id": i, "condition": "x", "vp_per_unit": 2} for i in (3, 10, 11, 6, 1, 2)],
+             "final_scoring_tiles": [{"id": 3}, {"id": 6}],
+             "boosters": [5, 10, 14, 7, 9, 4, 2],
+             "research_board": {"tech_tile_slots": [2, 3, 4, 10, 7, 9, 5, 8, 6],
+                                "advanced_tech_tiles": [5, 17, 19, 12, 8, 22]}}
     with gzip.open(path, "wt", encoding="utf-8") as f:
         json.dump({"frames": [{"state": state}]}, f)
 
@@ -50,6 +56,21 @@ class MarkSheetTest(unittest.TestCase):
             sec = {s[0]: s for s in data["games"][0]["sectors"]}
             self.assertEqual(sec[11][4], "11-2.webp")
             self.assertEqual(sec[1][4], "01.webp")
+            st = data["games"][0]["start"]
+            for k in ("rounds", "final", "boosters", "std", "adv", "seats"):
+                self.assertIn(k, st)
+            self.assertEqual(len(st["rounds"]), 6)
+            self.assertEqual(len(st["seats"]), 4)
+            self.assertEqual(st["seats"], ["Terrans", "Nevlas", "Firaks", "Ivits"])
+            # engine id 10 uses image 11 and vice versa; ids stay engine ids
+            r = {e[0]: e[1] for e in st["rounds"]}
+            self.assertTrue(r[10].startswith("round_11_"))
+            self.assertTrue(r[11].startswith("round_10_"))
+            self.assertTrue(r[3].startswith("round_03_"))
+            self.assertEqual(len(st["std"]), 9)
+            self.assertEqual(len(st["adv"]), 6)
+            self.assertEqual(len(st["boosters"]), 7)
+            self.assertTrue(any(f.startswith("round_11_") for f in files))
 
 
 if __name__ == "__main__":
