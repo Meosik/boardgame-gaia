@@ -42,9 +42,11 @@ itself writes into the run dir under gaia-lab, which bot turns must not edit; `s
 - Pattern 1 — **spread, not clustered**: the teacher puts its two mines ~7 apart, so at QIC range they open two separate
   ~9-planet areas with little overlap. Gleens · Geodens · Terrans sit closer (4.5–5.9), Xenos · Firaks · Itars farthest.
 - Pattern 2 — **next to opponents**: 84 % of seats have a building within 2 of an opponent (charge-seeking placement).
-- Pattern 3 — **little cheap room at reach 1**: 70 % of seats have at most 2 sites buildable without a QIC, and most ring
-  factions have no 0–1-step site without a QIC. The first-round mine therefore mostly needs a QIC, a terraform step or a
-  navigation step — relevant to the funded-goal design (E338–E345: 1R goal = reach the faction's opening line).
+- Pattern 3 — **few free planets inside base reach**: 70 % of seats have at most 2 free planets within reach 1, and most ring
+  factions have no 0–1-step planet within reach 1. **Hypothesis only** (Codex debate 1/1, accepted): `setup_report.py` marks
+  `qic` as `distance > reach` and checks neither buildability, resources, terraform cost nor boosters (range / terraform
+  booster), so "59 % need a QIC" means "59 % lie outside base reach", not a measured round-1 cost. Whether the first-round
+  mine really needs a QIC, terraforming or navigation is not shown by this data.
 - ① noise: 4 seats per faction — faction means are only indicative. ③ scope: ② at reach 1 measures sparsity, not overlap
   (the reach-3 recount replaces it); ④'s ranking is a heuristic (no federation split, no satellites, current navigation only).
   ⑥ condition: one game per map, the teacher's own placement — this shows what the teacher does, not whether it is good.
@@ -56,5 +58,7 @@ No code or deployment change. Lab: `138r-setup-replays` queued (replays of these
 
 - (ㄱ) `setup_report.py`: output-dir option (so bot turns can write the report outside gaia-lab) and ② at reach + QIC range —
   bot turn, Sonnet subagent, minutes.
-- (ㄴ) Theory: use pattern 3 in the E345 design (which openings need a QIC / navigation in round 1) — discussion, no experiment.
-Bot recommendation: (ㄱ) then (ㄴ); no new experiment while the hold stands.
+  Done 2790b80 (`--out`, `added_planets_qic`, Summary section); the distance-only QIC label is renamed in the follow-up commit.
+- (ㄴ) Theory: pattern 3 enters the E345 design only as a hypothesis (outside base reach ≠ measured cost); a real cost
+  check (ore/credits/QIC/booster at the first main turn) would be a later tool change — discussion, no experiment.
+Bot recommendation: (ㄱ) done; (ㄴ) as a hypothesis only; no new experiment while the hold stands.
