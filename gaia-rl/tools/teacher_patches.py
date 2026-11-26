@@ -5900,11 +5900,14 @@ def _pay_kinds(state, player, cost, big, built=None):
         left = need['credits']-max(0, power)-ore_spare    # still short after power and ore
         if state['round'] < 6:
             # User 2026-11-26: knowledge→credit at most once, only when power and ore cannot cover the
-            # last credit and it keeps next round's research steps (4 knowledge each); else round 6.
+            # last credit and it keeps next round's research steps (4 knowledge each); round 6 up to 3.
             from four_factions.value import production
             income = production(state, _built(player, built), include_booster=False)[2]
             keeps = (have['knowledge']-1+income)//4 == (have['knowledge']+income)//4
             knowledge = min(knowledge, 1) if left == 1 and keeps else 0
+        else:
+            # User 2026-11-26: 4+ knowledge→credit in round 6 is worse than one research step.
+            knowledge = min(knowledge, 3)
         if left > knowledge:
             return set()
         if ore_spare:

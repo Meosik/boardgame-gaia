@@ -59,6 +59,15 @@ class PayFilter(unittest.TestCase):
                             [conv('KnowledgeToCredit'), upgrade, {'type': 'Pass'}], round=rnd)
             self.assertEqual(self.blocked_kinds(snap), blocked, rnd)
 
+    def test_round_6_at_most_three_knowledge_to_credit(self):
+        # Only a lab is left to pay for (8 mines, 4 stations) and it is 4 credits short: 4 knowledge→credit
+        # would be one research step instead; 3 short is still paid.
+        for credits, blocked in ((1, {'KnowledgeToCredit'}), (2, set())):
+            snap = snapshot({'ore': 3, 'credits': credits, 'knowledge': 9, 'qic': 0},
+                            ['Mine']*8 + ['TradingStation']*4,
+                            [conv('KnowledgeToCredit'), {'type': 'Pass'}], round=6)
+            self.assertEqual(self.blocked_kinds(snap), blocked, credits)
+
     def test_one_knowledge_to_credit_keeps_next_research_step(self):
         # 1 credit short for a mine, no power or spare ore. Terrans income 1 knowledge: 3 knowledge → 4 next
         # round, so converting one loses next round's research step; 4 knowledge → 5 keeps it.
