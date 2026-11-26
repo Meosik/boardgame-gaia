@@ -831,6 +831,88 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual([s[0] for s in lifted], [6.0, 9.0, 5.0])
         self.assertIn('satellites -1', lifted[1][1])
 
+    def _fed_plan_fixture(self, structures, planets=(), federated=(), rnd=2):
+        empty = {'planet': None, 'structures': [], 'satellites': []}
+        hexes = {f'{q},{r}': dict(empty) for q in range(-6, 13) for r in range(-6, 13)}
+        for coord in planets:
+            hexes[coord] = {**empty, 'planet': {'planet_type': 'Terra', 'owner': None}}
+        tracks = {k: 0 for k in ('terraforming', 'navigation', 'ai', 'gaia', 'economy', 'science')}
+        player = {'faction': 'Terrans', 'research_tracks': tracks, 'tech_tiles': [], 'covered_tech_tiles': [],
+                  'structures': [{'kind': k, 'hex': h} for k, h in structures],
+                  'federated_hexes': list(federated)}
+        state = {'round': rnd, 'phase': {'ActionPhase': {}}, 'players': [player],
+                 'board': {'hexes': hexes, 'spaceship_tiles': {}}}
+        return {'player': 0, 'state': state}
+
+    def test_fed_plan_goals_plan_the_federation_from_adjacent_power_three(self):
+        near = ['-1,0', '0,-1', '3,0', '2,1', '-2,0']      # distance 1, 1, 2, 2, 2 from the group
+        far = '4,0'                                         # distance 3: never a step
+        group = [('Mine', '0,0'), ('TradingStation', '1,0')]
+        snapshot = self._fed_plan_fixture(group, near + [far])
+        tp._guide['fed_plan'] = False                                       # other tests' factories may leave it on
+        self.assertEqual(tp.fed_plan_goals(snapshot), [])                   # part off
+        tp._guide['fed_plan'] = True                                        # restored by setUp's cleanup
+        goals = tp.fed_plan_goals(snapshot)
+        self.assertTrue(goals and goals[0].name.startswith('federation-plan-'))
+        self.assertTrue(all(g.family == 'ordered' for g in goals))
+        by = {g.name: g for g in goals}
+        self.assertEqual(set(by), {'federation-plan-mines', 'federation-plan-institute', 'federation-plan-station'})
+        self.assertEqual([len(g.steps) for g in goals], [4, 4, 4])
+        self.assertEqual(goals[-1].name, 'federation-plan-mines')           # 2 satellites, the others 1
+        mines = by['federation-plan-mines']
+        self.assertEqual([s.coord for s in mines.steps], ['-1,0', '0,-1', '-2,0', '2,1'])   # nearest first
+        self.assertTrue(all(s.family == 'colony' for s in mines.steps))
+        self.assertNotIn(far, {s.coord for g in goals for s in g.steps})
+        inst = by['federation-plan-institute'].steps
+        self.assertEqual([(s.family, s.coord, s.target) for s in inst if s.family == 'upgrade'],
+                         [('upgrade', '1,0', 'PlanetaryInstitute')])
+        self.assertEqual(sum(s.family == 'colony' for s in inst), 3)
+        stat = by['federation-plan-station'].steps
+        self.assertEqual([(s.family, s.coord, s.target) for s in stat if s.family == 'upgrade'],
+                         [('upgrade', '0,0', 'TradingStation')])
+        self.assertEqual(sum(s.family == 'colony' for s in stat), 3)
+        # Power 2 is too little to plan, power 7 is a federation already.
+        low = self._fed_plan_fixture([('TradingStation', '0,0')], near)
+        self.assertEqual(tp.fed_plan_goals(low), [])
+        full = self._fed_plan_fixture([('TradingStation', '0,0'), ('TradingStation', '1,0'), ('Mine', '0,1'),
+                                       ('Mine', '1,1'), ('Mine', '-1,1')], near)   # 2+2+1+1+1
+        self.assertEqual(tp.fed_plan_goals(full), [])
+        snapshot['state']['round'] = 6
+        self.assertEqual(tp.fed_plan_goals(snapshot), [])                   # round 6 is free
+
+    def test_fed_plan_goals_hold_two_power_buildings_to_two_and_offer_ts3_once(self):
+        tp._guide['fed_plan'] = True
+        two = self._fed_plan_fixture([('TradingStation', '0,0'), ('TradingStation', '1,0')],
+                                     ['-1,0', '0,-1', '2,1', '3,0'])
+        names = {g.name for g in tp.fed_plan_goals(two)}
+        self.assertNotIn('federation-plan-station', names)                   # no mine to upgrade
+        self.assertIn('federation-plan-mines', names)
+        # TS + TS + mine, one free planet: the default plans cannot reach 7 (institute is already ours).
+        group = [('TradingStation', '0,0'), ('TradingStation', '1,0'), ('Mine', '0,1'),
+                 ('PlanetaryInstitute', '10,10')]
+        snapshot = self._fed_plan_fixture(group, ['-1,0'], federated=['10,10'])
+        goals = tp.fed_plan_goals(snapshot)
+        self.assertEqual([g.name for g in goals], ['federation-plan-ts3'])
+        self.assertEqual([(s.family, s.coord) for s in goals[0].steps], [('colony', '-1,0'), ('upgrade', '0,1')])
+        # Three trading stations already inside our federations: the exception was used.
+        used = group + [('TradingStation', '10,11'), ('TradingStation', '11,10'), ('TradingStation', '9,11')]
+        snapshot = self._fed_plan_fixture(used, ['-1,0'], federated=['10,10', '10,11', '11,10', '9,11'])
+        self.assertEqual(tp.fed_plan_goals(snapshot), [])
+        # No planet at all: even ts3 cannot finish.
+        snapshot = self._fed_plan_fixture(group, [], federated=['10,10'])
+        self.assertEqual(tp.fed_plan_goals(snapshot), [])
+
+    def test_federation_progress_counts_at_most_two_two_power_buildings_with_fed_plan(self):
+        snapshot = self._fed_plan_fixture([('TradingStation', '0,0'), ('TradingStation', '1,0'),
+                                           ('TradingStation', '2,0'), ('Mine', '0,1')])
+        state = snapshot['state']
+        player = state['players'][0]
+        tp._guide['fed_plan'] = False
+        off = tp.federation_progress(state, player)
+        tp._guide['fed_plan'] = True
+        on = tp.federation_progress(state, player)
+        self.assertLess(on, off)                                            # 2+2+0+1 = 5 against 7
+
     def test_endgame_prices_value_the_round_six_stock_at_the_final_scoring_rates(self):
         import copy
         import guide_value as gv

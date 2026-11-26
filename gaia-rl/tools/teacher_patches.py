@@ -300,6 +300,8 @@ def _faction_parts(faction):
         parts.update(FED_PARTS)
     if _guide['tokens']:
         parts.update(TOKEN_PARTS)
+    if _guide.get('fed_plan'):
+        parts.add('fed_plan')
     if _guide['track_plans']:
         parts.add('track_plans')
     if _guide['round_tile_lead']:
@@ -478,15 +480,22 @@ def federation_progress(state, player):
     import guide_value as gv
     federated = set(map(str, player.get('federated_hexes') or []))
     left = [s for s in player['structures'] if str(s['hex']) not in federated and _structure_power(s)]
+    # fed_plan (user 2026-11-27): a set holds at most FED_PLAN_TWO_POWER two-power buildings, so a third one in
+    # a group adds nothing here (the TSx3 + mine exception is a plan fallback only, see fed_plan_goals).
+    capped = _part(player, 'fed_plan')
     best, seen = 0, set()
     for i in range(len(left)):
         if i in seen:
             continue
-        group, todo = 0, [i]
+        group, two, todo = 0, 0, [i]
         seen.add(i)
         while todo:
             j = todo.pop()
-            group += _structure_power(left[j])
+            p = _structure_power(left[j])
+            if capped and p == 2:
+                two += 1
+                p = p if two <= FED_PLAN_TWO_POWER else 0
+            group += p
             for k in range(len(left)):
                 if k not in seen and _value.distance(left[j]['hex'], left[k]['hex']) <= 2:
                     seen.add(k)
@@ -3454,6 +3463,115 @@ def fed_cluster_scores(env, snapshot, scores):
     return lifted
 
 
+# fed_plan (user 2026-11-27, funded-goal-plan-design.md 9): the federation is planned before its buildings stand.
+# A group of adjacent buildings outside our federations with power FED_PLAN_START..6 gets plans that reach 7 power
+# (rulebook p.14; one action adds at most +1): the nearest free planets as mines (distance 1 = no satellite,
+# 2 = one), mine -> trading station while the set holds at most FED_PLAN_TWO_POWER two-power buildings, a trading
+# station -> institute. Each plan is an 'ordered' goal named federation-plan-* (the plan menu files it under the
+# federation family; a won plan is remembered by preparation.search and dropped when a step stops being viable).
+# Exception (user): one TSx3 + mine federation per game, offered only when no default plan exists. Upgrade vs mine
+# order is left to the search (one plan per shape). Rounds 1-5, action phase.
+FED_PLAN_START = 3
+FED_PLAN_POWER = 7
+FED_PLAN_TWO_POWER = 2
+FED_PLAN_LAST_ROUND = 5
+_FED_PLAN_PLANETS = frozenset({'Terra', 'Oxide', 'Volcanic', 'Desert', 'Swamp', 'Titanium', 'Ice', 'Gaia',
+                               'ProtoPlanet'})
+
+
+def _fed_plan_groups(player, touching):
+    """Groups (lists of structures) of adjacent buildings outside our federations and their neighbourhood."""
+    free = [s for s in player['structures'] if str(s['hex']) not in touching and _structure_power(s)]
+    groups, seen = [], set()
+    for i in range(len(free)):
+        if i in seen:
+            continue
+        group, todo = [], [i]
+        seen.add(i)
+        while todo:
+            j = todo.pop()
+            group.append(free[j])
+            for k in range(len(free)):
+                if k not in seen and _hex_distance(free[j]['hex'], free[k]['hex']) == 1:
+                    seen.add(k)
+                    todo.append(k)
+        groups.append(group)
+    return groups
+
+
+def fed_plan_goals(snapshot):
+    """federation-plan-* goals for the strongest group with power FED_PLAN_START..6 (empty when none)."""
+    from four_factions.preparation import Goal
+    from strategy_teacher import kind
+    state, actor = snapshot['state'], snapshot.get('player')
+    if (actor is None or not isinstance(state.get('phase'), dict) or 'ActionPhase' not in state['phase']
+            or state['round'] > FED_PLAN_LAST_ROUND):
+        return []
+    player = state['players'][actor]
+    if not _part(player, 'fed_plan'):
+        return []
+    federated = {str(h) for h in player.get('federated_hexes', [])}
+    touching = federated | {n for h in federated for n in _hex_neighbors(h)}
+    groups = [(sum(_structure_power(s) for s in g), g) for g in _fed_plan_groups(player, touching)]
+    groups = [(p, g) for p, g in groups if FED_PLAN_START <= p < FED_PLAN_POWER]
+    if not groups:
+        return []
+    power, group = max(groups, key=lambda pg: pg[0])
+    hexes = [str(s['hex']) for s in group]
+    need = FED_PLAN_POWER - power
+    kinds = {str(s['hex']): kind(s['kind']) for s in group}
+    two = sum(_structure_power(s) == 2 for s in group)
+    planets = []
+    for coord, cell in state['board']['hexes'].items():
+        planet = cell.get('planet')
+        if (not planet or planet['planet_type'] not in _FED_PLAN_PLANETS or planet['owner'] not in (None, actor)
+                or cell['structures'] or coord in touching):
+            continue
+        d = min(_hex_distance(coord, h) for h in hexes)
+        if d <= 2:
+            cost = _mine_cost(state, player, coord)
+            planets.append((d, cost.get('ore', 0) + cost.get('qic', 0), coord))
+    planets.sort()
+    colonies = [Goal(f'colony@{c}', 'colony', c) for _, _, c in planets]
+    mines = [h for h in hexes if kinds[h] == 'Mine']
+    stations = [h for h in hexes if kinds[h] == 'TradingStation']
+    has_institute = any(kind(s['kind']) == 'PlanetaryInstitute' for s in player['structures'])
+
+    def plan(shape, upgrades, limit):
+        rest = need - len(upgrades)
+        if rest < 0 or rest > len(colonies):
+            return None
+        if two + sum(u.target == 'TradingStation' for u in upgrades) > limit:
+            return None
+        steps = tuple(colonies[:rest]) + tuple(upgrades)
+        satellites = sum(d - 1 for d, _, _ in planets[:rest])
+        return (len(steps), satellites, Goal(f'federation-plan-{shape}', 'ordered', steps=steps,
+                                             sources=('user-2026-11-27',)))
+
+    options = [plan('mines', (), FED_PLAN_TWO_POWER)]
+    if stations and not has_institute:
+        options.append(plan('institute', (Goal(f'PlanetaryInstitute@{stations[0]}', 'upgrade', stations[0],
+                                                'PlanetaryInstitute'),), FED_PLAN_TWO_POWER))
+    if mines:
+        options.append(plan('station', (Goal(f'TradingStation@{mines[0]}', 'upgrade', mines[0], 'TradingStation'),),
+                            FED_PLAN_TWO_POWER))
+    options = [o for o in options if o is not None]
+    if not options and not _fed_plan_exception_used(player):
+        ups = tuple(Goal(f'TradingStation@{h}', 'upgrade', h, 'TradingStation')
+                    for h in mines[:max(0, 3 - two)])
+        o = plan('ts3', ups, FED_PLAN_TWO_POWER + 1)
+        options = [o] if o is not None else []
+    return [g for _, _, g in sorted(options, key=lambda o: o[:2])]
+
+
+def _fed_plan_exception_used(player):
+    """Proxy: three trading stations already inside our federations = the TSx3 + mine federation was made."""
+    from strategy_teacher import kind
+    federated = {str(h) for h in player.get('federated_hexes', [])}
+    return sum(kind(s['kind']) == 'TradingStation' and str(s['hex']) in federated
+               for s in player['structures']) >= 3
+
+
 def _link_costs(state, own, touching):
     """Function coord -> change in the satellites needed to link all our free buildings if a mine
     stands on coord (negative: it bridges two groups; 9: it cannot be linked or touches a federation).
@@ -4510,7 +4628,10 @@ def plan_menu_goals(snapshot, goals):
     all_plans = track_plan_goals(snapshot)
     plans = [g for g in all_plans if plan_affordable(snapshot, g)]      # E86 (ㄱ)
     covered = {step.name for plan in plans for step in plan.steps if step.family == 'research'}
-    pool = [g for g in (fed_compare_goal(snapshot, part=False), token_compare_goal(snapshot, part=False)) if g]
+    fed_now = fed_compare_goal(snapshot, part=False)
+    # fed_plan: with no legal federation now, the planned set takes the federation slot (federation-plan-*).
+    fed_plans = [] if fed_now is not None else fed_plan_goals(snapshot)
+    pool = [g for g in (fed_now, *fed_plans, token_compare_goal(snapshot, part=False)) if g]
     pool += plans + [g for g in goals if not (getattr(g, 'family', None) == 'research' and g.name in covered)]
     # A dropped plan's research stays a bare goal (the goals_for wrapper may already have removed it from `goals`).
     for plan in all_plans:
@@ -6142,6 +6263,14 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune(seed, **kwargs)
     _wrap_rank('_prune', prune_scores)
     _guide['power_first'] = True
     _wrap_rank('_power_first', power_first_scores)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan(seed, **kwargs):
+    """Teacher factory: ..._tier_prune + fed_plan (user 2026-11-27: federation planned from adjacent power 3, sets
+    of 7 power with at most two two-power buildings; see fed_plan_goals). Not in the base stack."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune(seed, **kwargs)
+    _guide['fed_plan'] = True
     return teacher
 
 
