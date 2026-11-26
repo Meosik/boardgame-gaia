@@ -1,0 +1,22 @@
+{
+ "name": "141-test-prune-tile",
+ "kind": "command",
+ "status": "failed",
+ "note": "E370 사용자 「구현해」(E369 기본 타일 고르는 순서). 봇 턴에서 python 실행이 막혀 단위 테스트만 lab에서 돌린다(실험 아님, 판정 없음). 건강 기준: 종료 코드 0, test_prune_tile 7개 · 기존 test_prune_power_tf · test_prune_convs 모두 통과. 실패하면 정리 턴에 고친다. 예상 1분, 제한 0.25시간.",
+ "host": "agentmaco",
+ "commit": "42fff1a",
+ "started_at": "2026-11-27T01:05:15+09:00",
+ "finished_at": "2026-11-27T01:05:16+09:00",
+ "command": [
+  "env",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "/home/sohegi/projects/gaia-lab/gaia-rl/.venv/bin/python",
+  "-m",
+  "unittest",
+  "-v",
+  "test_prune_tile",
+  "test_prune_power_tf",
+  "test_prune_convs"
+ ],
+ "exit_code": 1
+}
