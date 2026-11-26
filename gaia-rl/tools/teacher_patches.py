@@ -5761,6 +5761,35 @@ def _prune_mine(state, player, action):
     return False
 
 
+def _prune_power_tf(state, player, action):
+    """E368 (user 2026-11-27): keep only terraforming power actions within 1 range QIC whose free spades
+    exactly match the steps; buying extra spades is kept only with terraforming research 3+; deliberately
+    wasting a spade (e.g. the 2-spade action for a 1-step planet) is left to PPO. None when not one."""
+    free = {2: 2, 6: 1}.get(action.get('id')) if action.get('type') == 'PowerAction' else None
+    coord = action.get('coord')
+    if free is None or not coord:
+        return None
+    hexes = state['board']['hexes']
+    if coord not in hexes or not hexes[coord].get('planet'):
+        return None
+    from economy.teacher import RING
+    kind = hexes[coord]['planet']['planet_type']
+    if kind not in RING:
+        return None
+    from economy.teacher import path_distance
+    from four_factions.value import navigation
+    starts = [s['hex'] for s in player['structures']]
+    qic = max(0, (path_distance(state, starts, coord)-navigation(player)+1)//2) if starts else 0
+    if qic >= 2:
+        return True
+    steps = _terraform_steps(state, player, kind) or 0
+    if steps == 0 or free > steps:
+        return True
+    if steps-free >= 1:
+        return player['faction'] == 'Gleens' or player['research_tracks'].get('terraforming', 0) < 3
+    return False
+
+
 def _fed_minimum(player):
     pi = any((next(iter(s['kind'])) if isinstance(s['kind'], dict) else s['kind']) == 'PlanetaryInstitute'
              for s in player['structures'])
@@ -5954,9 +5983,9 @@ def prune_indices(snapshot):
         return set()
     player = state['players'][actor]
     candidates = snapshot['candidates']
-    families = {'tile': (set(), set()), 'mine': (set(), set())}
+    families = {'tile': (set(), set()), 'mine': (set(), set()), 'power_tf': (set(), set())}
     for i, c in enumerate(candidates):
-        for name, test in (('tile', _prune_tile), ('mine', _prune_mine)):
+        for name, test in (('tile', _prune_tile), ('mine', _prune_mine), ('power_tf', _prune_power_tf)):
             verdict = test(state, player, c['action'])
             if verdict is not None:
                 families[name][0].add(i)
