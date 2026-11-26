@@ -11,6 +11,7 @@ import gzip
 import json
 import os
 import re
+import shutil
 
 FACTION_KO = {
     "Terrans": "테란", "Lantids": "란티드", "Xenos": "제노스", "Gleens": "글린",
@@ -30,6 +31,82 @@ def parse_xy(key):
     return int(q), int(r)
 
 
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ASSET_ROOT = os.path.join(REPO, "gaia-frontend", "src", "assets")
+
+# Port of gaia-frontend/src/assets/sectorImages.ts (deepSpaceSectorSide) tables.
+DS_A = {11: ("Asteroid", None, "ProtoPlanet"), 12: ("ProtoPlanet", None, "Transdim"),
+        13: (None, "Asteroid", "Transdim"), 14: (None, "Asteroid", "ProtoPlanet"),
+        15: (None, None, "ProtoPlanet"), 16: (None, "ProtoPlanet", None),
+        17: (None, None, "Transdim"), 18: (None, None, "ProtoPlanet")}
+DS_B = {11: ("Asteroid", None, None), 12: (None, None, "Asteroid"),
+        13: (None, "Asteroid", None), 14: (None, "Asteroid", None),
+        15: (None, "Asteroid", "ProtoPlanet"), 16: (None, "Asteroid", "Asteroid"),
+        17: ("Asteroid", None, None), 18: ("Asteroid", None, None)}
+DS_LOCAL = [(0, 0), (1, 0), (0, 1)]
+# interspaceTileImages.ts: tile id by kind (files are interspace_NN_*.webp)
+SHIP_TILE = {"Eclipse": 2, "TFMars": 3, "Rebellion": 4, "Twilight": 5}
+TILE_BLANK, TILE_ASTEROID, TILE_PROTO = 1, 6, 7
+
+
+def rotate_hex_n(q, r, n):
+    for _ in range(((n % 6) + 6) % 6):
+        q, r = -r, q + r
+    return q, r
+
+
+def axial_distance(aq, ar, bq, br):
+    return max(abs(aq - bq), abs(ar - br), abs((-aq - ar) - (-bq - br)))
+
+
+def deep_space_side(sid, rotation, oq, orr, planets):
+    """Port of deepSpaceSectorSide; planets maps (q,r) -> planet_type or None."""
+    side_a, side_b = DS_A.get(sid), DS_B.get(sid)
+    if not side_a or not side_b:
+        return "A"
+    am = bm = ad = bd = 0
+    for i, (q, r) in enumerate(DS_LOCAL):
+        ea, eb = side_a[i], side_b[i]
+        if ea == eb:
+            continue
+        if ea is not None:
+            ad += 1
+        if eb is not None:
+            bd += 1
+        rq, rr = rotate_hex_n(q, r, rotation)
+        actual = planets.get((oq + rq, orr + rr))
+        if ea is not None and actual == ea:
+            am += 1
+        if eb is not None and actual == eb:
+            bm += 1
+    if am > bm:
+        return "A"
+    if bm > am:
+        return "B"
+    return "A" if ad <= bd else "B"
+
+
+def sector_file(sid, side):
+    """Path relative to the frontend assets dir, or None."""
+    if 1 <= sid <= 10:
+        return "space_sectors/normalized/%02d.webp" % sid
+    if 11 <= sid <= 18:
+        return "deep_space_sectors/normalized/%d-%d.webp" % (sid, 2 if side == "B" else 1)
+    return None
+
+
+def interspace_file(tile_id):
+    hits = sorted(glob.glob(os.path.join(ASSET_ROOT, "interspace_tiles", "normalized",
+                                         "interspace_%02d_*.webp" % tile_id)))
+    return "interspace_tiles/normalized/" + os.path.basename(hits[0]) if hits else None
+
+
+def xy_of(c):
+    if isinstance(c, dict):
+        return c["q"], c["r"]
+    return parse_xy(c)
+
+
 def load_game(path):
     m = re.search(r"pair-(\d+)", os.path.basename(path))
     if not m:
@@ -38,29 +115,106 @@ def load_game(path):
         d = json.load(f)
     st = d["frames"][0]["state"]
     board = st["board"]
-    hexes = []
+    planets = {}
     for key, h in board["hexes"].items():
-        q, r = parse_xy(key)
         pl = h.get("planet") if isinstance(h, dict) else None
-        hexes.append([q, r, pl.get("planet_type") if pl else None])
-    hexes.sort(key=lambda x: (x[0], x[1]))
-    sectors = []
+        planets[parse_xy(key)] = pl.get("planet_type") if pl else None
+    secs = []
     for s in board.get("sectors", []):
-        q, r = parse_xy(s["origin"])
-        sectors.append([s["id"], q, r])
+        oq, orr = parse_xy(s["origin"])
+        rot = s.get("rotation", 0)
+        side = deep_space_side(s["id"], rot, oq, orr, planets) if s["id"] >= 11 else None
+        secs.append((s["id"], oq, orr, rot, side))
+    # hexes covered by sector art (sectorPrintedHexKeys in GameBoard)
+    printed = set()
+    for (q, r) in planets:
+        for sid, oq, orr, rot, side in secs:
+            if sid <= 10 and axial_distance(q, r, oq, orr) <= 2:
+                printed.add((q, r))
+                break
+    for sid, oq, orr, rot, side in secs:
+        if sid > 10:
+            for (q, r) in DS_LOCAL:
+                rq, rr = rotate_hex_n(q, r, rot)
+                printed.add((oq + rq, orr + rr))
+    ships = {}
+    for ship, c in (board.get("spaceship_tiles") or {}).items():
+        if c:
+            ships[xy_of(c)] = ship
+    sectors = []
+    for sid, oq, orr, rot, side in secs:
+        sectors.append([sid, oq, orr, rot, sector_file(sid, side)])
+    hexes = []
+    for (q, r), pt in planets.items():
+        img = None
+        if (q, r) not in printed:  # interspace hole
+            if (q, r) in ships:
+                tile = SHIP_TILE.get(ships[(q, r)], TILE_BLANK)
+            elif pt == "Asteroid":
+                tile = TILE_ASTEROID
+            elif pt == "ProtoPlanet":
+                tile = TILE_PROTO
+            else:
+                tile = TILE_BLANK
+            img = interspace_file(tile)
+        # [q, r, planet, interspace image, covered by art]
+        covered = 1 if img else 0
+        if (q, r) in printed:
+            covered = 1 if any(s[4] and ((s[0] <= 10 and axial_distance(q, r, s[1], s[2]) <= 2)
+                                         or (s[0] > 10 and (q, r) in deep_hexes(s))) for s in sectors) else 0
+        hexes.append([q, r, pt, img, covered])
+    hexes.sort(key=lambda x: (x[0], x[1]))
     factions = [p["faction"] for p in st["players"]]
     return {"id": "pair-%03d" % int(m.group(1)), "hexes": hexes,
             "sectors": sectors, "factions": factions}
 
 
-def build_data(paths):
+def deep_hexes(s):
+    out = set()
+    for (q, r) in DS_LOCAL:
+        rq, rr = rotate_hex_n(q, r, s[3])
+        out.add((s[1] + rq, s[2] + rr))
+    return out
+
+
+def asset_files(data):
+    names = set()
+    for g in data["games"]:
+        for s in g["sectors"]:
+            if s[4]:
+                names.add(s[4])
+        for h in g["hexes"]:
+            if h[3]:
+                names.add(h[3])
+    return sorted(names)
+
+
+def build_data(paths, prefix="mark-assets/"):
     games = [g for g in (load_game(p) for p in paths) if g]
     games.sort(key=lambda g: g["id"])
-    return {"games": games, "ko": FACTION_KO, "exp": "138"}
+    return {"games": games, "ko": FACTION_KO, "exp": "138", "assets": prefix}
+
+
+def copy_assets(data, dest):
+    os.makedirs(dest, exist_ok=True)
+    n = 0
+    for rel in asset_files(data):
+        src = os.path.join(ASSET_ROOT, rel)
+        if os.path.isfile(src):
+            shutil.copy2(src, os.path.join(dest, os.path.basename(rel)))
+            n += 1
+    return n
 
 
 def render(data, title):
-    blob = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    # asset names are stored by basename in the page (files are copied flat)
+    d = json.loads(json.dumps(data))
+    for g in d["games"]:
+        for s in g["sectors"]:
+            s[4] = os.path.basename(s[4]) if s[4] else None
+        for h in g["hexes"]:
+            h[3] = os.path.basename(h[3]) if h[3] else None
+    blob = json.dumps(d, ensure_ascii=False, separators=(",", ":"))
     blob = blob.replace("</", "<\\/")
     return (HTML.replace("__TITLE__", title.replace("<", "&lt;"))
             .replace("__DATA__", blob))
@@ -70,16 +224,23 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--replays", default=DEFAULT_REPLAYS)
     ap.add_argument("--out", default=DEFAULT_OUT)
+    ap.add_argument("--assets-out", default=None,
+                    help="folder for copied art (default: mark-assets next to --out)")
     ap.add_argument("--title", default="실험 138 초반 위치 표시")
     a = ap.parse_args()
     paths = sorted(glob.glob(os.path.expanduser(a.replays)))
     if not paths:
         raise SystemExit("no replays match %s" % a.replays)
-    data = build_data(paths)
-    out = os.path.expanduser(a.out)
+    out = os.path.abspath(os.path.expanduser(a.out))
+    assets = os.path.abspath(os.path.expanduser(a.assets_out)) if a.assets_out \
+        else os.path.join(os.path.dirname(out), "mark-assets")
+    prefix = os.path.relpath(assets, os.path.dirname(out)).replace(os.sep, "/") + "/"
+    data = build_data(paths, prefix)
+    n = copy_assets(data, assets)
     with open(out, "w", encoding="utf-8") as f:
         f.write(render(data, a.title))
-    print("wrote %s: %d games, %d bytes" % (out, len(data["games"]), os.path.getsize(out)))
+    print("wrote %s: %d games, %d bytes, %d asset files copied to %s"
+          % (out, len(data["games"]), os.path.getsize(out), n, assets))
 
 
 HTML = r"""<!DOCTYPE html>
@@ -93,10 +254,10 @@ h1{font-size:18px;margin:4px 0}
 button,select{font-size:16px;padding:10px 12px;margin:3px;border-radius:8px;border:2px solid #555;background:#222;color:#eee}
 button.on{border-width:3px;background:#333;font-weight:bold}
 #svg{width:100%;height:auto;background:#0b0b10;touch-action:manipulation;display:block}
-.hx{fill:#0b0b10;stroke:#3a3a48;stroke-width:1}
-.hx.pl{fill:transparent}
+.hx{fill:none;stroke:#fff;stroke-opacity:.28;stroke-width:.35;pointer-events:none}
 .hit{fill:transparent;cursor:pointer}
-.sec{fill:#fff;fill-opacity:.13;font-weight:bold;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.art{pointer-events:none}
+.sec{fill:#fff;fill-opacity:.4;stroke:#000;stroke-opacity:.4;stroke-width:.3;paint-order:stroke;font-weight:bold;text-anchor:middle;dominant-baseline:central;pointer-events:none}
 .mk{pointer-events:none}
 .legend span{display:inline-block;margin:2px 8px 2px 0;font-size:14px}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:7px;vertical-align:middle;margin-right:4px;border:1px solid #888}
@@ -130,6 +291,10 @@ function el(n,a,p){var e=document.createElementNS("http://www.w3.org/2000/svg",n
 function btn(t,on,fn,col){var b=document.createElement("button");b.textContent=t;if(on)b.className="on";if(col)b.style.borderColor=col;b.onclick=fn;return b}
 var S=10,SQ=Math.sqrt(3);
 function px(q,r){return[1.5*q*S,SQ*(r+q/2)*S]}
+function rotN(q,r,n){var k=((n%6)+6)%6;for(var i=0;i<k;i++){var nq=-r,nr=q+r;q=nq;r=nr}return[q,r]}
+var STO=[],DSO=[[0,0],[1,0],[0,1]];
+for(var sq=-2;sq<=2;sq++){for(var sr=Math.max(-2,-2-sq);sr<=Math.min(2,2-sq);sr++)STO.push([sq,sr])}
+function centroid(offs,oq,or,rot){var sx=0,sy=0;offs.forEach(function(o){var rr=rotN(o[0],o[1],rot),p=px(rr[0]+oq,rr[1]+or);sx+=p[0];sy+=p[1]});return[sx/offs.length,sy/offs.length]}
 function hexPts(cx,cy,s){var p=[];for(var i=0;i<6;i++){var a=Math.PI/3*i;p.push((cx+s*Math.cos(a)).toFixed(2)+","+(cy+s*Math.sin(a)).toFixed(2))}return p.join(" ")}
 function ui(){
   var d=document.getElementById("games");d.innerHTML="";
@@ -161,16 +326,42 @@ function draw(){
   var g=G(),x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   g.hexes.forEach(function(h){var p=px(h[0],h[1]);x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])});
   var m=S*1.2;svg.setAttribute("viewBox",[x0-m,y0-m,x1-x0+2*m,y1-y0+2*m].join(" "));
-  var bg=el("g",{},svg),sg=el("g",{},svg),mg=el("g",{id:"mg","class":"mk"},svg),hg=el("g",{},svg);
+  el("rect",{x:x0-m,y:y0-m,width:x1-x0+2*m,height:y1-y0+2*m,fill:"#080818"},svg);
+  var ag=el("g",{"class":"art"},svg),bg=el("g",{},svg),sg=el("g",{},svg),mg=el("g",{id:"mg","class":"mk"},svg),hg=el("g",{},svg);
+  var defs=el("defs",{},ag),A=DATA.assets,fallback=0;
+  function href(f){return A+encodeURIComponent(f)}
+  // sector art: same placement math as GameBoard (units of S == HEX_SIZE)
+  g.sectors.forEach(function(s,si){
+    if(!s[4])return;
+    var deep=s[0]>=11,offs=deep?DSO:STO,rot=s[3];
+    var w=deep?S*3.5:S*8,hh=deep?S*2*SQ:S*5*SQ;
+    var photo=deep?1:4;
+    var pv=px(s[1],s[2]);
+    var cen=centroid(offs,s[1],s[2],photo);
+    var ix=deep?cen[0]-w*4/7:cen[0]-w/2,iy=deep?cen[1]-hh*0.5:cen[1]-hh/2;
+    var cp=el("clipPath",{id:"c"+si},defs);
+    offs.forEach(function(o){var rr=rotN(o[0],o[1],rot),p=px(rr[0]+s[1],rr[1]+s[2]);el("polygon",{points:hexPts(p[0],p[1],S)},cp)});
+    var gg=el("g",{"clip-path":"url(#c"+si+")"},ag);
+    var im=el("image",{href:href(s[4]),x:ix,y:iy,width:w,height:hh,preserveAspectRatio:"none",transform:"rotate("+((rot-photo)*60)+" "+pv[0]+" "+pv[1]+")"},gg);
+    im.setAttribute("style","pointer-events:none");
+  });
+  // interspace tiles: one hex each, clipped to the hex, 2.1*S square, slice
+  g.hexes.forEach(function(h,hi){
+    if(!h[3])return;var p=px(h[0],h[1]),sz=S*2.1;
+    var cp=el("clipPath",{id:"i"+hi},defs);el("polygon",{points:hexPts(p[0],p[1],S)},cp);
+    var gg=el("g",{"clip-path":"url(#i"+hi+")"},ag);
+    el("image",{href:href(h[3]),x:p[0]-sz/2,y:p[1]-sz/2,width:sz,height:sz,preserveAspectRatio:"xMidYMid slice"},gg);
+  });
   g.hexes.forEach(function(h){
     var p=px(h[0],h[1]);
-    el("polygon",{points:hexPts(p[0],p[1],S*0.97),"class":"hx"},bg);
-    if(h[2]){var c=PC[h[2]]||"#999";
+    el("polygon",{points:hexPts(p[0],p[1],S),"class":"hx"},bg);
+    if(h[2]&&!h[4]){fallback++;var c=PC[h[2]]||"#999";
       if(h[2]=="Asteroid"){for(var i=0;i<5;i++){var a=i*1.256;el("circle",{cx:p[0]+3.4*Math.cos(a),cy:p[1]+3.4*Math.sin(a),r:1.9,fill:"#9aa5b1"},bg)}}
       else{var e=el("circle",{cx:p[0],cy:p[1],r:S*0.5,fill:c,stroke:"#000","stroke-width":.6},bg);
         if(h[2]=="LostPlanet"){e.setAttribute("stroke","#fff");e.setAttribute("stroke-width",1.6)}}}
   });
-  g.sectors.forEach(function(s){var p=px(s[1],s[2]);var t=el("text",{x:p[0],y:p[1],"class":"sec","font-size":S*5},sg);t.textContent=s[0]});
+  document.getElementById("legend").style.display=fallback?"block":"none";
+  g.sectors.forEach(function(s){var p=px(s[1],s[2]);var t=el("text",{x:p[0],y:p[1],"class":"sec","font-size":S*2.2},sg);t.textContent=s[0]});
   g.hexes.forEach(function(h){
     var p=px(h[0],h[1]),key=h[0]+","+h[1];
     var pl=el("polygon",{points:hexPts(p[0],p[1],S),"class":"hit"},hg);
