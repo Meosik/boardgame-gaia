@@ -5853,7 +5853,7 @@ def _pay_targets(state, player, candidates):
     return targets
 
 
-def _pay_kinds(player, cost, big):
+def _pay_kinds(state, player, cost, big):
     """Conversion kinds in a payment that makes `cost` affordable, or an empty set when even every
     conversion cannot (power counted with burning; QIC→ore only for a lab/PI/academy, memory 11-23)."""
     r = player['resources']
@@ -5879,13 +5879,23 @@ def _pay_kinds(player, cost, big):
     if need['qic']:
         kinds.add('PowerToQic')
     if need['credits']:
-        spare = {'KnowledgeToCredit': have['knowledge']-cost.get('knowledge', 0),
-                 'OreToCredit': have['ore']-cost.get('ore', 0)}
-        cover = max(0, power) + sum(max(0, v) for v in spare.values())
-        if cover < need['credits']:
+        ore_spare = max(0, have['ore']-cost.get('ore', 0))
+        knowledge = max(0, have['knowledge']-cost.get('knowledge', 0))
+        left = need['credits']-max(0, power)-ore_spare    # still short after power and ore
+        if state['round'] < 6:
+            # User 2026-11-26: knowledge→credit at most once, only when power and ore cannot cover the
+            # last credit and it keeps next round's research steps (4 knowledge each); else round 6.
+            from four_factions.value import production
+            income = production(state, player, include_booster=False)[2]
+            keeps = (have['knowledge']-1+income)//4 == (have['knowledge']+income)//4
+            knowledge = min(knowledge, 1) if left == 1 and keeps else 0
+        if left > knowledge:
             return set()
-        kinds |= {k for k, v in spare.items() if v > 0}
-        power -= max(0, need['credits']-sum(max(0, v) for v in spare.values()))
+        if ore_spare:
+            kinds.add('OreToCredit')
+        if left > 0:
+            kinds.add('KnowledgeToCredit')
+        power -= max(0, need['credits']-ore_spare-max(0, left))
     return kinds if power >= 0 else set()
 
 
@@ -5897,7 +5907,7 @@ def _prune_convs(state, player, candidates):
         return set()
     allowed = set()
     for _, cost, big in _pay_targets(state, player, candidates):
-        allowed |= _pay_kinds(player, cost, big)
+        allowed |= _pay_kinds(state, player, cost, big)
     return {i for i, kind in convs.items() if kind not in allowed}
 
 
