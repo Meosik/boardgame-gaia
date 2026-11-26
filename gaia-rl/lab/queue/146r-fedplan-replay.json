@@ -1,0 +1,6 @@
+{
+ "kind": "command",
+ "note": "사용자 2026-11-27 「리플 한번 봐야겠다」: 146-fedplan-one-game 1판 리플레이 게시(139s와 같은 명령, 수입 재계산 바이너리를 지금 엔진으로 다시 빌드한 뒤 publish_faction_replays.py --all-games). 봇 쉘에서는 export가 거부돼 lab으로. 판정 없음(게시 전용). 성공 = 종료 코드 0, 리플레이 게시(146 판). 실패하면 로그 끝을 보고 원인만 기록(재시도는 사용자 결정). 예상 5–15분, 제한 1시간.",
+ "run": ["bash", "-c", "/home/sohegi/.cargo/bin/cargo build --manifest-path ../Cargo.toml -p gaia-engine --release --example replay_income && \"$0\" tools/publish_faction_replays.py runs/lab-146-fedplan-one-game --destination /home/sohegi/gaia-media/ai-replays --all-games", "{python}"],
+ "timeout_hours": 1
+}
