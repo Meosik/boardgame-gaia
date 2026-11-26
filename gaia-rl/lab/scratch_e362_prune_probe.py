@@ -107,6 +107,9 @@ def check_factory(rounds=1):
 
 
 if __name__ == '__main__':
+    if 'check' in sys.orig_argv[-1:]:
+        check_factory()
+        sys.exit(0)
     pick()
     probe()
     check_factory()
