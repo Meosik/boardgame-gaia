@@ -337,12 +337,10 @@ def predicate_for(snapshot, goal):
         if planet['owner'] not in (None, actor):
             return lambda a: False
         forming = planet['planet_type'] == 'Transdim' and not planet['is_gaia_formed']
-        builds = ('Build', 'RoundBoosterTerraformBuild', 'RoundBoosterRangeBuild',
-                  'TwilightRangeBuild', 'SpaceshipCreditTerraform')
-        if planet['planet_type'] == 'Asteroid':
-            builds += ('EclipseAsteroidMine',)
         return lambda a: (a.get('coord') == goal.coord and
-                          ('GaiaFormation' in a['type'] if forming else a['type'] in builds))
+                          ('GaiaFormation' in a['type'] if forming else
+                           a['type'] in ('Build', 'RoundBoosterTerraformBuild', 'RoundBoosterRangeBuild',
+                                         'TwilightRangeBuild', 'SpaceshipCreditTerraform')))
     if goal.family in ('ship', 'explore'):
         if goal.payoff == 'SpaceshipCreditTerraform' and player['explored_ships']:
             return lambda a: a['type'] == goal.payoff

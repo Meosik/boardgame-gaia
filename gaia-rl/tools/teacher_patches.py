@@ -6312,6 +6312,32 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan(seed, *
     of 7 power with at most two two-power buildings; see fed_plan_goals). Not in the base stack."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune(seed, **kwargs)
     _guide['fed_plan'] = True
+    install_eclipse_colony()
     return teacher
+
+
+def install_eclipse_colony():
+    """fed_plan only (user 2026-11-27 「이클립스 … 던질 예정」, debate 1/1: the frozen baseline stays untouched): a colony
+    step on an Asteroid also counts the Eclipse 6-credit asteroid mine (EclipseAsteroidMine) for a player with the
+    fed_plan part. Wraps preparation.predicate_for once; other players and lanes keep the baseline matcher."""
+    from four_factions import preparation
+    if getattr(preparation.predicate_for, '_eclipse_colony', False):
+        return
+    original = preparation.predicate_for
+
+    def predicate_for(snapshot, goal):
+        matches = original(snapshot, goal)
+        if goal.family != 'colony':
+            return matches
+        state, actor = snapshot['state'], snapshot['player']
+        planet = state['board']['hexes'][goal.coord]['planet']
+        if (planet['planet_type'] != 'Asteroid' or planet['owner'] not in (None, actor)
+                or not _part(state['players'][actor], 'fed_plan')):
+            return matches
+        return lambda a: matches(a) or (a['type'] == 'EclipseAsteroidMine' and a.get('coord') == goal.coord)
+
+    predicate_for._eclipse_colony = True
+    predicate_for.__wrapped__ = original
+    preparation.predicate_for = predicate_for
 
 

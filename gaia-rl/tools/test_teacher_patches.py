@@ -877,6 +877,25 @@ class OpeningBudgetTests(unittest.TestCase):
         self.assertEqual(colonies('Lantids'), set())                        # (d) nothing planned
         self.assertEqual(colonies('Lantids', fit='Eclipse'), {'-1,0'})      # Eclipse fitted
 
+    def test_eclipse_colony_counts_the_eclipse_asteroid_mine_only_with_fed_plan(self):
+        from four_factions import preparation
+        from four_factions.preparation import Goal
+        saved = preparation.predicate_for
+        self.addCleanup(setattr, preparation, 'predicate_for', saved)
+        tp.install_eclipse_colony()
+        tp.install_eclipse_colony()                                         # wraps once
+        self.assertIs(preparation.predicate_for.__wrapped__, saved)
+        snapshot = self._fed_plan_fixture([('Mine', '0,0')], ['-1,0'])
+        snapshot['state']['board']['hexes']['-1,0']['planet'].update(planet_type='Asteroid', is_gaia_formed=False)
+        goal = Goal('colony@-1,0', 'colony', '-1,0')
+        eclipse = {'type': 'EclipseAsteroidMine', 'coord': '-1,0'}
+        tp._guide['fed_plan'] = False
+        self.assertFalse(preparation.predicate_for(snapshot, goal)(eclipse))   # baseline matcher without the part
+        tp._guide['fed_plan'] = True                                        # restored by setUp's cleanup
+        self.assertTrue(preparation.predicate_for(snapshot, goal)(eclipse))
+        self.assertTrue(preparation.predicate_for(snapshot, goal)({'type': 'Build', 'coord': '-1,0'}))
+        self.assertFalse(preparation.predicate_for(snapshot, goal)({'type': 'EclipseAsteroidMine', 'coord': '3,0'}))
+
     def test_fed_plan_goals_plan_the_federation_from_adjacent_power_three(self):
         near = ['-1,0', '0,-1', '3,0', '2,1', '-2,0']      # distance 1, 1, 2, 2, 2 from the group
         far = '4,0'                                         # distance 3: never a step
