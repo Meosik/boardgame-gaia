@@ -27,10 +27,18 @@ def main():
     env = Environment(result['seed'], 2000)
     with gzip.open(game/'decisions.jsonl.gz', 'rt') as f:
         rows = [json.loads(line) for line in f]
+    import teacher_ab as ab
+    from types import SimpleNamespace
     for row in rows:
+        snapshot = json.loads(env.snapshot_json())
+        # Replay check (debate 1/1, as scratch_140_replay.py:50-58): digest, decision id, candidate count, chosen.
+        if (ab.digest(snapshot) != row['digest'] or snapshot['decision_id'] != row['decision_id']
+                or len(snapshot['candidates']) != row['candidates']
+                or snapshot['candidates'][row['index']] != row['chosen']):
+            print('DIVERGE at step', row['step'], 'round', row['round'], len(snapshot['candidates']), row['candidates'])
+            return
         dropped = [str(g) for g in row.get('menu_dropped') or [] if 'federation-plan' in str(g)]
         if dropped:
-            snapshot = json.loads(env.snapshot_json())
             state = snapshot['state']
             player = state['players'][snapshot['player']]
             power = player['resources']['power']
@@ -38,7 +46,20 @@ def main():
             budget = tp._plan_budget(state, player)
             print(f"step {row['step']} seat {row['seat']} {player['faction']} R{state['round']} dropped {dropped}"
                   f" budget {budget} tokens {tokens}")
-            for goal in tp.fed_plan_goals(snapshot):
+            # Menu proxy (debate 1/1): the real call passes menu=plans+goals (teacher_patches.py:4699), read only by
+            # _fed_plan_gaia_planned (a Gaia research to the next level). The log keeps goal names only, so a
+            # 'track-plan-GaiaProject-L' in this decision's menu stands for its first step, Gaia research to level+1.
+            level = player.get('research_tracks', {}).get('gaia', 0)
+            names = [str(g) for g in (row.get('menu_pool') or []) + (row.get('menu_dropped') or [])]
+            gaia = any(n.startswith('track-plan-GaiaProject-') and int(n.split('-')[3].split('>')[0]) > level
+                       for n in names)
+            menu = [SimpleNamespace(family='research', target='GaiaProject', level=level+1)] if gaia else []
+            plain = {g.name for g in tp.fed_plan_goals(snapshot)}
+            print(f"   menu gaia research to {level+1}: {gaia}; knowledge {player['resources'].get('knowledge')}"
+                  f"; gaia_planned {tp._fed_plan_gaia_planned(player, menu)}")
+            for goal in tp.fed_plan_goals(snapshot, menu=menu):
+                if goal.name not in plain:
+                    print('   (only with menu)')
                 cost = tp._plan_cost(snapshot, goal)
                 short = {k: n - budget.get(k, 0) for k, n in cost.items() if n > budget.get(k, 0)}
                 print(f"   {goal.name}: ok={tp.plan_affordable(snapshot, goal)} multi={tp._menu_multi_step(snapshot, goal)}"
