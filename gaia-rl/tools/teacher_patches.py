@@ -5804,9 +5804,10 @@ def _prune_feds(state, player, candidates):
 
 # Conversions as payment only (user 2026-11-26, E368): burning power and power→credit stay ordinary
 # candidates; the other base conversions (rulebook p.15) stay only while they pay toward an action that
-# is not legal yet and becomes affordable with conversions. Faction conversions are not filtered (user
-# answer pending). The engine lists each conversion with count 1, so a multi-unit payment is taken one
-# unit per decision; each step re-checks the same shortage and stops once the action is legal.
+# is not legal yet and becomes affordable with conversions. Faction conversions are never filtered (user
+# 2026-11-26: 「저건 막지마. 최대한 활용해야해」). The engine lists each conversion with count 1, so a
+# multi-unit payment is taken one unit per decision; each step re-checks the same shortage and stops once
+# the action is legal.
 CONV_KEEP = frozenset({'BurnPower', 'PowerToCredit'})
 CONV_PAY = frozenset({'KnowledgeToCredit', 'OreToCredit', 'PowerToOre', 'QicToOre',
                       'PowerToKnowledge', 'PowerToQic', 'OreToPower'})
