@@ -149,8 +149,11 @@ function ui(){
 }
 function toggle(key){
   var m=fm(G().factions[fi]);
-  if(kind=="start"){var i=m.start.indexOf(key);if(i>=0)m.start.splice(i,1);else m.start=[key]}
-  else{var j=m.early.indexOf(key);if(j>=0)m.early.splice(j,1);else m.early.push(key)}
+  var i=m.start.indexOf(key),j=m.early.indexOf(key);
+  if(i>=0)m.start.splice(i,1);
+  else if(j>=0)m.early.splice(j,1);
+  else if(kind=="start")m.start.push(key);
+  else m.early.push(key);
   save();ui();marks();
 }
 function draw(){
@@ -185,7 +188,7 @@ function marks(){
       el("circle",{cx:p[0],cy:p[1],r:S*(0.78-i*0.06),fill:"none",stroke:col,"stroke-width":big?2.2:1.6},mg);
       var t=el("text",{x:p[0]+off,y:p[1]+S*(0.35),"font-size":4,"text-anchor":"middle",fill:col,stroke:"#000","stroke-width":.5,"paint-order":"stroke","font-weight":"bold"},mg);
       t.textContent=txt}
-    m.start.forEach(function(k){put(k,lab+"S",true)});
+    m.start.forEach(function(k,j){put(k,lab+"S"+(j+1),true)});
     m.early.forEach(function(k,j){put(k,lab+(j+1),false)});
   });
 }
