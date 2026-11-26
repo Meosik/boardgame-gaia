@@ -5698,3 +5698,150 @@ GAIA_RIDERS = frozenset(f for f, tracks in FACTION_TRACKS.items() if 'gaia' in t
 GAIA_ASTEROID_HOLD_LAST_ROUND = 3
 
 
+# ── prune (user 2026-11-26, E356–E362; research/strategy/candidate-pruning-tables.md) ─────────────
+# Candidates the user's tables say not to calculate at all are blocked in every ranking (root and
+# rollouts). Each family falls back to its original list when the filter would leave none of it.
+# Implemented: 1.1 off-track standard tile track (2 attack tracks + navigation below 2), P1, P2 (Gaia
+# exception only), P4, P5 (Gleens), F1, F2, F5 (rounds 1-5). Not implemented yet: 1.2 per-faction
+# tile table, P2 sector/federation-link exceptions, P5 Lantids, F3, F4, score/competition tracks.
+TRACK_KEYS = {'Terraforming': 'terraforming', 'Navigation': 'navigation', 'ArtificialIntelligence': 'ai',
+              'GaiaProject': 'gaia', 'Economy': 'economy', 'Science': 'science'}
+
+
+def prune_tracks(player):
+    """Tracks an off-track standard tile may advance: the first two attack tracks below their cap,
+    plus Navigation while below 2 (table 1.1)."""
+    levels, caps = player['research_tracks'], TRACK_CAPS.get(player['faction'], {})
+    attack = [t for t in FACTION_TRACKS.get(player['faction'], ())
+              if levels.get(t, 0) < caps.get(t, 5)][:2]
+    if levels.get('navigation', 0) < 2:
+        attack.append('navigation')
+    return set(attack)
+
+
+def _prune_tile(state, player, action):
+    """True when this standard-tile choice advances a track outside prune_tracks (off-track tiles only)."""
+    choice = action.get('tech_tile_choice') if isinstance(action, dict) else None
+    if not isinstance(choice, dict) or choice.get('kind') != 'Standard':
+        return None
+    slots = (state.get('research_board') or {}).get('tech_tile_slots') or []
+    if choice.get('tile') in slots[:len(TRACK_ORDER)]:
+        return None    # on-track tile: the track is fixed, one variant only
+    track = TRACK_KEYS.get(choice.get('advance_track'))
+    return track not in prune_tracks(player)
+
+
+def _prune_mine(state, player, action):
+    """P1/P2/P4/P5 for a plain mine build; None when the action is not one (power-action and
+    two-step terraforming builds are the P1 exception, so only BUILD_TYPES are looked at)."""
+    from economy.teacher import BUILD_TYPES, RING
+    if action.get('type') not in BUILD_TYPES or not action.get('coord'):
+        return None
+    coord = action['coord']
+    hexes = state['board']['hexes']
+    if coord not in hexes or not hexes[coord].get('planet'):
+        return None
+    kind = hexes[coord]['planet']['planet_type']
+    from economy.teacher import path_distance
+    from four_factions.value import navigation
+    starts = [s['hex'] for s in player['structures']]
+    qic = max(0, (path_distance(state, starts, coord)-navigation(player)+1)//2) if starts else 0
+    if kind == 'Gaia':
+        # P4: no QIC to pay the Gaia QIC (Gleens pay ore)
+        return player['resources']['qic'] < qic+1 and player['faction'] != 'Gleens'
+    if qic >= 2:
+        return True    # P2
+    if kind in RING:
+        steps = _terraform_steps(state, player, kind) or 0
+        if player['faction'] == 'Gleens' and steps >= 1:
+            return True    # P5
+        if steps >= 2 and player['research_tracks'].get('terraforming', 0) < 3:
+            return True    # P1
+    return False
+
+
+def _fed_minimum(player):
+    pi = any((next(iter(s['kind'])) if isinstance(s['kind'], dict) else s['kind']) == 'PlanetaryInstitute'
+             for s in player['structures'])
+    return 6 if player['faction'] == 'Xenos' and pi else 7
+
+
+def _prune_feds(state, player, candidates):
+    """Indices of FormFederation candidates blocked by F1 (one satellite layout per building set:
+    fewest satellites, first listed), F2 (a building can be dropped and 7 power remain) and F5
+    (4+ satellites in rounds 1-5)."""
+    power = {str(s['hex']): _structure_power(s) for s in player['structures']}
+    need = _fed_minimum(player)
+    best, blocked = {}, set()
+    for i, c in enumerate(candidates):
+        a = c['action']
+        if a.get('type') != 'FormFederation':
+            continue
+        hexes = [str(h) for h in a.get('hexes') or []]
+        sats = len(a.get('satellite_hexes') or [])
+        token = a.get('token')
+        token = token.get('kind') if isinstance(token, dict) else token
+        if state['round'] < 6 and sats >= 4:
+            blocked.add(i)
+            continue
+        built = [power.get(h, 0) for h in hexes if power.get(h, 0)]
+        if built and sum(built)-min(built) >= need:
+            blocked.add(i)
+            continue
+        key = (tuple(sorted(hexes)), str(token))
+        if key in best:
+            j = best[key]
+            if sats < len(candidates[j]['action'].get('satellite_hexes') or []):
+                blocked.add(j)
+                best[key] = i
+            else:
+                blocked.add(i)
+        else:
+            best[key] = i
+    return blocked
+
+
+def prune_indices(snapshot):
+    """Candidate indices the pruning tables block in this snapshot (pure; also used by teacher_ab's
+    decision log). A family left empty by the filter is restored whole."""
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in str(state.get('phase')):
+        return set()
+    player = state['players'][actor]
+    candidates = snapshot['candidates']
+    families = {'tile': (set(), set()), 'mine': (set(), set())}
+    for i, c in enumerate(candidates):
+        for name, test in (('tile', _prune_tile), ('mine', _prune_mine)):
+            verdict = test(state, player, c['action'])
+            if verdict is not None:
+                families[name][0].add(i)
+                if verdict:
+                    families[name][1].add(i)
+    feds = {i for i, c in enumerate(candidates) if c['action'].get('type') == 'FormFederation'}
+    families['fed'] = (feds, _prune_feds(state, player, candidates))
+    blocked = set()
+    for members, out in families.values():
+        if members - out:
+            blocked |= out
+    return blocked
+
+
+def prune_scores(env, snapshot, scores):
+    from current_actions.conservation import BLOCKED, PREFIX
+    out = prune_indices(snapshot)
+    if not out:
+        return scores
+    lifted = list(scores)
+    for i in out:
+        lifted[i] = (BLOCKED, PREFIX+'prune: pruning tables (E362)', *scores[i][2:])
+    return lifted
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune(seed, **kwargs):
+    """Teacher factory: ships_menu1_all_tier + the user's candidate-pruning tables (E362, one game)."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier(seed, **kwargs)
+    _guide['prune'] = True
+    _wrap_rank('_prune', prune_scores)
+    return teacher
+
+

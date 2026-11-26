@@ -449,6 +449,15 @@ def seat_script_step(candidates, moves):
     return ('play', hits[0]) if len(hits) == 1 else ('stop', len(hits))
 
 
+def _prune_blocked(snapshot):
+    """Candidates the E362 pruning tables would block here (counted for every arm; None if unavailable)."""
+    try:
+        import teacher_patches
+        return len(teacher_patches.prune_indices(snapshot))
+    except Exception:
+        return None
+
+
 def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, max_steps=None, script=None,
          seat_scripts=None, stop_after_setup=False):
     """One game. With stop_round, the game ends when round stop_round+1 starts and 'scores' are the
@@ -549,7 +558,9 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, ma
                                             'menu': reply.get('menu', []),
                                             'menu_pool': reply.get('menu_pool', []),
                                             'menu_dropped': reply.get('menu_dropped', []),
-                                            'menu_forgot': reply.get('menu_forgot')})+'\n')
+                                            'menu_forgot': reply.get('menu_forgot'),
+                                            'candidates': len(snapshot['candidates']),
+                                            'prune_blocked': _prune_blocked(snapshot)})+'\n')
                     env.step(snapshot['decision_id'], index)
                     snapshot = json.loads(env.snapshot_json())
                     expected = digest(snapshot)
