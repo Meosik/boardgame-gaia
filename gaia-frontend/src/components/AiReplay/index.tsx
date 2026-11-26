@@ -13,6 +13,28 @@ import { RewardMotion } from '../RewardMotion';
 import { useLiveReplays } from '../../replay/useLiveReplays';
 
 import { ReplayHighlightContext, replayHighlight } from '../../replay/highlight';
+import { ReplayMarksContext, type ReplayMarks } from '../../replay/marks';
+import { hexLocationLabel } from '../../hexLocation';
+import type { HexCoord } from '../../types/game';
+
+type MarkKind = 'start' | 'early';
+interface HexMark { q: number; r: number; faction: string; kind: MarkKind }
+const MARK_KIND_NAMES: Record<MarkKind, string> = { start: '스타트', early: '초반 땅' };
+const marksKey = (id: string) => `gaia-replay-marks:${id}`;
+function loadMarks(id: string): HexMark[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(marksKey(id)) ?? '[]');
+    if (!Array.isArray(value)) return [];
+    return value.filter((m): m is HexMark => !!m && typeof m === 'object' && Number.isInteger(m.q) && Number.isInteger(m.r)
+      && typeof m.faction === 'string' && (m.kind === 'start' || m.kind === 'early'));
+  } catch { return []; }
+}
+function saveMarks(id: string, marks: HexMark[]) {
+  try {
+    if (marks.length) localStorage.setItem(marksKey(id), JSON.stringify(marks));
+    else localStorage.removeItem(marksKey(id));
+  } catch { /* storage unavailable: marks stay in memory only */ }
+}
 
 const SPEEDS = [0.5, 1, 2, 4];
 const SHORT_POLICY_NAMES: Record<string, string> = {
@@ -82,6 +104,11 @@ export function AiReplay() {
   const [loading, setLoading] = useState(true);
   const actions = useGameStore(s => s.actions);
   const root = useRef<HTMLDivElement>(null);
+  const [markMode, setMarkMode] = useState(false);
+  const [markFaction, setMarkFaction] = useState('');
+  const [markKind, setMarkKind] = useState<MarkKind>('start');
+  const [marks, setMarks] = useState<HexMark[]>([]);
+  const [markText, setMarkText] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     actions.setReadOnly(true);
@@ -112,6 +139,8 @@ export function AiReplay() {
       setSelected(latestLiveGame.id);
     }
   }, [selected, latestLiveGame, followLive]);
+
+  useEffect(() => { setMarks(selected ? loadMarks(selected) : []); setMarkText(null); }, [selected]);
 
   useEffect(() => {
     liveSelection.current = '';
@@ -282,6 +311,40 @@ export function AiReplay() {
   const action = frame?.action;
   const ended = cursor === maxCursor && !!frame && typeof frame.state.phase === 'object' && 'Ended' in frame.state.phase;
   const replayPlayers = record?.frames[record.frames.length - 1].state.players ?? [];
+  const markFactionId = replayPlayers.some(p => p.faction === markFaction) ? markFaction : replayPlayers[0]?.faction ?? '';
+  const factionName = (faction: string) => FACTION_DISPLAY_NAMES[faction as FactionId] ?? faction;
+  const replayMarks = useMemo<ReplayMarks | null>(() => !markMode ? null : {
+    marks: Object.fromEntries(marks.map(m => [`${m.q},${m.r}`, `${factionName(m.faction).slice(0, 2)}${m.kind === 'start' ? 'S' : '초'}`])),
+    onHexMark(coord: HexCoord) {
+      const exists = marks.some(m => m.q === coord.q && m.r === coord.r);
+      const next = exists ? marks.filter(m => !(m.q === coord.q && m.r === coord.r))
+        : markFactionId ? [...marks, { q: coord.q, r: coord.r, faction: markFactionId, kind: markKind }] : marks;
+      setMarks(next);
+      saveMarks(selected, next);
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [markMode, marks, markFactionId, markKind, selected]);
+  function marksText(): string {
+    const board = frame?.state.board;
+    const game = games.find(item => item.id === selected);
+    const lines = [game ? gameLabel(game, registeredAt.get(game.id)) : selected];
+    const order = [...new Set([...replayPlayers.map(p => p.faction as string), ...marks.map(m => m.faction)])];
+    for (const faction of order) {
+      for (const kind of ['start', 'early'] as MarkKind[]) {
+        for (const m of marks.filter(item => item.faction === faction && item.kind === kind)) {
+          lines.push(`${factionName(faction)} ${MARK_KIND_NAMES[kind]}: ${hexLocationLabel({ q: m.q, r: m.r }, board)} (${m.q},${m.r})`);
+        }
+      }
+    }
+    return lines.join('\n');
+  }
+  function copyMarks() {
+    const text = marksText();
+    const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+    if (!clipboard?.writeText) { setMarkText(text); return; }
+    clipboard.writeText(text).then(() => setMarkText(null), () => setMarkText(text));
+  }
+  function clearMarks() { setMarks([]); saveMarks(selected, []); setMarkText(null); }
   function optionLabel(game: ReplayGame) {
     const status = live.games.find(item => item.id === game.id)?.status;
     const prefix = status === 'running' ? 'LIVE · ' : status === 'complete' ? '완료 · ' : status === 'failed' ? '중단 · ' : '';
@@ -295,6 +358,7 @@ export function AiReplay() {
           : loading || !record || !frame ? <p className="ai-replay-message" role="status">AI 리플레이를 불러오는 중...</p>
             : <ReplayBoundary key={selected}>
               <ReplayHighlightContext.Provider value={replayHighlight(step ? { ...frame, action: null, player: null } : frame, step ? undefined : previous)}>
+              <ReplayMarksContext.Provider value={replayMarks}>
               <App replay={{ events: settlement.events, eventStart: step?.eventStart ?? previous?.event_end ?? 0,
                 eventEnd: step?.eventEnd ?? frame.event_end,
                 onEventSelect: index => {
@@ -302,6 +366,7 @@ export function AiReplay() {
                   seek(target >= 0 ? lastAction + 1 + target : frameForEvent(record.frames, index));
                 } }} />
               {motionBatches.map(batch => <RewardMotion key={`${batch.id}-${batch.player}`} batch={batch} duration={400 / speed} />)}
+              </ReplayMarksContext.Provider>
               </ReplayHighlightContext.Provider>
             </ReplayBoundary>}
       </div>
@@ -355,6 +420,19 @@ export function AiReplay() {
             onChange={event => { setArrowControl('speed'); changeSpeed(Number(event.target.value)); }}>
             {SPEEDS.map(value => <option key={value} value={value}>{value}×</option>)}
           </select></label>
+          <button type="button" onClick={() => setMarkMode(value => !value)} disabled={!record} aria-pressed={markMode}>칸 표시</button>
+          {markMode && <>
+            <select aria-label="표시 종족" value={markFactionId} onChange={event => setMarkFaction(event.target.value)}>
+              {replayPlayers.map(player => <option key={player.player_id} value={player.faction}>{factionName(player.faction)}</option>)}
+            </select>
+            <select aria-label="표시 종류" value={markKind} onChange={event => setMarkKind(event.target.value as MarkKind)}>
+              {(Object.keys(MARK_KIND_NAMES) as MarkKind[]).map(kind => <option key={kind} value={kind}>{MARK_KIND_NAMES[kind]}</option>)}
+            </select>
+            <button type="button" onClick={copyMarks} disabled={!marks.length}>표시 복사</button>
+            <button type="button" onClick={clearMarks} disabled={!marks.length}>표시 지우기</button>
+            {markText !== null && <textarea readOnly aria-label="표시 요약" rows={Math.min(8, markText.split('\n').length)} value={markText}
+              onFocus={event => event.currentTarget.select()} />}
+          </>}
         </div>
         <div className="ai-replay-position">
           <label htmlFor="ai-replay-position">{sourceCursor} / {lastAction} 행동{step ? ` · 정산 ${cursor - lastAction}/${settlement.steps.length}` : ''}</label>

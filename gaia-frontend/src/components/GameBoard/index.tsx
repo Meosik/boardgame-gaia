@@ -13,6 +13,7 @@ import {
 } from './hex-utils';
 import { HexCell } from './HexCell';
 import { useGameStore } from '../../store/gameStore';
+import { useReplayMarks } from '../../replay/marks';
 import {
   deepSpaceSectorImageSrc,
   deepSpaceSectorSide,
@@ -188,6 +189,7 @@ export function GameBoard({
     shallow,
   );
   const multiSelect = selectedAction === 'FormFederation';
+  const replayMarks = useReplayMarks();
 
   const validSet = new Set(validTargets.map((c) => hexKey(c.q, c.r)));
   const teacherHintSet = new Set(teacherHintHexes.map((c) => hexKey(c.q, c.r)));
@@ -217,6 +219,10 @@ export function GameBoard({
   // hint set of hexes without restricting which ones are clickable.
   function handleHexClick(hex: Hex, event: ReactMouseEvent<SVGGElement>) {
     const { coord } = hex;
+    if (replayMarks) {
+      replayMarks.onHexMark(coord);
+      return;
+    }
     onHexInspect?.(coord);
     if (devPowerChargeTargeting) {
       const hasOwnedBuilding = interactivePlayerId !== undefined
@@ -681,6 +687,20 @@ export function GameBoard({
               isTeacherHint={teacherHintSet.has(key)}
               onClick={(event) => handleHexClick(hex, event)}
             />
+          );
+        })}
+
+        {replayMarks && Object.entries(replayMarks.marks).map(([key, label]) => {
+          const [q, r] = key.split(',').map(Number);
+          if (!Number.isFinite(q) || !Number.isFinite(r)) return null;
+          const [px, py] = axialToPixel(q, r, HEX_SIZE);
+          const cx = px + OFFSET_X;
+          const cy = py + OFFSET_Y;
+          return (
+            <g key={`mark-${key}`} className="replay-hex-mark" data-testid={`replay-mark-${key}`} pointerEvents="none">
+              <circle cx={cx} cy={cy} r={HEX_SIZE * 0.7} fill="rgba(255,80,80,0.18)" stroke="#ff5050" strokeWidth="3" />
+              <text x={cx} y={cy + 5} textAnchor="middle" fontSize="14" fontWeight="bold" fill="#fff" stroke="#000" strokeWidth="3" paintOrder="stroke">{label}</text>
+            </g>
           );
         })}
       </svg>
