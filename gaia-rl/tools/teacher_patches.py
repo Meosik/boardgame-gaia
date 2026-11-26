@@ -5802,9 +5802,113 @@ def _prune_feds(state, player, candidates):
     return blocked
 
 
+# Conversions as payment only (user 2026-11-26, E368): burning power and power→credit stay ordinary
+# candidates; the other base conversions (rulebook p.15) stay only while they pay toward an action that
+# is not legal yet and becomes affordable with conversions. Faction conversions are not filtered (user
+# answer pending). The engine lists each conversion with count 1, so a multi-unit payment is taken one
+# unit per decision; each step re-checks the same shortage and stops once the action is legal.
+CONV_KEEP = frozenset({'BurnPower', 'PowerToCredit'})
+CONV_PAY = frozenset({'KnowledgeToCredit', 'OreToCredit', 'PowerToOre', 'QicToOre',
+                      'PowerToKnowledge', 'PowerToQic', 'OreToPower'})
+# Base costs (rulebook p.12-13): mine 1 ore 2 credits; trading station 2 ore + 3 credits next to another
+# player / 6 alone (the cheaper is checked: the shortage test only has to be possible); lab 3 ore 5
+# credits; PI 4 ore 6 credits; academy 6 ore 6 credits; research 4 knowledge.
+UPGRADE_COST = {'TradingStation': ('Mine', 4, 2, 3), 'ResearchLab': ('TradingStation', 3, 3, 5),
+                'PlanetaryInstitute': ('TradingStation', 1, 4, 6), 'Academy': ('ResearchLab', 2, 6, 6)}
+BIG = frozenset({'ResearchLab', 'PlanetaryInstitute', 'Academy'})
+
+
+def _kind_of(structure):
+    kind = structure['kind']
+    return next(iter(kind)) if isinstance(kind, dict) else kind
+
+
+def _tf_ore(player):
+    level = player['research_tracks'].get('terraforming', 0)
+    return 3 if level < 2 else 2 if level == 2 else 1
+
+
+def _pay_targets(state, player, candidates):
+    """(name, cost, big) for actions not among the candidates that the player could still take:
+    cost is {'ore','credits','knowledge','qic'}. Places are not checked (over-inclusive on purpose)."""
+    from economy.teacher import BUILD_TYPES
+    counts = {}
+    for s in player['structures']:
+        counts[_kind_of(s)] = counts.get(_kind_of(s), 0)+1
+    def target(to):    # Academy is {"Academy": "Qic"|"Knowledge"}
+        return next(iter(to)) if isinstance(to, dict) else to
+    listed = {(c['action'].get('type'), target(c['action'].get('to'))) for c in candidates}
+    builds = [c['action'] for c in candidates if c['action'].get('type') in BUILD_TYPES]
+    hexes = state['board']['hexes']
+    stepped = any(_terraform_steps(state, player, ((hexes.get(a.get('coord')) or {}).get('planet') or {})
+                                   .get('planet_type')) for a in builds)
+    targets = []
+    if counts.get('Mine', 0) < 8:
+        if not builds:
+            targets.append(('mine', {'ore': 1, 'credits': 2}, False))
+            targets.append(('gaia mine', {'ore': 1, 'credits': 2, 'qic': 1}, False))
+        if not stepped:
+            targets.append(('mine 1 step', {'ore': 1+_tf_ore(player), 'credits': 2}, False))
+    for to, (source, cap, ore, credits) in UPGRADE_COST.items():
+        if counts.get(source, 0) and counts.get(to, 0) < cap and ('Upgrade', to) not in listed:
+            targets.append((to, {'ore': ore, 'credits': credits}, to in BIG))
+    if not any(t == 'ResearchAdvance' for t, _ in listed):
+        targets.append(('research', {'knowledge': 4}, False))
+    return targets
+
+
+def _pay_kinds(player, cost, big):
+    """Conversion kinds in a payment that makes `cost` affordable, or an empty set when even every
+    conversion cannot (power counted with burning; QIC→ore only for a lab/PI/academy, memory 11-23)."""
+    r = player['resources']
+    p = r['power']
+    power = p.get('bowl3', 0)*(2 if player['faction'] == 'Nevlas' and any(
+        _kind_of(s) == 'PlanetaryInstitute' for s in player['structures']) else 1)
+    power += p.get('bowl2', 0)//2 + (3 if p.get('brainstone') == 'Area3' else 0)
+    have = {k: r.get(k, 0) for k in ('ore', 'credits', 'knowledge', 'qic')}
+    need = {k: max(0, cost.get(k, 0)-have[k]) for k in have}
+    if not any(need.values()):
+        return set()
+    kinds, qic_spare = set(), have['qic']-cost.get('qic', 0)
+    ore_short = need['ore']
+    if ore_short and big and qic_spare > 0:
+        used = min(ore_short, qic_spare)
+        ore_short, qic_spare = ore_short-used, qic_spare-used
+        kinds.add('QicToOre')
+    if ore_short:
+        kinds.add('PowerToOre')
+    power -= 3*ore_short + 4*need['knowledge'] + 4*need['qic']
+    if need['knowledge']:
+        kinds.add('PowerToKnowledge')
+    if need['qic']:
+        kinds.add('PowerToQic')
+    if need['credits']:
+        spare = {'KnowledgeToCredit': have['knowledge']-cost.get('knowledge', 0),
+                 'OreToCredit': have['ore']-cost.get('ore', 0)}
+        cover = max(0, power) + sum(max(0, v) for v in spare.values())
+        if cover < need['credits']:
+            return set()
+        kinds |= {k for k, v in spare.items() if v > 0}
+        power -= max(0, need['credits']-sum(max(0, v) for v in spare.values()))
+    return kinds if power >= 0 else set()
+
+
+def _prune_convs(state, player, candidates):
+    """Indices of base conversions (CONV_PAY) that pay toward no affordable missing action (E368)."""
+    convs = {i: c['action']['kind'] for i, c in enumerate(candidates)
+             if c['action'].get('type') == 'FreeAction' and c['action'].get('kind') in CONV_PAY}
+    if not convs:
+        return set()
+    allowed = set()
+    for _, cost, big in _pay_targets(state, player, candidates):
+        allowed |= _pay_kinds(player, cost, big)
+    return {i for i, kind in convs.items() if kind not in allowed}
+
+
 def prune_indices(snapshot):
     """Candidate indices the pruning tables block in this snapshot (pure; also used by teacher_ab's
-    decision log). A family left empty by the filter is restored whole."""
+    decision log). A family left empty by the filter is restored whole; blocked conversions are not
+    restored (the turn's other actions remain), unless nothing else would be left."""
     state, actor = snapshot['state'], snapshot.get('player')
     if actor is None or 'ActionPhase' not in str(state.get('phase')):
         return set()
@@ -5824,6 +5928,10 @@ def prune_indices(snapshot):
     for members, out in families.values():
         if members - out:
             blocked |= out
+    if _guide.get('prune_convs', True):
+        convs = _prune_convs(state, player, candidates)
+        if len(blocked | convs) < len(candidates):
+            blocked |= convs
     return blocked
 
 
