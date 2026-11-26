@@ -143,26 +143,7 @@ def tid_of(x):
     return x.get("id") if isinstance(x, dict) else x
 
 
-# gaia-engine/src/rules/terraforming.rs PLANET_RING (fixed ring used for terraform steps)
-PLANET_RING = ["Terra", "Oxide", "Volcanic", "Desert", "Swamp", "Titanium", "Ice"]
-
-
-def wheel_distance(wheel, a, b):
-    """Cyclic terraforming distance on the wheel (engine: rules/terraforming.rs ring_distance)."""
-    if a not in wheel or b not in wheel:
-        return None
-    d = abs(wheel.index(a) - wheel.index(b))
-    return min(d, len(wheel) - d)
-
-
-def faction_closeness(wheel, seats):
-    out = []
-    for i in range(len(seats)):
-        for j in range(i + 1, len(seats)):
-            d = wheel_distance(wheel, FACTION_PLANET.get(seats[i]), FACTION_PLANET.get(seats[j]))
-            out.append([seats[i], seats[j], d])
-    out.sort(key=lambda x: (x[2] is None, x[2] if x[2] is not None else 0))
-    return out
+BOARD_IMG = "boards/normalized/scoring_board.webp"
 
 
 def game_start_panel(st):
@@ -200,8 +181,7 @@ def game_start_panel(st):
         fed_supply.append(fed_entry(rb["terraforming_level_5_token"]) + ["테라 5단계"])
     return {"rounds": rounds, "final": final, "boosters": boosters, "std": std,
             "adv": adv, "seats": seats, "ship_tech": ship_tech, "ship_fed": ship_fed,
-            "ship_art": ship_art, "fed_supply": fed_supply,
-            "close": faction_closeness(PLANET_RING, seats)}
+            "ship_art": ship_art, "fed_supply": fed_supply}
 
 
 def xy_of(c):
@@ -293,13 +273,16 @@ def asset_files(data):
             for e in g["start"][key]:
                 if e[1]:
                     names.add(e[1])
+    if data.get("board"):
+        names.add(data["board"])
     return sorted(names)
 
 
 def build_data(paths, prefix="mark-assets/"):
     games = [g for g in (load_game(p) for p in paths) if g]
     games.sort(key=lambda g: g["id"])
-    return {"games": games, "ko": FACTION_KO, "home": FACTION_PLANET, "exp": "138", "assets": prefix, "tracks": TRACKS_KO}
+    return {"games": games, "ko": FACTION_KO, "home": FACTION_PLANET, "exp": "138", "assets": prefix, "tracks": TRACKS_KO,
+            "board": BOARD_IMG}
 
 
 START_KEYS = ("rounds", "final", "boosters", "std", "adv", "ship_tech", "ship_fed", "ship_art", "fed_supply")
@@ -309,7 +292,9 @@ TILE_DIRS = ("round_scoring_tiles/", "final_scoring_tiles/", "round_boosters/", 
 
 def shrink_tile(src, rel, dst, max_w=240):
     """Write a downscaled webp copy of a tile image if PIL is available; True when done."""
-    if not rel.startswith(TILE_DIRS):
+    if rel == BOARD_IMG:
+        max_w = 200
+    elif not rel.startswith(TILE_DIRS):
         return False
     try:
         from PIL import Image
@@ -341,6 +326,8 @@ def copy_assets(data, dest):
 def render(data, title):
     # asset names are stored by basename in the page (files are copied flat)
     d = json.loads(json.dumps(data))
+    if d.get("board"):
+        d["board"] = os.path.basename(d["board"])
     for g in d["games"]:
         for s in g["sectors"]:
             s[4] = os.path.basename(s[4]) if s[4] else None
@@ -481,17 +468,9 @@ function startPanel(){
     d.appendChild(r)}
   var sd=document.createElement("div");sd.className="seats";
   sd.textContent="순서: "+s.seats.map(function(f,i){return (i+1)+". "+ko(f)}).join("  ");d.appendChild(sd);
-  if(s.close&&s.close.length){
-    var cd=document.createElement("div");cd.className="seats";
-    var ct=document.createElement("div");ct.textContent="종족 가까운 정도 (테라포밍 단계)";cd.appendChild(ct);
-    s.close.forEach(function(c){
-      var ln=document.createElement("div");
-      [c[0],c[1]].forEach(function(f,k){
-        var sp=document.createElement("span");sp.textContent=ko(f);sp.style.color=fcol(f,s.seats.indexOf(f));
-        ln.appendChild(sp);if(k==0)ln.appendChild(document.createTextNode("–"))});
-      ln.appendChild(document.createTextNode(" "+(c[2]===null?"–":c[2]+"단계")));
-      cd.appendChild(ln)});
-    d.appendChild(cd)}
+  if(DATA.board){
+    var bi=document.createElement("img");bi.src=DATA.assets+encodeURIComponent(DATA.board);bi.alt="점수판";
+    bi.style.width="140px";bi.style.height="auto";bi.style.display="block";bi.style.margin="4px 0";d.appendChild(bi)}
   row("라운드 점수 R1–R6",s.rounds,s.rounds.map(function(e,i){return "R"+(i+1)}));
   row("최종 점수",s.final);
   row("부스터",s.boosters);

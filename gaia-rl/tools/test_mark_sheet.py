@@ -87,10 +87,15 @@ class MarkSheetTest(unittest.TestCase):
                     self.assertIn(data["home"].get(f), pc_keys, f)
             for f in data["ko"]:
                 self.assertIn(data["home"].get(f), pc_keys, f)
-            self.assertEqual(len(st["close"]), 6)
-            self.assertIn("종족 가까운 정도 (테라포밍 단계)", html)
-            ds = [c[2] for c in st["close"]]
-            self.assertEqual(ds, sorted(ds))
+            sys.path.insert(0, HERE)
+            import mark_sheet as ms
+            self.assertEqual(data["board"], os.path.basename(ms.BOARD_IMG))
+            raw = ms.build_data(glob.glob(os.path.join(td, "x-pair-*.json.gz")))
+            self.assertEqual(raw["board"], ms.BOARD_IMG)
+            self.assertIn(ms.BOARD_IMG, ms.asset_files(raw))
+            if os.path.isfile(os.path.join(ms.ASSET_ROOT, ms.BOARD_IMG)):
+                self.assertIn(os.path.basename(ms.BOARD_IMG), files)
+            self.assertNotIn("종족 가까운", html)
             self.assertNotIn('class":"sec"', html)
             self.assertNotIn('"class":"sec"', html)
 
@@ -137,29 +142,6 @@ class ShipFedTest(unittest.TestCase):
             self.assertTrue(g["ship_fed"])
             self.assertTrue(g["ship_art"])
             self.assertTrue(g["ship_tech"])
-
-
-class WheelTest(unittest.TestCase):
-    def setUp(self):
-        sys.path.insert(0, HERE)
-        import mark_sheet
-        self.ms = mark_sheet
-
-    def test_distance(self):
-        d = self.ms.wheel_distance
-        ring = self.ms.PLANET_RING
-        self.assertEqual(d(ring, "Terra", "Oxide"), 1)
-        self.assertEqual(d(ring, "Terra", "Desert"), 3)
-        self.assertEqual(d(ring, "Titanium", "Terra"), 2)
-        self.assertEqual(d(ring, "Terra", "Terra"), 0)
-        self.assertIsNone(d(ring, "Asteroid", "Terra"))
-
-    def test_pairs(self):
-        c = self.ms.faction_closeness(self.ms.PLANET_RING, ["Geodens", "Nevlas", "Xenos", "Tinkeroids"])
-        self.assertEqual(len(c), 6)
-        self.assertEqual([x[2] for x in c if x[2] is None], [None] * 3)
-        self.assertIsNone(c[-1][2])
-        self.assertEqual(c[0][2], 1)
 
 
 if __name__ == "__main__":
