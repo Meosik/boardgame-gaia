@@ -99,7 +99,8 @@ class MarkSheetTest(unittest.TestCase):
             self.assertEqual(set(ms.FACTION_GUIDE), set(ms.FACTION_KO))
             for f in ms.FACTION_GUIDE:
                 self.assertIn(f, ms.FACTION_KO)
-                self.assertEqual(len(ms.FACTION_GUIDE[f]), 2)
+                self.assertEqual(len(ms.FACTION_GUIDE[f]), 3)
+                self.assertTrue(all(isinstance(s, str) and s for s in ms.FACTION_GUIDE[f]))
             self.assertNotIn("종족 가까운", html)
             self.assertNotIn('class":"sec"', html)
             self.assertNotIn('"class":"sec"', html)
