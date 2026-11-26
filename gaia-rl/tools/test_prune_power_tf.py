@@ -5,7 +5,7 @@ from unittest import mock
 import teacher_patches as tp
 
 # Terrans (home Terra): Terra 0 steps, Oxide 1, Volcanic 2 (RING order).
-PLANETS = {'own': 'Terra', 'one': 'Oxide', 'two': 'Volcanic'}
+PLANETS = {'own': 'Terra', 'one': 'Oxide', 'two': 'Volcanic', 'gaia': 'Gaia'}
 
 
 def snapshot(candidates, terraforming=0, faction='Terrans'):
@@ -60,6 +60,11 @@ class PowerTf(unittest.TestCase):
         self.assertTrue(self.verdict(pa(6, 'two'), terraforming=0))
         self.assertTrue(self.verdict(pa(6, 'two'), terraforming=2))
         self.assertFalse(self.verdict(pa(6, 'two'), terraforming=3))
+
+    def test_off_ring_blocked_exact_fit_kept(self):
+        self.assertTrue(self.verdict(pa(6, 'gaia')))
+        snap = snapshot([pa(6, 'gaia'), pa(6, 'one')])
+        self.assertEqual(tp.prune_indices(snap), {0})
 
     def test_not_a_terraforming_power_action(self):
         self.assertIsNone(self.verdict(pa(3, None)))

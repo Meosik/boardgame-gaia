@@ -5764,7 +5764,8 @@ def _prune_mine(state, player, action):
 def _prune_power_tf(state, player, action):
     """E368 (user 2026-11-27): keep only terraforming power actions within 1 range QIC whose free spades
     exactly match the steps; buying extra spades is kept only with terraforming research 3+; deliberately
-    wasting a spade (e.g. the 2-spade action for a 1-step planet) is left to PPO. None when not one."""
+    wasting a spade (e.g. the 2-spade action for a 1-step planet, or any target off the ring) is left to PPO.
+    None when not one."""
     free = {2: 2, 6: 1}.get(action.get('id')) if action.get('type') == 'PowerAction' else None
     coord = action.get('coord')
     if free is None or not coord:
@@ -5775,7 +5776,7 @@ def _prune_power_tf(state, player, action):
     from economy.teacher import RING
     kind = hexes[coord]['planet']['planet_type']
     if kind not in RING:
-        return None
+        return True    # off the ring (Gaia, ProtoPlanet, Transdim) every free spade is wasted: blocked
     from economy.teacher import path_distance
     from four_factions.value import navigation
     starts = [s['hex'] for s in player['structures']]
