@@ -71,6 +71,18 @@ class MarkSheetTest(unittest.TestCase):
             self.assertEqual(len(st["adv"]), 6)
             self.assertEqual(len(st["boosters"]), 7)
             self.assertTrue(any(f.startswith("round_11_") for f in files))
+            # faction mark colours: every faction has a home planet that the JS PC table knows
+            pc = re.search(r"var PC=\{(.*?)\};", html, re.S).group(1)
+            pc_keys = set(re.findall(r"(\w+):\"#", pc))
+            for g in data["games"]:
+                for f in g["factions"]:
+                    if f == "Zzz":
+                        continue  # fake unknown faction: falls back to the FC palette
+                    self.assertIn(data["home"].get(f), pc_keys, f)
+            for f in data["ko"]:
+                self.assertIn(data["home"].get(f), pc_keys, f)
+            self.assertNotIn('class":"sec"', html)
+            self.assertNotIn('"class":"sec"', html)
 
 
 if __name__ == "__main__":

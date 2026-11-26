@@ -21,6 +21,15 @@ FACTION_KO = {
     "Moweyds": "모웨이드", "SpaceGiants": "스페이스 자이언트",
     "Tinkeroids": "팅커로이드", "Darkanians": "다카니안",
 }
+# home planet per faction, from gaia-engine/data/factions.toml (id/home_planet pairs)
+FACTION_PLANET = {
+    "Terrans": "Terra", "Lantids": "Terra", "Xenos": "Desert", "Gleens": "Desert",
+    "Taklons": "Swamp", "Ambas": "Swamp", "HadschHallas": "Oxide", "Ivits": "Oxide",
+    "Geodens": "Volcanic", "BalTaks": "Volcanic", "Firaks": "Titanium",
+    "Bescods": "Titanium", "Nevlas": "Ice", "Itars": "Ice",
+    "Tinkeroids": "Asteroid", "Moweyds": "ProtoPlanet",
+    "SpaceGiants": "ProtoPlanet", "Darkanians": "Asteroid",
+}
 
 DEFAULT_REPLAYS = "~/gaia-media/ai-replays/ab-lab-138-setup-placement-sim-20-pair-*.json.gz"
 DEFAULT_OUT = "~/gaia-media/ai-replays/mark-138.html"
@@ -234,7 +243,7 @@ def asset_files(data):
 def build_data(paths, prefix="mark-assets/"):
     games = [g for g in (load_game(p) for p in paths) if g]
     games.sort(key=lambda g: g["id"])
-    return {"games": games, "ko": FACTION_KO, "exp": "138", "assets": prefix, "tracks": TRACKS_KO}
+    return {"games": games, "ko": FACTION_KO, "home": FACTION_PLANET, "exp": "138", "assets": prefix, "tracks": TRACKS_KO}
 
 
 TILE_DIRS = ("round_scoring_tiles/", "final_scoring_tiles/", "round_boosters/", "tech_tiles/")
@@ -325,7 +334,6 @@ button.on{border-width:3px;background:#333;font-weight:bold}
 .hx{fill:none;stroke:#fff;stroke-opacity:.28;stroke-width:.35;pointer-events:none}
 .hit{fill:transparent;cursor:pointer}
 .art{pointer-events:none}
-.sec{fill:#fff;fill-opacity:.4;stroke:#000;stroke-opacity:.4;stroke-width:.3;paint-order:stroke;font-weight:bold;text-anchor:middle;dominant-baseline:central;pointer-events:none}
 .mk{pointer-events:none}
 .legend span{display:inline-block;margin:2px 8px 2px 0;font-size:14px}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:7px;vertical-align:middle;margin-right:4px;border:1px solid #888}
@@ -354,6 +362,7 @@ var DATA=__DATA__;
 var PC={Terra:"#2e6fd8",Volcanic:"#e8862a",Oxide:"#c0392b",Desert:"#f1c40f",Swamp:"#7a5230",Titanium:"#8a8a8a",Ice:"#f4f6f7",Gaia:"#27ae60",Transdim:"#8e44ad",Asteroid:"#5d6d7e",ProtoPlanet:"#a3e4a1",LostPlanet:"#000"};
 var PK={Terra:"테란=파랑",Volcanic:"화산=주황",Oxide:"산화=빨강",Desert:"사막=노랑",Swamp:"늪=갈색",Titanium:"티타늄=회색",Ice:"얼음=흰색",Gaia:"가이아=초록",Transdim:"차원 변환=보라",Asteroid:"소행성",ProtoPlanet:"원시 행성"};
 var FC=["#00e5ff","#ff2bd6","#aaff00","#ff5a36"];
+function fcol(f,i){return PC[DATA.home[f]]||FC[i%4]}
 var SK="mark138-v1";
 var store={};try{store=JSON.parse(localStorage.getItem(SK)||"{}")}catch(e){store={}}
 var gi=0,fi=0,kind="start";
@@ -381,7 +390,7 @@ function ui(){
   d.appendChild(btn("◀",false,function(){if(gi>0){gi--;fi=0;ui();draw()}}));
   d.appendChild(btn("▶",false,function(){if(gi<DATA.games.length-1){gi++;fi=0;ui();draw()}}));
   var f=document.getElementById("facs");f.innerHTML="";
-  G().factions.forEach(function(x,i){f.appendChild(btn(ko(x),i==fi,function(){fi=i;ui()},FC[i%4]))});
+  G().factions.forEach(function(x,i){f.appendChild(btn(ko(x),i==fi,function(){fi=i;ui()},fcol(x,i)))});
   var k=document.getElementById("kinds");k.innerHTML="";
   k.appendChild(btn("스타트",kind=="start",function(){kind="start";ui()}));
   k.appendChild(btn("초반 땅",kind=="early",function(){kind="early";ui()}));
@@ -459,7 +468,6 @@ function draw(){
         if(h[2]=="LostPlanet"){e.setAttribute("stroke","#fff");e.setAttribute("stroke-width",1.6)}}}
   });
   document.getElementById("legend").style.display=fallback?"block":"none";
-  g.sectors.forEach(function(s){var p=px(s[1],s[2]);var t=el("text",{x:p[0],y:p[1],"class":"sec","font-size":S*2.2},sg);t.textContent=s[0]});
   g.hexes.forEach(function(h){
     var p=px(h[0],h[1]),key=h[0]+","+h[1];
     var pl=el("polygon",{points:hexPts(p[0],p[1],S),"class":"hit"},hg);
@@ -471,9 +479,10 @@ function marks(){
   var mg=document.getElementById("mg");mg.innerHTML="";
   var g=G(),gmk=store[g.id]||{};
   g.factions.forEach(function(f,i){
-    var m=gmk[f];if(!m)return;var col=FC[i%4],lab=ko(f).replace(/\s/g,"").slice(0,2);
+    var m=gmk[f];if(!m)return;var col=fcol(f,i),lab=ko(f).replace(/\s/g,"").slice(0,2);
     function put(key,txt,big){var xy=key.split(",");var p=px(+xy[0],+xy[1]);
       var off=(i-1.5)*1.6;
+      el("circle",{cx:p[0],cy:p[1],r:S*(0.78-i*0.06),fill:"none",stroke:"#000","stroke-width":(big?2.2:1.6)+1.2},mg);
       el("circle",{cx:p[0],cy:p[1],r:S*(0.78-i*0.06),fill:"none",stroke:col,"stroke-width":big?2.2:1.6},mg);
       var t=el("text",{x:p[0]+off,y:p[1]+S*(0.35),"font-size":4,"text-anchor":"middle",fill:col,stroke:"#000","stroke-width":.5,"paint-order":"stroke","font-weight":"bold"},mg);
       t.textContent=txt}
