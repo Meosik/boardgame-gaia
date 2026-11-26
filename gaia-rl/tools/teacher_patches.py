@@ -6025,6 +6025,10 @@ def power_first_scores(env, snapshot, scores):
     lifted = list(scores)
     _swap(lifted, list(scores), best[1], top,
           f"{player['faction']} power action first for {best[2]} (user 2026-11-26, power_first)")
+    bi = best[1]
+    rivals = [lifted[j][0] for j in act if j != bi and isinstance(lifted[j][0], (int, float))]
+    if rivals and isinstance(lifted[bi][0], (int, float)) and max(rivals) >= lifted[bi][0]:
+        lifted[bi] = (max(rivals) + 1e-6, *lifted[bi][1:])    # strictly first even when another candidate tied the top
     return lifted
 
 

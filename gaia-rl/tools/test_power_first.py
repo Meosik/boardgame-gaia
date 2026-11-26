@@ -51,6 +51,14 @@ class PowerFirst(unittest.TestCase):
         best, _ = run(snap, 0)
         self.assertEqual(best, 0)
 
+    def test_tied_top_candidates_power_action_strictly_first(self):
+        snap = snapshot({'ore': 0, 'credits': 9, 'knowledge': 9, 'qic': 0}, [], [PASS, OTHER, PA3])
+        scores = [(9.0, 'r'), (9.0, 'r'), (0.0, 'r')]
+        out = tp.power_first_scores(None, snap, scores)
+        self.assertIn('power_first', out[2][1])
+        for j in (0, 1):
+            self.assertGreater(out[2][0], out[j][0])
+
     def test_blocked_power_action_ignored(self):
         snap = snapshot({'ore': 0, 'credits': 9, 'knowledge': 9, 'qic': 0}, [], [PASS, PA3])
         from current_actions.conservation import BLOCKED, PREFIX
