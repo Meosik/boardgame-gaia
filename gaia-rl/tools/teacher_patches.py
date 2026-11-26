@@ -3471,12 +3471,21 @@ def fed_cluster_scores(env, snapshot, scores):
 # federation family; a won plan is remembered by preparation.search and dropped when a step stops being viable).
 # Exception (user): one TSx3 + mine federation per game, offered only when no default plan exists. Upgrade vs mine
 # order is left to the search (one plan per shape). Rounds 1-5, action phase.
+# Usable land (user 2026-11-27): Gaia planets, home type, 1-step terraform; asteroid special cases and Transdim for
+# gaia-track factions not yet.
 FED_PLAN_START = 3
 FED_PLAN_POWER = 7
 FED_PLAN_TWO_POWER = 2
 FED_PLAN_LAST_ROUND = 5
-_FED_PLAN_PLANETS = frozenset({'Terra', 'Oxide', 'Volcanic', 'Desert', 'Swamp', 'Titanium', 'Ice', 'Gaia',
-                               'ProtoPlanet'})
+FED_PLAN_MAX_STEPS = 1
+
+
+def _fed_plan_usable(state, player, planet):
+    """Usable land (user 2026-11-27): a Gaia planet, or a ring planet at most FED_PLAN_MAX_STEPS terraform steps away."""
+    if planet['planet_type'] == 'Gaia':
+        return True
+    steps = _terraform_steps(state, player, planet['planet_type'])
+    return steps is not None and steps <= FED_PLAN_MAX_STEPS
 
 
 def _fed_plan_groups(player, touching):
@@ -3525,7 +3534,7 @@ def fed_plan_goals(snapshot):
     planets = []
     for coord, cell in state['board']['hexes'].items():
         planet = cell.get('planet')
-        if (not planet or planet['planet_type'] not in _FED_PLAN_PLANETS or planet['owner'] not in (None, actor)
+        if (not planet or not _fed_plan_usable(state, player, planet) or planet['owner'] not in (None, actor)
                 or cell['structures'] or coord in touching):
             continue
         d = min(_hex_distance(coord, h) for h in hexes)

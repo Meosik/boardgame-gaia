@@ -844,6 +844,16 @@ class OpeningBudgetTests(unittest.TestCase):
                  'board': {'hexes': hexes, 'spaceship_tiles': {}}}
         return {'player': 0, 'state': state}
 
+    def test_fed_plan_goals_use_only_gaia_home_and_one_step_planets(self):
+        tp._guide['fed_plan'] = True                                        # restored by setUp's cleanup
+        kinds = {'-1,0': 'Desert', '0,-1': 'Oxide', '3,0': 'Gaia', '2,1': 'Transdim', '-2,0': 'ProtoPlanet'}
+        snapshot = self._fed_plan_fixture([('Mine', '0,0'), ('TradingStation', '1,0')], list(kinds))
+        for coord, planet_type in kinds.items():
+            snapshot['state']['board']['hexes'][coord]['planet']['planet_type'] = planet_type
+        goals = tp.fed_plan_goals(snapshot)
+        coords = {s.coord for g in goals for s in g.steps if s.family == 'colony'}
+        self.assertEqual(coords, {'0,-1', '3,0'})
+
     def test_fed_plan_goals_plan_the_federation_from_adjacent_power_three(self):
         near = ['-1,0', '0,-1', '3,0', '2,1', '-2,0']      # distance 1, 1, 2, 2, 2 from the group
         far = '4,0'                                         # distance 3: never a step
