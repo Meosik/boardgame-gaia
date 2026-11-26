@@ -68,6 +68,7 @@ def seat_report(state, seat):
             continue
         kind = cell['planet']['planet_type']
         sites.append({'coord': c, 'planet': kind, 'steps': _steps(home, kind), 'special': kind in SPECIAL,
+                      # distance only: no cost or booster check
                       'qic': nearest > reach, 'distance': nearest,
                       'near_opponent': bool(_next_to_opponent(state, seat, c)),
                       'room': expansion_room(state, seat, c)})
@@ -163,9 +164,9 @@ def summary_lines(sm):
              f"- planets seen at reach+QIC, mean: first {sm['first_sees_qic_mean']}, second {sm['second_sees_qic_mean']}",
              f"- nearest opponent distance: {_hist_text(sm['nearest_opponent_hist'])}; "
              f"seats within 2: {sm['seats_within_2_of_opponent']}/{sm['seats']}",
-             f"- top sites: {t['total']}, needing QIC {t['qic']}, near opponent {t['near_opponent']}; "
+             f"- top sites: {t['total']}, outside base reach (Q) {t['qic']}, near opponent {t['near_opponent']}; "
              f"steps {_hist_text(t['steps_hist'])}",
-             f"- non-QIC top sites per seat: {_hist_text(sm['non_qic_sites_per_seat_hist'])}", '',
+             f"- top sites inside base reach per seat: {_hist_text(sm['non_qic_sites_per_seat_hist'])}", '',
              '| faction | seats | own distance mean | 2nd adds (reach+QIC) mean | nearest opponent mean |',
              '|---|---|---|---|---|']
     for f, r in sm['by_faction'].items():
@@ -177,7 +178,7 @@ def summary_lines(sm):
 
 def markdown(games):
     out = ['# Setup report', '',
-           'Sites: coord (planet type, terraform steps from home; Gaia/Transdim off the ring), Q = needs a QIC, '
+           'Sites: coord (planet type, terraform steps from home; Gaia/Transdim off the ring), Q = outside base reach (distance > reach; QIC by distance only, no cost/booster check), '
            'N = next to an opponent. Rank: no QIC, fewer steps, near opponent first.', '']
     out += summary_lines(summary(games))
     for g in games:
