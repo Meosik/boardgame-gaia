@@ -5986,11 +5986,55 @@ def prune_scores(env, snapshot, scores):
     return lifted
 
 
+POWER_FIRST_PROGRESS = frozenset({'Build', 'Upgrade', 'ResearchAdvance', 'FormFederation', 'GaiaFormation',
+                                  'PowerAction'})
+
+
+def power_first_scores(env, snapshot, scores):
+    """User 2026-11-26: when the top move does not progress (build, upgrade, research, federation, power
+    action) and a legal power action's reward makes an unaffordable build or research affordable, the power
+    action takes the top place (order only; no other conversions counted)."""
+    from current_actions.conservation import blocked
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or not _guide.get('power_first', True):
+        return scores
+    act = {i: c['action'] for i, c in enumerate(snapshot['candidates']) if not blocked(scores[i])}
+    if not act:
+        return scores
+    top = max(act, key=lambda i: scores[i][0])
+    if act[top].get('type') in POWER_FIRST_PROGRESS:
+        return scores
+    player = state['players'][actor]
+    res = player['resources']
+    have = {k: res.get(k, 0) for k in ('ore', 'credits', 'knowledge', 'qic')}
+    best = None    # (score, index, target name)
+    for name, cost, _big, _built in _pay_targets(state, player, snapshot['candidates']):
+        if all(have[k] >= cost.get(k, 0) for k in have):
+            continue
+        for i, a in act.items():
+            if a.get('type') != 'PowerAction':
+                continue
+            after = dict(have)
+            for rewards, kind in ((POWER_ACTION_ORE, 'ore'), (POWER_ACTION_KNOWLEDGE, 'knowledge')):
+                after[kind] += rewards.get(a.get('id'), 0)
+            if after != have and all(after[k] >= cost.get(k, 0) for k in have) \
+                    and (best is None or scores[i][0] > best[0]):
+                best = (scores[i][0], i, name)
+    if best is None:
+        return scores
+    lifted = list(scores)
+    _swap(lifted, list(scores), best[1], top,
+          f"{player['faction']} power action first for {best[2]} (user 2026-11-26, power_first)")
+    return lifted
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune(seed, **kwargs):
     """Teacher factory: ships_menu1_all_tier + the user's candidate-pruning tables (E362, one game)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier(seed, **kwargs)
     _guide['prune'] = True
     _wrap_rank('_prune', prune_scores)
+    _guide['power_first'] = True
+    _wrap_rank('_power_first', power_first_scores)
     return teacher
 
 
