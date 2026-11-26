@@ -73,6 +73,18 @@ class PayFilter(unittest.TestCase):
                         [conv('PowerToQic'), build, {'type': 'Pass'}], bowl3=4)
         self.assertEqual(self.blocked_kinds(snap), set())
 
+    def test_research_check_counts_income_of_the_paid_structure(self):
+        # Codex debate 1/1: 2 knowledge, a lab 1 credit short. Without the lab next round has 3 knowledge
+        # either way; the lab's income makes it 4, so converting one knowledge loses that research step.
+        snap = snapshot({'ore': 3, 'credits': 4, 'knowledge': 2, 'qic': 0}, ['TradingStation'],
+                        [conv('KnowledgeToCredit'), {'type': 'Pass'}])
+        player = snap['state']['players'][0]
+        before = tp._value.production(snap['state'], player, include_booster=False)[2]
+        after = tp._value.production(snap['state'], tp._built(player, ('TradingStation', 'ResearchLab')),
+                                     include_booster=False)[2]
+        self.assertEqual((before, after), (1, 2))
+        self.assertEqual(self.blocked_kinds(snap), {'KnowledgeToCredit'})
+
     def test_never_blocks_everything(self):
         snap = snapshot({'ore': 9, 'credits': 20, 'knowledge': 9, 'qic': 3}, [], [conv('OreToCredit')])
         self.assertEqual(tp.prune_indices(snap), set())

@@ -5837,23 +5837,39 @@ def _pay_targets(state, player, candidates):
     counts = {}
     for s in player['structures']:
         counts[_kind_of(s)] = counts.get(_kind_of(s), 0)+1
-    targets = []
+    targets = []    # (name, cost, big, built): built = (structure replaced or None, structure added)
     if counts.get('Mine', 0) < 8:
         for steps in range(4):    # terraforming 0-3 steps, each with 0 or 1 range QIC
             for qic in (0, 1):
                 targets.append((f'mine {steps} step +{qic} QIC',
-                                {'ore': 1+steps*_tf_ore(player), 'credits': 2, 'qic': qic}, False))
-        targets.append(('gaia mine +1 QIC', {'ore': 1, 'credits': 2, 'qic': 2}, False))
+                                {'ore': 1+steps*_tf_ore(player), 'credits': 2, 'qic': qic}, False,
+                                (None, 'Mine')))
+        targets.append(('gaia mine +1 QIC', {'ore': 1, 'credits': 2, 'qic': 2}, False, (None, 'Mine')))
     for to, (source, cap, ore, credits) in UPGRADE_COST.items():
         if counts.get(source, 0) and counts.get(to, 0) < cap:
-            targets.append((to, {'ore': ore, 'credits': credits}, to in BIG))
+            targets.append((to, {'ore': ore, 'credits': credits}, to in BIG, (source, to)))
             if to == 'TradingStation':
-                targets.append(('TradingStation alone', {'ore': ore, 'credits': 6}, False))
-    targets.append(('research', {'knowledge': 4}, False))
+                targets.append(('TradingStation alone', {'ore': ore, 'credits': 6}, False, (source, to)))
+    targets.append(('research', {'knowledge': 4}, False, None))
     return targets
 
 
-def _pay_kinds(state, player, cost, big):
+def _built(player, built):
+    """The player with the paid-for structure in place, for next round's income (codex debate 1/1:
+    a research lab raises the knowledge income the research-step check counts)."""
+    if not built:
+        return player
+    source, to = built
+    structures = list(player['structures'])
+    if source is not None:
+        i = next(i for i, s in enumerate(structures) if _kind_of(s) == source)
+        structures[i] = {**structures[i], 'kind': to}
+    else:
+        structures.append({'kind': to, 'hex': None})
+    return {**player, 'structures': structures}
+
+
+def _pay_kinds(state, player, cost, big, built=None):
     """Conversion kinds in a payment that makes `cost` affordable, or an empty set when even every
     conversion cannot (power counted with burning; QIC→ore only for a lab/PI/academy, memory 11-23)."""
     r = player['resources']
@@ -5886,7 +5902,7 @@ def _pay_kinds(state, player, cost, big):
             # User 2026-11-26: knowledge→credit at most once, only when power and ore cannot cover the
             # last credit and it keeps next round's research steps (4 knowledge each); else round 6.
             from four_factions.value import production
-            income = production(state, player, include_booster=False)[2]
+            income = production(state, _built(player, built), include_booster=False)[2]
             keeps = (have['knowledge']-1+income)//4 == (have['knowledge']+income)//4
             knowledge = min(knowledge, 1) if left == 1 and keeps else 0
         if left > knowledge:
@@ -5906,8 +5922,8 @@ def _prune_convs(state, player, candidates):
     if not convs:
         return set()
     allowed = set()
-    for _, cost, big in _pay_targets(state, player, candidates):
-        allowed |= _pay_kinds(state, player, cost, big)
+    for _, cost, big, built in _pay_targets(state, player, candidates):
+        allowed |= _pay_kinds(state, player, cost, big, built)
     return {i for i, kind in convs.items() if kind not in allowed}
 
 
