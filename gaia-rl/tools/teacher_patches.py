@@ -5810,8 +5810,8 @@ def _prune_feds(state, player, candidates):
 CONV_KEEP = frozenset({'BurnPower', 'PowerToCredit'})
 CONV_PAY = frozenset({'KnowledgeToCredit', 'OreToCredit', 'PowerToOre', 'QicToOre',
                       'PowerToKnowledge', 'PowerToQic', 'OreToPower'})
-# Base costs (rulebook p.12-13): mine 1 ore 2 credits; trading station 2 ore + 3 credits next to another
-# player / 6 alone (the cheaper is checked: the shortage test only has to be possible); lab 3 ore 5
+# Base costs (rulebook p.12-13): mine 1 ore 2 credits (+ terraforming ore, + range QIC; a Gaia planet
+# 1 QIC); trading station 2 ore + 3 credits next to another player / 6 alone (both checked); lab 3 ore 5
 # credits; PI 4 ore 6 credits; academy 6 ore 6 credits; research 4 knowledge.
 UPGRADE_COST = {'TradingStation': ('Mine', 4, 2, 3), 'ResearchLab': ('TradingStation', 3, 3, 5),
                 'PlanetaryInstitute': ('TradingStation', 1, 4, 6), 'Academy': ('ResearchLab', 2, 6, 6)}
@@ -5829,31 +5829,27 @@ def _tf_ore(player):
 
 
 def _pay_targets(state, player, candidates):
-    """(name, cost, big) for actions not among the candidates that the player could still take:
-    cost is {'ore','credits','knowledge','qic'}. Places are not checked (over-inclusive on purpose)."""
-    from economy.teacher import BUILD_TYPES
+    """(name, cost, big) for every destination cost the player could still pay: cost is
+    {'ore','credits','knowledge','qic'}. An affordable cost adds no conversion (_pay_kinds), so one
+    legal instance never hides a dearer one (codex debate 1/1: a 3-credit trading station does not
+    cover a 6-credit one, a 1-step mine does not cover a 3-step one). Places are not checked, so a
+    cost with no reachable place still keeps its conversions (over-inclusive on purpose)."""
     counts = {}
     for s in player['structures']:
         counts[_kind_of(s)] = counts.get(_kind_of(s), 0)+1
-    def target(to):    # Academy is {"Academy": "Qic"|"Knowledge"}
-        return next(iter(to)) if isinstance(to, dict) else to
-    listed = {(c['action'].get('type'), target(c['action'].get('to'))) for c in candidates}
-    builds = [c['action'] for c in candidates if c['action'].get('type') in BUILD_TYPES]
-    hexes = state['board']['hexes']
-    stepped = any(_terraform_steps(state, player, ((hexes.get(a.get('coord')) or {}).get('planet') or {})
-                                   .get('planet_type')) for a in builds)
     targets = []
     if counts.get('Mine', 0) < 8:
-        if not builds:
-            targets.append(('mine', {'ore': 1, 'credits': 2}, False))
-            targets.append(('gaia mine', {'ore': 1, 'credits': 2, 'qic': 1}, False))
-        if not stepped:
-            targets.append(('mine 1 step', {'ore': 1+_tf_ore(player), 'credits': 2}, False))
+        for steps in range(4):    # terraforming 0-3 steps, each with 0 or 1 range QIC
+            for qic in (0, 1):
+                targets.append((f'mine {steps} step +{qic} QIC',
+                                {'ore': 1+steps*_tf_ore(player), 'credits': 2, 'qic': qic}, False))
+        targets.append(('gaia mine +1 QIC', {'ore': 1, 'credits': 2, 'qic': 2}, False))
     for to, (source, cap, ore, credits) in UPGRADE_COST.items():
-        if counts.get(source, 0) and counts.get(to, 0) < cap and ('Upgrade', to) not in listed:
+        if counts.get(source, 0) and counts.get(to, 0) < cap:
             targets.append((to, {'ore': ore, 'credits': credits}, to in BIG))
-    if not any(t == 'ResearchAdvance' for t, _ in listed):
-        targets.append(('research', {'knowledge': 4}, False))
+            if to == 'TradingStation':
+                targets.append(('TradingStation alone', {'ore': ore, 'credits': 6}, False))
+    targets.append(('research', {'knowledge': 4}, False))
     return targets
 
 

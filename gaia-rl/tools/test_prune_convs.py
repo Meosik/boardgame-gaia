@@ -48,6 +48,19 @@ class PayFilter(unittest.TestCase):
                         [conv('PowerToOre'), {'type': 'Pass'}], bowl3=3)
         self.assertEqual(self.blocked_kinds(snap), {'PowerToOre'})
 
+    def test_lone_trading_station_keeps_knowledge_to_credit(self):
+        # Codex debate 1/1: a 3-credit station may be legal, a 6-credit one needs 3 knowledge→credit.
+        upgrade = {'type': 'Upgrade', 'coord': 'h0', 'to': 'TradingStation', 'tech_tile_choice': None}
+        snap = snapshot({'ore': 2, 'credits': 3, 'knowledge': 3, 'qic': 0}, ['Mine'],
+                        [conv('KnowledgeToCredit'), upgrade, {'type': 'Pass'}])
+        self.assertEqual(self.blocked_kinds(snap), set())
+
+    def test_legal_mine_does_not_hide_gaia_mine_qic(self):
+        build = {'type': 'Build', 'coord': 'h9'}
+        snap = snapshot({'ore': 9, 'credits': 20, 'knowledge': 0, 'qic': 0}, ['Mine'],
+                        [conv('PowerToQic'), build, {'type': 'Pass'}], bowl3=4)
+        self.assertEqual(self.blocked_kinds(snap), set())
+
     def test_never_blocks_everything(self):
         snap = snapshot({'ore': 9, 'credits': 20, 'knowledge': 9, 'qic': 3}, [], [conv('OreToCredit')])
         self.assertEqual(tp.prune_indices(snap), set())
