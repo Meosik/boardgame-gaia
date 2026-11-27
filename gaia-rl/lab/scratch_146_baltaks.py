@@ -3,7 +3,8 @@
 Replays with the lab checkout modules (same as scratch_146_pass.py) and at the given steps prints the standard tech tile
 layout (tile -> track), the seat's research levels, and every candidate that takes a tech tile. Read only.
 
-  scratch_146_baltaks.py <game dir> <step> [<step> ...]
+  scratch_146_baltaks.py <game dir> <step> [<step> ...] [--tech]
+  (default: resources, chosen action, legal Build coords; --tech adds the tech-tile / research candidates)
 """
 import gzip
 import json
@@ -17,7 +18,7 @@ sys.path[:0] = [str(LAB/'python'), str(LAB/'baseline-teacher-20260917'), str(LAB
 
 
 def main():
-    game, steps = Path(sys.argv[1]), {int(s) for s in sys.argv[2:]}
+    game, steps = Path(sys.argv[1]), {int(s) for s in sys.argv[2:] if s != '--tech'}
     result = json.loads((game/'result.json').read_text())
     from gaia_rl import Environment
     env = Environment(result['seed'], 2000)
@@ -29,7 +30,17 @@ def main():
             state, seat = snap['state'], snap.get('player')
             p = state['players'][seat]
             print(f"step {row['step']} seat {seat} {p['faction']} round {state['round']}")
-            print('  research', json.dumps(p.get('research'), ensure_ascii=False))
+            r = p['resources']
+            print('  resources', {k: r[k] for k in r if k != 'power'}, 'power', r['power'])
+            print('  chosen', json.dumps(snap['candidates'][row['index']]['action'], ensure_ascii=False))
+            builds = [c['action'].get('coord') for c in snap['candidates'] if c['action'].get('type') == 'Build']
+            print('  legal Build', builds)
+            print('  legal FreeAction', [c['action'].get('kind') for c in snap['candidates'] if c['action'].get('type') == 'FreeAction'])
+            if '--tech' not in sys.argv:
+                env.step(row['decision_id'], row['index'])
+                if row['step'] >= max(steps):
+                    break
+                continue
             for key in state:
                 if 'tech' in key.lower():
                     print(f'  {key}', json.dumps(state[key], ensure_ascii=False)[:600])
