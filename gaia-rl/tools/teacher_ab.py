@@ -367,8 +367,10 @@ def decision_timing(audit, decision, tick):
 
 
 class Worker:
-    def __init__(self, teacher, seed, clock, log, state=None):
-        env = {**os.environ, **teacher.get('env', {}),
+    def __init__(self, teacher, seed, clock, log, state=None, dump_dir=None):
+        # GAIA_ROLLOUT_DUMP_DIR: the game's directory; forked pool workers inherit it (tools/rollout_dump.py).
+        env = {**({'GAIA_ROLLOUT_DUMP_DIR': str(dump_dir)} if dump_dir else {}),
+               **os.environ, **teacher.get('env', {}),
                'PYTHONPATH': teacher['source'], 'PYTHONDONTWRITEBYTECODE': '1'}
         self.process = subprocess.Popen(
             [sys.executable, '-u', str(Path(__file__).resolve()), 'worker', '--seed', seed,
@@ -490,7 +492,7 @@ def play(output, seed, teachers, a_seats, clock, stop_round=None, state=None, ma
     try:
         with (output/'workers.log').open('w') as log:
             for arm in 'AB':
-                workers[arm] = Worker(teachers[arm], seed, clock, log, state)
+                workers[arm] = Worker(teachers[arm], seed, clock, log, state, output)
             for arm, w in workers.items():
                 hello = w.request(None, timeout=300)
                 if hello.get('digest') != digest(snapshot):

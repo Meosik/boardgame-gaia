@@ -19,6 +19,7 @@ import copy
 import json
 import math
 import multiprocessing
+import os
 import time
 
 _state = {'pool': None, 'processes': 0, 'prefetch': None, 'root': None, 'horizon': 1}
@@ -50,10 +51,17 @@ def _compute(job):
     if first is None:
         select = getattr(preparation.select_goal, '__wrapped__', preparation.select_goal)
         first = select(env, snapshot, scores, goal, policies, deadline)
-    if capture_r1:
-        result = preparation.rollout(env, snapshot, first, goal, policies, deadline, capture_r1=True)
-    else:
-        result = preparation.rollout(env, snapshot, first, goal, policies, deadline)
+    try:
+        if capture_r1:
+            result = preparation.rollout(env, snapshot, first, goal, policies, deadline, capture_r1=True)
+        else:
+            result = preparation.rollout(env, snapshot, first, goal, policies, deadline)
+    except ValueError as exc:
+        directory = os.environ.get('GAIA_ROLLOUT_DUMP_DIR')
+        if directory and 'No eligible continuation' in str(exc):
+            import rollout_dump
+            rollout_dump.dump_no_continuation(exc, directory)
+        raise
     return first, result
 
 
