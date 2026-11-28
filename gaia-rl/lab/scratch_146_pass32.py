@@ -22,7 +22,8 @@ def short(a):
 
 def main():
     game, step = Path(sys.argv[1]), int(sys.argv[2])
-    last = int(sys.argv[3]) if len(sys.argv) > 3 else step
+    nums = [s for s in sys.argv[3:] if not s.startswith(('hex=', 'then='))]
+    last = int(nums[0]) if nums else step
     result = json.loads((game/'result.json').read_text())
     from gaia_rl import Environment
     env = Environment(result['seed'], 2000)
@@ -40,12 +41,34 @@ def main():
                 if k not in ('resources',):
                     print(f'  {k}', json.dumps(p[k], ensure_ascii=False)[:300])
             print('  resources', p['resources'])
+            hexq = next((s[4:] for s in sys.argv if s.startswith('hex=')), None)
+            if hexq:
+                def find(node, path):
+                    if isinstance(node, dict):
+                        if hexq in (node.get('coord'), node.get('hex'), str(node.get('coord'))):
+                            print(f'  {path}', json.dumps(node, ensure_ascii=False)[:400])
+                        for k, v in node.items():
+                            if k == hexq:
+                                print(f'  {path}.{k}', json.dumps(v, ensure_ascii=False)[:400])
+                            find(v, f'{path}.{k}')
+                    elif isinstance(node, list):
+                        for j, v in enumerate(node):
+                            find(v, f'{path}[{j}]')
+                find(state, 'state')
             kinds = Counter(c['action'].get('type') for c in snap['candidates'])
             print('  candidate types', dict(kinds))
             for i, c in enumerate(snap['candidates']):
                 a = c['action']
                 if a.get('type') != 'FreeAction':
                     print(f"  {'*' if i == row['index'] else ' '}[{i}]", short(a))
+            then = next((int(s[5:]) for s in sys.argv if s.startswith('then=')), None)
+            if then is not None:
+                after = json.loads(env.fork(snap['decision_id'], then).snapshot_json())
+                ap = after['state']['players'][seat]
+                print(f'  after [{then}] player', after.get('player'), 'resources', ap['resources'])
+                for i, c in enumerate(after['candidates']):
+                    if c['action'].get('type') not in ('FreeAction', 'Pass'):
+                        print(f'    then[{i}]', short(c['action']))
             print('  row keys', list(row))
             for key in ('compared', 'plan', 'chosen_plan', 'reason', 'menu', 'values', 'menu_pool', 'menu_dropped', 'menu_forgot',
                         'selected', 'prune_blocked', 'unsearched_comparisons'):
