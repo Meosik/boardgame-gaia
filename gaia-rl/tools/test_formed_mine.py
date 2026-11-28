@@ -95,6 +95,20 @@ class FormedMine(unittest.TestCase):
         self.assertEqual(out[0][0], BLOCKED)
         self.assertEqual(out[2], (2.0, 'r'))
 
+    def test_2d_short_chain_wins_over_deep_qic_subtree(self):
+        kc = {'type': 'FreeAction', 'kind': 'KnowledgeToCredit', 'count': 1}
+        snap = make([PASS, kc, QIC])
+        wide = copy.deepcopy(snap)    # QicToOre child: dead end that would branch further
+        wide['candidates'] = [{'action': PASS}, {'action': kc}, {'action': QIC}]
+        done = copy.deepcopy(snap)
+        done['candidates'] = [{'action': BUILD}, {'action': PASS}]
+        env = FakeFork(snap, {2: FakeFork(wide), 1: FakeFork(done)})
+        out = tp.formed_mine_scores(env, snap, [(9.0, 'r'), (1.0, 'r'), (2.0, 'r')])
+        self.assertGreater(out[1][0], 9.0)
+        self.assertTrue(out[1][1].startswith('BalTaks KnowledgeToCredit to afford'))
+        self.assertEqual(out[0][0], BLOCKED)
+        self.assertEqual(out[2], (2.0, 'r'))
+
     def test_3_other_faction_unchanged(self):
         snap = make([PASS, BUILD], faction='Terrans')
         scores = [(9.0, 'r'), (1.0, 'r')]

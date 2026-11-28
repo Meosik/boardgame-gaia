@@ -6405,7 +6405,7 @@ def formed_mine_scores(env, snapshot, scores):
     """User 2026-11-27 (known-bad 30) 「즉시포밍 했으면 꼭 광산까지 지어」, applied to BalTaks only (2026-11-28): when the
     player has its own finished Gaia Project planet without a structure, the mine there goes on top and Pass is
     blocked. If the build is not legal for lack of resources, the first of a chain of up to 3 free conversions
-    (QicToOre first, bounded DFS, at most 24 forks) whose forked state makes the build legal is lifted instead (even
+    (QicToOre first, breadth-first, at most 24 forks) whose forked state makes the build legal is lifted instead (even
     when the pruning tables blocked it). Order only."""
     from current_actions.conservation import blocked, BLOCKED, PREFIX
     state, actor = snapshot['state'], snapshot.get('player')
@@ -6432,36 +6432,39 @@ def formed_mine_scores(env, snapshot, scores):
         a = c['action']
         if a.get('type') == 'Build' and a.get('coord') in hexes:
             return finish(i, f"{faction} mine on own formed Gaia planet {a['coord']} before passing (user 2026-11-27, formed_mine)")
-    forks = [0]
-
-    def search(cur_env, cur_snap, chain, depth):
-        """DFS over free-conversion chains; returns (first_index, kinds) of the first chain that opens the Build."""
-        cs = cur_snap['candidates']
-        frees = [j for j, c in enumerate(cs) if c['action'].get('type') == 'FreeAction']
-        frees.sort(key=lambda j: cs[j]['action'].get('kind') != 'QicToOre')    # stable: QicToOre first
-        seen = set()
-        for j in frees:
-            a = cs[j]['action']
-            key = (a.get('kind'), a.get('count'))
-            if key in seen:
-                continue
-            seen.add(key)
-            if forks[0] >= 24:
-                return None
-            forks[0] += 1
-            child = cur_env.fork(cur_snap['decision_id'], j)
-            nxt = json.loads(child.snapshot_json())
-            kinds = chain[1] + [a.get('kind')]
-            first = chain[0] if chain[0] is not None else j
-            if any(c['action'].get('type') == 'Build' and c['action'].get('coord') in hexes for c in nxt['candidates']):
-                return first, kinds
-            if depth < 3 and nxt.get('player') == actor and 'ActionPhase' in nxt['state']['phase']:
-                found = search(child, nxt, (first, kinds), depth + 1)
-                if found:
-                    return found
-        return None
-
-    found = search(env, snapshot, (None, []), 1)
+    forks = 0
+    level = [(env, snapshot, None, [])]    # nodes of the current chain length: (env, snapshot, first index, kinds)
+    found = None
+    for depth in (1, 2, 3):    # breadth-first: all chains of length 1, then 2, then 3
+        nxt_level = []
+        for cur_env, cur_snap, first0, kinds0 in level:
+            cs = cur_snap['candidates']
+            frees = [j for j, c in enumerate(cs) if c['action'].get('type') == 'FreeAction']
+            frees.sort(key=lambda j: cs[j]['action'].get('kind') != 'QicToOre')    # stable: QicToOre first
+            seen = set()
+            for j in frees:
+                a = cs[j]['action']
+                key = (a.get('kind'), a.get('count'))
+                if key in seen:
+                    continue
+                seen.add(key)
+                if forks >= 24:
+                    break
+                forks += 1
+                child = cur_env.fork(cur_snap['decision_id'], j)
+                nxt = json.loads(child.snapshot_json())
+                first = j if first0 is None else first0
+                kinds = kinds0 + [a.get('kind')]
+                if any(c['action'].get('type') == 'Build' and c['action'].get('coord') in hexes for c in nxt['candidates']):
+                    found = (first, kinds)
+                    break
+                if depth < 3 and nxt.get('player') == actor and 'ActionPhase' in nxt['state']['phase']:
+                    nxt_level.append((child, nxt, first, kinds))
+            if found or forks >= 24:
+                break
+        if found or forks >= 24:
+            break
+        level = nxt_level
     if found:
         first, kinds = found
         return finish(first, f"{faction} {' -> '.join(kinds)} to afford the mine on own formed Gaia planet (user 2026-11-27, formed_mine)")
