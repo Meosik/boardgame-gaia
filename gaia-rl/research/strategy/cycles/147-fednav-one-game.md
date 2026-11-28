@@ -8,8 +8,9 @@ e362-20388 Firaks · Itars · BalTaks · Xenos(146과 같은 맵), `teacher_ab r
 commit 7e93256, 21:09:46 → 21:16:29(7분). Result: lab/results/147-fednav-one-game.md.
 
 **Health: 실패 — 0/1판.** 1R 26번째 결정(좌석 2 BalTaks, A)에서 `ValueError: No eligible continuation; do not silently
-pass`(`four_factions/preparation.py:555`) — 비교 rollout 안의 한 좌석에서 `select_goal`/`best_index`가 None, 즉 그 상태의 모든
-후보가 `blocked`(workers.log: `parallel_search._compute` → `teacher_patches.py:1597` → `:389` → `preparation.rollout`;
+pass`(`four_factions/preparation.py:555`) — 비교 rollout 안의 한 좌석에서 `select_goal`/`best_index`가 None, 즉 그 상태에 선택
+가능한 후보가 남지 않음(전부 `blocked`인지 · 후보 0인지 · 어느 단계인지는 덤프 전 미확인 — 충전 응답 단계엔 패스가 없고
+`gaia-engine/src/rules/ai.rs:188–197` 연방 한도 경로는 연방 후보를 뺀다, 토론 1/1 코덱스)(workers.log: `parallel_search._compute` → `teacher_patches.py:1597` → `:389` → `preparation.rollout`;
 호출은 `teacher_patches.py:4887 → :1830` search). 기록된 25결정: 오류 전 타임아웃 · 폴백 0, 결정 최대 36.2초(결정 로그
 `seconds`), 둔 수는 배치 · 부스터 · 충전 · 교역소/연구소 업그레이드뿐.
 
