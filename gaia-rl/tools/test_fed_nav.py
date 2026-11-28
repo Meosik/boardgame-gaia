@@ -208,6 +208,50 @@ class GoodByCost(unittest.TestCase):
         self.assertFalse(self.usable(True, 3, None))
 
 
+def mines(*hexes):
+    return [{'hex': h, 'kind': 'Mine'} for h in hexes]
+
+
+class FedGroup2(unittest.TestCase):
+    def setUp(self):
+        self.saved = tp._guide.get('fed_group2')
+
+    def tearDown(self):
+        if self.saved is None:
+            tp._guide.pop('fed_group2', None)
+        else:
+            tp._guide['fed_group2'] = self.saved
+
+    def groups(self, flag, structures):
+        tp._guide['fed_group2'] = flag
+        return tp._fed_plan_groups({'structures': structures}, set())
+
+    def goals(self, flag, structures):
+        tp._guide['fed_group2'] = flag
+        player = {'structures': structures, 'federated_hexes': [], 'resources': {}, 'research_tracks': {}}
+        spots = ['0,3', '1,3', '2,3', '3,2', '-1,3', '4,1', '5,0', '-2,3']
+        hexes = {c: {'planet': {'planet_type': 'Terra', 'owner': None}, 'structures': []} for c in spots}
+        state = {'phase': {'ActionPhase': {}}, 'round': 2, 'players': [player], 'board': {'hexes': hexes}}
+        with mock.patch.object(tp, '_part', lambda p, name: True), \
+                mock.patch.object(tp, '_fed_plan_usable', lambda *a, **k: True), \
+                mock.patch.object(tp, '_mine_cost', lambda *a, **k: {}):
+            return tp.fed_plan_goals({'state': state, 'player': 0})
+
+    def test_1_flag_off_distance_2_is_two_groups(self):
+        self.assertEqual(len(self.groups(False, mines('0,0', '2,0'))), 2)
+
+    def test_2_flag_on_distance_2_is_one_group(self):
+        self.assertEqual(len(self.groups(True, mines('0,0', '2,0'))), 1)
+
+    def test_3_power_3_no_plan_power_4_plans(self):
+        self.assertEqual(self.goals(True, mines('0,0', '1,0', '2,0')), [])
+        self.assertTrue(self.goals(True, mines('0,0', '1,0', '2,0', '3,0')))
+
+    def test_4_internal_gap_is_a_satellite(self):
+        self.assertEqual(tp._fed_group_gaps(mines('0,0', '1,0', '3,0', '4,0')), 1)
+        self.assertEqual(tp._fed_group_gaps(mines('0,0', '1,0')), 0)
+
+
 class Factory(unittest.TestCase):
     def test_factory_exists(self):
         self.assertTrue(callable(

@@ -3494,6 +3494,7 @@ def fed_cluster_scores(env, snapshot, scores):
 # held now pays it (FED_PLAN_RESEARCH_KNOWLEDGE, so within this round) — see _fed_plan_gaia_planned.
 FED_PLAN_RESEARCH_KNOWLEDGE = 4     # rulebook: a research step costs 4 knowledge
 FED_PLAN_START = 3
+FED_GROUP2_START = 4                # fed_group2 (user 2026-11-28): distance-2 groups, a plan starts at power 4
 FED_PLAN_POWER = 7
 FED_PLAN_TWO_POWER = 2
 FED_PLAN_LAST_ROUND = 5
@@ -3542,6 +3543,7 @@ def _fed_plan_usable(state, player, planet, gaia_planned=False):
 def _fed_plan_groups(player, touching):
     """Groups (lists of structures) of adjacent buildings outside our federations and their neighbourhood."""
     free = [s for s in player['structures'] if str(s['hex']) not in touching and _structure_power(s)]
+    link = 2 if _guide.get('fed_group2') else 1     # fed_group2: buildings within distance 2 share a group
     groups, seen = [], set()
     for i in range(len(free)):
         if i in seen:
@@ -3552,11 +3554,30 @@ def _fed_plan_groups(player, touching):
             j = todo.pop()
             group.append(free[j])
             for k in range(len(free)):
-                if k not in seen and _hex_distance(free[j]['hex'], free[k]['hex']) == 1:
+                if k not in seen and _hex_distance(free[j]['hex'], free[k]['hex']) <= link:
                     seen.add(k)
                     todo.append(k)
         groups.append(group)
     return groups
+
+
+def _fed_group_gaps(group):
+    """Satellites needed to join a group inside itself: its distance-1 connected components minus 1 (each distance-2
+    gap takes one satellite; fed_group2)."""
+    seen, parts = set(), 0
+    for i in range(len(group)):
+        if i in seen:
+            continue
+        parts += 1
+        seen.add(i)
+        todo = [i]
+        while todo:
+            j = todo.pop()
+            for k in range(len(group)):
+                if k not in seen and _hex_distance(group[j]['hex'], group[k]['hex']) == 1:
+                    seen.add(k)
+                    todo.append(k)
+    return max(0, parts - 1)
 
 
 def fed_plan_goals(snapshot, menu=()):
@@ -3575,10 +3596,13 @@ def fed_plan_goals(snapshot, menu=()):
     federated = {str(h) for h in player.get('federated_hexes', [])}
     touching = federated | {n for h in federated for n in _hex_neighbors(h)}
     groups = [(sum(_structure_power(s) for s in g), g) for g in _fed_plan_groups(player, touching)]
-    groups = [(p, g) for p, g in groups if FED_PLAN_START <= p < FED_PLAN_POWER]
+    group2 = bool(_guide.get('fed_group2'))
+    start = FED_GROUP2_START if group2 else FED_PLAN_START
+    groups = [(p, g) for p, g in groups if start <= p < FED_PLAN_POWER]
     if not groups:
         return []
     power, group = max(groups, key=lambda pg: pg[0])
+    group_gaps = _fed_group_gaps(group) if group2 else 0
     hexes = [str(s['hex']) for s in group]
     need = FED_PLAN_POWER - power
     kinds = {str(s['hex']): kind(s['kind']) for s in group}
@@ -3630,7 +3654,7 @@ def fed_plan_goals(snapshot, menu=()):
                 continue
             rest = need - gain
             steps = tuple(colonies[:rest]) + ups
-            satellites = sum(d - 1 for d, _, _ in planets[:rest])
+            satellites = sum(d - 1 for d, _, _ in planets[:rest]) + group_gaps
             name = shape if shape else ('mines' if gain == 0 else f'up{gain}')
             out.append((gain, satellites, Goal(f'federation-plan-{name}', 'ordered', steps=steps,
                                                sources=('user-2026-11-27',))))
@@ -6584,9 +6608,9 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance_formedmine_fednav(seed, **kwargs):
     """Teacher factory: ..._formedmine + fed_absorb (_coming_mines) + fed_prep (_fed_prep_order) + nav_good
     (_opened_colonies / _opened_ships) — user 2026-11-28 「ㄱ ㄴ는 하고 ㄷ은 딱 사거리가 맞는 좋은 행성 + 함선만 계산해」,
-    known-bad 34–37, E383. Not in the base stack."""
+    known-bad 34–37, E383. Not in the base stack. + fed_group2 (user 2026-11-28, distance-2 groups from power 4)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance_formedmine(seed, **kwargs)
-    _guide.update({'fed_absorb': True, 'fed_prep': True, 'nav_good': True, 'good_by_cost': True})
+    _guide.update({'fed_absorb': True, 'fed_prep': True, 'nav_good': True, 'good_by_cost': True, 'fed_group2': True})
     return teacher
 
 
