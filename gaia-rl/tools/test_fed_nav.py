@@ -135,28 +135,41 @@ class OpenedShips(unittest.TestCase):
             self.assertEqual(tp._opened_ships(state, player, 2), [])
 
 
+NAV_RANGE = {0: 1, 1: 1, 2: 2, 3: 2, 4: 3, 5: 4}
+NAV_DIST = {'1,0': 1, '2,0': 2, '3,0': 4, '4,0': 2}      # coord -> distance
+NAV_TYPE = {'1,0': 'Good', '2,0': 'Good', '3,0': 'Good', '4,0': 'Bad'}
+
+
+def dist_range_qic(state, player, coord, bonus=0, starts=None):
+    return max(0, (NAV_DIST[coord] - NAV_RANGE[player['research_tracks']['navigation']] + 1) // 2)
+
+
 class NavGood(FlagCase):
-    def opened(self, flag):
+    def opened(self, flag, qic=1):
         tp._guide['nav_good'] = flag
-        hexes = {c: {'planet': {'planet_type': t}} for c, t in (('1,0', 'Bad'), ('2,0', 'Good'), ('3,0', 'Good'))}
-        player = {'faction': 'X', 'research_tracks': {'navigation': 1}}
+        hexes = {c: {'planet': {'planet_type': t}} for c, t in NAV_TYPE.items()}
+        player = {'faction': 'X', 'research_tracks': {'navigation': 1}, 'resources': {'qic': qic}}
         state = state_with(hexes)
 
-        def targets(st, p, types):
-            if p['research_tracks']['navigation'] >= 2:
-                return [(c, hexes[c]['planet'], 0) for c in hexes]
-            return []
+        def targets(st, p, types):      # in reach with the QIC the player holds
+            return [(c, hexes[c]['planet'], 0) for c in hexes if dist_range_qic(st, p, c) <= p['resources']['qic']]
         with mock.patch.object(tp._value, 'targets', targets), \
+                mock.patch('economy.teacher.range_qic', dist_range_qic), \
                 mock.patch.object(tp, '_fed_plan_usable', lambda st, p, pl, gaia_planned=False: pl['planet_type'] == 'Good'), \
                 mock.patch.object(tp, '_colony_cost', lambda st, p, c: (True, 0)):
             return tp._opened_colonies(state, player, 'navigation', 2)
 
-    def test_1_flag_keeps_good_only(self):
-        self.assertEqual(self.opened(True), ['2,0', '3,0'])
+    def test_1_needs_qic_now_none_after(self):
+        # nav 1 to 2, 1 QIC held: distance 2 (QIC 1 now, 0 after) in; distance 4 (still QIC 1) out;
+        # distance 1 (already in range) out; the bad planet at distance 2 out
+        self.assertEqual(self.opened(True), ['2,0'])
 
-    def test_2_without_flag_keeps_all(self):
-        # TRACK_PLAN_COLONIES caps the list, so the bad planet shows up among the first ones
-        self.assertEqual(self.opened(False), ['1,0', '2,0', '3,0'][:tp.TRACK_PLAN_COLONIES])
+    def test_2_held_qic_does_not_matter(self):
+        self.assertEqual(self.opened(True, qic=0), ['2,0'])
+
+    def test_3_without_flag_old_reach_difference(self):
+        # old: reach(after) - reach(player) with the held QIC: distance 4 (QIC 1 at level 2) newly reachable
+        self.assertEqual(self.opened(False), ['3,0'])
 
 
 class Factory(unittest.TestCase):

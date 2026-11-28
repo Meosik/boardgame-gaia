@@ -4237,7 +4237,12 @@ def _opened_colonies(state, player, track, level):
         if track == 'navigation' and _guide.get('nav_good'):
             # nav_good (user 2026-11-28 「딱 사거리가 맞는 좋은 행성 + 함선만 계산해」, known-bad 34, E383): only good
             # planets the new range reaches (_fed_plan_usable: Gaia, home type, one terraform step); ships: _opened_ships.
-            opened = {c for c in opened if _fed_plan_usable(state, player, state['board']['hexes'][c]['planet'])}
+            # Range, not held QIC (debate 1/1): needs QIC now, none after the step (as _opened_ships).
+            from economy.teacher import range_qic
+            rich = dict(after, resources={**after['resources'], 'qic': 99})
+            opened = {c for c in reach(rich, RING+('Gaia',))
+                      if range_qic(state, player, c) > 0 and range_qic(state, after, c) == 0
+                      and _fed_plan_usable(state, player, state['board']['hexes'][c]['planet'])}
     elif track == 'terraforming':
         home = _home_type(player)
         now = player['research_tracks'].get('terraforming', 0)
