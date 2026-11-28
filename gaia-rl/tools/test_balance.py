@@ -1,4 +1,6 @@
 """E380 next-round credit:ore balance (teacher_patches.balance_scores)."""
+import copy
+import json
 import unittest
 
 import teacher_patches as tp
@@ -12,9 +14,26 @@ BUILD = {'type': 'Build', 'coord': 'h9'}
 CONV = {'type': 'FreeAction', 'kind': 'PowerToCredit', 'count': 1}
 
 
-def run(snap, top_index=0, others=0.0):
+class FakeFork:
+    def __init__(self, snap, resources):
+        self.snap = copy.deepcopy(snap)
+        self.snap['state']['players'][0]['resources'].update(resources)
+
+    def snapshot_json(self):
+        return json.dumps(self.snap)
+
+
+class FakeEnv:
+    def __init__(self, snap, resources):
+        self.snap, self.resources = snap, resources
+
+    def fork(self, decision_id, index):
+        return FakeFork(self.snap, self.resources)
+
+
+def run(snap, top_index=0, others=0.0, env=None):
     scores = [(9.0 if i == top_index else others, 'r') for i in range(len(snap['candidates']))]
-    out = tp.balance_scores(None, snap, scores)
+    out = tp.balance_scores(env, snap, scores)
     return max(range(len(out)), key=lambda i: out[i][0]), out
 
 
@@ -52,8 +71,39 @@ class Balance(unittest.TestCase):
         best, _ = run(snap)
         self.assertEqual(best, 0)
 
-    def test_d_build_top_unchanged(self):
-        snap = snapshot(self.res(10, 0), ['Mine'], [BUILD, PA4])
+    def test_d1_build_top_credits_short_after_lifts_pa4(self):
+        snap = snapshot(self.res(10, 40), ['Mine'], [BUILD, PA4])
+        snap['decision_id'] = 1
+        env = FakeEnv(snap, self.res(10, 0))
+        best, out = run(snap, env=env)
+        self.assertEqual(best, 1)
+        self.assertIn('먼저해', out[1][1])
+
+    def test_d2_build_top_in_band_unchanged(self):
+        snap = snapshot(self.res(10, 0), ['Mine'], [BUILD, PA3, PA4])
+        snap['decision_id'] = 1
+        inc = income(snap)
+        o = 10 + inc[0]
+        env = FakeEnv(snap, self.res(10, round(1.5*o) - inc[1]))
+        best, _ = run(snap, env=env)
+        self.assertEqual(best, 0)
+
+    def test_d3_build_top_ore_short_no_ore_lift(self):
+        snap = snapshot(self.res(10, 0), ['Mine'], [BUILD, PA3])
+        snap['decision_id'] = 1
+        env = FakeEnv(snap, self.res(0, 30))
+        best, _ = run(snap, env=env)
+        self.assertEqual(best, 0)
+
+    def test_d4_build_top_bescods_unchanged(self):
+        snap = self.faction(snapshot(self.res(10, 40), ['Mine'], [BUILD, PA4]), 'Bescods')
+        snap['decision_id'] = 1
+        env = FakeEnv(snap, self.res(10, 0))
+        best, _ = run(snap, env=env)
+        self.assertEqual(best, 0)
+
+    def test_d5_power_action_top_unchanged(self):
+        snap = snapshot(self.res(10, 0), [], [PA3, PA4])
         best, _ = run(snap)
         self.assertEqual(best, 0)
 

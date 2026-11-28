@@ -6333,8 +6333,9 @@ def balance_scores(env, snapshot, scores):
     """User 2026-11-28 (E380): look one round ahead. Next-round holdings = current resources + next-round income
     (production, include_booster=False). Best ore:credits is 1:1.5, 1:1 to 1:2 allowed (conflicts/general-and-lf.md B5).
     When next credits < next ore, the 7-credit power action (id 4) takes the top place; when next credits >
-    2 * next ore, the 2-ore power action (id 3). Order only; a top move that is a build, upgrade, research,
-    federation or power action is left alone (the balance is the end-of-round one); no conversions added.
+    2 * next ore, the 2-ore power action (id 3). Order only; a power action on top is left alone; when a
+    build/upgrade/research/federation/gaia move is on top, its forked result is the balance and only the 7-credit
+    action is lifted before it (user 2026-11-28 「먼저해」). No conversions added.
     Faction exceptions in BALANCE_SKIP (faction guides)."""
     from current_actions.conservation import blocked
     state, actor = snapshot['state'], snapshot.get('player')
@@ -6345,15 +6346,22 @@ def balance_scores(env, snapshot, scores):
     if not act:
         return scores
     top = max(act, key=lambda i: scores[i][0])
-    if act[top].get('type') in POWER_FIRST_PROGRESS:
+    top_type = act[top].get('type')
+    if top_type == 'PowerAction':
         return scores
     from four_factions.value import production
     player = state['players'][actor]
-    income = production(state, player, include_booster=False)
-    res = player['resources']
+    progress = top_type in POWER_FIRST_PROGRESS
+    if progress:
+        after_player = json.loads(env.fork(snapshot['decision_id'], top).snapshot_json())['state']['players'][actor]
+        res = after_player['resources']
+        income = production(state, after_player, include_booster=False)
+    else:
+        res = player['resources']
+        income = production(state, player, include_booster=False)
     o = res.get('ore', 0) + income[0]
     c = res.get('credits', 0) + income[1]
-    want = 'credits' if c < o else 'ore' if c > 2*o else None
+    want = 'credits' if c < o else 'ore' if (c > 2*o and not progress) else None
     if want is None:
         return scores
     if want in BALANCE_SKIP.get(player['faction'], ()):
@@ -6362,9 +6370,14 @@ def balance_scores(env, snapshot, scores):
     if not picks:
         return scores
     pick = max(picks, key=lambda i: scores[i][0])
+    if progress:
+        reason = (f"{player['faction']} next-round credits short after {top_type} (credits {c} vs ore {o}), "
+                  "7 credits first (user 2026-11-28 먼저해, balance)")
+    else:
+        reason = (f"{player['faction']} next-round {want} short (credits {c} vs ore {o}), "
+                  "power action now (user 2026-11-28, balance)")
     lifted = list(scores)
-    _swap(lifted, list(scores), pick, top,
-          f"{player['faction']} next-round {want} short (credits {c} vs ore {o}), power action now (user 2026-11-28, balance)")
+    _swap(lifted, list(scores), pick, top, reason)
     rivals = [lifted[j][0] for j in act if j != pick and isinstance(lifted[j][0], (int, float))]
     if rivals and isinstance(lifted[pick][0], (int, float)) and max(rivals) >= lifted[pick][0]:
         lifted[pick] = (max(rivals) + 1e-6, *lifted[pick][1:])    # strictly first even when another candidate tied the top
