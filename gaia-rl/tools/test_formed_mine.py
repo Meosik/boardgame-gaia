@@ -109,6 +109,16 @@ class FormedMine(unittest.TestCase):
         self.assertEqual(out[0][0], BLOCKED)
         self.assertEqual(out[2], (2.0, 'r'))
 
+    def test_2e_two_qic_chain_not_used(self):
+        snap = make([PASS, QIC])
+        mid = copy.deepcopy(snap)
+        mid['candidates'] = [{'action': PASS}, {'action': QIC}]
+        done = copy.deepcopy(snap)
+        done['candidates'] = [{'action': BUILD}, {'action': PASS}]
+        env = FakeFork(snap, {1: FakeFork(mid, {1: FakeFork(done)})})
+        scores = [(9.0, 'r'), (1.0, 'r')]
+        self.assertEqual(tp.formed_mine_scores(env, snap, scores), scores)
+
     def test_3_other_faction_unchanged(self):
         snap = make([PASS, BUILD], faction='Terrans')
         scores = [(9.0, 'r'), (1.0, 'r')]

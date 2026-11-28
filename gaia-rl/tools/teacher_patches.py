@@ -6405,7 +6405,8 @@ def formed_mine_scores(env, snapshot, scores):
     """User 2026-11-27 (known-bad 30) 「즉시포밍 했으면 꼭 광산까지 지어」, applied to BalTaks only (2026-11-28): when the
     player has its own finished Gaia Project planet without a structure, the mine there goes on top and Pass is
     blocked. If the build is not legal for lack of resources, the first of a chain of up to 3 free conversions
-    (QicToOre first, breadth-first, at most 24 forks) whose forked state makes the build legal is lifted instead (even
+    (QicToOre first, breadth-first, at most 24 forks; at most one QIC spent per chain: one QicToOre of count 1, and no
+    OreToCredit after it) whose forked state makes the build legal is lifted instead (even
     when the pruning tables blocked it). Order only."""
     from current_actions.conservation import blocked, BLOCKED, PREFIX
     state, actor = snapshot['state'], snapshot.get('player')
@@ -6444,6 +6445,11 @@ def formed_mine_scores(env, snapshot, scores):
             seen = set()
             for j in frees:
                 a = cs[j]['action']
+                # user 2026-11-28 「qic를 세번 써서 짓는 광산? 그건 아닌듯」: at most one QIC spend per chain
+                if a.get('kind') == 'QicToOre' and ('QicToOre' in kinds0 or (a.get('count') or 1) > 1):
+                    continue
+                if a.get('kind') == 'OreToCredit' and 'QicToOre' in kinds0:
+                    continue
                 key = (a.get('kind'), a.get('count'))
                 if key in seen:
                     continue
