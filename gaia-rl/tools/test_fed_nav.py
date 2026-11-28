@@ -172,6 +172,42 @@ class NavGood(FlagCase):
         self.assertEqual(self.opened(False), ['3,0'])
 
 
+class GoodByCost(unittest.TestCase):
+    def setUp(self):
+        self.saved = tp._guide.get('good_by_cost')
+
+    def tearDown(self):
+        if self.saved is None:
+            tp._guide.pop('good_by_cost', None)
+        else:
+            tp._guide['good_by_cost'] = self.saved
+
+    def usable(self, flag, level, steps):
+        tp._guide['good_by_cost'] = flag
+        player = {'research_tracks': {'terraforming': level}}
+        with mock.patch.object(tp, '_terraform_steps', lambda st, p, kind: steps):
+            return tp._fed_plan_usable({}, player, {'planet_type': 'Desert'})
+
+    def test_1_level0(self):
+        self.assertTrue(self.usable(True, 0, 1))
+        self.assertFalse(self.usable(True, 0, 2))
+
+    def test_2_level2(self):
+        self.assertTrue(self.usable(True, 2, 1))     # 2 ore
+        self.assertFalse(self.usable(True, 2, 2))    # 4 ore
+
+    def test_3_level3(self):
+        self.assertTrue(self.usable(True, 3, 3))     # 3 ore
+        self.assertFalse(self.usable(True, 2, 3))
+
+    def test_4_flag_off_level3(self):
+        self.assertFalse(self.usable(False, 3, 2))
+        self.assertTrue(self.usable(False, 3, 1))
+
+    def test_5_steps_none(self):
+        self.assertFalse(self.usable(True, 3, None))
+
+
 class Factory(unittest.TestCase):
     def test_factory_exists(self):
         self.assertTrue(callable(

@@ -3498,6 +3498,7 @@ FED_PLAN_POWER = 7
 FED_PLAN_TWO_POWER = 2
 FED_PLAN_LAST_ROUND = 5
 FED_PLAN_MAX_STEPS = 1
+GOOD_TERRAFORM_ORE = 3              # good_by_cost: one terraform step at the base price (rulebook p.22)
 
 
 def _fed_plan_gaia_planned(player, goals):
@@ -3529,6 +3530,12 @@ def _fed_plan_usable(state, player, planet, gaia_planned=False):
             return gaia_planned
         return ECLIPSE_SHIP in (player.get('explored_ships') or ()) or _ship_fit(state, player)[0] == 'Eclipse'
     steps = _terraform_steps(state, player, planet['planet_type'])
+    if steps is not None and _guide.get('good_by_cost'):
+        # good_by_cost (user 2026-11-28 「2부터 풀어도 되는데, 많아야 테라포밍 1개? 그냥 하나로 할까? … 3레벨 올리는 종족이
+        # 있을 수도」): the limit is the terraform ore, at most one base step (3 ore) — levels 0-2 keep one step,
+        # level 3+ (1 ore a step, rulebook p.22) opens up to three.
+        from economy.teacher import ORE_PER_STEP
+        return steps*ORE_PER_STEP[player['research_tracks'].get('terraforming', 0)] <= GOOD_TERRAFORM_ORE
     return steps is not None and steps <= FED_PLAN_MAX_STEPS
 
 
@@ -6579,7 +6586,7 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance
     (_opened_colonies / _opened_ships) — user 2026-11-28 「ㄱ ㄴ는 하고 ㄷ은 딱 사거리가 맞는 좋은 행성 + 함선만 계산해」,
     known-bad 34–37, E383. Not in the base stack."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance_formedmine(seed, **kwargs)
-    _guide.update({'fed_absorb': True, 'fed_prep': True, 'nav_good': True})
+    _guide.update({'fed_absorb': True, 'fed_prep': True, 'nav_good': True, 'good_by_cost': True})
     return teacher
 
 
