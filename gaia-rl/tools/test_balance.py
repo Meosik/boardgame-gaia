@@ -72,6 +72,25 @@ class Balance(unittest.TestCase):
         best, _ = run(snap)
         self.assertEqual(best, 0)
 
+    def faction(self, snap, name):
+        snap['state']['players'][0]['faction'] = name
+        return snap
+
+    def test_h_hadsch_ore_short_unchanged(self):
+        snap = self.faction(snapshot(self.res(0, 30), [], [PASS, PA3]), 'HadschHallas')
+        best, _ = run(snap)
+        self.assertEqual(best, 0)
+
+    def test_i_bescods_credits_short_unchanged(self):
+        snap = self.faction(snapshot(self.res(10, 0), [], [PASS, PA4]), 'Bescods')
+        best, _ = run(snap)
+        self.assertEqual(best, 0)
+
+    def test_j_hadsch_credits_short_still_lifts(self):
+        snap = self.faction(snapshot(self.res(10, 0), [], [PASS, PA4]), 'HadschHallas')
+        best, _ = run(snap)
+        self.assertEqual(best, 1)
+
 
 if __name__ == '__main__':
     unittest.main()

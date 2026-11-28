@@ -6323,6 +6323,10 @@ def power_first_scores(env, snapshot, scores):
 
 
 BALANCE_POWER = {'credits': 4, 'ore': 3}    # power action ids: 4 = 7 credits, 3 = 2 ore (engine apply_power_effect)
+# Faction guides that override the common ratio (research/strategy/faction-claims-status.md): Hadsch Hallas
+# B17-S04 "7돈 vs 2광석이면 보통 7돈" -> no 2-ore lift; Bescods (Mad Androids) PG13-S41 / B13-S12 "7크레딧 액션은
+# 거의 필요 없음", credits come from two labs -> no 7-credit lift. Darkanians SHDK-S10 (ore focus) agree with the ratio.
+BALANCE_SKIP = {'HadschHallas': frozenset({'ore'}), 'Bescods': frozenset({'credits'})}
 
 
 def balance_scores(env, snapshot, scores):
@@ -6330,7 +6334,8 @@ def balance_scores(env, snapshot, scores):
     (production, include_booster=False). Best ore:credits is 1:1.5, 1:1 to 1:2 allowed (conflicts/general-and-lf.md B5).
     When next credits < next ore, the 7-credit power action (id 4) takes the top place; when next credits >
     2 * next ore, the 2-ore power action (id 3). Order only; a top move that is a build, upgrade, research,
-    federation or power action is left alone (the balance is the end-of-round one); no conversions added."""
+    federation or power action is left alone (the balance is the end-of-round one); no conversions added.
+    Faction exceptions in BALANCE_SKIP (faction guides)."""
     from current_actions.conservation import blocked
     state, actor = snapshot['state'], snapshot.get('player')
     if actor is None or 'ActionPhase' not in state['phase'] or not _guide.get('balance', True) \
@@ -6350,6 +6355,8 @@ def balance_scores(env, snapshot, scores):
     c = res.get('credits', 0) + income[1]
     want = 'credits' if c < o else 'ore' if c > 2*o else None
     if want is None:
+        return scores
+    if want in BALANCE_SKIP.get(player['faction'], ()):
         return scores
     picks = [i for i, a in act.items() if a.get('type') == 'PowerAction' and a.get('id') == BALANCE_POWER[want]]
     if not picks:
