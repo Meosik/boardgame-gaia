@@ -6448,7 +6448,8 @@ def formed_mine_scores(env, snapshot, scores):
                 # user 2026-11-28 「qic를 세번 써서 짓는 광산? 그건 아닌듯」: at most one QIC spend per chain
                 if a.get('kind') == 'QicToOre' and ('QicToOre' in kinds0 or (a.get('count') or 1) > 1):
                     continue
-                if a.get('kind') == 'OreToCredit' and 'QicToOre' in kinds0:
+                # no OreToCredit in the same chain as QicToOre (either order): QIC must not become credits
+                if (a.get('kind') == 'OreToCredit' and 'QicToOre' in kinds0) or (a.get('kind') == 'QicToOre' and 'OreToCredit' in kinds0):
                     continue
                 key = (a.get('kind'), a.get('count'))
                 if key in seen:

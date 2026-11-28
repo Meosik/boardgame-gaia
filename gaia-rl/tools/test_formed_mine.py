@@ -119,6 +119,17 @@ class FormedMine(unittest.TestCase):
         scores = [(9.0, 'r'), (1.0, 'r')]
         self.assertEqual(tp.formed_mine_scores(env, snap, scores), scores)
 
+    def test_2f_ore_to_credit_then_qic_chain_not_used(self):
+        oc = {'type': 'FreeAction', 'kind': 'OreToCredit', 'count': 1}
+        snap = make([PASS, oc])
+        mid = copy.deepcopy(snap)
+        mid['candidates'] = [{'action': PASS}, {'action': QIC}]
+        done = copy.deepcopy(snap)
+        done['candidates'] = [{'action': BUILD}, {'action': PASS}]
+        env = FakeFork(snap, {1: FakeFork(mid, {1: FakeFork(done)})})
+        scores = [(9.0, 'r'), (1.0, 'r')]
+        self.assertEqual(tp.formed_mine_scores(env, snap, scores), scores)
+
     def test_3_other_faction_unchanged(self):
         snap = make([PASS, BUILD], faction='Terrans')
         scores = [(9.0, 'r'), (1.0, 'r')]
