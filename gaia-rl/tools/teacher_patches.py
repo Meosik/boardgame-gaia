@@ -481,6 +481,8 @@ def federation_progress(state, player):
     import guide_value as gv
     federated = set(map(str, player.get('federated_hexes') or []))
     left = [s for s in player['structures'] if str(s['hex']) not in federated and _structure_power(s)]
+    if _guide.get('fed_absorb'):
+        left += _coming_mines(state, player, federated)
     # fed_plan (user 2026-11-27): a set holds at most FED_PLAN_TWO_POWER two-power buildings, so a third one in
     # a group adds nothing here (the TSx3 + mine exception is a plan fallback only, see fed_plan_goals).
     capped = _part(player, 'fed_plan')
@@ -503,6 +505,18 @@ def federation_progress(state, player):
                     todo.append(k)
         best = max(best, group)
     return gv.to_vp(state, gv.FEDERATION_TOKEN*min(best, gv.FEDERATION_POWER)/gv.FEDERATION_POWER)
+
+
+def _coming_mines(state, player, federated):
+    """fed_absorb (user 2026-11-28 「포밍할 예정인 행성이 강제 편입되는데 그것도 계산 안 되고」, known-bad 37, E383): our
+    planets without a building (a Gaia project under way or a formed Gaia planet) as coming mines of power 1. One next
+    to our federation joins it when built (engine: 146 step 172 mine -12,5 in federated_hexes at 174), so it is left
+    out — the potential then shows the loss of forming a federation beside a planned mine."""
+    touching = federated | {n for h in federated for n in _hex_neighbors(h)}
+    actor = player.get('player_id')
+    return [{'hex': coord, 'kind': 'Mine'} for coord, cell in state['board']['hexes'].items()
+            if (cell.get('planet') or {}).get('owner') == actor and actor is not None
+            and not cell.get('structures') and coord not in touching]
 
 
 def leech_value(state, player):
@@ -4220,6 +4234,10 @@ def _opened_colonies(state, player, track, level):
     reach = lambda p, types: {coord for coord, _, _ in _value.targets(state, p, types)}
     if track in ('navigation', 'ai'):
         opened = reach(after, RING+('Gaia',)) - reach(player, RING+('Gaia',))
+        if track == 'navigation' and _guide.get('nav_good'):
+            # nav_good (user 2026-11-28 「딱 사거리가 맞는 좋은 행성 + 함선만 계산해」, known-bad 34, E383): only good
+            # planets the new range reaches (_fed_plan_usable: Gaia, home type, one terraform step); ships: _opened_ships.
+            opened = {c for c in opened if _fed_plan_usable(state, player, state['board']['hexes'][c]['planet'])}
     elif track == 'terraforming':
         home = _home_type(player)
         now = player['research_tracks'].get('terraforming', 0)
@@ -4239,6 +4257,20 @@ def _opened_colonies(state, player, track, level):
     else:
         return []
     return sorted(opened, key=lambda c: (_colony_cost(state, after, c)[1], c))[:TRACK_PLAN_COLONIES]
+
+
+def _opened_ships(state, player, level):
+    """nav_good: Lost Fleet ships not explored yet that the Navigation step to `level` brings into range (QIC needed
+    now, none after); empty without an exploration shuttle. Facts only (economy.teacher.range_qic)."""
+    from economy.teacher import range_qic, SHIP_IDS
+    if player.get('exploration_shuttles_available', 0) <= 0:
+        return []
+    after = _at_level(player, 'navigation', level)
+    explored = set(player.get('explored_ships') or ())
+    tiles = state['board'].get('spaceship_tiles') or {}
+    return sorted(ship for ship, at in tiles.items()
+                  if SHIP_IDS.get(ship) not in explored and range_qic(state, player, at) > 0
+                  and range_qic(state, after, at) == 0)
 
 
 def track_plan_goals(snapshot):
@@ -4261,6 +4293,11 @@ def track_plan_goals(snapshot):
         for coord in colonies:
             plans.append(Goal(f'track-plan-{name}-{level}>colony@{coord}', 'ordered',
                               steps=(research, Goal(f'colony@{coord}', 'colony', coord)), sources=('track_plans',)))
+        ships = _opened_ships(state, player, level) if track == 'navigation' and _guide.get('nav_good') else []
+        for ship in ships:
+            plans.append(Goal(f'track-plan-{name}-{level}>explore@{ship}', 'ordered',
+                              steps=(research, Goal(f'explore@{ship}', 'explore', target=ship)), sources=('track_plans',)))
+        colonies = list(colonies) + ships
         if bare and not colonies:
             plans.append(Goal(f'track-plan-{name}-{level}', 'ordered', steps=(research,), sources=('track_plans',)))
     guide = _plan_tracks(state, actor)
@@ -4677,6 +4714,21 @@ def forget_unaffordable_plan(snapshot, memory):
     return {**memory, '_plans': {k: v for k, v in plans.items() if k != key}}, goal.name
 
 
+def _fed_prep_order(snapshot, fed_now, prep):
+    """fed_prep (user 2026-11-28, known-bad 35 · 36, E383): with a legal federation now, the federation plans of a
+    smaller adjacent set (fed_plan_goals: upgrades or near mines to 7 power, fewer buildings and satellites) are
+    compared too, so forming later with a leaner set can beat forming now. The menu gives a family one slot: when the
+    current choice (top of the root ranking) already is a federation it is compared as current-choice, so the best
+    plan takes the slot; otherwise the legal federation keeps it. Order only; the rollout judges."""
+    scores = _fed_scores.get(id(snapshot))
+    if not prep or scores is None or len(scores) != len(snapshot['candidates']):
+        return [fed_now]
+    top = max(range(len(scores)), key=lambda i: scores[i][0])
+    if snapshot['candidates'][top]['action'].get('type') == 'FormFederation':
+        return [*prep, fed_now]
+    return [fed_now, *prep]
+
+
 def plan_menu_goals(snapshot, goals):
     """The goal list with the menu's first MENU_FIRST plans in front (faction row order); `_menu_slots` keeps them
     for the interleave / scoring_pairs wrappers that place them in the comparison order (install_plan_menu)."""
@@ -4697,7 +4749,10 @@ def plan_menu_goals(snapshot, goals):
     fed_now = fed_compare_goal(snapshot, part=False)
     # fed_plan: with no legal federation now, the planned set takes the federation slot (federation-plan-*).
     fed_plans = [] if fed_now is not None else fed_plan_goals(snapshot, menu=plans + list(goals))
-    pool = [g for g in (fed_now, *fed_plans, token_compare_goal(snapshot, part=False)) if g]
+    feds = [fed_now, *fed_plans]
+    if fed_now is not None and _guide.get('fed_prep'):
+        feds = _fed_prep_order(snapshot, fed_now, fed_plan_goals(snapshot, menu=plans + list(goals)))
+    pool = [g for g in (*feds, token_compare_goal(snapshot, part=False)) if g]
     pool += plans + [g for g in goals if not (getattr(g, 'family', None) == 'research' and g.name in covered)]
     # A dropped plan's research stays a bare goal (the goals_for wrapper may already have removed it from `goals`).
     for plan in all_plans:
@@ -6511,6 +6566,15 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance(seed, **kwargs)
     _guide['formed_mine'] = True
     _wrap_rank('_formed_mine', formed_mine_scores)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance_formedmine_fednav(seed, **kwargs):
+    """Teacher factory: ..._formedmine + fed_absorb (_coming_mines) + fed_prep (_fed_prep_order) + nav_good
+    (_opened_colonies / _opened_ships) — user 2026-11-28 「ㄱ ㄴ는 하고 ㄷ은 딱 사거리가 맞는 좋은 행성 + 함선만 계산해」,
+    known-bad 34–37, E383. Not in the base stack."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance_formedmine(seed, **kwargs)
+    _guide.update({'fed_absorb': True, 'fed_prep': True, 'nav_good': True})
     return teacher
 
 
