@@ -1,0 +1,33 @@
+{
+ "kind": "command",
+ "note": "사용자 11-28 「일단 다시 실험해봐」(HANDOFF E387 뒤, 이론 단계의 한 판 예외): 팩토리 ..._fedplan_balance_formedmine_fednav(fed_absorb · fed_prep · nav_good · good_by_cost · fed_group2, E383–E387) cap60-p2 비교 4, 4좌석 같은 교사, teacher_ab run --single 1판 6R 끝까지. 맵 · 종족은 146-fedplan-one-game과 같은 e362-20388 Firaks · Itars · BalTaks · Xenos라 146과 나란히 본다. 146 대비 차이는 부품 다섯(+ 그 사이 balance · formedmine)이라 변화를 한 부품의 효과로 읽지 않는다. 1판이라 강도 판단 아님. 판정 없음(관찰). 건강 기준: 종료 코드 0, 판 완주, 오류 · 타임아웃 0, 폴백 타임아웃 수와 최대 결정 시간(≈ 80초 이내). 볼 것(정리 턴): ① 좌석별 연방 수 · 라운드별 연방 시점 · 최종 VP · 1–3R 충전(참고), 146과 나란히 ② fed_group2 활성: 거리 2 묶음(파워 4–6)으로 federation-plan-* 가 후보로 나온 횟수 · 이긴 횟수 · 끝까지 실행된 계획 수 · 묶음 안 위성 수 ③ 서로 다른 연방에 쓸 건물이 한 묶음에 묶인 사례(사용자 E387 우려)가 줄었는지 리플레이로. 예상 ≈ 1–2시간, 제한 4시간. 리플레이 게시는 정리 턴 제안.",
+ "run": [
+  "env",
+  "GAIA_ENGINE_FIXES_2=1",
+  "PYTHONPATH=python:baseline-teacher-20260917:tools",
+  "{python}",
+  "tools/teacher_ab.py",
+  "run",
+  "--teacher-a",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-prune-fedplan-balance-formedmine-fednav-cap60-p2.json",
+  "--teacher-b",
+  "tools/teacher-a-search4-h1-guide-r1-charge3-lf-more-vm-lf-ts-ships-menu1-all-tier-prune-fedplan-balance-formedmine-fednav-cap60-p2.json",
+  "--games",
+  "1",
+  "--seeds",
+  "e362-20388@factions=Firaks,Itars,BalTaks,Xenos",
+  "--comparisons",
+  "4",
+  "--jobs",
+  "{jobs}",
+  "--fast-copy",
+  "--single",
+  "--output",
+  "runs/lab-147-fednav-one-game"
+ ],
+ "metrics": "runs/lab-147-fednav-one-game/results.json",
+ "seeds": [
+  "e362-20388@factions=Firaks,Itars,BalTaks,Xenos"
+ ],
+ "timeout_hours": 4
+}
