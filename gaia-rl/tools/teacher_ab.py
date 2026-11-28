@@ -366,12 +366,17 @@ def decision_timing(audit, decision, tick):
     return timing
 
 
+def _worker_env(teacher, dump_dir=None):
+    # GAIA_ROLLOUT_DUMP_DIR: the game's directory, absolute because the worker runs in the teacher source
+    # folder; forked pool workers inherit it (tools/rollout_dump.py).
+    return {**({'GAIA_ROLLOUT_DUMP_DIR': str(Path(dump_dir).resolve())} if dump_dir else {}),
+            **os.environ, **teacher.get('env', {}),
+            'PYTHONPATH': teacher['source'], 'PYTHONDONTWRITEBYTECODE': '1'}
+
+
 class Worker:
     def __init__(self, teacher, seed, clock, log, state=None, dump_dir=None):
-        # GAIA_ROLLOUT_DUMP_DIR: the game's directory; forked pool workers inherit it (tools/rollout_dump.py).
-        env = {**({'GAIA_ROLLOUT_DUMP_DIR': str(dump_dir)} if dump_dir else {}),
-               **os.environ, **teacher.get('env', {}),
-               'PYTHONPATH': teacher['source'], 'PYTHONDONTWRITEBYTECODE': '1'}
+        env = _worker_env(teacher, dump_dir)
         self.process = subprocess.Popen(
             [sys.executable, '-u', str(Path(__file__).resolve()), 'worker', '--seed', seed,
              '--spec', json.dumps(teacher), '--clock', json.dumps(clock),

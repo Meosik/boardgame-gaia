@@ -54,6 +54,18 @@ class RolloutDumpTest(unittest.TestCase):
                 self.assertIsNone(rollout_dump.dump_no_continuation(exc, out))
             self.assertEqual(list(Path(out).iterdir()), [])
 
+    def test_worker_env_dump_dir_absolute(self):
+        import os
+        from unittest import mock
+        import teacher_ab
+        teacher = {'source': '/tmp/teacher-source'}
+        with mock.patch.dict(os.environ, clear=False):
+            os.environ.pop('GAIA_ROLLOUT_DUMP_DIR', None)
+            env = teacher_ab._worker_env(teacher, 'runs/lab-x/pair-000/game-0-A02')
+            self.assertEqual(env['GAIA_ROLLOUT_DUMP_DIR'], str(Path('runs/lab-x/pair-000/game-0-A02').resolve()))
+            self.assertTrue(Path(env['GAIA_ROLLOUT_DUMP_DIR']).is_absolute())
+            self.assertNotIn('GAIA_ROLLOUT_DUMP_DIR', teacher_ab._worker_env(teacher, None))
+
 
 if __name__ == '__main__':
     unittest.main()
