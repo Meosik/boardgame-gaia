@@ -153,6 +153,34 @@ fn own_completed_gaia_project_keeps_entry_exemption_and_returns_former() {
 }
 
 #[test]
+fn own_completed_gaia_project_is_accessible_without_range_qic() {
+    // Rulebook p.11: a Gaia Planet with the faction's own Gaiaformer "is considered accessible to
+    // that faction" (146 Itars, step 75: distance 2, range 1, no QIC -> mine must be legal).
+    let coord = HexCoord::new(3, 0);
+    let mut state = gaia_state(FactionId::Itars, 3, 0);
+    let planet = state
+        .board
+        .hexes
+        .get_mut(&coord)
+        .unwrap_or_else(|| panic!("fixture hex should exist"))
+        .planet
+        .as_mut()
+        .unwrap_or_else(|| panic!("fixture planet should exist"));
+    planet.planet_type = PlanetType::Transdim;
+    planet.is_gaia_formed = true;
+    planet.owner = Some(0);
+    state.players[0].gaiaformers_total = 1;
+    state.players[0].gaiaformers_deployed = 1;
+    let action = GameAction::Build { coord };
+    assert!(RuleEngine::get_valid_actions(&state, 0).contains(&action));
+    RuleEngine::apply_action(&mut state, 0, action).unwrap_or_else(|error| panic!("test action should succeed: {error}"));
+    assert_eq!(state.players[0].resources.qic, 0);
+    assert_eq!(state.players[0].resources.ore, 6);
+    assert_eq!(state.players[0].resources.credits, 15);
+    assert_eq!(state.players[0].gaiaformers_deployed, 0);
+}
+
+#[test]
 fn unreserved_formed_gaia_still_requires_entry_qic() {
     let coord = HexCoord::new(1, 0);
     let mut state = gaia_state(FactionId::HadschHallas, 1, 0);

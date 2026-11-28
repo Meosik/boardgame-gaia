@@ -1613,6 +1613,25 @@ fn apply_lost_planet_placement(
     events
 }
 
+/// The player's own finished Gaia Project with no structure on it yet (the planet owner is the
+/// Gaiaformer reservation marker). Rulebook p.11: only that faction can colonize it, it is
+/// considered accessible to that faction, and no Q.I.C. is paid to make it habitable.
+fn own_completed_gaia_project(state: &GameState, player_id: PlayerId, coord: HexCoord) -> bool {
+    let Some(hex) = state.board.hexes.get(&coord) else {
+        return false;
+    };
+    let Some(planet) = hex.planet.as_ref() else {
+        return false;
+    };
+    planet.is_gaia_formed
+        && planet.planet_type == PlanetType::Transdim
+        && planet.owner == Some(player_id)
+        && hex.structures.is_empty()
+        && state
+            .player(player_id)
+            .is_some_and(|player| !player.structures.iter().any(|s| s.hex == coord))
+}
+
 fn validate_build(
     state: &GameState,
     player_id: PlayerId,
@@ -1727,8 +1746,9 @@ fn validate_build_impl_with_options(
     }
 
     // Reachability — range determined by Navigation research track, extendable with QIC.
-    // `unlimited_range` (Lost Fleet Federation token) skips this entirely.
-    let qic_for_range = if unlimited_range {
+    // `unlimited_range` (Lost Fleet Federation token) skips this entirely, and a Gaia Planet
+    // with the player's own Gaiaformer "is considered accessible to that faction" (rulebook p.11).
+    let qic_for_range = if unlimited_range || own_completed_gaia_project(state, player_id, coord) {
         0
     } else {
         let nav_level = player.research_tracks.navigation as usize;
@@ -1902,7 +1922,7 @@ fn apply_build_impl_with_options(
         Some(h) => h.clone(),
         None => return events,
     };
-    let qic_for_range = if unlimited_range {
+    let qic_for_range = if unlimited_range || own_completed_gaia_project(state, player_id, coord) {
         0
     } else {
         state
