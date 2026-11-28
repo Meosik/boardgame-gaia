@@ -37,8 +37,11 @@ pass`(`four_factions/preparation.py:555`) — 비교 rollout 안의 한 좌석�
 
 ## Proposal (user decision, nothing queued)
 
-- (ㄱ) 진단 수정(Sonnet 작은 수정, 봇 턴): `teacher_patches.py` rollout 감싸개(:1597 근처)에서 이 ValueError를 잡아 막힌 상태의
-  snapshot · 좌석 · 목표 · 후보별 `blocked` 까닭을 게임 폴더에 덤프한 뒤 다시 던진다(행동은 그대로, 기록만).
+- (ㄱ) 진단 수정(Sonnet 작은 수정, 봇 턴): 감싸개 입력 `snapshot`은 탐색 시작 상태일 뿐이라(토론 1/1 코덱스) 실패 상태는
+  `preparation.rollout`의 지역 변수 `current` · `scores` · `remaining` · `goal`(`preparation.py:522, 549–555`)에서 가져온다.
+  동결 기준 파일은 건드리지 않고, `teacher_patches.py` rollout 감싸개(:1597, 워커 프로세스 안)에서 이 ValueError를 잡아
+  traceback 가장 안쪽 `rollout` 프레임의 그 지역 변수 · 막힌 좌석 · 후보별 `blocked` 점수를 게임 폴더에 덤프한 뒤 다시 던진다
+  (행동은 그대로, 기록만).
 - (ㄴ) 같은 시드 147 재실행(lab ≈10분 — 결정적이면 같은 26번째 결정에서 재현되어 덤프가 나온다; 비결정이면 완주까지 ≈1–2시간).
 - (ㄷ) 원인을 본 뒤 수정(필터가 마지막 후보는 막지 않게 등, 119 · 147 공통) → 147 다시.
 - (ㄹ) 작업 트리 엔진 재빌드(사용자 명령, E367) — 재생 도구가 다시 쓸 수 있게.
