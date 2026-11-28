@@ -6384,6 +6384,63 @@ def balance_scores(env, snapshot, scores):
     return lifted
 
 
+# User 2026-11-28 「발타크만 넣어봐」 (rule of 2026-11-27, known-bad 30: 「즉시포밍 했으면 꼭 광산까지 지어」): BalTaks only.
+FORMED_MINE_FACTIONS = frozenset({'BalTaks'})
+
+
+def _formed_gaia_hexes(state, actor):
+    """Coords of the actor's own finished Gaia Project planets with no structure on them."""
+    player = state['players'][actor]
+    taken = {s.get('hex') for s in player.get('structures', [])}
+    out = []
+    for coord, hx in state['board']['hexes'].items():
+        planet = hx.get('planet') or {}
+        if planet.get('planet_type') == 'Transdim' and planet.get('is_gaia_formed') \
+                and planet.get('owner') == actor and not hx.get('structures') and coord not in taken:
+            out.append(coord)
+    return out
+
+
+def formed_mine_scores(env, snapshot, scores):
+    """User 2026-11-27 (known-bad 30) 「즉시포밍 했으면 꼭 광산까지 지어」, applied to BalTaks only (2026-11-28): when the
+    player has its own finished Gaia Project planet without a structure, the mine there goes on top and Pass is
+    blocked. If the build is not legal for lack of resources, a free conversion (QicToOre first) whose forked state
+    makes the build legal is lifted instead (even when the pruning tables blocked it). Order only."""
+    from current_actions.conservation import blocked, BLOCKED, PREFIX
+    state, actor = snapshot['state'], snapshot.get('player')
+    if actor is None or 'ActionPhase' not in state['phase'] or not _guide.get('formed_mine', False):
+        return scores
+    faction = state['players'][actor]['faction']
+    if faction not in FORMED_MINE_FACTIONS:
+        return scores
+    hexes = _formed_gaia_hexes(state, actor)
+    if not hexes:
+        return scores
+    cands = snapshot['candidates']
+    top = max([s[0] for s in scores if not blocked(s) and isinstance(s[0], (int, float))], default=0.0) + 1e-6
+
+    def finish(i, reason):
+        lifted = list(scores)
+        lifted[i] = (top, reason, *scores[i][2:])
+        for j, c in enumerate(cands):
+            if c['action'].get('type') == 'Pass':
+                lifted[j] = (BLOCKED, PREFIX+'formed_mine: build the formed Gaia planet first', *scores[j][2:])
+        return lifted
+
+    for i, c in enumerate(cands):
+        a = c['action']
+        if a.get('type') == 'Build' and a.get('coord') in hexes:
+            return finish(i, f"{faction} mine on own formed Gaia planet {a['coord']} before passing (user 2026-11-27, formed_mine)")
+    frees = [i for i, c in enumerate(cands) if c['action'].get('type') == 'FreeAction']
+    frees.sort(key=lambda i: cands[i]['action'].get('kind') != 'QicToOre')    # stable: QicToOre first
+    for i in frees[:8]:
+        nxt = json.loads(env.fork(snapshot['decision_id'], i).snapshot_json())
+        if any(c['action'].get('type') == 'Build' and c['action'].get('coord') in hexes for c in nxt['candidates']):
+            kind = cands[i]['action'].get('kind')
+            return finish(i, f"{faction} {kind} to afford the mine on own formed Gaia planet (user 2026-11-27, formed_mine)")
+    return scores
+
+
 def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune(seed, **kwargs):
     """Teacher factory: ships_menu1_all_tier + the user's candidate-pruning tables (E362, one game)."""
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier(seed, **kwargs)
@@ -6408,6 +6465,15 @@ def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance
     teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan(seed, **kwargs)
     _guide['balance'] = True
     _wrap_rank('_balance', balance_scores)
+    return teacher
+
+
+def guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance_formedmine(seed, **kwargs):
+    """Teacher factory: ..._fedplan_balance + formed_mine (user 2026-11-28, BalTaks builds the mine on its own formed
+    Gaia planet before passing; known-bad 30). Not in the base stack."""
+    teacher = guide_r1_charge3_lf_more_vm_lf_ts_ships_menu1_all_tier_prune_fedplan_balance(seed, **kwargs)
+    _guide['formed_mine'] = True
+    _wrap_rank('_formed_mine', formed_mine_scores)
     return teacher
 
 
